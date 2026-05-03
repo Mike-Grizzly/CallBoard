@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useEffect } from "react";
+import { useActionState } from "react";
 import { resendVerification, type AuthResult } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 
@@ -10,15 +10,7 @@ export function ResendForm({ email }: { email: string }) {
     FormData
   >(resendVerification, undefined);
 
-  const [sent, setSent] = useState(false);
-
-  useEffect(() => {
-    if (state && !state.error) {
-      setSent(true);
-      const timer = setTimeout(() => setSent(false), 30000);
-      return () => clearTimeout(timer);
-    }
-  }, [state]);
+  const sent = state !== undefined && !state.error;
 
   return (
     <form action={formAction}>
@@ -40,13 +32,9 @@ export function ResendForm({ email }: { email: string }) {
         type="submit"
         variant="outline"
         className="w-full"
-        disabled={pending || sent}
+        disabled={pending}
       >
-        {pending
-          ? "Sending..."
-          : sent
-            ? "Email sent"
-            : "Resend verification email"}
+        {pending ? "Sending..." : "Resend verification email"}
       </Button>
     </form>
   );
