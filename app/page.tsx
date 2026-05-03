@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 
 /**
- * Root entry. Phase 1: always send visitors to /dashboard.
- * Phase 2 will add auth gating and redirect unauthenticated users to /login.
+ * Root entry. Redirects to /dashboard.
+ * The proxy handles auth gating — unauthenticated users will be
+ * redirected to /login before this page even renders.
  */
 export default function RootPage() {
   redirect("/dashboard");
