@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Theater } from "lucide-react";
 import type { Production } from "@/db/schema";
@@ -49,26 +50,28 @@ export function ProductionList({
   return (
     <div className="space-y-3">
       {productions.map((production) => (
-        <Card key={production.id}>
-          <CardContent className="flex items-center justify-between p-4">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-3">
-                <h2 className="truncate text-sm font-semibold">
-                  {production.title}
-                </h2>
-                <StatusBadge status={production.status} />
+        <Link key={production.id} href={`/productions/${production.slug}`}>
+          <Card className="transition-colors hover:bg-[color:var(--accent)]">
+            <CardContent className="flex items-center justify-between p-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-3">
+                  <h2 className="truncate text-sm font-semibold">
+                    {production.title}
+                  </h2>
+                  <StatusBadge status={production.status} />
+                </div>
+                <div className="mt-1 flex items-center gap-1 text-xs text-[color:var(--muted-foreground)]">
+                  <Calendar className="h-3 w-3" aria-hidden />
+                  <span>
+                    {formatDate(production.openingDate)}
+                    {production.closingDate &&
+                      ` — ${formatDate(production.closingDate)}`}
+                  </span>
+                </div>
               </div>
-              <div className="mt-1 flex items-center gap-1 text-xs text-[color:var(--muted-foreground)]">
-                <Calendar className="h-3 w-3" aria-hidden />
-                <span>
-                  {formatDate(production.openingDate)}
-                  {production.closingDate &&
-                    ` — ${formatDate(production.closingDate)}`}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
       ))}
     </div>
   );

@@ -4,14 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "./nav-items";
 import { cn } from "@/lib/utils";
+import { can } from "@/lib/permissions";
+import type { Role } from "@/types/roles";
 
-/**
- * Left sidebar navigation. Desktop-first — on small screens it collapses
- * to a top strip so the MVP is at least usable on mobile without building
- * a full drawer yet.
- */
-export function Sidebar() {
+export function Sidebar({ role }: { role: Role }) {
   const pathname = usePathname();
+
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => !item.capability || can(role, item.capability),
+  );
 
   return (
     <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-[color:var(--border)] md:bg-[color:var(--muted)]">
@@ -19,7 +20,7 @@ export function Sidebar() {
         <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
           Navigate
         </p>
-        {NAV_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const Icon = item.icon;
           const isActive =
             pathname === item.href || pathname.startsWith(`${item.href}/`);

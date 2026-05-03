@@ -19,6 +19,12 @@ export function CreateProductionForm() {
       action={formAction}
       className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-6 shadow-sm"
     >
+      {state?.error && (
+        <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+          {state.error}
+        </div>
+      )}
+
       <div className="mb-4">
         <label htmlFor="title" className="mb-1.5 block text-sm font-medium">
           Title

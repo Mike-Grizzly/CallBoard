@@ -1,7 +1,16 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
+import { requireCurrentUser } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { CreateProductionForm } from "./create-production-form";
 
-export default function NewProductionPage() {
+export default async function NewProductionPage() {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "productions:manage")) {
+    redirect("/productions");
+  }
+
   return (
     <div className="mx-auto max-w-lg">
       <div className="mb-6">

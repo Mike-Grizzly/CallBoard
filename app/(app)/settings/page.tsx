@@ -1,10 +1,13 @@
-import { PlaceholderPage } from "@/components/app-shell/placeholder-page";
+import { redirect } from "next/navigation";
+import { requireCurrentUser } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 
-export default function SettingsPage() {
-  return (
-    <PlaceholderPage
-      title="Settings"
-      description="Organization and production settings. Admin only."
-    />
-  );
+export default async function SettingsPage() {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "settings:manage")) {
+    redirect("/dashboard");
+  }
+
+  redirect("/settings/members");
 }
