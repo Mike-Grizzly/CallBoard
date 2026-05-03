@@ -10,7 +10,13 @@ import { createSupabaseProxyClient } from "@/lib/supabase/proxy";
  * 3. Redirect authenticated users away from /login and /signup to /dashboard
  */
 
-const PUBLIC_ROUTES = ["/login", "/signup", "/auth/callback"];
+const PUBLIC_ROUTES = [
+  "/login",
+  "/signup",
+  "/auth/callback",
+  "/forgot-password",
+  "/reset-password",
+];
 
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some(

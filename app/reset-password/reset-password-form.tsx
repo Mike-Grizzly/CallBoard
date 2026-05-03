@@ -1,15 +1,14 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
-import { login, type AuthResult } from "@/app/actions/auth";
+import { updatePassword, type AuthResult } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 
-export function LoginForm() {
+export function ResetPasswordForm() {
   const [state, formAction, pending] = useActionState<
     AuthResult | undefined,
     FormData
-  >(login, undefined);
+  >(updatePassword, undefined);
 
   return (
     <form
@@ -23,59 +22,46 @@ export function LoginForm() {
       )}
 
       <div className="mb-4">
-        <label
-          htmlFor="email"
-          className="mb-1.5 block text-sm font-medium"
-        >
-          Email
+        <label htmlFor="password" className="mb-1.5 block text-sm font-medium">
+          New password
         </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm placeholder:text-[color:var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
-          placeholder="you@example.com"
-        />
-      </div>
-
-      <div className="mb-6">
-        <div className="mb-1.5 flex items-center justify-between">
-          <label htmlFor="password" className="text-sm font-medium">
-            Password
-          </label>
-          <Link
-            href="/forgot-password"
-            className="text-xs text-[color:var(--muted-foreground)] underline underline-offset-4 hover:text-[color:var(--foreground)]"
-          >
-            Forgot password?
-          </Link>
-        </div>
         <input
           id="password"
           name="password"
           type="password"
           required
-          autoComplete="current-password"
+          minLength={6}
+          autoComplete="new-password"
+          className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm placeholder:text-[color:var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+          placeholder="••••••••"
+        />
+        <p className="mt-1 text-xs text-[color:var(--muted-foreground)]">
+          Must be at least 6 characters
+        </p>
+      </div>
+
+      <div className="mb-6">
+        <label
+          htmlFor="confirm_password"
+          className="mb-1.5 block text-sm font-medium"
+        >
+          Confirm new password
+        </label>
+        <input
+          id="confirm_password"
+          name="confirm_password"
+          type="password"
+          required
+          minLength={6}
+          autoComplete="new-password"
           className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm placeholder:text-[color:var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
           placeholder="••••••••"
         />
       </div>
 
       <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? "Signing in..." : "Sign in"}
+        {pending ? "Updating..." : "Update password"}
       </Button>
-
-      <p className="mt-4 text-center text-sm text-[color:var(--muted-foreground)]">
-        Don&apos;t have an account?{" "}
-        <Link
-          href="/signup"
-          className="font-medium text-[color:var(--foreground)] underline underline-offset-4"
-        >
-          Sign up
-        </Link>
-      </p>
     </form>
   );
 }
