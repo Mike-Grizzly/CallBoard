@@ -38,7 +38,12 @@ export async function proxy(request: NextRequest) {
   }
 
   // Authenticated user on a public auth page → redirect to dashboard
-  if (user && (pathname === "/login" || pathname === "/signup")) {
+  if (
+    user &&
+    (pathname === "/login" ||
+      pathname === "/signup" ||
+      pathname === "/signup/confirm")
+  ) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

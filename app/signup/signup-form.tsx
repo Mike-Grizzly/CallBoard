@@ -22,21 +22,39 @@ export function SignupForm() {
         </div>
       )}
 
-      <div className="mb-4">
-        <label
-          htmlFor="full_name"
-          className="mb-1.5 block text-sm font-medium"
-        >
-          Full name
-        </label>
-        <input
-          id="full_name"
-          name="full_name"
-          type="text"
-          autoComplete="name"
-          className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm placeholder:text-[color:var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
-          placeholder="Jane Doe"
-        />
+      <div className="mb-4 grid grid-cols-2 gap-3">
+        <div>
+          <label
+            htmlFor="first_name"
+            className="mb-1.5 block text-sm font-medium"
+          >
+            First name
+          </label>
+          <input
+            id="first_name"
+            name="first_name"
+            type="text"
+            autoComplete="given-name"
+            className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm placeholder:text-[color:var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+            placeholder="Jane"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="last_name"
+            className="mb-1.5 block text-sm font-medium"
+          >
+            Last name
+          </label>
+          <input
+            id="last_name"
+            name="last_name"
+            type="text"
+            autoComplete="family-name"
+            className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm placeholder:text-[color:var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+            placeholder="Doe"
+          />
+        </div>
       </div>
 
       <div className="mb-4">
