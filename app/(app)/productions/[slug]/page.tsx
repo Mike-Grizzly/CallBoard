@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { Users, FileText } from "lucide-react";
+import { Users, FileText, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireCurrentUser } from "@/lib/auth";
@@ -12,6 +12,7 @@ import {
   getProductionMembership,
 } from "@/features/members/queries";
 import { getReportsByProduction } from "@/features/reports/queries";
+import { ProductionTabs } from "./production-tabs";
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -66,6 +67,16 @@ export default async function ProductionDetailPage({
     getReportsByProduction(production.id),
   ]);
 
+  const canCreateReports = can(user.role, "reports:create");
+
+  const tabs = [
+    { label: "Overview", href: `/productions/${slug}` },
+    { label: "Reports", href: `/productions/${slug}/reports` },
+  ];
+  if (canCreateReports) {
+    tabs.push({ label: "Daily Log", href: `/productions/${slug}/log` });
+  }
+
   return (
     <div className="mx-auto max-w-4xl">
       <div className="mb-6">
@@ -88,30 +99,43 @@ export default async function ProductionDetailPage({
         </p>
       </div>
 
-      <div className="mb-6">
+      <ProductionTabs slug={slug} tabs={tabs} />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Link href={`/productions/${slug}/reports`}>
           <Card className="transition-colors hover:bg-[color:var(--accent)]">
-            <CardContent className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-[color:var(--muted-foreground)]" aria-hidden />
-                <div>
-                  <h2 className="text-sm font-semibold">Rehearsal Reports</h2>
-                  <p className="text-xs text-[color:var(--muted-foreground)]">
-                    {reports.length === 0
-                      ? "No reports filed yet"
-                      : `${reports.length} report${reports.length !== 1 ? "s" : ""}`}
-                  </p>
-                </div>
+            <CardContent className="flex items-center gap-3 p-4">
+              <FileText className="h-8 w-8 text-[color:var(--muted-foreground)]" aria-hidden />
+              <div>
+                <h2 className="text-sm font-semibold">Rehearsal Reports</h2>
+                <p className="text-xs text-[color:var(--muted-foreground)]">
+                  {reports.length === 0
+                    ? "No reports filed yet"
+                    : `${reports.length} report${reports.length !== 1 ? "s" : ""}`}
+                </p>
               </div>
-              <span className="text-sm text-[color:var(--muted-foreground)]">
-                &rarr;
-              </span>
             </CardContent>
           </Card>
         </Link>
+
+        {canCreateReports && (
+          <Link href={`/productions/${slug}/log`}>
+            <Card className="transition-colors hover:bg-[color:var(--accent)]">
+              <CardContent className="flex items-center gap-3 p-4">
+                <BookOpen className="h-8 w-8 text-[color:var(--muted-foreground)]" aria-hidden />
+                <div>
+                  <h2 className="text-sm font-semibold">Daily Log</h2>
+                  <p className="text-xs text-[color:var(--muted-foreground)]">
+                    Your personal running notes
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
       </div>
 
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mt-8 mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Team</h2>
         {canManage && (
           <Link href={`/productions/${slug}/members`}>

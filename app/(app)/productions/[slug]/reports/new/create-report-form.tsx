@@ -1,30 +1,48 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import {
   createReport,
   type CreateReportResult,
 } from "@/features/reports/actions";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Button } from "@/components/ui/button";
+import { FileDown } from "lucide-react";
 
 export function CreateReportForm({
   productionId,
   slug,
+  logContent,
 }: {
   productionId: string;
   slug: string;
+  logContent: string | null;
 }) {
   const [state, formAction, pending] = useActionState<
     CreateReportResult | undefined,
     FormData
   >(createReport, undefined);
 
+  const [generalNotes, setGeneralNotes] = useState("");
+  const [scheduleNotes, setScheduleNotes] = useState("");
   const today = new Date().toISOString().split("T")[0];
+
+  function importFromLog() {
+    if (logContent) {
+      setGeneralNotes(logContent);
+    }
+  }
+
+  function handleSubmit(formData: FormData) {
+    formData.set("general_notes", generalNotes);
+    formData.set("schedule_notes", scheduleNotes);
+    formAction(formData);
+  }
 
   return (
     <form
-      action={formAction}
+      action={handleSubmit}
       className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-6 shadow-sm"
     >
       <input type="hidden" name="production_id" value={productionId} />
@@ -58,19 +76,26 @@ export function CreateReportForm({
       </div>
 
       <div className="mb-4">
-        <label
-          htmlFor="general_notes"
-          className="mb-1.5 block text-sm font-medium"
-        >
-          General notes
-        </label>
-        <textarea
-          id="general_notes"
-          name="general_notes"
-          required
-          rows={6}
-          className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm placeholder:text-[color:var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
-          placeholder="What happened in rehearsal today? Notes on blocking, run-throughs, issues, etc."
+        <div className="mb-1.5 flex items-center justify-between">
+          <label className="text-sm font-medium">General notes</label>
+          {logContent && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={importFromLog}
+              className="text-xs"
+            >
+              <FileDown className="h-3 w-3" aria-hidden />
+              Import from daily log
+            </Button>
+          )}
+        </div>
+        <RichTextEditor
+          content={generalNotes}
+          onChange={setGeneralNotes}
+          placeholder="What happened in rehearsal today?"
+          minHeight="200px"
         />
         {state?.errors?.general_notes && (
           <p className="mt-1 text-sm text-red-600">
@@ -80,21 +105,17 @@ export function CreateReportForm({
       </div>
 
       <div className="mb-4">
-        <label
-          htmlFor="schedule_notes"
-          className="mb-1.5 block text-sm font-medium"
-        >
+        <label className="mb-1.5 block text-sm font-medium">
           Schedule notes
           <span className="ml-1 font-normal text-[color:var(--muted-foreground)]">
             (optional)
           </span>
         </label>
-        <textarea
-          id="schedule_notes"
-          name="schedule_notes"
-          rows={3}
-          className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm placeholder:text-[color:var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+        <RichTextEditor
+          content={scheduleNotes}
+          onChange={setScheduleNotes}
           placeholder="Upcoming schedule changes, call times, etc."
+          minHeight="120px"
         />
       </div>
 

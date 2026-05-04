@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { Paperclip } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -7,6 +8,11 @@ import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
 import { getReportById } from "@/features/reports/queries";
+import {
+  getReportAttachments,
+  getAttachmentUrl,
+} from "@/features/reports/attachments";
+import { AttachmentUpload } from "./attachment-upload";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -15,6 +21,12 @@ function formatDate(dateStr: string): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default async function ReportDetailPage({
@@ -45,6 +57,16 @@ export default async function ReportDetailPage({
     notFound();
   }
 
+  const attachments = await getReportAttachments(reportId);
+  const canUpload = can(user.role, "reports:create");
+
+  const attachmentUrls = await Promise.all(
+    attachments.map(async (a) => ({
+      ...a,
+      url: await getAttachmentUrl(a.storagePath),
+    })),
+  );
+
   const authorName =
     report.createdByFirstName || report.createdByLastName
       ? `${report.createdByFirstName} ${report.createdByLastName}`.trim()
@@ -73,9 +95,10 @@ export default async function ReportDetailPage({
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
               General Notes
             </h2>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed">
-              {report.generalNotes}
-            </p>
+            <div
+              className="prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: report.generalNotes }}
+            />
           </CardContent>
         </Card>
 
@@ -85,12 +108,51 @@ export default async function ReportDetailPage({
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
                 Schedule Notes
               </h2>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                {report.scheduleNotes}
-              </p>
+              <div
+                className="prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: report.scheduleNotes }}
+              />
             </CardContent>
           </Card>
         )}
+
+        <Card>
+          <CardContent className="p-6">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
+              Attachments
+            </h2>
+
+            {attachmentUrls.length > 0 && (
+              <div className="mb-4 space-y-2">
+                {attachmentUrls.map((a) => (
+                  <a
+                    key={a.id}
+                    href={a.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-md border border-[color:var(--border)] p-3 text-sm transition-colors hover:bg-[color:var(--accent)]"
+                  >
+                    <Paperclip className="h-4 w-4 text-[color:var(--muted-foreground)]" aria-hidden />
+                    <span className="flex-1 truncate font-medium">
+                      {a.fileName}
+                    </span>
+                    <span className="text-xs text-[color:var(--muted-foreground)]">
+                      {formatFileSize(a.fileSize)}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {attachmentUrls.length === 0 && !canUpload && (
+              <p className="text-sm text-[color:var(--muted-foreground)]">
+                No attachments.
+              </p>
+            )}
+
+            {canUpload && <AttachmentUpload reportId={reportId} />}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
