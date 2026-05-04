@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,10 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
-import { getProductionMembers } from "@/features/members/queries";
+import {
+  getProductionMembers,
+  getProductionMembership,
+} from "@/features/members/queries";
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -48,8 +51,16 @@ export default async function ProductionDetailPage({
     notFound();
   }
 
-  const members = await getProductionMembers(production.id);
   const canManage = can(user.role, "productions:manage");
+
+  if (!canManage) {
+    const membership = await getProductionMembership(user.id, production.id);
+    if (!membership) {
+      redirect("/productions");
+    }
+  }
+
+  const members = await getProductionMembers(production.id);
 
   return (
     <div className="mx-auto max-w-4xl">

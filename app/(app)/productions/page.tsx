@@ -5,13 +5,18 @@ import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getProductionsByOrganization } from "@/features/productions/queries";
+import { getUserProductionIds } from "@/features/members/queries";
 import { ProductionList } from "./production-list";
 
 export default async function ProductionsPage() {
   const user = await requireCurrentUser();
   const org = await getOrCreateDefaultOrganization();
-  const productionsList = await getProductionsByOrganization(org.id);
   const canManage = can(user.role, "productions:manage");
+
+  const [productionsList, assignedIds] = await Promise.all([
+    getProductionsByOrganization(org.id),
+    canManage ? Promise.resolve(null) : getUserProductionIds(user.id),
+  ]);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -32,7 +37,10 @@ export default async function ProductionsPage() {
         )}
       </div>
 
-      <ProductionList productions={productionsList} />
+      <ProductionList
+        productions={productionsList}
+        accessibleIds={assignedIds}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Theater } from "lucide-react";
+import { Calendar, Lock, Theater } from "lucide-react";
 import type { Production } from "@/db/schema";
 
 function StatusBadge({ status }: { status: string }) {
@@ -30,8 +30,10 @@ function formatDate(dateStr: string | null): string {
 
 export function ProductionList({
   productions,
+  accessibleIds,
 }: {
   productions: Production[];
+  accessibleIds: Set<string> | null;
 }) {
   if (productions.length === 0) {
     return (
@@ -49,9 +51,39 @@ export function ProductionList({
 
   return (
     <div className="space-y-3">
-      {productions.map((production) => (
-        <Link key={production.id} href={`/productions/${production.slug}`}>
-          <Card className="transition-colors hover:bg-[color:var(--accent)]">
+      {productions.map((production) => {
+        const hasAccess =
+          accessibleIds === null || accessibleIds.has(production.id);
+
+        if (hasAccess) {
+          return (
+            <Link key={production.id} href={`/productions/${production.slug}`}>
+              <Card className="transition-colors hover:bg-[color:var(--accent)]">
+                <CardContent className="flex items-center justify-between p-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-3">
+                      <h2 className="truncate text-sm font-semibold">
+                        {production.title}
+                      </h2>
+                      <StatusBadge status={production.status} />
+                    </div>
+                    <div className="mt-1 flex items-center gap-1 text-xs text-[color:var(--muted-foreground)]">
+                      <Calendar className="h-3 w-3" aria-hidden />
+                      <span>
+                        {formatDate(production.openingDate)}
+                        {production.closingDate &&
+                          ` — ${formatDate(production.closingDate)}`}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        }
+
+        return (
+          <Card key={production.id} className="opacity-60">
             <CardContent className="flex items-center justify-between p-4">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3">
@@ -69,10 +101,14 @@ export function ProductionList({
                   </span>
                 </div>
               </div>
+              <div className="flex items-center gap-1.5 text-xs text-[color:var(--muted-foreground)]">
+                <Lock className="h-3 w-3" aria-hidden />
+                <span>Not assigned</span>
+              </div>
             </CardContent>
           </Card>
-        </Link>
-      ))}
+        );
+      })}
     </div>
   );
 }

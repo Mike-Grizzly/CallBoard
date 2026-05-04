@@ -64,3 +64,12 @@ export async function getProductionMembership(
 
   return results[0] ?? null;
 }
+
+export async function getUserProductionIds(userId: string) {
+  const rows = await db
+    .select({ productionId: productionMemberships.productionId })
+    .from(productionMemberships)
+    .where(eq(productionMemberships.userId, userId));
+
+  return new Set(rows.map((r) => r.productionId));
+}
