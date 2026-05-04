@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { Users, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireCurrentUser } from "@/lib/auth";
@@ -11,6 +11,7 @@ import {
   getProductionMembers,
   getProductionMembership,
 } from "@/features/members/queries";
+import { getReportsByProduction } from "@/features/reports/queries";
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -60,7 +61,10 @@ export default async function ProductionDetailPage({
     }
   }
 
-  const members = await getProductionMembers(production.id);
+  const [members, reports] = await Promise.all([
+    getProductionMembers(production.id),
+    getReportsByProduction(production.id),
+  ]);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -82,6 +86,29 @@ export default async function ProductionDetailPage({
           {production.closingDate &&
             ` — ${formatDate(production.closingDate)}`}
         </p>
+      </div>
+
+      <div className="mb-6">
+        <Link href={`/productions/${slug}/reports`}>
+          <Card className="transition-colors hover:bg-[color:var(--accent)]">
+            <CardContent className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-[color:var(--muted-foreground)]" aria-hidden />
+                <div>
+                  <h2 className="text-sm font-semibold">Rehearsal Reports</h2>
+                  <p className="text-xs text-[color:var(--muted-foreground)]">
+                    {reports.length === 0
+                      ? "No reports filed yet"
+                      : `${reports.length} report${reports.length !== 1 ? "s" : ""}`}
+                  </p>
+                </div>
+              </div>
+              <span className="text-sm text-[color:var(--muted-foreground)]">
+                &rarr;
+              </span>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div className="mb-4 flex items-center justify-between">
