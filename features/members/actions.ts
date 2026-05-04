@@ -109,11 +109,11 @@ export async function assignProductionMember(
     return { error: "You don't have permission to manage productions." };
   }
 
-  const userId = formData.get("user_id") as string;
   const productionId = formData.get("production_id") as string;
   const role = formData.get("role") as string;
+  const userIdsJson = formData.get("user_ids") as string;
 
-  if (!userId || !productionId || !role) {
+  if (!productionId || !role) {
     return { error: "Missing required fields." };
   }
 
@@ -121,28 +121,41 @@ export async function assignProductionMember(
     return { error: "Invalid role." };
   }
 
-  const existing = await db
-    .select()
-    .from(productionMemberships)
-    .where(
-      and(
-        eq(productionMemberships.userId, userId),
-        eq(productionMemberships.productionId, productionId),
-      ),
-    )
-    .limit(1);
+  let userIds: string[];
+  try {
+    userIds = JSON.parse(userIdsJson);
+  } catch {
+    return { error: "Invalid member selection." };
+  }
 
-  if (existing.length > 0) {
-    await db
-      .update(productionMemberships)
-      .set({ role })
-      .where(eq(productionMemberships.id, existing[0].id));
-  } else {
-    await db.insert(productionMemberships).values({
-      userId,
-      productionId,
-      role,
-    });
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    return { error: "Select at least one member." };
+  }
+
+  for (const userId of userIds) {
+    const existing = await db
+      .select()
+      .from(productionMemberships)
+      .where(
+        and(
+          eq(productionMemberships.userId, userId),
+          eq(productionMemberships.productionId, productionId),
+        ),
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(productionMemberships)
+        .set({ role })
+        .where(eq(productionMemberships.id, existing[0].id));
+    } else {
+      await db.insert(productionMemberships).values({
+        userId,
+        productionId,
+        role,
+      });
+    }
   }
 
   revalidatePath(`/productions`);

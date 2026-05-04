@@ -14,6 +14,7 @@ export async function getOrganizationMembers(organizationId: string) {
       email: profiles.email,
       firstName: profiles.firstName,
       lastName: profiles.lastName,
+      requestedRole: profiles.requestedRole,
       role: organizationMemberships.role,
       createdAt: organizationMemberships.createdAt,
     })

@@ -80,6 +80,12 @@ function MemberRow({
           <p className="mt-0.5 text-xs text-[color:var(--muted-foreground)]">
             {member.email}
           </p>
+          {member.requestedRole &&
+            member.requestedRole !== member.role && (
+              <p className="mt-0.5 text-xs text-amber-600">
+                Requested: {member.requestedRole === "stage_manager" ? "Stage Manager" : member.requestedRole.charAt(0).toUpperCase() + member.requestedRole.slice(1)}
+              </p>
+            )}
           {(roleState?.error || removeState?.error) && (
             <p className="mt-1 text-xs text-red-600">
               {roleState?.error || removeState?.error}

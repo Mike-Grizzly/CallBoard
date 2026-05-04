@@ -38,6 +38,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       email: authUser.email ?? "",
       firstName: (meta.first_name as string) || "",
       lastName: (meta.last_name as string) || "",
+      requestedRole: (meta.requested_role as string) || null,
     });
 
     const memberCount = await db

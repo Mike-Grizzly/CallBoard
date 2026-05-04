@@ -40,6 +40,7 @@ export async function signup(
   const password = formData.get("password") as string;
   const firstName = formData.get("first_name") as string;
   const lastName = formData.get("last_name") as string;
+  const position = formData.get("position") as string;
 
   if (!email || !password) {
     return { error: "Email and password are required." };
@@ -54,6 +55,7 @@ export async function signup(
       data: {
         first_name: firstName || "",
         last_name: lastName || "",
+        requested_role: position || "",
       },
     },
   });

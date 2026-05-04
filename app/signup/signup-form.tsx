@@ -59,6 +59,34 @@ export function SignupForm() {
 
       <div className="mb-4">
         <label
+          htmlFor="position"
+          className="mb-1.5 block text-sm font-medium"
+        >
+          Position
+        </label>
+        <select
+          id="position"
+          name="position"
+          defaultValue=""
+          required
+          className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+        >
+          <option value="" disabled>
+            Select your role...
+          </option>
+          <option value="producer">Producer</option>
+          <option value="director">Director</option>
+          <option value="stage_manager">Stage Manager</option>
+          <option value="cast">Cast</option>
+          <option value="crew">Crew</option>
+        </select>
+        <p className="mt-1 text-xs text-[color:var(--muted-foreground)]">
+          Your admin will confirm your permissions after signup.
+        </p>
+      </div>
+
+      <div className="mb-4">
+        <label
           htmlFor="email"
           className="mb-1.5 block text-sm font-medium"
         >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ROLES } from "@/types/roles";
@@ -29,13 +29,21 @@ function roleLabel(role: string): string {
   return labels[role] ?? role;
 }
 
-function AssignForm({
+function displayName(member: { firstName: string; lastName: string; email: string }) {
+  return member.firstName || member.lastName
+    ? `${member.firstName} ${member.lastName}`.trim()
+    : member.email;
+}
+
+function BulkAssignForm({
   productionId,
   availableMembers,
 }: {
   productionId: string;
   availableMembers: OrgMember[];
 }) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [role, setRole] = useState("cast");
   const [state, formAction, pending] = useActionState<
     MemberActionResult | undefined,
     FormData
@@ -49,66 +57,100 @@ function AssignForm({
     );
   }
 
+  function toggleMember(userId: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (selected.size === availableMembers.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(availableMembers.map((m) => m.userId)));
+    }
+  }
+
   return (
-    <form action={formAction} className="flex flex-wrap items-end gap-3">
-      <input type="hidden" name="production_id" value={productionId} />
-
-      <div className="min-w-[200px] flex-1">
-        <label
-          htmlFor="user_id"
-          className="mb-1.5 block text-sm font-medium"
-        >
-          Member
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={selected.size === availableMembers.length}
+            onChange={toggleAll}
+            className="h-4 w-4 rounded border-gray-300"
+          />
+          <span className="font-medium">Select all</span>
         </label>
-        <select
-          id="user_id"
-          name="user_id"
-          required
-          className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
-        >
-          <option value="">Select a member...</option>
-          {availableMembers.map((m) => {
-            const name =
-              m.firstName || m.lastName
-                ? `${m.firstName} ${m.lastName}`.trim()
-                : m.email;
-            return (
-              <option key={m.userId} value={m.userId}>
-                {name} ({m.email})
+
+        <div className="flex items-center gap-2">
+          <label htmlFor="bulk-role" className="text-sm font-medium">
+            Role:
+          </label>
+          <select
+            id="bulk-role"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="rounded-md border border-[color:var(--border)] bg-transparent px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+          >
+            {PRODUCTION_ROLES.map((r) => (
+              <option key={r} value={r}>
+                {roleLabel(r)}
               </option>
-            );
-          })}
-        </select>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div className="min-w-[160px]">
-        <label htmlFor="role" className="mb-1.5 block text-sm font-medium">
-          Role
-        </label>
-        <select
-          id="role"
-          name="role"
-          required
-          defaultValue="cast"
-          className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
-        >
-          {PRODUCTION_ROLES.map((r) => (
-            <option key={r} value={r}>
-              {roleLabel(r)}
-            </option>
-          ))}
-        </select>
+      <div className="max-h-64 space-y-1 overflow-y-auto rounded-md border border-[color:var(--border)] p-2">
+        {availableMembers.map((m) => (
+          <label
+            key={m.userId}
+            className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-[color:var(--accent)]"
+          >
+            <input
+              type="checkbox"
+              checked={selected.has(m.userId)}
+              onChange={() => toggleMember(m.userId)}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <span className="text-sm font-medium">{displayName(m)}</span>
+            <span className="text-xs text-[color:var(--muted-foreground)]">
+              {m.email}
+            </span>
+          </label>
+        ))}
       </div>
 
-      <Button type="submit" disabled={pending}>
-        <UserPlus className="h-4 w-4" aria-hidden />
-        {pending ? "Assigning..." : "Assign"}
-      </Button>
+      <form
+        action={(formData) => {
+          const userIds = Array.from(selected);
+          if (userIds.length === 0) return;
+          formData.set("production_id", productionId);
+          formData.set("role", role);
+          formData.set("user_ids", JSON.stringify(userIds));
+          formAction(formData);
+        }}
+      >
+        <Button type="submit" disabled={pending || selected.size === 0}>
+          <UserPlus className="h-4 w-4" aria-hidden />
+          {pending
+            ? "Assigning..."
+            : `Assign ${selected.size} member${selected.size !== 1 ? "s" : ""}`}
+        </Button>
+      </form>
 
       {state?.error && (
-        <p className="w-full text-sm text-red-600">{state.error}</p>
+        <p className="text-sm text-red-600">{state.error}</p>
       )}
-    </form>
+    </div>
   );
 }
 
@@ -118,16 +160,11 @@ function CurrentMemberRow({ member }: { member: ProductionMember }) {
     FormData
   >(removeProductionMember, undefined);
 
-  const displayName =
-    member.firstName || member.lastName
-      ? `${member.firstName} ${member.lastName}`.trim()
-      : member.email;
-
   return (
     <Card>
       <CardContent className="flex items-center justify-between p-3">
         <div>
-          <span className="text-sm font-medium">{displayName}</span>
+          <span className="text-sm font-medium">{displayName(member)}</span>
           <span className="ml-2 text-xs text-[color:var(--muted-foreground)]">
             {member.email}
           </span>
@@ -167,10 +204,10 @@ export function ProductionMemberManager({
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Add Member</h2>
+        <h2 className="mb-3 text-lg font-semibold">Add Members</h2>
         <Card>
           <CardContent className="p-4">
-            <AssignForm
+            <BulkAssignForm
               productionId={productionId}
               availableMembers={availableMembers}
             />

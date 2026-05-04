@@ -5,6 +5,7 @@ export const profiles = pgTable("profiles", {
   email: text("email").notNull(),
   firstName: text("first_name").notNull().default(""),
   lastName: text("last_name").notNull().default(""),
+  requestedRole: text("requested_role"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
