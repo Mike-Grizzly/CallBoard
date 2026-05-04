@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import {
-  users,
+  profiles,
   organizationMemberships,
   productionMemberships,
 } from "@/db/schema";
@@ -10,15 +10,15 @@ export async function getOrganizationMembers(organizationId: string) {
   return db
     .select({
       id: organizationMemberships.id,
-      userId: users.id,
-      email: users.email,
-      firstName: users.firstName,
-      lastName: users.lastName,
+      userId: profiles.id,
+      email: profiles.email,
+      firstName: profiles.firstName,
+      lastName: profiles.lastName,
       role: organizationMemberships.role,
       createdAt: organizationMemberships.createdAt,
     })
     .from(organizationMemberships)
-    .innerJoin(users, eq(organizationMemberships.userId, users.id))
+    .innerJoin(profiles, eq(organizationMemberships.userId, profiles.id))
     .where(eq(organizationMemberships.organizationId, organizationId));
 }
 
@@ -30,15 +30,15 @@ export async function getProductionMembers(productionId: string) {
   return db
     .select({
       id: productionMemberships.id,
-      userId: users.id,
-      email: users.email,
-      firstName: users.firstName,
-      lastName: users.lastName,
+      userId: profiles.id,
+      email: profiles.email,
+      firstName: profiles.firstName,
+      lastName: profiles.lastName,
       role: productionMemberships.role,
       createdAt: productionMemberships.createdAt,
     })
     .from(productionMemberships)
-    .innerJoin(users, eq(productionMemberships.userId, users.id))
+    .innerJoin(profiles, eq(productionMemberships.userId, profiles.id))
     .where(eq(productionMemberships.productionId, productionId));
 }
 

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { users, organizationMemberships } from "@/db/schema";
+import { profiles, organizationMemberships } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
@@ -27,13 +27,13 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const existing = await db
     .select()
-    .from(users)
-    .where(eq(users.id, authUser.id))
+    .from(profiles)
+    .where(eq(profiles.id, authUser.id))
     .limit(1);
 
   if (existing.length === 0) {
     const meta = authUser.user_metadata ?? {};
-    await db.insert(users).values({
+    await db.insert(profiles).values({
       id: authUser.id,
       email: authUser.email ?? "",
       firstName: (meta.first_name as string) || "",

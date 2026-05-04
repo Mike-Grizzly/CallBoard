@@ -1,6 +1,6 @@
 import { pgTable, uuid, text, timestamp, unique } from "drizzle-orm/pg-core";
 import { organizations } from "./organizations";
-import { users } from "./users";
+import { profiles } from "./users";
 
 export const organizationMemberships = pgTable(
   "organization_memberships",
@@ -8,7 +8,7 @@ export const organizationMemberships = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => profiles.id, { onDelete: "cascade" }),
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),

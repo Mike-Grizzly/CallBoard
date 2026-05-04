@@ -1,6 +1,6 @@
 import { pgTable, uuid, text, timestamp, unique } from "drizzle-orm/pg-core";
 import { productions } from "./productions";
-import { users } from "./users";
+import { profiles } from "./users";
 
 export const productionMemberships = pgTable(
   "production_memberships",
@@ -8,7 +8,7 @@ export const productionMemberships = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => profiles.id, { onDelete: "cascade" }),
     productionId: uuid("production_id")
       .notNull()
       .references(() => productions.id, { onDelete: "cascade" }),
