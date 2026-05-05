@@ -196,6 +196,7 @@ export function RichTextEditor({
   minHeight?: string;
 }) {
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Underline,
