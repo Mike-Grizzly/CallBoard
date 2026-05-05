@@ -8,7 +8,7 @@ import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
 import { getDocumentsByProduction } from "@/features/documents/queries";
-import { DOCUMENT_TYPES } from "@/features/documents/actions";
+import { DOCUMENT_TYPES } from "@/features/documents/constants";
 import { DocumentUploadForm } from "./document-upload-form";
 import { DocumentDownloadButton } from "./document-download-button";
 import { DocumentDeleteButton } from "./document-delete-button";

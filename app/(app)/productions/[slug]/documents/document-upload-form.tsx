@@ -3,7 +3,8 @@
 import { useState, useTransition, useRef } from "react";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { uploadDocument, DOCUMENT_TYPES } from "@/features/documents/actions";
+import { uploadDocument } from "@/features/documents/actions";
+import { DOCUMENT_TYPES } from "@/features/documents/constants";
 
 export function DocumentUploadForm({ productionId }: { productionId: string }) {
   const [error, setError] = useState<string | null>(null);
