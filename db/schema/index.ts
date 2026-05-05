@@ -6,3 +6,4 @@ export * from "./production-memberships";
 export * from "./rehearsal-reports";
 export * from "./production-logs";
 export * from "./report-attachments";
+export * from "./documents";

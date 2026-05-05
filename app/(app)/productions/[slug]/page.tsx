@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { Users, FileText, BookOpen } from "lucide-react";
+import { Users, FileText, BookOpen, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireCurrentUser } from "@/lib/auth";
@@ -12,6 +12,7 @@ import {
   getProductionMembership,
 } from "@/features/members/queries";
 import { getReportsByProduction } from "@/features/reports/queries";
+import { getDocumentsByProduction } from "@/features/documents/queries";
 import { ProductionTabs } from "./production-tabs";
 
 function StatusBadge({ status }: { status: string }) {
@@ -62,9 +63,10 @@ export default async function ProductionDetailPage({
     }
   }
 
-  const [members, reports] = await Promise.all([
+  const [members, reports, documents] = await Promise.all([
     getProductionMembers(production.id),
     getReportsByProduction(production.id),
+    getDocumentsByProduction(production.id),
   ]);
 
   const canCreateReports = can(user.role, "reports:create");
@@ -72,6 +74,7 @@ export default async function ProductionDetailPage({
   const tabs = [
     { label: "Overview", href: `/productions/${slug}` },
     { label: "Reports", href: `/productions/${slug}/reports` },
+    { label: "Documents", href: `/productions/${slug}/documents` },
   ];
   if (canCreateReports) {
     tabs.push({ label: "Daily Log", href: `/productions/${slug}/log` });
@@ -112,6 +115,22 @@ export default async function ProductionDetailPage({
                   {reports.length === 0
                     ? "No reports filed yet"
                     : `${reports.length} report${reports.length !== 1 ? "s" : ""}`}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href={`/productions/${slug}/documents`}>
+          <Card className="transition-colors hover:bg-[color:var(--accent)]">
+            <CardContent className="flex items-center gap-3 p-4">
+              <FolderOpen className="h-8 w-8 text-[color:var(--muted-foreground)]" aria-hidden />
+              <div>
+                <h2 className="text-sm font-semibold">Documents</h2>
+                <p className="text-xs text-[color:var(--muted-foreground)]">
+                  {documents.length === 0
+                    ? "No documents uploaded"
+                    : `${documents.length} document${documents.length !== 1 ? "s" : ""}`}
                 </p>
               </div>
             </CardContent>
