@@ -217,15 +217,19 @@ export function RichTextEditor({
     },
   });
 
+  if (!editor) {
+    return (
+      <div
+        className="overflow-hidden rounded-md border border-[color:var(--border)]"
+        style={{ minHeight }}
+      />
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-md border border-[color:var(--border)]">
       <Toolbar editor={editor} />
       <EditorContent editor={editor} />
-      {!content && placeholder && editor && editor.isEmpty && (
-        <p className="pointer-events-none absolute px-4 py-3 text-sm text-[color:var(--muted-foreground)]">
-          {placeholder}
-        </p>
-      )}
     </div>
   );
 }
