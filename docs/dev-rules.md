@@ -1,0 +1,67 @@
+# Development Rules
+
+## Build rules
+
+- Build in vertical slices — each feature is a complete slice (schema, queries, actions, UI)
+- Do not introduce new libraries without approval
+- Do not rewrite working systems unless explicitly asked
+- Extend existing patterns before creating new ones
+- Do not expand database schema speculatively
+- Do not add permissions or capabilities speculatively
+- Do not add broad abstractions before they are needed
+- Keep TypeScript strict
+- Follow existing Next.js 16 App Router conventions (check `node_modules/next/dist/docs/` for breaking changes)
+- Prefer server-side logic where possible
+- Keep UI primitives local (shadcn-style) unless approved otherwise
+- Use Supabase and Drizzle consistently — do not introduce alternative data access patterns
+- Every feature should include manual test steps
+- Update docs when changing architecture, schema, permissions, or completing a feature
+- Do not mark a feature complete until it has been manually tested
+- Flag security concerns instead of silently working around them
+- Preserve the documented architecture unless explicitly told to change it
+- Preserve the original MVP scope unless explicitly told to expand it
+
+## Code style
+
+- Default to writing no comments — only add one when the WHY is non-obvious
+- Do not add error handling or validation for scenarios that cannot happen
+- Prefer editing existing files over creating new ones
+- Three similar lines is better than a premature abstraction
+- No half-finished implementations
+
+## Claude Code operating rules
+
+- Start every session by reading `CLAUDE.md` (automatic) — it will direct you to relevant docs
+- For substantial feature work, read `/docs/architecture.md`, `/docs/current-status.md`, and the relevant feature spec before editing
+- For small fixes, scale the reading to the task — don't read 7 files to fix a typo
+- Rehydrate context from the repo, not from memory or assumptions
+- Summarize understanding before editing files when working on a new feature area
+- Identify intended files to touch before making changes
+- Ask before broad refactors
+- Prefer small, reviewable changes
+- Do not silently introduce new patterns
+- Do not clean up unrelated code during feature work
+- Stop and flag inconsistencies instead of guessing
+- If the requested task conflicts with documented architecture, flag the conflict before coding
+
+## Required session closeout
+
+At the end of every Claude Code development session, update the relevant docs before stopping.
+
+### Required closeout updates
+
+- `/docs/current-status.md` — what changed, what remains incomplete
+- The relevant `/docs/feature-specs/*.md` file — updated status, test results, new edge cases
+- `/docs/decision-log.md` — if a durable architecture, product, schema, or permission decision was made
+- `/docs/open-questions.md` — if unresolved issues, risks, bugs, assumptions, or follow-up questions came up
+- Root `README.md` — only if setup instructions, scripts, environment variables, or major project status changed
+
+### Closeout rules
+
+- Do not mark a feature complete unless it has been tested
+- If something was built but not fully tested, document it as "implemented but not fully verified"
+- If a bug, risk, or concern was discovered but not fixed, document it in `/docs/open-questions.md` or the relevant feature spec
+- If architecture changed, update `/docs/architecture.md`
+- If development rules changed, update `/docs/dev-rules.md`
+- If the session made a meaningful product or technical decision, record it in `/docs/decision-log.md`
+- Do not end a feature session without documenting what changed, what was tested, what remains incomplete, and what risks or questions remain

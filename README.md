@@ -5,7 +5,9 @@ workspace per show for communication, reports, documents, schedules, and
 role-based visibility.
 
 This repository is the MVP. It is being built in vertical slices per the
-product tech packet. The current phase is **Phase 1: Foundation and app shell**.
+product tech packet.
+
+> **Note:** Steps 1-7 have been implemented (Foundation, Auth, Roles/Permissions, Productions/Dashboard, Reports/Daily Log, Document Center, File Uploads). See `/docs/current-status.md` for the full status.
 
 ---
 
@@ -142,6 +144,14 @@ Use this to verify the foundation slice before moving on to Phase 2 (Auth).
   tables (`rehearsal_reports`, `documents`, `announcements`, `activity_log`,
   memberships, users profile) will be added by their respective feature
   phases, not speculatively.
+
+---
+
+## AI development context
+
+Before using Claude Code or another AI coding assistant, read `CLAUDE.md` (read automatically by Claude Code) and `/docs/session-start.md`.
+
+The `/docs` folder is the persistent project context for architecture, development rules, feature specs, current status, decisions, and open questions. It should be updated whenever architecture, schema, permissions, feature status, or major product decisions change.
 
 ---
 
