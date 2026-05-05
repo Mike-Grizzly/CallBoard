@@ -10,7 +10,6 @@ import { getProductionMembership } from "@/features/members/queries";
 import { getDocumentsByProduction } from "@/features/documents/queries";
 import { DOCUMENT_TYPES } from "@/features/documents/constants";
 import { DocumentUploadForm } from "./document-upload-form";
-import { DocumentViewButton } from "./document-download-button";
 import { DocumentDeleteButton } from "./document-delete-button";
 
 function formatFileSize(bytes: number): string {
@@ -99,9 +98,12 @@ export default async function DocumentsPage({
                 : doc.uploadedByEmail;
 
             return (
-              <Card key={doc.id}>
+              <Card key={doc.id} className="transition-colors hover:bg-[color:var(--accent)]">
                 <CardContent className="flex items-center justify-between p-4">
-                  <div className="min-w-0 flex-1">
+                  <Link
+                    href={`/productions/${slug}/documents/${doc.id}`}
+                    className="min-w-0 flex-1"
+                  >
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 shrink-0 text-[color:var(--muted-foreground)]" aria-hidden />
                       <h2 className="truncate text-sm font-semibold">
@@ -115,13 +117,12 @@ export default async function DocumentsPage({
                       {doc.fileName} &middot; {formatFileSize(doc.fileSize)} &middot; Uploaded by{" "}
                       {uploaderName} on {formatDate(doc.createdAt)}
                     </p>
-                  </div>
-                  <div className="ml-3 flex items-center gap-2">
-                    <DocumentViewButton storagePath={doc.storagePath} fileName={doc.fileName} />
-                    {canUpload && (
+                  </Link>
+                  {canUpload && (
+                    <div className="ml-3 flex items-center gap-2">
                       <DocumentDeleteButton documentId={doc.id} />
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
