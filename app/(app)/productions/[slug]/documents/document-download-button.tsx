@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Download } from "lucide-react";
+import { useTransition } from "react";
+import { Eye, Download } from "lucide-react";
 import { getDocumentUrl } from "@/features/documents/actions";
 
-export function DocumentDownloadButton({
+export function DocumentViewButton({
   storagePath,
   fileName,
 }: {
@@ -13,7 +13,7 @@ export function DocumentDownloadButton({
 }) {
   const [isPending, startTransition] = useTransition();
 
-  function handleClick() {
+  function handleView() {
     startTransition(async () => {
       const url = await getDocumentUrl(storagePath);
       if (url) {
@@ -22,15 +22,38 @@ export function DocumentDownloadButton({
     });
   }
 
+  function handleDownload() {
+    startTransition(async () => {
+      const url = await getDocumentUrl(storagePath);
+      if (url) {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        a.click();
+      }
+    });
+  }
+
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={isPending}
-      className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--accent)] hover:text-[color:var(--foreground)]"
-      title={`Download ${fileName}`}
-    >
-      <Download className="h-4 w-4" />
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={handleView}
+        disabled={isPending}
+        className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--accent)] hover:text-[color:var(--foreground)]"
+        title="View"
+      >
+        <Eye className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        onClick={handleDownload}
+        disabled={isPending}
+        className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--accent)] hover:text-[color:var(--foreground)]"
+        title="Download"
+      >
+        <Download className="h-4 w-4" />
+      </button>
+    </>
   );
 }
