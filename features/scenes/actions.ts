@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { productionScenes, sceneBeats } from "@/db/schema";
+import { productionScenes, sceneBeats, blockingPositions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -140,4 +140,48 @@ export async function deleteBeat(
 
   revalidatePath(`/productions`);
   return {};
+}
+
+export type CaptureNextBeatResult = { beatId?: string; error?: string };
+
+export async function captureNextBeat(
+  sceneId: string,
+  label: string,
+  orderIndex: number,
+  sourceBeatId: string | null,
+): Promise<CaptureNextBeatResult> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "blocking:edit")) {
+    return { error: "You don't have permission to manage beats." };
+  }
+
+  const [newBeat] = await db
+    .insert(sceneBeats)
+    .values({ sceneId, label, orderIndex })
+    .returning({ id: sceneBeats.id });
+
+  // Copy positions from the source beat so the new beat starts where the last left off
+  if (sourceBeatId) {
+    const existing = await db
+      .select()
+      .from(blockingPositions)
+      .where(eq(blockingPositions.beatId, sourceBeatId));
+
+    if (existing.length > 0) {
+      await db.insert(blockingPositions).values(
+        existing.map((p) => ({
+          beatId: newBeat.id,
+          entityType: p.entityType,
+          entityId: p.entityId,
+          xPercent: p.xPercent,
+          yPercent: p.yPercent,
+          rotation: p.rotation,
+          updatedBy: user.id,
+        })),
+      );
+    }
+  }
+
+  revalidatePath(`/productions`);
+  return { beatId: newBeat.id };
 }

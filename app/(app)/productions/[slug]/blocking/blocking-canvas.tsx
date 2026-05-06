@@ -17,7 +17,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Settings, Plus, Trash2, ChevronRight, RotateCcw } from "lucide-react";
+import { Settings, Plus, Trash2, ChevronRight, RotateCcw, Aperture } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   saveBlockingPosition,
@@ -29,6 +29,7 @@ import {
   createBeat,
   deleteScene,
   deleteBeat,
+  captureNextBeat,
 } from "@/features/scenes/actions";
 import { SET_PIECES, ACTOR_COLORS } from "@/features/blocking/constants";
 import type { StageConfiguration, BlockingPosition } from "@/db/schema";
@@ -84,7 +85,7 @@ function ActorToken({
     left: `${xPercent}%`,
     top: `${yPercent}%`,
     transform: CSS.Translate.toString(transform),
-    zIndex: isDragging ? 50 : 10,
+    zIndex: isDragging ? 50 : 20,
     cursor: canEdit ? (isDragging ? "grabbing" : "grab") : "default",
     userSelect: "none",
     touchAction: "none",
@@ -165,7 +166,7 @@ function SetPieceToken({
     left: `${xPercent}%`,
     top: `${yPercent}%`,
     transform: CSS.Translate.toString(transform),
-    zIndex: isDragging ? 50 : 10,
+    zIndex: isDragging ? 50 : 20,
     cursor: canEdit ? (isDragging ? "grabbing" : "grab") : "default",
     userSelect: "none",
     touchAction: "none",
@@ -274,56 +275,63 @@ function NumberGridOverlay({
   return (
     <svg
       className="pointer-events-none absolute inset-0 h-full w-full"
+      style={{ zIndex: 2 }}
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
     >
       {/* Vertical grid lines (SL/SR) */}
-      {vertLines.map(({ x, label }) => (
-        <g key={`v-${x}`}>
-          <line
-            x1={x}
-            y1={0}
-            x2={x}
-            y2={100}
-            stroke={label === "C" ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.25)"}
-            strokeWidth={label === "C" ? "0.4" : "0.2"}
-            strokeDasharray={label === "C" ? "none" : "2 2"}
-          />
-          <text
-            x={x}
-            y={97}
-            textAnchor="middle"
-            fontSize="2.5"
-            fill="rgba(255,255,255,0.7)"
-            style={{ pointerEvents: "none" }}
-          >
-            {label}
-          </text>
-        </g>
-      ))}
+      {vertLines.map(({ x, label }) => {
+        const isCenter = label === "C";
+        return (
+          <g key={`v-${x}`}>
+            {/* Shadow for contrast on both light and dark backgrounds */}
+            <line x1={x} y1={0} x2={x} y2={100}
+              stroke="rgba(255,255,255,0.6)"
+              strokeWidth={isCenter ? "0.7" : "0.45"}
+              strokeDasharray={isCenter ? "none" : "2 2"}
+            />
+            <line x1={x} y1={0} x2={x} y2={100}
+              stroke={isCenter ? "rgba(220,38,38,0.85)" : "rgba(30,64,175,0.55)"}
+              strokeWidth={isCenter ? "0.4" : "0.25"}
+              strokeDasharray={isCenter ? "none" : "2 2"}
+            />
+            {/* Label with opaque background */}
+            <rect x={x - 3} y={93} width={6} height={4} fill="rgba(0,0,0,0.55)" rx="0.5" />
+            <text x={x} y={96.5} textAnchor="middle" fontSize="2.8"
+              fill="white" fontWeight={isCenter ? "bold" : "normal"}
+              style={{ pointerEvents: "none" }}>
+              {label}
+            </text>
+          </g>
+        );
+      })}
       {/* Horizontal grid lines (US/DS) */}
-      {horizLines.map(({ y, label }, i) => (
-        <g key={`h-${y}`}>
-          <line
-            x1={0}
-            y1={y}
-            x2={100}
-            y2={y}
-            stroke={i === 0 ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.2)"}
-            strokeWidth={i === 0 ? "0.4" : "0.2"}
-            strokeDasharray={i === 0 ? "none" : "2 2"}
-          />
-          <text
-            x={2}
-            y={y - 0.8}
-            fontSize="2.2"
-            fill="rgba(255,255,255,0.6)"
-            style={{ pointerEvents: "none" }}
-          >
-            {label}
-          </text>
-        </g>
-      ))}
+      {horizLines.map(({ y, label }, i) => {
+        const isBaseline = i === 0;
+        return (
+          <g key={`h-${y}`}>
+            <line x1={0} y1={y} x2={100} y2={y}
+              stroke="rgba(255,255,255,0.6)"
+              strokeWidth={isBaseline ? "0.7" : "0.45"}
+              strokeDasharray={isBaseline ? "none" : "2 2"}
+            />
+            <line x1={0} y1={y} x2={100} y2={y}
+              stroke={isBaseline ? "rgba(220,38,38,0.85)" : "rgba(30,64,175,0.55)"}
+              strokeWidth={isBaseline ? "0.4" : "0.25"}
+              strokeDasharray={isBaseline ? "none" : "2 2"}
+            />
+            {label !== "0" && (
+              <>
+                <rect x={1} y={y - 4} width={7} height={3.5} fill="rgba(0,0,0,0.55)" rx="0.5" />
+                <text x={4.5} y={y - 1.2} textAnchor="middle" fontSize="2.8"
+                  fill="white" style={{ pointerEvents: "none" }}>
+                  {label}
+                </text>
+              </>
+            )}
+          </g>
+        );
+      })}
     </svg>
   );
 }
@@ -362,6 +370,9 @@ export function BlockingCanvas({
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const [currentBeatId, setCurrentBeatId] = useState<string | null>(initialBeatId);
+  const [currentSceneId, setCurrentSceneId] = useState<string | null>(
+    scenesWithBeats[0]?.id ?? null,
+  );
   const [positions, setPositions] = useState<PositionMap>(
     () => positionRowsToMap(initialPositions),
   );
@@ -378,11 +389,17 @@ export function BlockingCanvas({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
-  // Load positions when beat changes (skip on first render — initialPositions covers that)
+  // Load positions when beat changes.
+  // skipNextBeatLoad is set when capturing — positions are already copied in DB and current state is correct.
   const isFirstBeat = useRef(true);
+  const skipNextBeatLoad = useRef(false);
   useEffect(() => {
     if (isFirstBeat.current) {
       isFirstBeat.current = false;
+      return;
+    }
+    if (skipNextBeatLoad.current) {
+      skipNextBeatLoad.current = false;
       return;
     }
     if (!currentBeatId) {
@@ -553,6 +570,24 @@ export function BlockingCanvas({
     router.refresh();
   }
 
+  async function handleCaptureBeat() {
+    const sceneId = currentSceneId;
+    if (!sceneId) return;
+    const scene = scenesWithBeats.find((s) => s.id === sceneId);
+    if (!scene) return;
+
+    const nextIndex = scene.beats.length;
+    const nextLabel = `Beat ${nextIndex + 1}`;
+    const result = await captureNextBeat(sceneId, nextLabel, nextIndex, currentBeatId);
+    if (result.beatId) {
+      // Keep current positions in state — the new beat already has them copied in DB
+      setHistory([]);
+      skipNextBeatLoad.current = true;
+      setCurrentBeatId(result.beatId);
+      router.refresh();
+    }
+  }
+
   const actorColors: Record<string, string> = {};
   castMembers.forEach((m, i) => {
     actorColors[m.userId] = ACTOR_COLORS[i % ACTOR_COLORS.length];
@@ -633,7 +668,10 @@ export function BlockingCanvas({
           ) : (
             scenesWithBeats.map((scene) => (
               <div key={scene.id} className="mb-2">
-                <div className="group flex items-center justify-between rounded px-1 py-0.5 hover:bg-[color:var(--accent)]">
+                <div
+                  className={`group flex cursor-pointer items-center justify-between rounded px-1 py-0.5 hover:bg-[color:var(--accent)] ${currentSceneId === scene.id && !currentBeatId ? "bg-[color:var(--accent)]" : ""}`}
+                  onClick={() => { setCurrentSceneId(scene.id); setCurrentBeatId(null); }}
+                >
                   <span className="text-xs font-semibold text-[color:var(--muted-foreground)]">
                     Act {scene.actNumber} Sc {scene.sceneNumber} — {scene.title}
                   </span>
@@ -694,7 +732,7 @@ export function BlockingCanvas({
                           ? "bg-[color:var(--primary)] text-[color:var(--primary-foreground)]"
                           : "hover:bg-[color:var(--accent)]"
                       }`}
-                      onClick={() => setCurrentBeatId(beat.id)}
+                      onClick={() => { setCurrentSceneId(scene.id); setCurrentBeatId(beat.id); }}
                     >
                       <div className="flex items-center gap-1">
                         <ChevronRight className="h-2.5 w-2.5 opacity-50" />
@@ -750,6 +788,16 @@ export function BlockingCanvas({
                 Undo
               </button>
             )}
+            {canEdit && currentSceneId && (
+              <button
+                onClick={handleCaptureBeat}
+                className="flex items-center gap-1.5 rounded bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-500"
+                title="Save current positions as a beat and advance to the next one"
+              >
+                <Aperture className="h-3.5 w-3.5" />
+                Capture Beat
+              </button>
+            )}
             {canEdit && (
               <button
                 onClick={() =>
@@ -773,8 +821,8 @@ export function BlockingCanvas({
             {pdfUrl ? (
               <canvas
                 ref={pdfCanvasRef}
-                className="absolute inset-0 h-full w-full object-contain"
-                style={{ objectFit: "contain" }}
+                className="absolute inset-0 h-full w-full"
+                style={{ zIndex: 1 }}
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
