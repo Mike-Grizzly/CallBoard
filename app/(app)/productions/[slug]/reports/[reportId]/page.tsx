@@ -6,7 +6,10 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
-import { getProductionMembership } from "@/features/members/queries";
+import {
+  getProductionMembership,
+  getProductionMembers,
+} from "@/features/members/queries";
 import { getReportById } from "@/features/reports/queries";
 import { DEPARTMENTS } from "@/features/reports/constants";
 import { formatReportAsEmail } from "@/features/reports/email-format";
@@ -60,7 +63,10 @@ export default async function ReportDetailPage({
     notFound();
   }
 
-  const attachments = await getReportAttachments(reportId);
+  const [attachments, productionMembers] = await Promise.all([
+    getReportAttachments(reportId),
+    getProductionMembers(production.id),
+  ]);
   const canUpload = can(user.role, "reports:create");
 
   const attachmentUrls = await Promise.all(
@@ -115,7 +121,7 @@ export default async function ReportDetailPage({
               </p>
             )}
           </div>
-          <CopyEmailButton text={emailText} />
+          <CopyEmailButton text={emailText} members={productionMembers} />
         </div>
       </div>
 
