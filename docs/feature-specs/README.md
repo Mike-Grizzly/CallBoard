@@ -34,3 +34,4 @@ Each feature spec must be updated when its feature changes. Status should reflec
 | `06-documents.md` | Document Center | Implemented |
 | `07-file-uploads.md` | File Upload Infrastructure | Implemented |
 | `08-announcements.md` | Announcements | Implemented (not fully verified) |
+| `09-rehearsal-report-overhaul.md` | Rehearsal Report Overhaul | Planned |

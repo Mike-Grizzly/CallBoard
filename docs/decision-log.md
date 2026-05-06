@@ -96,6 +96,23 @@ Record of durable project decisions. Add new entries at the bottom with date and
 
 ---
 
+## 2026-05-06 — Rehearsal report overhaul planned as Step 9
+
+**Decision:** The existing free-form rehearsal report will be replaced with a structured department-by-department format matching professional stage management standards. An email export (copy to clipboard) will be added.
+
+**Reason:** Current two-field format (generalNotes, scheduleNotes) doesn't match how SMs actually produce reports. The real workflow is: fill out department notes during rehearsal → email formatted report to the full company after.
+
+**Key decisions made:**
+- Departments are fixed (not configurable per production) for MVP
+- Email export = copy-to-clipboard (no email service needed)
+- Plain text format for email export (cross-client safe)
+- Attendance tracking deferred to a later pass
+- Daily Log (already built) covers the "personal notes" use case — not rebuilding it
+
+**Impact:** `rehearsal_reports` table needs ~20 new columns. Apply via Supabase SQL Editor.
+
+---
+
 ## 2026-05-05 — Next.js 16 serverActions config under experimental
 
 **Decision:** The `serverActions.bodySizeLimit` config must be placed under `experimental` in `next.config.ts`.

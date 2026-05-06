@@ -88,6 +88,14 @@
 - Announcements tab and overview card added to production detail page
 - **Not fully verified:** Live testing in browser pending
 
+### Step 9: Rehearsal Report Overhaul — PLANNED
+See `/docs/feature-specs/09-rehearsal-report-overhaul.md` for full spec.
+- Structured department-by-department format replacing free-form TipTap
+- Header block: report number, scheduled/actual times, next rehearsal info
+- 12 department note fields (Scenery, Props, Costumes, Hair & Makeup, Lighting, Sound, Sound Effects, Music, Choreography, Video, Crew, Other)
+- "Copy as Email" button — formats report to clipboard for pasting into Gmail/Outlook
+- Schema changes to `rehearsal_reports` table required
+
 ## Scaffolded only (not implemented)
 
 - **Activity log** — placeholder page exists, capability defined, feature directory has only .gitkeep

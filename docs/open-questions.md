@@ -6,7 +6,10 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ## Product questions
 
-- What is the next feature step after Step 7? (Announcements and Activity are scaffolded but no product decision has been made.)
+- Step 8 (Announcements) is complete. Step 9 (Rehearsal Report Overhaul) is planned and specced in `/docs/feature-specs/09-rehearsal-report-overhaul.md`.
+- Should rehearsal report departments be configurable per production, or fixed? Fixed for MVP — revisit later.
+- Should the email export be plain text or HTML? Plain text recommended for cross-client compatibility — confirm with user before implementing.
+- Should attendance tracking be included in Step 9 or deferred to a later pass?
 - Should productions have additional statuses beyond draft/active/archived?
 - Should there be a notification system when reports are filed or documents uploaded?
 - Should the "requested role" from signup trigger any workflow (e.g., admin approval queue)?
