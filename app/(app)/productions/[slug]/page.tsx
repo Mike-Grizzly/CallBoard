@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { Users, FileText, BookOpen, FolderOpen } from "lucide-react";
+import { Users, FileText, BookOpen, FolderOpen, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireCurrentUser } from "@/lib/auth";
@@ -13,6 +13,7 @@ import {
 } from "@/features/members/queries";
 import { getReportsByProduction } from "@/features/reports/queries";
 import { getDocumentsByProduction } from "@/features/documents/queries";
+import { getAnnouncementsByProduction } from "@/features/announcements/queries";
 import { ProductionTabs } from "./production-tabs";
 
 function StatusBadge({ status }: { status: string }) {
@@ -63,16 +64,18 @@ export default async function ProductionDetailPage({
     }
   }
 
-  const [members, reports, documents] = await Promise.all([
+  const [members, reports, documents, announcementItems] = await Promise.all([
     getProductionMembers(production.id),
     getReportsByProduction(production.id),
     getDocumentsByProduction(production.id),
+    getAnnouncementsByProduction(production.id, org.id),
   ]);
 
   const canCreateReports = can(user.role, "reports:create");
 
   const tabs = [
     { label: "Overview", href: `/productions/${slug}` },
+    { label: "Announcements", href: `/productions/${slug}/announcements` },
     { label: "Reports", href: `/productions/${slug}/reports` },
     { label: "Documents", href: `/productions/${slug}/documents` },
   ];
@@ -105,6 +108,22 @@ export default async function ProductionDetailPage({
       <ProductionTabs slug={slug} tabs={tabs} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Link href={`/productions/${slug}/announcements`}>
+          <Card className="transition-colors hover:bg-[color:var(--accent)]">
+            <CardContent className="flex items-center gap-3 p-4">
+              <Megaphone className="h-8 w-8 text-[color:var(--muted-foreground)]" aria-hidden />
+              <div>
+                <h2 className="text-sm font-semibold">Announcements</h2>
+                <p className="text-xs text-[color:var(--muted-foreground)]">
+                  {announcementItems.length === 0
+                    ? "No announcements yet"
+                    : `${announcementItems.length} announcement${announcementItems.length !== 1 ? "s" : ""}`}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
         <Link href={`/productions/${slug}/reports`}>
           <Card className="transition-colors hover:bg-[color:var(--accent)]">
             <CardContent className="flex items-center gap-3 p-4">

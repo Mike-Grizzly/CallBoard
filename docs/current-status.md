@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-05-05
 
-**Current milestone:** Steps 1-7 have been built.
+**Current milestone:** Steps 1-8 have been built.
 
 ## Feature status
 
@@ -77,9 +77,19 @@
 - Signed URLs generated server-side with 1-hour expiry
 - File size validation: 25MB for documents, 10MB for report attachments
 
+### Step 8: Announcements — IMPLEMENTED
+- `announcements` table: org-scoped with optional `production_id` (null = org-wide)
+- Production-scoped announcements page at `/productions/[slug]/announcements`
+- Global announcements page at `/announcements` showing all announcements the user can see
+- Rich text body via TipTap (optional)
+- Pinning: admin/producer only
+- Delete: author or admin/producer
+- Org-wide badge on all announcement cards
+- Announcements tab and overview card added to production detail page
+- **Not fully verified:** Live testing in browser pending
+
 ## Scaffolded only (not implemented)
 
-- **Announcements** — placeholder page exists, capability defined, feature directory has only .gitkeep
 - **Activity log** — placeholder page exists, capability defined, feature directory has only .gitkeep
 - **AI script analysis** — `documentType` and `processingStatus` fields exist in documents schema, no processing logic
 - **Document comments/annotations** — placeholder sidebar in document viewer, no data model or functionality
