@@ -6,9 +6,9 @@ export async function getReportsByProduction(productionId: string) {
   return db
     .select({
       id: rehearsalReports.id,
+      reportNumber: rehearsalReports.reportNumber,
       reportDate: rehearsalReports.reportDate,
       generalNotes: rehearsalReports.generalNotes,
-      scheduleNotes: rehearsalReports.scheduleNotes,
       createdAt: rehearsalReports.createdAt,
       createdById: profiles.id,
       createdByEmail: profiles.email,
@@ -30,9 +30,29 @@ export async function getReportById(reportId: string) {
     .select({
       id: rehearsalReports.id,
       productionId: rehearsalReports.productionId,
+      reportNumber: rehearsalReports.reportNumber,
       reportDate: rehearsalReports.reportDate,
+      scheduledCall: rehearsalReports.scheduledCall,
+      actualStart: rehearsalReports.actualStart,
+      endTime: rehearsalReports.endTime,
       generalNotes: rehearsalReports.generalNotes,
       scheduleNotes: rehearsalReports.scheduleNotes,
+      nextRehearsalDate: rehearsalReports.nextRehearsalDate,
+      nextRehearsalTime: rehearsalReports.nextRehearsalTime,
+      nextRehearsalLocation: rehearsalReports.nextRehearsalLocation,
+      nextRehearsalNotes: rehearsalReports.nextRehearsalNotes,
+      deptScenery: rehearsalReports.deptScenery,
+      deptProps: rehearsalReports.deptProps,
+      deptCostumes: rehearsalReports.deptCostumes,
+      deptHairMakeup: rehearsalReports.deptHairMakeup,
+      deptLighting: rehearsalReports.deptLighting,
+      deptSound: rehearsalReports.deptSound,
+      deptSoundEffects: rehearsalReports.deptSoundEffects,
+      deptMusic: rehearsalReports.deptMusic,
+      deptChoreography: rehearsalReports.deptChoreography,
+      deptVideo: rehearsalReports.deptVideo,
+      deptCrew: rehearsalReports.deptCrew,
+      deptOther: rehearsalReports.deptOther,
       createdAt: rehearsalReports.createdAt,
       createdByEmail: profiles.email,
       createdByFirstName: profiles.firstName,
@@ -45,3 +65,7 @@ export async function getReportById(reportId: string) {
 
   return results[0] ?? null;
 }
+
+export type ReportDetail = NonNullable<
+  Awaited<ReturnType<typeof getReportById>>
+>;

@@ -1,8 +1,8 @@
 # Current Status
 
-**Last updated:** 2026-05-05
+**Last updated:** 2026-05-06
 
-**Current milestone:** Steps 1-7 have been built.
+**Current milestone:** Steps 1-7 built. Rehearsal report overhaul (Step 9) implemented, pending manual test.
 
 ## Feature status
 
@@ -48,15 +48,14 @@
 - Non-assigned users without `productions:manage` are redirected from production detail
 - Personalized dashboard with stats (admin) and assigned productions list
 
-### Step 5: Reports — IMPLEMENTED
-- Rehearsal report creation with date, general notes, schedule notes
-- Rich text editor (TipTap) for report content
-- Report list per production, ordered by date
-- Report detail page with HTML rendering
+### Step 5: Reports — IMPLEMENTED (overhauled in Step 9)
+- Structured rehearsal report: header (date, scheduled call, actual start, end), TipTap general notes, 12 fixed department text fields, next-rehearsal block
+- Per-production auto-incremented `report_number` (MAX+1 in server action)
+- "Copy as Email" button on detail page (plain-text clipboard)
+- Reports list shows `#N — {date}`; legacy `scheduleNotes` still renders if populated
 - Daily log feature: personal rich text notes per user per production
-- "Import from daily log" button when creating a new report
-- Report file attachments via Supabase Storage (10MB limit)
-- Signed URL downloads for attachments (1-hour expiry)
+- "Import from daily log" button when creating a new report (fills general notes)
+- Report file attachments via Supabase Storage (10MB limit), signed URL downloads (1-hour expiry)
 - **Known issue:** TipTap bullet points not working due to Tailwind prose CSS reset
 
 ### Step 6: Documents — IMPLEMENTED

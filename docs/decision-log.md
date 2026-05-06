@@ -96,6 +96,16 @@ Record of durable project decisions. Add new entries at the bottom with date and
 
 ---
 
+## 2026-05-06 — Rehearsal report overhaul: structured format
+
+**Decision:** Replaced free-form `generalNotes`/`scheduleNotes` reports with a structured format: header time fields, TipTap general notes, 12 fixed department text fields, next-rehearsal block, per-production `report_number`, and a clipboard "Copy as Email" export.
+
+**Reason:** Matches professional SM workflow per spec `09-rehearsal-report-overhaul.md`. User emails the report to the company after rehearsal — a clipboard plain-text export keeps the MVP free of email-service integration.
+
+**Impact:** New nullable columns added to `rehearsal_reports` via Supabase MCP `apply_migration` (name `rehearsal_report_overhaul`). Legacy `scheduleNotes` column kept and still rendered on detail if non-empty so old reports remain readable. Departments are fixed; making them per-production-configurable is deferred. Attendance tracking deferred.
+
+---
+
 ## 2026-05-05 — Next.js 16 serverActions config under experimental
 
 **Decision:** The `serverActions.bodySizeLimit` config must be placed under `experimental` in `next.config.ts`.
