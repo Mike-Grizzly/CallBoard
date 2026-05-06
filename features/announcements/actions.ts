@@ -41,9 +41,7 @@ export async function createAnnouncement(
   });
 
   revalidatePath("/announcements");
-  if (productionId) {
-    revalidatePath("/productions");
-  }
+  revalidatePath("/productions", "layout");
 
   return { success: true };
 }
@@ -79,7 +77,7 @@ export async function deleteAnnouncement(
   await db.delete(announcements).where(eq(announcements.id, announcementId));
 
   revalidatePath("/announcements");
-  revalidatePath("/productions");
+  revalidatePath("/productions", "layout");
 
   return { success: true };
 }
@@ -117,7 +115,7 @@ export async function togglePin(
     .where(eq(announcements.id, announcementId));
 
   revalidatePath("/announcements");
-  revalidatePath("/productions");
+  revalidatePath("/productions", "layout");
 
   return { success: true };
 }
