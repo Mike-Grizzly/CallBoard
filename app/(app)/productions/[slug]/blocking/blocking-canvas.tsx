@@ -298,8 +298,8 @@ function NumberGridOverlay({
           <line x1={calibrationX1!} y1={y} x2={calibrationX2!} y2={y} stroke={gridShadow} strokeWidth="0.4" strokeDasharray="3 3" />
           <line x1={calibrationX1!} y1={y} x2={calibrationX2!} y2={y} stroke={gridColor} strokeWidth="0.25" strokeDasharray="3 3" />
           {/* Side label */}
-          <rect x={calibrationX1! - 8} y={y - 2} width={7} height={3.5} fill="rgba(0,0,0,0.5)" rx="0.5" />
-          <text x={calibrationX1! - 4.5} y={y + 1} textAnchor="middle" fontSize="2.6" fill="white" style={{ pointerEvents: "none" }}>
+          <rect x={calibrationX1! - 6} y={y - 1.5} width={5.5} height={2.8} fill="rgba(0,0,0,0.5)" rx="0.4" />
+          <text x={calibrationX1! - 3.2} y={y + 0.7} textAnchor="middle" fontSize="1.9" fill="white" style={{ pointerEvents: "none" }}>
             {ft}'
           </text>
         </g>
@@ -326,8 +326,8 @@ function NumberGridOverlay({
             <line x1={x} y1={centerY} x2={x} y2={centerY - tickH}
               stroke="rgba(30,64,175,0.85)" strokeWidth="0.3" />
             {/* Label background + text */}
-            <rect x={x - 3.2} y={labelY - 3.2} width={6.4} height={3.8} fill="rgba(0,0,0,0.5)" rx="0.5" />
-            <text x={x} y={labelY} textAnchor="middle" fontSize="2.6"
+            <rect x={x - 2.4} y={labelY - 2.4} width={4.8} height={2.8} fill="rgba(0,0,0,0.5)" rx="0.4" />
+            <text x={x} y={labelY} textAnchor="middle" fontSize="1.9"
               fill="white" fontWeight={isMajor ? "bold" : "normal"}
               style={{ pointerEvents: "none" }}>
               {label}
