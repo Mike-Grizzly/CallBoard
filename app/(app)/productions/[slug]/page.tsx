@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { Users, FileText, BookOpen, FolderOpen } from "lucide-react";
+import { Users, FileText, BookOpen, FolderOpen, Layout } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireCurrentUser } from "@/lib/auth";
@@ -70,6 +70,7 @@ export default async function ProductionDetailPage({
   ]);
 
   const canCreateReports = can(user.role, "reports:create");
+  const canViewBlocking = can(user.role, "blocking:view");
 
   const tabs = [
     { label: "Overview", href: `/productions/${slug}` },
@@ -78,6 +79,9 @@ export default async function ProductionDetailPage({
   ];
   if (canCreateReports) {
     tabs.push({ label: "Daily Log", href: `/productions/${slug}/log` });
+  }
+  if (canViewBlocking) {
+    tabs.push({ label: "Blocking", href: `/productions/${slug}/blocking` });
   }
 
   return (
@@ -152,6 +156,22 @@ export default async function ProductionDetailPage({
             </Card>
           </Link>
         )}
+
+        {canViewBlocking && (
+          <Link href={`/productions/${slug}/blocking`}>
+            <Card className="transition-colors hover:bg-[color:var(--accent)]">
+              <CardContent className="flex items-center gap-3 p-4">
+                <Layout className="h-8 w-8 text-[color:var(--muted-foreground)]" aria-hidden />
+                <div>
+                  <h2 className="text-sm font-semibold">Blocking Tool</h2>
+                  <p className="text-xs text-[color:var(--muted-foreground)]">
+                    Stage positions and movement
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
       </div>
 
       <div className="mt-8 mb-4 flex items-center justify-between">
@@ -185,6 +205,7 @@ export default async function ProductionDetailPage({
               admin: "Admin",
               producer: "Producer",
               director: "Director",
+              choreographer: "Choreographer",
               stage_manager: "Stage Manager",
               cast: "Cast",
               crew: "Crew",

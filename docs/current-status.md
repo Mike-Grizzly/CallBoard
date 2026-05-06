@@ -1,8 +1,8 @@
 # Current Status
 
-**Last updated:** 2026-05-05
+**Last updated:** 2026-05-06
 
-**Current milestone:** Steps 1-7 have been built.
+**Current milestone:** Steps 1-7 built. Step 8 (Blocking Tool, Phase 1) in progress on branch `claude/drag-drop-blocking-tool-Ss1F5`.
 
 ## Feature status
 
@@ -76,6 +76,21 @@
 - Storage RLS policies: authenticated users can insert/select/delete
 - Signed URLs generated server-side with 1-hour expiry
 - File size validation: 25MB for documents, 10MB for report attachments
+
+### Step 8: Blocking Tool (Phase 1) — IN PROGRESS
+
+- **New role:** `choreographer` (7th role, has `blocking:edit` + standard director-level caps)
+- **New capabilities:** `blocking:view` (all roles), `blocking:edit` (admin, producer, director, choreographer, stage_manager)
+- **New DB tables:** `production_scenes`, `scene_beats`, `stage_configurations`, `blocking_positions`
+- **Schema change:** `production_memberships` now has `character_name` (nullable)
+- **New feature modules:** `features/scenes/` (queries, actions, validation), `features/blocking/` (queries, actions, constants)
+- **Set piece library:** 15 SVG shapes (chair, armchair, couch, loveseat, beds, tables, desk, stairs, door, window, grand piano, podium, platform)
+- **Routes:** `/productions/[slug]/blocking` (canvas), `/productions/[slug]/blocking/setup` (wizard)
+- **Blocking canvas:** PDF background (rendered via pdfjs-dist v5), number grid overlay, drag-and-drop actor tokens + set pieces (@dnd-kit/core), autosave per beat, in-session undo
+- **Scene manager:** Left panel with Act/Scene/Beat hierarchy, add/delete scenes and beats
+- **Stage setup wizard:** 2-step flow — select ground plan PDF + enter dimensions, then click 2-point calibration on PDF for scale
+- **Permissions:** SM/Director/Choreographer/Admin/Producer can drag and edit; Cast/Crew view only
+- **Not yet built (Phase 2):** Set piece rotation UI, beat-to-beat copy, print/export, character name assignment UI, multi-page ground plans
 
 ## Scaffolded only (not implemented)
 
