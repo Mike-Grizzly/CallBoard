@@ -96,20 +96,23 @@ Record of durable project decisions. Add new entries at the bottom with date and
 
 ---
 
-## 2026-05-06 — Rehearsal report overhaul planned as Step 9
+## 2026-05-06 — Email sending via Resend (rehearsal reports)
 
-**Decision:** The existing free-form rehearsal report will be replaced with a structured department-by-department format matching professional stage management standards. An email export (copy to clipboard) will be added.
+**Decision:** Use Resend (`resend` npm package) for transactional email. Initial sender is `onboarding@resend.dev` (Resend sandbox) until the product has a verified domain. Switching to a custom domain requires only updating `RESEND_FROM_EMAIL` in env — no code changes.
 
-**Reason:** Current two-field format (generalNotes, scheduleNotes) doesn't match how SMs actually produce reports. The real workflow is: fill out department notes during rehearsal → email formatted report to the full company after.
+**Reason:** User does not yet own a domain for the product. Resend's sandbox lets us build and test the full email flow now and upgrade the sender address later without refactoring.
 
-**Key decisions made:**
-- Departments are fixed (not configurable per production) for MVP
-- Email export = copy-to-clipboard (no email service needed)
-- Plain text format for email export (cross-client safe)
-- Attendance tracking deferred to a later pass
-- Daily Log (already built) covers the "personal notes" use case — not rebuilding it
+**Impact:** `RESEND_API_KEY` and `RESEND_FROM_EMAIL` required in `.env.local`. Both vars documented in `.env.example`. Email is sent as HTML (with plain-text fallback) from `features/reports/send-report.ts`.
 
-**Impact:** `rehearsal_reports` table needs ~20 new columns. Apply via Supabase SQL Editor.
+---
+
+## 2026-05-06 — Rehearsal report overhaul: structured format
+
+**Decision:** Replaced free-form `generalNotes`/`scheduleNotes` reports with a structured format: header time fields, TipTap general notes, 12 fixed department text fields, next-rehearsal block, per-production `report_number`, and Email Report button via Resend.
+
+**Reason:** Matches professional SM workflow per spec `09-rehearsal-report-overhaul.md`. Departments fixed for MVP; attendance deferred.
+
+**Impact:** New nullable columns added to `rehearsal_reports` via Supabase MCP `apply_migration` (name `rehearsal_report_overhaul`). Legacy `scheduleNotes` retained for old reports. `resend` package added.
 
 ---
 

@@ -1,8 +1,8 @@
 # Current Status
 
-**Last updated:** 2026-05-05
+**Last updated:** 2026-05-06
 
-**Current milestone:** Steps 1-8 have been built.
+**Current milestone:** Steps 1-8 built. Rehearsal report overhaul (Step 9) implemented and tested.
 
 ## Feature status
 
@@ -48,15 +48,14 @@
 - Non-assigned users without `productions:manage` are redirected from production detail
 - Personalized dashboard with stats (admin) and assigned productions list
 
-### Step 5: Reports — IMPLEMENTED
-- Rehearsal report creation with date, general notes, schedule notes
-- Rich text editor (TipTap) for report content
-- Report list per production, ordered by date
-- Report detail page with HTML rendering
+### Step 5: Reports — IMPLEMENTED (overhauled 2026-05-06)
+- Structured rehearsal report: header (date, scheduled call, actual start, end), TipTap general notes, 12 fixed department text fields, next-rehearsal block
+- Per-production auto-incremented `report_number` (MAX+1 in server action)
+- **Email Report** button: recipient picker (entire production or individual checkboxes), sends HTML email via Resend (`resend` package, `RESEND_API_KEY` + `RESEND_FROM_EMAIL` env vars)
+- Reports list shows `#N — {date}`; legacy `scheduleNotes` still renders if populated
 - Daily log feature: personal rich text notes per user per production
-- "Import from daily log" button when creating a new report
-- Report file attachments via Supabase Storage (10MB limit)
-- Signed URL downloads for attachments (1-hour expiry)
+- "Import from daily log" button when creating a new report (fills general notes)
+- Report file attachments via Supabase Storage (10MB limit), signed URL downloads (1-hour expiry)
 - **Known issue:** TipTap bullet points not working due to Tailwind prose CSS reset
 
 ### Step 6: Documents — IMPLEMENTED
@@ -88,13 +87,12 @@
 - Announcements tab and overview card added to production detail page
 - **Not fully verified:** Live testing in browser pending
 
-### Step 9: Rehearsal Report Overhaul — PLANNED
-See `/docs/feature-specs/09-rehearsal-report-overhaul.md` for full spec.
+### Step 9: Rehearsal Report Overhaul — IMPLEMENTED
 - Structured department-by-department format replacing free-form TipTap
 - Header block: report number, scheduled/actual times, next rehearsal info
-- 12 department note fields (Scenery, Props, Costumes, Hair & Makeup, Lighting, Sound, Sound Effects, Music, Choreography, Video, Crew, Other)
-- "Copy as Email" button — formats report to clipboard for pasting into Gmail/Outlook
-- Schema changes to `rehearsal_reports` table required
+- 12 fixed department note fields
+- **Email Report** button — sends HTML email via Resend with recipient picker (entire production or individual members)
+- Schema applied via Supabase MCP `apply_migration`; `resend` package added
 
 ## Scaffolded only (not implemented)
 
