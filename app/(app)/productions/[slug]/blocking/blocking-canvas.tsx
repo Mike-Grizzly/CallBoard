@@ -221,8 +221,12 @@ function SetPieceToken({
 
 function NumberGridOverlay({
   stageConfig,
+  showSLSR,
+  showUSDS,
 }: {
   stageConfig: StageConfiguration;
+  showSLSR: boolean;
+  showUSDS: boolean;
 }) {
   const {
     calibrationX1,
@@ -231,7 +235,6 @@ function NumberGridOverlay({
     calibrationY2,
     prosceniumWidthFt,
     stageDepthFt,
-    pixelsPerFoot,
   } = stageConfig;
 
   if (
@@ -245,32 +248,34 @@ function NumberGridOverlay({
 
   const centerX = (calibrationX1 + calibrationX2) / 2;
   const centerY = (calibrationY1 + calibrationY2) / 2;
-
-  // Span of the calibration line in percent
   const lineSpanX = Math.abs(calibrationX2 - calibrationX1);
-  // 1 foot as percent of canvas width
   const footPercent = lineSpanX / prosceniumWidthFt;
-
   const halfWidthFt = Math.ceil(prosceniumWidthFt / 2);
   const depthLines = Math.floor(stageDepthFt / 2);
 
-  // vertical lines every 2ft
-  const vertLines: { x: number; label: string }[] = [];
+  // Tick positions along proscenium (every 2')
+  const ticks: { x: number; ft: number; isMajor: boolean }[] = [];
   for (let ft = -halfWidthFt; ft <= halfWidthFt; ft += 2) {
     const x = centerX + ft * footPercent;
     if (x >= 0 && x <= 100) {
-      vertLines.push({ x, label: ft === 0 ? "C" : `${Math.abs(ft)}'` });
+      ticks.push({ x, ft, isMajor: ft % 10 === 0 });
     }
   }
 
-  // horizontal lines every 2ft (upstage from proscenium line)
-  const horizLines: { y: number; label: string }[] = [];
-  for (let i = 0; i <= depthLines; i++) {
+  // US/DS horizontal positions (every 2', upstage from proscenium)
+  const depthTicks: { y: number; ft: number }[] = [];
+  for (let i = 1; i <= depthLines; i++) {
     const y = centerY - i * 2 * footPercent;
     if (y >= 0 && y <= 100) {
-      horizLines.push({ y, label: i === 0 ? "0" : `${i * 2}'` });
+      depthTicks.push({ y, ft: i * 2 });
     }
   }
+
+  const minorTickH = 1.8;  // percent height for minor ticks (2', 4', 6', 8')
+  const majorTickH = 3.0;  // percent height for major ticks (0', 10', 20', ...)
+  const labelY = centerY + 4.5;
+  const gridColor = "rgba(30,64,175,0.45)";
+  const gridShadow = "rgba(255,255,255,0.55)";
 
   return (
     <svg
@@ -279,56 +284,54 @@ function NumberGridOverlay({
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
     >
-      {/* Vertical grid lines (SL/SR) */}
-      {vertLines.map(({ x, label }) => {
-        const isCenter = label === "C";
+      {/* ── SL/SR full grid lines (toggle) ─────────────────── */}
+      {showSLSR && ticks.map(({ x, ft }) => (
+        <g key={`slsr-${x}`}>
+          <line x1={x} y1={0} x2={x} y2={100} stroke={gridShadow} strokeWidth="0.4" strokeDasharray="3 3" />
+          <line x1={x} y1={0} x2={x} y2={100} stroke={gridColor} strokeWidth="0.25" strokeDasharray="3 3" />
+        </g>
+      ))}
+
+      {/* ── US/DS full grid lines (toggle) ─────────────────── */}
+      {showUSDS && depthTicks.map(({ y, ft }) => (
+        <g key={`usds-${y}`}>
+          <line x1={calibrationX1!} y1={y} x2={calibrationX2!} y2={y} stroke={gridShadow} strokeWidth="0.4" strokeDasharray="3 3" />
+          <line x1={calibrationX1!} y1={y} x2={calibrationX2!} y2={y} stroke={gridColor} strokeWidth="0.25" strokeDasharray="3 3" />
+          {/* Side label */}
+          <rect x={calibrationX1! - 8} y={y - 2} width={7} height={3.5} fill="rgba(0,0,0,0.5)" rx="0.5" />
+          <text x={calibrationX1! - 4.5} y={y + 1} textAnchor="middle" fontSize="2.6" fill="white" style={{ pointerEvents: "none" }}>
+            {ft}'
+          </text>
+        </g>
+      ))}
+
+      {/* ── Ruler baseline (always on) ──────────────────────── */}
+      {/* Shadow */}
+      <line x1={calibrationX1!} y1={centerY} x2={calibrationX2!} y2={centerY}
+        stroke="rgba(255,255,255,0.7)" strokeWidth="0.6" />
+      {/* Line */}
+      <line x1={calibrationX1!} y1={centerY} x2={calibrationX2!} y2={centerY}
+        stroke="rgba(30,64,175,0.8)" strokeWidth="0.35" />
+
+      {/* ── Tick marks + labels (always on) ─────────────────── */}
+      {ticks.map(({ x, ft, isMajor }) => {
+        const tickH = isMajor ? majorTickH : minorTickH;
+        const label = ft === 0 ? "0" : `${Math.abs(ft)}'`;
         return (
-          <g key={`v-${x}`}>
-            {/* Shadow for contrast on both light and dark backgrounds */}
-            <line x1={x} y1={0} x2={x} y2={100}
-              stroke="rgba(255,255,255,0.6)"
-              strokeWidth={isCenter ? "0.7" : "0.45"}
-              strokeDasharray={isCenter ? "none" : "2 2"}
-            />
-            <line x1={x} y1={0} x2={x} y2={100}
-              stroke={isCenter ? "rgba(220,38,38,0.85)" : "rgba(30,64,175,0.55)"}
-              strokeWidth={isCenter ? "0.4" : "0.25"}
-              strokeDasharray={isCenter ? "none" : "2 2"}
-            />
-            {/* Label with opaque background */}
-            <rect x={x - 3} y={93} width={6} height={4} fill="rgba(0,0,0,0.55)" rx="0.5" />
-            <text x={x} y={96.5} textAnchor="middle" fontSize="2.8"
-              fill="white" fontWeight={isCenter ? "bold" : "normal"}
+          <g key={`tick-${x}`}>
+            {/* Tick shadow */}
+            <line x1={x} y1={centerY} x2={x} y2={centerY - tickH}
+              stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
+            {/* Tick */}
+            <line x1={x} y1={centerY} x2={x} y2={centerY - tickH}
+              stroke="rgba(30,64,175,0.85)" strokeWidth="0.3" />
+            {/* Label background + text */}
+            <rect x={x - 3.2} y={labelY - 3.2} width={6.4} height={3.8} fill="rgba(0,0,0,0.5)" rx="0.5" />
+            <text x={x} y={labelY} textAnchor="middle" fontSize="2.6"
+              fill="white" fontWeight={isMajor ? "bold" : "normal"}
               style={{ pointerEvents: "none" }}>
               {label}
             </text>
-          </g>
-        );
-      })}
-      {/* Horizontal grid lines (US/DS) */}
-      {horizLines.map(({ y, label }, i) => {
-        const isBaseline = i === 0;
-        return (
-          <g key={`h-${y}`}>
-            <line x1={0} y1={y} x2={100} y2={y}
-              stroke="rgba(255,255,255,0.6)"
-              strokeWidth={isBaseline ? "0.7" : "0.45"}
-              strokeDasharray={isBaseline ? "none" : "2 2"}
-            />
-            <line x1={0} y1={y} x2={100} y2={y}
-              stroke={isBaseline ? "rgba(220,38,38,0.85)" : "rgba(30,64,175,0.55)"}
-              strokeWidth={isBaseline ? "0.4" : "0.25"}
-              strokeDasharray={isBaseline ? "none" : "2 2"}
-            />
-            {label !== "0" && (
-              <>
-                <rect x={1} y={y - 4} width={7} height={3.5} fill="rgba(0,0,0,0.55)" rx="0.5" />
-                <text x={4.5} y={y - 1.2} textAnchor="middle" fontSize="2.8"
-                  fill="white" style={{ pointerEvents: "none" }}>
-                  {label}
-                </text>
-              </>
-            )}
           </g>
         );
       })}
@@ -378,6 +381,8 @@ export function BlockingCanvas({
   );
   const [history, setHistory] = useState<PositionMap[]>([]);
   const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [showSLSR, setShowSLSR] = useState(false);
+  const [showUSDS, setShowUSDS] = useState(false);
   const [addingScene, setAddingScene] = useState(false);
   const [newSceneTitle, setNewSceneTitle] = useState("");
   const [newSceneAct, setNewSceneAct] = useState("1");
@@ -778,6 +783,33 @@ export function BlockingCanvas({
             )}
           </div>
           <div className="flex items-center gap-2">
+            {/* Grid toggles — only shown when calibration exists */}
+            {stageConfig?.calibrationX1 != null && (
+              <div className="flex items-center gap-1 border-r border-neutral-700 pr-2">
+                <button
+                  onClick={() => setShowSLSR((v) => !v)}
+                  className={`rounded px-2 py-1 text-xs transition-colors ${
+                    showSLSR
+                      ? "bg-blue-700 text-white"
+                      : "text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
+                  }`}
+                  title="Toggle stage left/right grid lines"
+                >
+                  SL/SR
+                </button>
+                <button
+                  onClick={() => setShowUSDS((v) => !v)}
+                  className={`rounded px-2 py-1 text-xs transition-colors ${
+                    showUSDS
+                      ? "bg-blue-700 text-white"
+                      : "text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
+                  }`}
+                  title="Toggle upstage/downstage grid lines"
+                >
+                  US/DS
+                </button>
+              </div>
+            )}
             {canEdit && history.length > 0 && (
               <button
                 onClick={handleUndo}
@@ -836,7 +868,13 @@ export function BlockingCanvas({
               </div>
             )}
 
-            {stageConfig && <NumberGridOverlay stageConfig={stageConfig} />}
+            {stageConfig && (
+              <NumberGridOverlay
+                stageConfig={stageConfig}
+                showSLSR={showSLSR}
+                showUSDS={showUSDS}
+              />
+            )}
 
             {currentBeatId &&
               castMembers.map((member) => {
