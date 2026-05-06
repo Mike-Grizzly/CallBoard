@@ -48,10 +48,10 @@
 - Non-assigned users without `productions:manage` are redirected from production detail
 - Personalized dashboard with stats (admin) and assigned productions list
 
-### Step 5: Reports — IMPLEMENTED (overhauled in Step 9)
+### Step 5: Reports — IMPLEMENTED (overhauled 2026-05-06)
 - Structured rehearsal report: header (date, scheduled call, actual start, end), TipTap general notes, 12 fixed department text fields, next-rehearsal block
 - Per-production auto-incremented `report_number` (MAX+1 in server action)
-- "Copy as Email" button on detail page (plain-text clipboard)
+- **Email Report** button: recipient picker (entire production or individual checkboxes), sends HTML email via Resend (`resend` package, `RESEND_API_KEY` + `RESEND_FROM_EMAIL` env vars)
 - Reports list shows `#N — {date}`; legacy `scheduleNotes` still renders if populated
 - Daily log feature: personal rich text notes per user per production
 - "Import from daily log" button when creating a new report (fills general notes)

@@ -2,18 +2,25 @@
 
 ## Status
 
-**IMPLEMENTED — pending manual test.**
+**IMPLEMENTED — manually tested 2026-05-06.**
 
-Implemented on 2026-05-06 in branch `claude/rehearsal-report-overhaul-Gl1IV`:
+Implemented in branch `claude/rehearsal-report-overhaul-Gl1IV`, merged to main 2026-05-06:
 - Schema: added `report_number`, header time fields, next-rehearsal fields, and 12 department text columns to `rehearsal_reports` (applied via Supabase MCP `apply_migration`, name `rehearsal_report_overhaul`).
 - `createReport` auto-increments `report_number` per production with `MAX+1`.
 - New structured form replaces the old free-form TipTap layout (general notes still TipTap; departments, times, and next-rehearsal fields are plain text).
 - Detail page renders structured sections; empty department fields display as "None".
-- Added `Copy as Email` button (plain-text clipboard copy via `formatReportAsEmail`).
+- **Email Report** button (replaces clipboard copy): opens a popover with production member checkboxes ("Entire production" / individual), sends HTML email via Resend with plain-text fallback. Sender is `RESEND_FROM_EMAIL` env var (defaults to `onboarding@resend.dev` until a domain is verified).
 - Reports list shows `#N — {date}`.
 - `scheduleNotes` retained on schema and rendered if present (legacy reports still display); not exposed in the new form.
 - Departments are fixed (per spec recommendation).
 - Attendance not implemented (deferred per spec).
+
+## New files
+- `features/reports/constants.ts` — shared department list
+- `features/reports/email-html.ts` — HTML email template
+- `features/reports/email-format.ts` — plain-text fallback (used by Resend `text` param)
+- `features/reports/send-report.ts` — `sendReport` server action
+- `app/.../reports/[reportId]/email-report-button.tsx` — recipient picker + send UI
 
 ## Background
 

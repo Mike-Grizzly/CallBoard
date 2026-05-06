@@ -96,6 +96,16 @@ Record of durable project decisions. Add new entries at the bottom with date and
 
 ---
 
+## 2026-05-06 — Email sending via Resend (rehearsal reports)
+
+**Decision:** Use Resend (`resend` npm package) for transactional email. Initial sender is `onboarding@resend.dev` (Resend sandbox) until the product has a verified domain. Switching to a custom domain requires only updating `RESEND_FROM_EMAIL` in env — no code changes.
+
+**Reason:** User does not yet own a domain for the product. Resend's sandbox lets us build and test the full email flow now and upgrade the sender address later without refactoring.
+
+**Impact:** `RESEND_API_KEY` and `RESEND_FROM_EMAIL` required in `.env.local`. Both vars documented in `.env.example`. Email is sent as HTML (with plain-text fallback) from `features/reports/send-report.ts`.
+
+---
+
 ## 2026-05-06 — Rehearsal report overhaul: structured format
 
 **Decision:** Replaced free-form `generalNotes`/`scheduleNotes` reports with a structured format: header time fields, TipTap general notes, 12 fixed department text fields, next-rehearsal block, per-production `report_number`, and a clipboard "Copy as Email" export.
