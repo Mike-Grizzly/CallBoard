@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import {
   saveBlockingPosition,
   removeBlockingPosition,
+  fetchBeatPositions,
 } from "@/features/blocking/actions";
 import {
   createScene,
@@ -29,9 +30,8 @@ import {
   deleteScene,
   deleteBeat,
 } from "@/features/scenes/actions";
-import { getBlockingPositionsForBeat } from "@/features/blocking/queries";
 import { SET_PIECES, ACTOR_COLORS } from "@/features/blocking/constants";
-import type { StageConfiguration } from "@/db/schema";
+import type { StageConfiguration, BlockingPosition } from "@/db/schema";
 import type { SceneWithBeats } from "@/features/scenes/queries";
 import type { CastMember } from "@/features/blocking/queries";
 
@@ -51,6 +51,8 @@ type Props = {
   pdfUrl: string | null;
   canEdit: boolean;
   currentUserId: string;
+  initialBeatId: string | null;
+  initialPositions: Pick<BlockingPosition, "entityType" | "entityId" | "xPercent" | "yPercent" | "rotation">[];
 };
 
 // ─── Actor Token ────────────────────────────────────────────────────
@@ -328,6 +330,20 @@ function NumberGridOverlay({
 
 // ─── Main Component ─────────────────────────────────────────────────
 
+function positionRowsToMap(
+  rows: Pick<BlockingPosition, "entityType" | "entityId" | "xPercent" | "yPercent" | "rotation">[],
+): PositionMap {
+  const map: PositionMap = {};
+  for (const row of rows) {
+    map[`${row.entityType}:${row.entityId}`] = {
+      xPercent: row.xPercent,
+      yPercent: row.yPercent,
+      rotation: row.rotation,
+    };
+  }
+  return map;
+}
+
 export function BlockingCanvas({
   production,
   stageConfig,
@@ -336,6 +352,8 @@ export function BlockingCanvas({
   pdfUrl,
   canEdit,
   currentUserId,
+  initialBeatId,
+  initialPositions,
 }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -343,10 +361,10 @@ export function BlockingCanvas({
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [currentBeatId, setCurrentBeatId] = useState<string | null>(
-    scenesWithBeats[0]?.beats[0]?.id ?? null,
+  const [currentBeatId, setCurrentBeatId] = useState<string | null>(initialBeatId);
+  const [positions, setPositions] = useState<PositionMap>(
+    () => positionRowsToMap(initialPositions),
   );
-  const [positions, setPositions] = useState<PositionMap>({});
   const [history, setHistory] = useState<PositionMap[]>([]);
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [addingScene, setAddingScene] = useState(false);
@@ -360,23 +378,20 @@ export function BlockingCanvas({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
-  // Load positions when beat changes
+  // Load positions when beat changes (skip on first render — initialPositions covers that)
+  const isFirstBeat = useRef(true);
   useEffect(() => {
-    if (!currentBeatId) {
-      setPositions({});
+    if (isFirstBeat.current) {
+      isFirstBeat.current = false;
       return;
     }
-    getBlockingPositionsForBeat(currentBeatId).then((rows) => {
-      const map: PositionMap = {};
-      for (const row of rows) {
-        const key = `${row.entityType}:${row.entityId}`;
-        map[key] = {
-          xPercent: row.xPercent,
-          yPercent: row.yPercent,
-          rotation: row.rotation,
-        };
-      }
-      setPositions(map);
+    if (!currentBeatId) {
+      setPositions({});
+      setHistory([]);
+      return;
+    }
+    fetchBeatPositions(currentBeatId).then((rows) => {
+      setPositions(positionRowsToMap(rows));
       setHistory([]);
     });
   }, [currentBeatId]);

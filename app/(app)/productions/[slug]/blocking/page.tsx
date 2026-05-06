@@ -4,7 +4,7 @@ import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
-import { getStageConfiguration, getCastMembers } from "@/features/blocking/queries";
+import { getStageConfiguration, getCastMembers, getBlockingPositionsForBeat } from "@/features/blocking/queries";
 import { getScenesWithBeats } from "@/features/scenes/queries";
 import { getDocumentById } from "@/features/documents/queries";
 import { getDocumentUrl } from "@/features/documents/actions";
@@ -51,6 +51,11 @@ export default async function BlockingPage({
     }
   }
 
+  const firstBeatId = scenesWithBeats[0]?.beats[0]?.id ?? null;
+  const initialPositions = firstBeatId
+    ? await getBlockingPositionsForBeat(firstBeatId)
+    : [];
+
   return (
     <BlockingCanvas
       production={{ id: production.id, title: production.title, slug }}
@@ -60,6 +65,8 @@ export default async function BlockingPage({
       pdfUrl={pdfUrl}
       canEdit={can(user.role, "blocking:edit")}
       currentUserId={user.id}
+      initialBeatId={firstBeatId}
+      initialPositions={initialPositions}
     />
   );
 }

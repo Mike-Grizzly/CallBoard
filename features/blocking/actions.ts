@@ -9,6 +9,31 @@ import { can } from "@/lib/permissions";
 
 export type BlockingActionResult = { error?: string };
 
+export type PositionRow = {
+  entityType: string;
+  entityId: string;
+  xPercent: number;
+  yPercent: number;
+  rotation: number;
+};
+
+export async function fetchBeatPositions(
+  beatId: string,
+): Promise<PositionRow[]> {
+  await requireCurrentUser();
+  const rows = await db
+    .select({
+      entityType: blockingPositions.entityType,
+      entityId: blockingPositions.entityId,
+      xPercent: blockingPositions.xPercent,
+      yPercent: blockingPositions.yPercent,
+      rotation: blockingPositions.rotation,
+    })
+    .from(blockingPositions)
+    .where(eq(blockingPositions.beatId, beatId));
+  return rows;
+}
+
 // ─── Stage Configuration ────────────────────────────────────────────
 
 export async function saveStageConfiguration(
