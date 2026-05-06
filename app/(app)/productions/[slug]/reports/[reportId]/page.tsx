@@ -12,13 +12,12 @@ import {
 } from "@/features/members/queries";
 import { getReportById } from "@/features/reports/queries";
 import { DEPARTMENTS } from "@/features/reports/constants";
-import { formatReportAsEmail } from "@/features/reports/email-format";
 import {
   getReportAttachments,
   getAttachmentUrl,
 } from "@/features/reports/attachments";
 import { AttachmentUpload } from "./attachment-upload";
-import { CopyEmailButton } from "./copy-email-button";
+import { EmailReportButton } from "./email-report-button";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -81,8 +80,6 @@ export default async function ReportDetailPage({
       ? `${report.createdByFirstName} ${report.createdByLastName}`.trim()
       : report.createdByEmail;
 
-  const emailText = formatReportAsEmail(report, production.title, authorName);
-
   const headerTimeBits: string[] = [];
   if (report.scheduledCall) headerTimeBits.push(`Call ${report.scheduledCall}`);
   if (report.actualStart) headerTimeBits.push(`Start ${report.actualStart}`);
@@ -121,7 +118,7 @@ export default async function ReportDetailPage({
               </p>
             )}
           </div>
-          <CopyEmailButton text={emailText} members={productionMembers} />
+          <EmailReportButton reportId={reportId} slug={slug} members={productionMembers} />
         </div>
       </div>
 
