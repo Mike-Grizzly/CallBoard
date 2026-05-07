@@ -61,6 +61,15 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 - Should server actions validate that referenced IDs (productionId, reportId, documentId) actually exist and belong to the correct org before proceeding?
 - `dangerouslySetInnerHTML` in `RichTextDisplay` renders unsanitized HTML. Should a sanitization library (e.g., DOMPurify) be added?
 
+## Notes questions
+
+- **Visibility enforcement:** Private notes are visible to all team members in the current implementation. Should the `getNotesByProduction` query filter by `visibility = 'shared' OR created_by = currentUserId`?
+- **Cross-production notes view:** User wants a dashboard glimpse of notes from all productions. When should this be built?
+- **Real-time updates:** Notes from other team members only appear on reload. Should Supabase Realtime subscriptions be used here?
+- **Note editing rights:** Currently only the author or a manage_tags user can edit a note. Should this be loosened for "shared" notes?
+- **Tag deletion cascade:** Deleting a tag sets `tag_id = null` on all notes (ON DELETE SET NULL). Should users be warned how many notes will lose their tag?
+- **Bullet points in TipTap:** Same issue as reports — Tailwind prose resets list styles. Should a fix be applied globally?
+
 ## Scope control questions
 
 - The MVP is being built in vertical slices. What is the definition of "MVP complete"?

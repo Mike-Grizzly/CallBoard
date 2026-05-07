@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-05-07
 
-**Current milestone:** Steps 1-8 complete. Blocking Tool Phase 1 shipped.
+**Current milestone:** Steps 1-9 complete. Notes feature shipped.
 
 ## Feature status
 
@@ -93,6 +93,20 @@
 - **Number line ruler:** Proscenium baseline with tick marks every 2', labels every 5'; SL/SR and US/DS grid lines are toggleable (both off by default)
 - **Permissions:** SM/Director/Choreographer/Admin/Producer can drag and edit; Cast/Crew view only
 - **Known limitations (Phase 2):** Set piece rotation UI, character name assignment UI in member management, multi-page ground plan support, print/export
+
+### Step 9: Notes — IMPLEMENTED (not fully verified)
+
+- Two-panel Notion-like interface per production (`/productions/[slug]/notes`)
+- Notes list with filter tabs (All, To-do, Pinned, Notes, Done)
+- Pinned notes grouped at top of list
+- Unified note type with optional to-do checkbox and completion toggle
+- Pin toggle, visibility toggle (private/shared), due date field
+- Org-level tag library with colored tags; seeded with 7 defaults on first access
+- Admin/producer/director/stage_manager can add/remove tags via tag manager modal
+- TipTap rich text editor with auto-save (600ms debounce)
+- Notes added as card on production overview and tab in production nav
+- **Not verified:** All permission edge cases, auto-save under slow network, optimistic create race conditions
+- **Known limitation:** Visibility toggle is display-only — no query-level enforcement; all team members see all notes
 
 ## Scaffolded only (not implemented)
 

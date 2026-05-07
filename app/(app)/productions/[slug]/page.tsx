@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { Users, FileText, BookOpen, FolderOpen, Layout } from "lucide-react";
+import { Users, FileText, BookOpen, FolderOpen, Layout, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireCurrentUser } from "@/lib/auth";
@@ -71,6 +71,7 @@ export default async function ProductionDetailPage({
 
   const canCreateReports = can(user.role, "reports:create");
   const canViewBlocking = can(user.role, "blocking:view");
+  const canViewNotes = can(user.role, "notes:view");
 
   const tabs = [
     { label: "Overview", href: `/productions/${slug}` },
@@ -82,6 +83,9 @@ export default async function ProductionDetailPage({
   }
   if (canViewBlocking) {
     tabs.push({ label: "Blocking", href: `/productions/${slug}/blocking` });
+  }
+  if (canViewNotes) {
+    tabs.push({ label: "Notes", href: `/productions/${slug}/notes` });
   }
 
   return (
@@ -166,6 +170,22 @@ export default async function ProductionDetailPage({
                   <h2 className="text-sm font-semibold">Blocking Tool</h2>
                   <p className="text-xs text-[color:var(--muted-foreground)]">
                     Stage positions and movement
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+
+        {canViewNotes && (
+          <Link href={`/productions/${slug}/notes`}>
+            <Card className="transition-colors hover:bg-[color:var(--accent)]">
+              <CardContent className="flex items-center gap-3 p-4">
+                <StickyNote className="h-8 w-8 text-[color:var(--muted-foreground)]" aria-hidden />
+                <div>
+                  <h2 className="text-sm font-semibold">Notes</h2>
+                  <p className="text-xs text-[color:var(--muted-foreground)]">
+                    Shared and personal production notes
                   </p>
                 </div>
               </CardContent>
