@@ -12,7 +12,7 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ## Product questions
 
-- Steps 8–10 are complete. What is the next feature step?
+- Steps 8–11 are complete. What is the next feature step?
 - Should rehearsal report departments be configurable per production, or remain fixed?
 - Should attendance tracking be added to rehearsal reports?
 - Should productions have additional statuses beyond draft/active/archived?
@@ -50,6 +50,15 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 - Should the document viewer support page-by-page navigation for multi-page PDFs?
 - Should there be a search/filter capability on the documents list?
 - Should the production overview cards show more metadata (dates, member count)?
+
+## Notes questions
+
+- **Visibility enforcement:** Private notes are visible to all team members in the current implementation. Should the `getNotesByProduction` query filter by `visibility = 'shared' OR created_by = currentUserId`?
+- **Cross-production notes view:** User wants a dashboard glimpse of notes from all productions. When should this be built?
+- **Real-time updates:** Notes from other team members only appear on reload. Should Supabase Realtime subscriptions be used here?
+- **Note editing rights:** Currently only the author or a manage_tags user can edit a note. Should this be loosened for "shared" notes?
+- **Tag deletion cascade:** Deleting a tag sets `tag_id = null` on all notes (ON DELETE SET NULL). Should users be warned how many notes will lose their tag?
+- **Bullet points in TipTap:** Same issue as reports — Tailwind prose resets list styles. Should a fix be applied globally?
 
 ## Testing / hardening questions
 

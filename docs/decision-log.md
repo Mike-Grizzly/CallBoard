@@ -156,6 +156,26 @@ Record of durable project decisions. Add new entries at the bottom with date and
 
 ---
 
+## 2026-05-07 — Notes are per-production and org-level tags
+
+**Decision:** Notes are scoped to a production and shared with all production members. Tags are org-level (shared across all productions) and seeded lazily from a fixed preset list on first access.
+
+**Reason:** Tags like "Calls", "Props", "Music" are generic theatre categories that make sense across any production. Per-production tags would create redundant setup for each show.
+
+**Impact:** `note_tags` table uses `organization_id` FK. Tags seeded in `getNoteTagsByOrg()` on first call if empty. Higher-permission users can add/remove tags which affects all productions.
+
+---
+
+## 2026-05-07 — Note visibility is informational in Phase 1
+
+**Decision:** The "private" vs "shared" visibility field on notes is stored but not query-level enforced — all team members can see all notes in the list.
+
+**Reason:** Implementing row-level visibility filtering requires passing the current user's ID into the query and filtering at the DB layer. This adds complexity; the UI affordance (EyeOff icon + footer label) is sufficient for Phase 1 trust-based use.
+
+**Impact:** Visibility should be enforced at the query layer before this feature is used in a high-trust environment. See open questions.
+
+---
+
 ## 2026-05-05 — Next.js 16 serverActions config under experimental
 
 **Decision:** The `serverActions.bodySizeLimit` config must be placed under `experimental` in `next.config.ts`.

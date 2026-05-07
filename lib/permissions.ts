@@ -13,6 +13,9 @@ export const CAPABILITIES = [
   "settings:manage",
   "blocking:view",
   "blocking:edit",
+  "notes:view",
+  "notes:create",
+  "notes:manage_tags",
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -31,6 +34,9 @@ const CAPABILITY_MAP: Record<Role, ReadonlySet<Capability>> = {
     "settings:manage",
     "blocking:view",
     "blocking:edit",
+    "notes:view",
+    "notes:create",
+    "notes:manage_tags",
   ]),
   producer: new Set<Capability>([
     "productions:view",
@@ -44,6 +50,9 @@ const CAPABILITY_MAP: Record<Role, ReadonlySet<Capability>> = {
     "activity:view",
     "blocking:view",
     "blocking:edit",
+    "notes:view",
+    "notes:create",
+    "notes:manage_tags",
   ]),
   director: new Set<Capability>([
     "productions:view",
@@ -56,6 +65,9 @@ const CAPABILITY_MAP: Record<Role, ReadonlySet<Capability>> = {
     "activity:view",
     "blocking:view",
     "blocking:edit",
+    "notes:view",
+    "notes:create",
+    "notes:manage_tags",
   ]),
   choreographer: new Set<Capability>([
     "productions:view",
@@ -67,6 +79,8 @@ const CAPABILITY_MAP: Record<Role, ReadonlySet<Capability>> = {
     "activity:view",
     "blocking:view",
     "blocking:edit",
+    "notes:view",
+    "notes:create",
   ]),
   stage_manager: new Set<Capability>([
     "productions:view",
@@ -78,6 +92,9 @@ const CAPABILITY_MAP: Record<Role, ReadonlySet<Capability>> = {
     "activity:view",
     "blocking:view",
     "blocking:edit",
+    "notes:view",
+    "notes:create",
+    "notes:manage_tags",
   ]),
   cast: new Set<Capability>([
     "productions:view",
@@ -85,6 +102,8 @@ const CAPABILITY_MAP: Record<Role, ReadonlySet<Capability>> = {
     "documents:view",
     "announcements:view",
     "blocking:view",
+    "notes:view",
+    "notes:create",
   ]),
   crew: new Set<Capability>([
     "productions:view",
@@ -92,6 +111,8 @@ const CAPABILITY_MAP: Record<Role, ReadonlySet<Capability>> = {
     "documents:view",
     "announcements:view",
     "blocking:view",
+    "notes:view",
+    "notes:create",
   ]),
 };
 
