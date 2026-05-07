@@ -2,6 +2,7 @@ import {
   pgTable,
   uuid,
   text,
+  integer,
   real,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -24,6 +25,8 @@ export const stageConfigurations = pgTable("stage_configurations", {
   calibrationY1: real("calibration_y1"),
   calibrationX2: real("calibration_x2"),
   calibrationY2: real("calibration_y2"),
+  // Which page of the ground plan PDF to render (1-indexed)
+  groundPlanPage: integer("ground_plan_page").notNull().default(1),
   // Derived: pixels per foot at reference render size (used for grid overlay)
   pixelsPerFoot: real("pixels_per_foot"),
   createdAt: timestamp("created_at", { withTimezone: true })

@@ -7,13 +7,14 @@ import { ROLES } from "@/types/roles";
 import {
   assignProductionMember,
   removeProductionMember,
+  updateCharacterName,
   type MemberActionResult,
 } from "@/features/members/actions";
 import type {
   ProductionMember,
   OrgMember,
 } from "@/features/members/queries";
-import { UserPlus, Users } from "lucide-react";
+import { UserPlus, Users, Check, X } from "lucide-react";
 
 const PRODUCTION_ROLES = ROLES.filter((r) => r !== "admin");
 
@@ -154,6 +155,77 @@ function BulkAssignForm({
   );
 }
 
+function CharacterNameEditor({
+  membershipId,
+  current,
+}: {
+  membershipId: string;
+  current: string | null;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(current ?? "");
+  const [state, formAction, pending] = useActionState<
+    MemberActionResult | undefined,
+    FormData
+  >(updateCharacterName, undefined);
+
+  if (!editing) {
+    return (
+      <button
+        onClick={() => setEditing(true)}
+        className="flex items-center gap-1 text-xs text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
+        title="Set character name"
+      >
+        {current ? (
+          <span className="italic">{current}</span>
+        ) : (
+          <span className="opacity-60">+ character name</span>
+        )}
+      </button>
+    );
+  }
+
+  return (
+    <form
+      action={(fd) => {
+        fd.set("membership_id", membershipId);
+        fd.set("character_name", value);
+        formAction(fd);
+        setEditing(false);
+      }}
+      className="flex items-center gap-1"
+    >
+      <input
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setEditing(false);
+        }}
+        placeholder="Character name"
+        className="rounded border border-[color:var(--border)] bg-[color:var(--background)] px-1.5 py-0.5 text-xs"
+      />
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded p-0.5 text-green-600 hover:bg-green-50"
+      >
+        <Check className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => setEditing(false)}
+        className="rounded p-0.5 text-[color:var(--muted-foreground)] hover:bg-[color:var(--accent)]"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+      {state?.error && (
+        <span className="text-xs text-red-600">{state.error}</span>
+      )}
+    </form>
+  );
+}
+
 function CurrentMemberRow({ member }: { member: ProductionMember }) {
   const [state, formAction, pending] = useActionState<
     MemberActionResult | undefined,
@@ -171,6 +243,14 @@ function CurrentMemberRow({ member }: { member: ProductionMember }) {
           <span className="ml-2 inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
             {roleLabel(member.role)}
           </span>
+          {member.role === "cast" && (
+            <span className="ml-3">
+              <CharacterNameEditor
+                membershipId={member.id}
+                current={member.characterName ?? null}
+              />
+            </span>
+          )}
         </div>
         <form action={formAction}>
           <input type="hidden" name="membership_id" value={member.id} />

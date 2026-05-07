@@ -3,7 +3,6 @@
 import {
   useRef,
   useState,
-  useCallback,
   useEffect,
   useTransition,
 } from "react";
@@ -17,7 +16,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Settings, Plus, Trash2, ChevronRight, RotateCcw, Aperture } from "lucide-react";
+import { Settings, Plus, Trash2, ChevronRight, RotateCcw, Aperture, Download, RotateCw, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   saveBlockingPosition,
@@ -60,8 +59,8 @@ type Props = {
 
 function ActorToken({
   id,
-  name,
-  characterName,
+  initials,
+  label,
   color,
   xPercent,
   yPercent,
@@ -69,8 +68,8 @@ function ActorToken({
   onRemove,
 }: {
   id: string;
-  name: string;
-  characterName: string | null;
+  initials: string;
+  label: string;
   color: string;
   xPercent: number;
   yPercent: number;
@@ -90,13 +89,6 @@ function ActorToken({
     userSelect: "none",
     touchAction: "none",
   };
-
-  const initials = name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 
   return (
     <div
@@ -126,14 +118,11 @@ function ActorToken({
         >
           {initials}
         </div>
-        <div className="mt-0.5 max-w-[80px] rounded bg-black/60 px-1 text-center text-[10px] leading-tight text-white">
-          <div className="truncate font-medium">{name}</div>
-          {characterName && (
-            <div className="truncate text-[9px] opacity-80 italic">
-              {characterName}
-            </div>
-          )}
-        </div>
+        {label && (
+          <div className="mt-0.5 max-w-[80px] rounded bg-black/60 px-1 text-center text-[10px] leading-tight text-white">
+            <div className="truncate">{label}</div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -147,16 +136,20 @@ function SetPieceToken({
   svgPath,
   xPercent,
   yPercent,
+  rotation,
   canEdit,
   onRemove,
+  onRotate,
 }: {
   id: string;
   label: string;
   svgPath: string;
   xPercent: number;
   yPercent: number;
+  rotation: number;
   canEdit: boolean;
   onRemove: () => void;
+  onRotate: (delta: number) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id, disabled: !canEdit });
@@ -182,33 +175,59 @@ function SetPieceToken({
     >
       <div className="relative">
         {canEdit && (
-          <button
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-            className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white group-hover:flex"
-            style={{ fontSize: 10 }}
-          >
-            ×
-          </button>
+          <>
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+              className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white group-hover:flex"
+              style={{ fontSize: 10 }}
+            >
+              ×
+            </button>
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRotate(-15);
+              }}
+              className="absolute -left-5 top-1/2 -translate-y-1/2 hidden h-5 w-5 items-center justify-center rounded-full bg-neutral-700 text-white group-hover:flex"
+              title="Rotate -15°"
+            >
+              <RotateCcw className="h-2.5 w-2.5" />
+            </button>
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRotate(15);
+              }}
+              className="absolute -right-5 top-1/2 -translate-y-1/2 hidden h-5 w-5 items-center justify-center rounded-full bg-neutral-700 text-white group-hover:flex"
+              title="Rotate +15°"
+            >
+              <RotateCw className="h-2.5 w-2.5" />
+            </button>
+          </>
         )}
-        <svg
-          viewBox="0 0 80 60"
-          width={64}
-          height={48}
-          className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm"
-        >
-          <path
-            d={svgPath}
-            fill="none"
-            stroke="#374151"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <div style={{ transform: `rotate(${rotation}deg)` }}>
+          <svg
+            viewBox="0 0 80 60"
+            width={64}
+            height={48}
+            className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm"
+          >
+            <path
+              d={svgPath}
+              fill="none"
+              stroke="#374151"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
         <div className="mt-0.5 text-center text-[9px] text-white/90 bg-black/50 rounded px-1">
           {label}
         </div>
@@ -419,6 +438,10 @@ export function BlockingCanvas({
     });
   }, [currentBeatId]);
 
+  const groundPlanPage = stageConfig?.groundPlanPage ?? 1;
+  const [currentPdfPage, setCurrentPdfPage] = useState(groundPlanPage);
+  const [numPdfPages, setNumPdfPages] = useState(1);
+
   // Render PDF background
   useEffect(() => {
     if (!pdfUrl || !pdfCanvasRef.current) return;
@@ -431,7 +454,8 @@ export function BlockingCanvas({
       ).toString();
       const pdf = await pdfjsLib.getDocument(pdfUrl!).promise;
       if (cancelled) return;
-      const page = await pdf.getPage(1);
+      setNumPdfPages(pdf.numPages);
+      const page = await pdf.getPage(currentPdfPage);
       const viewport = page.getViewport({ scale: 1.5 });
       const canvas = pdfCanvasRef.current!;
       canvas.width = viewport.width;
@@ -441,7 +465,7 @@ export function BlockingCanvas({
     }
     render().catch(() => setPdfLoaded(false));
     return () => { cancelled = true; };
-  }, [pdfUrl]);
+  }, [pdfUrl, currentPdfPage]);
 
   function pushHistory(prev: PositionMap) {
     setHistory((h) => [...h.slice(-49), prev]);
@@ -496,6 +520,126 @@ export function BlockingCanvas({
         rotation: current.rotation,
       });
     });
+  }
+
+  function handleRotateSetPiece(entityId: string, delta: number) {
+    if (!canEdit || !currentBeatId) return;
+    const key = `set_piece:${entityId}`;
+    const current = positions[key];
+    if (!current) return;
+    const newRotation = (current.rotation + delta + 360) % 360;
+    pushHistory(positions);
+    const updated = { ...positions, [key]: { ...current, rotation: newRotation } };
+    setPositions(updated);
+    startTransition(async () => {
+      await saveBlockingPosition({
+        beatId: currentBeatId,
+        entityType: "set_piece",
+        entityId,
+        xPercent: current.xPercent,
+        yPercent: current.yPercent,
+        rotation: newRotation,
+      });
+    });
+  }
+
+  function handleExportPng() {
+    const pdfCanvas = pdfCanvasRef.current;
+    const container = canvasContainerRef.current;
+    if (!container) return;
+
+    const w = pdfCanvas ? pdfCanvas.width : container.clientWidth;
+    const h = pdfCanvas ? pdfCanvas.height : container.clientHeight;
+    const scaleX = w / container.clientWidth;
+    const scaleY = h / container.clientHeight;
+
+    const offscreen = document.createElement("canvas");
+    offscreen.width = w;
+    offscreen.height = h;
+    const ctx = offscreen.getContext("2d")!;
+
+    if (pdfCanvas) {
+      ctx.drawImage(pdfCanvas, 0, 0);
+    } else {
+      ctx.fillStyle = "#171717";
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    // Draw actor tokens
+    for (const member of castMembers) {
+      const key = `actor:${member.userId}`;
+      const pos = positions[key];
+      if (!pos) continue;
+      const x = (pos.xPercent / 100) * w;
+      const y = (pos.yPercent / 100) * h;
+      const r = 20 * Math.min(scaleX, scaleY);
+      const color = actorColors[member.userId];
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      const ini =
+        ((member.firstName?.[0] ?? "") + (member.lastName?.[0] ?? ""))
+          .toUpperCase() || member.email[0]?.toUpperCase() || "?";
+      ctx.fillStyle = "white";
+      ctx.font = `bold ${r}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(ini, x, y);
+
+      const lbl = member.characterName ?? "";
+      if (lbl) {
+        const fs = r * 0.75;
+        ctx.font = `${fs}px sans-serif`;
+        const tw = ctx.measureText(lbl).width;
+        ctx.fillStyle = "rgba(0,0,0,0.65)";
+        ctx.fillRect(x - tw / 2 - 4, y + r + 2, tw + 8, fs + 4);
+        ctx.fillStyle = "white";
+        ctx.textBaseline = "top";
+        ctx.fillText(lbl, x, y + r + 4);
+      }
+    }
+
+    // Draw set piece tokens
+    for (const piece of SET_PIECES) {
+      const key = `set_piece:${piece.key}`;
+      const pos = positions[key];
+      if (!pos) continue;
+      const x = (pos.xPercent / 100) * w;
+      const y = (pos.yPercent / 100) * h;
+      const tokenW = 64 * Math.min(scaleX, scaleY);
+      const tokenH = 48 * Math.min(scaleX, scaleY);
+
+      ctx.save();
+      ctx.translate(x, y);
+      if (pos.rotation) ctx.rotate((pos.rotation * Math.PI) / 180);
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fillRect(-tokenW / 2, -tokenH / 2, tokenW, tokenH);
+      ctx.strokeStyle = "#374151";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(-tokenW / 2, -tokenH / 2, tokenW, tokenH);
+      ctx.scale(tokenW / 80, tokenH / 60);
+      ctx.translate(-40, -30);
+      const path = new Path2D(piece.svgPath);
+      ctx.strokeStyle = "#374151";
+      ctx.lineWidth = 2;
+      ctx.stroke(path);
+      ctx.restore();
+    }
+
+    offscreen.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `blocking-${production.title.replace(/\s+/g, "-")}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, "image/png");
   }
 
   function placeOnCanvas(entityType: "actor" | "set_piece", entityId: string) {
@@ -584,7 +728,19 @@ export function BlockingCanvas({
 
     const nextIndex = scene.beats.length;
     const nextLabel = `Beat ${nextIndex + 1}`;
-    const result = await captureNextBeat(sceneId, nextLabel, nextIndex, currentBeatId);
+
+    // If no current beat (first beat of this scene), inherit positions from the
+    // last beat of the previous scene so actors carry forward across scene breaks.
+    let sourceBeatId = currentBeatId;
+    if (!sourceBeatId) {
+      const sceneIndex = scenesWithBeats.findIndex((s) => s.id === sceneId);
+      if (sceneIndex > 0) {
+        const prevScene = scenesWithBeats[sceneIndex - 1];
+        sourceBeatId = prevScene.beats[prevScene.beats.length - 1]?.id ?? null;
+      }
+    }
+
+    const result = await captureNextBeat(sceneId, nextLabel, nextIndex, sourceBeatId);
     if (result.beatId) {
       // Keep current positions in state — the new beat already has them copied in DB
       setHistory([]);
@@ -831,6 +987,14 @@ export function BlockingCanvas({
                 Capture Beat
               </button>
             )}
+            <button
+              onClick={handleExportPng}
+              className="flex items-center gap-1 rounded px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-700"
+              title="Export current beat as PNG"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export
+            </button>
             {canEdit && (
               <button
                 onClick={() =>
@@ -844,6 +1008,31 @@ export function BlockingCanvas({
             )}
           </div>
         </div>
+
+        {/* Multi-page controls */}
+        {pdfUrl && numPdfPages > 1 && (
+          <div className="flex items-center justify-center gap-2 border-b border-neutral-700 bg-neutral-800 py-1 text-xs text-neutral-300">
+            <button
+              onClick={() => setCurrentPdfPage((p) => Math.max(1, p - 1))}
+              disabled={currentPdfPage <= 1}
+              className="rounded p-0.5 hover:bg-neutral-700 disabled:opacity-40"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <span>
+              Page {currentPdfPage} of {numPdfPages}
+            </span>
+            <button
+              onClick={() =>
+                setCurrentPdfPage((p) => Math.min(numPdfPages, p + 1))
+              }
+              disabled={currentPdfPage >= numPdfPages}
+              className="rounded p-0.5 hover:bg-neutral-700 disabled:opacity-40"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Canvas area */}
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
@@ -882,16 +1071,24 @@ export function BlockingCanvas({
                 const key = `actor:${member.userId}`;
                 const pos = positions[key];
                 if (!pos) return null;
-                const name =
-                  member.firstName || member.lastName
+                const ini =
+                  (
+                    (member.firstName?.[0] ?? "") +
+                    (member.lastName?.[0] ?? "")
+                  ).toUpperCase() ||
+                  member.email[0]?.toUpperCase() ||
+                  "?";
+                const lbl =
+                  member.characterName ??
+                  (member.firstName || member.lastName
                     ? `${member.firstName} ${member.lastName}`.trim()
-                    : member.email;
+                    : member.email);
                 return (
                   <ActorToken
                     key={key}
                     id={key}
-                    name={name}
-                    characterName={member.characterName}
+                    initials={ini}
+                    label={lbl}
                     color={actorColors[member.userId]}
                     xPercent={pos.xPercent}
                     yPercent={pos.yPercent}
@@ -914,8 +1111,10 @@ export function BlockingCanvas({
                     svgPath={piece.svgPath}
                     xPercent={pos.xPercent}
                     yPercent={pos.yPercent}
+                    rotation={pos.rotation}
                     canEdit={canEdit}
                     onRemove={() => removeFromCanvas("set_piece", piece.key)}
+                    onRotate={(delta) => handleRotateSetPiece(piece.key, delta)}
                   />
                 );
               })}
@@ -937,20 +1136,21 @@ export function BlockingCanvas({
               No cast assigned.
             </p>
           ) : (
-            castMembers.map((member, i) => {
+            castMembers.map((member) => {
               const key = `actor:${member.userId}`;
               const isOnCanvas = !!positions[key];
-              const name =
+              const actorName =
                 member.firstName || member.lastName
                   ? `${member.firstName} ${member.lastName}`.trim()
                   : member.email;
               const color = actorColors[member.userId];
-              const initials = name
-                .split(" ")
-                .map((n: string) => n[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase();
+              const ini =
+                (
+                  (member.firstName?.[0] ?? "") +
+                  (member.lastName?.[0] ?? "")
+                ).toUpperCase() ||
+                member.email[0]?.toUpperCase() ||
+                "?";
 
               return (
                 <button
@@ -970,14 +1170,18 @@ export function BlockingCanvas({
                     className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
                     style={{ backgroundColor: color }}
                   >
-                    {initials}
+                    {ini}
                   </div>
                   <div className="min-w-0">
-                    <div className="truncate font-medium">{name}</div>
-                    {member.characterName && (
-                      <div className="truncate text-[10px] italic text-[color:var(--muted-foreground)]">
-                        {member.characterName}
-                      </div>
+                    {member.characterName ? (
+                      <>
+                        <div className="truncate font-medium">{member.characterName}</div>
+                        <div className="truncate text-[10px] text-[color:var(--muted-foreground)]">
+                          {actorName}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="truncate font-medium">{actorName}</div>
                     )}
                   </div>
                 </button>

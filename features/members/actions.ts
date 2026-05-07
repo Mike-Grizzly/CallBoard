@@ -165,6 +165,31 @@ export async function assignProductionMember(
   return {};
 }
 
+export async function updateCharacterName(
+  _prevState: MemberActionResult | undefined,
+  formData: FormData,
+): Promise<MemberActionResult> {
+  const currentUser = await requireCurrentUser();
+
+  if (!can(currentUser.role, "productions:manage")) {
+    return { error: "You don't have permission to manage productions." };
+  }
+
+  const membershipId = formData.get("membership_id") as string;
+  const characterName =
+    (formData.get("character_name") as string | null)?.trim() || null;
+
+  if (!membershipId) return { error: "Missing membership ID." };
+
+  await db
+    .update(productionMemberships)
+    .set({ characterName })
+    .where(eq(productionMemberships.id, membershipId));
+
+  revalidatePath(`/productions`);
+  return {};
+}
+
 export async function removeProductionMember(
   _prevState: MemberActionResult | undefined,
   formData: FormData,
