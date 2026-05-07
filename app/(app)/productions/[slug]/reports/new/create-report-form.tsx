@@ -87,8 +87,7 @@ export function CreateReportForm({
             <input
               id="scheduled_call"
               name="scheduled_call"
-              type="text"
-              placeholder="7:00 PM"
+              type="time"
               className={inputCls}
             />
           </div>
@@ -99,8 +98,7 @@ export function CreateReportForm({
             <input
               id="actual_start"
               name="actual_start"
-              type="text"
-              placeholder="7:10 PM"
+              type="time"
               className={inputCls}
             />
           </div>
@@ -111,8 +109,7 @@ export function CreateReportForm({
             <input
               id="end_time"
               name="end_time"
-              type="text"
-              placeholder="10:30 PM"
+              type="time"
               className={inputCls}
             />
           </div>

@@ -76,6 +76,17 @@ function memberDisplayName(
   return `${firstName ?? ""} ${lastName ?? ""}`.trim() || email;
 }
 
+function formatCallTime(stored: string | null | undefined): string | null {
+  if (!stored) return null;
+  const m = stored.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return stored; // old free-text fallback
+  const h = parseInt(m[1]);
+  const mins = m[2];
+  const period = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${mins} ${period}`;
+}
+
 function relativeTime(date: Date): string {
   const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60_000);
@@ -183,7 +194,7 @@ export default async function ProductionDetailPage({
     ? {
         ...formatCallDate(nextCall.callDate),
         id: nextCall.id,
-        time: nextCall.callTime,
+        time: formatCallTime(nextCall.callTime),
         location: nextCall.location,
         focus: nextCall.focus,
         scenes: nextCall.scenes,

@@ -4,12 +4,29 @@ import { useActionState, useState, useMemo } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { CountedTextarea } from "@/components/ui/counted-textarea";
 import {
   createCall,
   updateCall,
   type CallResult,
 } from "@/features/calls/actions";
 import type { Call } from "@/db/schema";
+
+/** Convert stored time string to "HH:MM" for <input type="time"> defaultValue. */
+function toInputTime(stored: string | null | undefined): string {
+  if (!stored) return "";
+  if (/^\d{2}:\d{2}$/.test(stored)) return stored;
+  const m = stored.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+  if (m) {
+    let h = parseInt(m[1]);
+    const mins = m[2];
+    const period = m[3].toLowerCase();
+    if (period === "pm" && h !== 12) h += 12;
+    if (period === "am" && h === 12) h = 0;
+    return `${String(h).padStart(2, "0")}:${mins}`;
+  }
+  return "";
+}
 
 const inputCls =
   "w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)] placeholder:text-[color:var(--muted-foreground)]";
@@ -314,12 +331,10 @@ export function CallForm({
             <input
               id="call_time"
               name="call_time"
-              type="text"
-              defaultValue={existingCall?.callTime ?? ""}
-              placeholder="7:00 PM"
+              type="time"
+              defaultValue={toInputTime(existingCall?.callTime)}
               className={inputCls}
             />
-            <p className={hintCls}>Any format — "7pm", "TBD", "see schedule"</p>
           </div>
           <div>
             <label htmlFor="location" className={labelCls}>
@@ -329,6 +344,7 @@ export function CallForm({
               id="location"
               name="location"
               type="text"
+              maxLength={150}
               defaultValue={existingCall?.location ?? ""}
               placeholder="Studio A"
               className={inputCls}
@@ -355,6 +371,7 @@ export function CallForm({
               id="focus"
               name="focus"
               type="text"
+              maxLength={200}
               defaultValue={existingCall?.focus ?? ""}
               placeholder="Act II — choreography, music review"
               className={inputCls}
@@ -365,13 +382,13 @@ export function CallForm({
             <label htmlFor="scenes" className={labelCls}>
               Scenes / numbers
             </label>
-            <textarea
+            <CountedTextarea
               id="scenes"
               name="scenes"
               rows={3}
+              maxLength={500}
               defaultValue={existingCall?.scenes ?? ""}
               placeholder="e.g. pp. 42–72, I Am the Very Model, A Modern Major-General"
-              className={inputCls}
             />
             <p className={hintCls}>
               Specific scenes or numbers (fill in 1–2 days out)
@@ -391,15 +408,15 @@ export function CallForm({
             <label htmlFor="schedule" className={labelCls}>
               Schedule breakdown
             </label>
-            <textarea
+            <CountedTextarea
               id="schedule"
               name="schedule"
               rows={5}
+              maxLength={1500}
               defaultValue={existingCall?.schedule ?? ""}
               placeholder={
                 "6:00 – 6:30  work projections\n6:30 – 6:45  vocal warmups\n6:45 – 7:00  prep Act I"
               }
-              className={inputCls}
             />
             <p className={hintCls}>One item per line — any format works</p>
           </div>
@@ -411,13 +428,13 @@ export function CallForm({
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
           Additional Notes
         </h2>
-        <textarea
+        <CountedTextarea
           id="notes"
           name="notes"
           rows={3}
+          maxLength={1000}
           defaultValue={existingCall?.notes ?? ""}
           placeholder="Anything else the company should know..."
-          className={inputCls}
         />
       </section>
 
