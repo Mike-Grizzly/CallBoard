@@ -69,3 +69,18 @@ export async function getReportById(reportId: string) {
 export type ReportDetail = NonNullable<
   Awaited<ReturnType<typeof getReportById>>
 >;
+
+export async function getLatestReportNextCall(productionId: string) {
+  const results = await db
+    .select({
+      id: rehearsalReports.id,
+      nextRehearsalDate: rehearsalReports.nextRehearsalDate,
+      nextRehearsalTime: rehearsalReports.nextRehearsalTime,
+      nextRehearsalLocation: rehearsalReports.nextRehearsalLocation,
+    })
+    .from(rehearsalReports)
+    .where(eq(rehearsalReports.productionId, productionId))
+    .orderBy(desc(rehearsalReports.reportDate))
+    .limit(1);
+  return results[0] ?? null;
+}
