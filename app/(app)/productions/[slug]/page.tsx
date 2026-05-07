@@ -188,6 +188,7 @@ export default async function ProductionDetailPage({
         focus: nextCall.focus,
         scenes: nextCall.scenes,
         castCalled: nextCall.castCalled,
+        schedule: nextCall.schedule,
         notes: nextCall.notes,
         isToday: isToday(nextCall.callDate),
       }
@@ -379,6 +380,26 @@ export default async function ProductionDetailPage({
               </p>
             </div>
           </div>
+
+          {/* Schedule breakdown */}
+          {callDisplay.schedule && (
+            <div className="border-t border-white/10 pt-4 mb-5">
+              <p className="text-white/40 text-xs font-semibold uppercase tracking-widest mb-2">
+                Schedule
+              </p>
+              <div className="space-y-1.5">
+                {callDisplay.schedule
+                  .split("\n")
+                  .map((l) => l.trim())
+                  .filter(Boolean)
+                  .map((line, i) => (
+                    <p key={i} className="text-white/80 text-sm font-mono">
+                      {line}
+                    </p>
+                  ))}
+              </div>
+            </div>
+          )}
 
           {/* Details grid — shows whichever fields are filled */}
           {(callDisplay.focus ||

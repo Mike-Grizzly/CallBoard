@@ -50,6 +50,7 @@ export async function createCall(
     focus: trim(formData.get("focus")),
     scenes: trim(formData.get("scenes")),
     castCalled: trim(formData.get("cast_called")),
+    schedule: trim(formData.get("schedule")),
     notes: trim(formData.get("notes")),
   });
 
@@ -83,6 +84,7 @@ export async function updateCall(
       focus: trim(formData.get("focus")),
       scenes: trim(formData.get("scenes")),
       castCalled: trim(formData.get("cast_called")),
+      schedule: trim(formData.get("schedule")),
       notes: trim(formData.get("notes")),
       updatedAt: new Date(),
     })

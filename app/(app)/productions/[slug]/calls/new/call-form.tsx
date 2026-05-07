@@ -149,6 +149,22 @@ export function CallForm({
               Who&apos;s needed (fill in 1–2 days out)
             </p>
           </div>
+          <div>
+            <label htmlFor="schedule" className={labelCls}>
+              Schedule breakdown
+            </label>
+            <textarea
+              id="schedule"
+              name="schedule"
+              rows={5}
+              defaultValue={existingCall?.schedule ?? ""}
+              placeholder={"6:00 – 6:30  work projections\n6:30 – 6:45  vocal warmups\n6:45 – 7:00  prep Act I"}
+              className={inputCls}
+            />
+            <p className={hintCls}>
+              One item per line — any format works
+            </p>
+          </div>
         </div>
       </section>
 

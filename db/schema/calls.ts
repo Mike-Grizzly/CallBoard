@@ -16,6 +16,7 @@ export const calls = pgTable("calls", {
   focus: text("focus"),
   scenes: text("scenes"),
   castCalled: text("cast_called"),
+  schedule: text("schedule"),
   notes: text("notes"),
   status: text("status").notNull().default("scheduled"),
   createdAt: timestamp("created_at", { withTimezone: true })
