@@ -56,10 +56,20 @@ export function SetupWizard({
         ]
       : [],
   );
+  const [selectedPage, setSelectedPage] = useState<number>(
+    existingConfig?.groundPlanPage ?? 1,
+  );
+  const [numPages, setNumPages] = useState<number>(1);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [canvasDims, setCanvasDims] = useState({ width: 0, height: 0 });
+
+  async function loadPdfUrl(docId: string): Promise<string | null> {
+    const doc = pdfDocuments.find((d) => d.id === docId);
+    if (!doc) return null;
+    return getDocumentUrl(doc.storagePath);
+  }
 
   async function goToCalibration() {
     setError(null);
@@ -73,13 +83,19 @@ export function SetupWizard({
     }
 
     if (selectedDocId) {
-      const doc = pdfDocuments.find((d) => d.id === selectedDocId);
-      if (doc) {
-        const url = await getDocumentUrl(doc.storagePath);
-        setPdfUrl(url);
-      }
+      const url = await loadPdfUrl(selectedDocId);
+      setPdfUrl(url);
     }
 
+    setStep(2);
+  }
+
+  async function goToRecalibrate() {
+    setError(null);
+    if (selectedDocId) {
+      const url = await loadPdfUrl(selectedDocId);
+      setPdfUrl(url);
+    }
     setStep(2);
   }
 
@@ -99,7 +115,8 @@ export function SetupWizard({
         const pdf = await loadingTask.promise;
         if (cancelled) return;
 
-        const page = await pdf.getPage(1);
+        setNumPages(pdf.numPages);
+        const page = await pdf.getPage(selectedPage);
         const viewport = page.getViewport({ scale: 1.5 });
 
         const canvas = canvasRef.current!;
@@ -114,8 +131,10 @@ export function SetupWizard({
     }
 
     renderPdf();
-    return () => { cancelled = true; };
-  }, [step, pdfUrl]);
+    return () => {
+      cancelled = true;
+    };
+  }, [step, pdfUrl, selectedPage]);
 
   const handleCanvasClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -152,6 +171,7 @@ export function SetupWizard({
     formData.set("proscenium_width_ft", widthFt);
     formData.set("stage_depth_ft", depthFt);
     if (selectedDocId) formData.set("ground_plan_document_id", selectedDocId);
+    formData.set("ground_plan_page", selectedPage.toString());
     if (calibPoints.length === 2) {
       formData.set("calibration_x1", calibPoints[0].xPercent.toString());
       formData.set("calibration_y1", calibPoints[0].yPercent.toString());
@@ -244,6 +264,11 @@ export function SetupWizard({
             >
               Cancel
             </Button>
+            {existingConfig && selectedDocId && (
+              <Button variant="outline" onClick={goToRecalibrate}>
+                Recalibrate Only
+              </Button>
+            )}
             <Button onClick={goToCalibration}>
               {selectedDocId ? "Next: Calibrate" : "Save & Continue"}
             </Button>
@@ -279,41 +304,64 @@ export function SetupWizard({
           </CardContent>
         </Card>
       ) : (
-        <div
-          ref={containerRef}
-          className="relative cursor-crosshair overflow-hidden rounded-lg border border-[color:var(--border)]"
-          onClick={handleCanvasClick}
-        >
-          <canvas ref={canvasRef} className="block w-full" />
-          <svg
-            className="pointer-events-none absolute inset-0 h-full w-full"
-            viewBox={`0 0 100 100`}
-            preserveAspectRatio="none"
+        <>
+          {numPages > 1 && (
+            <div className="flex items-center gap-3 rounded-md border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-2 text-sm">
+              <span className="font-medium">Page:</span>
+              {Array.from({ length: numPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => {
+                    setSelectedPage(p);
+                    setCalibPoints([]);
+                  }}
+                  className={`rounded px-2 py-0.5 text-sm ${
+                    selectedPage === p
+                      ? "bg-[color:var(--primary)] text-[color:var(--primary-foreground)]"
+                      : "hover:bg-[color:var(--accent)]"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          )}
+          <div
+            ref={containerRef}
+            className="relative cursor-crosshair overflow-hidden rounded-lg border border-[color:var(--border)]"
+            onClick={handleCanvasClick}
           >
-            {calibPoints.map((pt, i) => (
-              <circle
-                key={i}
-                cx={pt.xPercent}
-                cy={pt.yPercent}
-                r="1.2"
-                fill={i === 0 ? "#ef4444" : "#3b82f6"}
-                stroke="white"
-                strokeWidth="0.4"
-              />
-            ))}
-            {hasTwoPoints && (
-              <line
-                x1={calibPoints[0].xPercent}
-                y1={calibPoints[0].yPercent}
-                x2={calibPoints[1].xPercent}
-                y2={calibPoints[1].yPercent}
-                stroke="#f59e0b"
-                strokeWidth="0.5"
-                strokeDasharray="2 1"
-              />
-            )}
-          </svg>
-        </div>
+            <canvas ref={canvasRef} className="block w-full" />
+            <svg
+              className="pointer-events-none absolute inset-0 h-full w-full"
+              viewBox={`0 0 100 100`}
+              preserveAspectRatio="none"
+            >
+              {calibPoints.map((pt, i) => (
+                <circle
+                  key={i}
+                  cx={pt.xPercent}
+                  cy={pt.yPercent}
+                  r="1.2"
+                  fill={i === 0 ? "#ef4444" : "#3b82f6"}
+                  stroke="white"
+                  strokeWidth="0.4"
+                />
+              ))}
+              {hasTwoPoints && (
+                <line
+                  x1={calibPoints[0].xPercent}
+                  y1={calibPoints[0].yPercent}
+                  x2={calibPoints[1].xPercent}
+                  y2={calibPoints[1].yPercent}
+                  stroke="#f59e0b"
+                  strokeWidth="0.5"
+                  strokeDasharray="2 1"
+                />
+              )}
+            </svg>
+          </div>
+        </>
       )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}

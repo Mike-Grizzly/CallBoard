@@ -67,6 +67,10 @@ export async function saveStageConfiguration(
   const pixelsPerFoot = parseFloat(
     formData.get("pixels_per_foot") as string,
   );
+  const groundPlanPage = parseInt(
+    (formData.get("ground_plan_page") as string) || "1",
+    10,
+  );
 
   if (!productionId) return { error: "Missing production ID." };
   if (isNaN(prosceniumWidthFt) || prosceniumWidthFt <= 0)
@@ -90,6 +94,7 @@ export async function saveStageConfiguration(
     calibrationX2: isNaN(calibrationX2) ? null : calibrationX2,
     calibrationY2: isNaN(calibrationY2) ? null : calibrationY2,
     pixelsPerFoot: isNaN(pixelsPerFoot) ? null : pixelsPerFoot,
+    groundPlanPage: isNaN(groundPlanPage) || groundPlanPage < 1 ? 1 : groundPlanPage,
     updatedAt: new Date(),
   };
 

@@ -4,19 +4,17 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
-## Blocking tool questions (Phase 2 candidates)
+## Blocking tool questions (Phase 3 candidates)
 
-- Should character names be assignable from the production members UI, or only from a dedicated blocking tool panel?
-- Should the blocking tool support multi-page ground plans (currently only page 1 of the PDF is rendered)?
-- Should blocking snapshots be printable / exportable to PDF?
-- Should set pieces have a rotation control (drag handle or angle input)?
-- Should beat positions be copyable between scenes (e.g., "start Act 2 Scene 1 from the final position of Act 1")?
+- **Set piece rotation UX:** Current ±15° buttons work but the desired UX is a corner drag handle that can rotate to any angle freely. Requires tracking pointer angle relative to the token center during drag (separate from the @dnd-kit drag-move path).
+- **Full beat breakdown export:** Directors want to print the entire blocking script — all scenes, all beats, each with a canvas snapshot. Approach: loop through every beat, render positions onto an offscreen canvas, assemble into a multi-page PDF (e.g. via `jspdf`) or a print-friendly HTML page. Should include scene/beat label and actor legend per page.
 - The number line ruler uses `preserveAspectRatio="none"` on the SVG, which distorts tick mark heights on non-square viewports — is this acceptable or should it be addressed?
-- Should the calibration step be re-enterable without resetting the whole stage config?
 
 ## Product questions
 
-- What is the next feature step after Step 8? (Announcements and Activity are scaffolded but no product decision has been made.)
+- Steps 8–11 are complete. What is the next feature step?
+- Should rehearsal report departments be configurable per production, or remain fixed?
+- Should attendance tracking be added to rehearsal reports?
 - Should productions have additional statuses beyond draft/active/archived?
 - Should there be a notification system when reports are filed or documents uploaded?
 - Should the "requested role" from signup trigger any workflow (e.g., admin approval queue)?
@@ -53,14 +51,6 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 - Should there be a search/filter capability on the documents list?
 - Should the production overview cards show more metadata (dates, member count)?
 
-## Testing / hardening questions
-
-- There are zero test files in the repo. When should testing be introduced?
-- What level of testing is appropriate for MVP? (Unit tests, integration tests, E2E?)
-- Password reset flow was never fully tested due to Supabase email rate limits. Needs verification.
-- Should server actions validate that referenced IDs (productionId, reportId, documentId) actually exist and belong to the correct org before proceeding?
-- `dangerouslySetInnerHTML` in `RichTextDisplay` renders unsanitized HTML. Should a sanitization library (e.g., DOMPurify) be added?
-
 ## Notes questions
 
 - **Visibility enforcement:** Private notes are visible to all team members in the current implementation. Should the `getNotesByProduction` query filter by `visibility = 'shared' OR created_by = currentUserId`?
@@ -69,6 +59,14 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 - **Note editing rights:** Currently only the author or a manage_tags user can edit a note. Should this be loosened for "shared" notes?
 - **Tag deletion cascade:** Deleting a tag sets `tag_id = null` on all notes (ON DELETE SET NULL). Should users be warned how many notes will lose their tag?
 - **Bullet points in TipTap:** Same issue as reports — Tailwind prose resets list styles. Should a fix be applied globally?
+
+## Testing / hardening questions
+
+- There are zero test files in the repo. When should testing be introduced?
+- What level of testing is appropriate for MVP? (Unit tests, integration tests, E2E?)
+- Password reset flow was never fully tested due to Supabase email rate limits. Needs verification.
+- Should server actions validate that referenced IDs (productionId, reportId, documentId) actually exist and belong to the correct org before proceeding?
+- `dangerouslySetInnerHTML` in `RichTextDisplay` renders unsanitized HTML. Should a sanitization library (e.g., DOMPurify) be added?
 
 ## Scope control questions
 
