@@ -4,7 +4,7 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
-import { getProductionMembership } from "@/features/members/queries";
+import { getProductionMembership, getProductionMembers } from "@/features/members/queries";
 import { CallForm } from "./call-form";
 
 export default async function NewCallPage({
@@ -28,6 +28,9 @@ export default async function NewCallPage({
     const membership = await getProductionMembership(user.id, production.id);
     if (!membership) redirect("/productions");
   }
+
+  const allMembers = await getProductionMembers(production.id);
+  const castMembers = allMembers.filter((m) => m.role === "cast");
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -56,7 +59,7 @@ export default async function NewCallPage({
         </p>
       </div>
 
-      <CallForm productionId={production.id} slug={slug} />
+      <CallForm productionId={production.id} slug={slug} castMembers={castMembers} />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
-import { getProductionMembership } from "@/features/members/queries";
+import { getProductionMembership, getProductionMembers } from "@/features/members/queries";
 import { getCallById } from "@/features/calls/queries";
 import { deleteCall } from "@/features/calls/actions";
 import { CallForm } from "../../new/call-form";
@@ -31,8 +31,12 @@ export default async function EditCallPage({
     if (!membership) redirect("/productions");
   }
 
-  const call = await getCallById(callId);
+  const [call, allMembers] = await Promise.all([
+    getCallById(callId),
+    getProductionMembers(production.id),
+  ]);
   if (!call || call.productionId !== production.id) notFound();
+  const castMembers = allMembers.filter((m) => m.role === "cast");
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -81,6 +85,7 @@ export default async function EditCallPage({
         productionId={production.id}
         slug={slug}
         existingCall={call}
+        castMembers={castMembers}
       />
     </div>
   );
