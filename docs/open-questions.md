@@ -4,9 +4,19 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
+## Blocking tool questions (Phase 2 candidates)
+
+- Should character names be assignable from the production members UI, or only from a dedicated blocking tool panel?
+- Should the blocking tool support multi-page ground plans (currently only page 1 of the PDF is rendered)?
+- Should blocking snapshots be printable / exportable to PDF?
+- Should set pieces have a rotation control (drag handle or angle input)?
+- Should beat positions be copyable between scenes (e.g., "start Act 2 Scene 1 from the final position of Act 1")?
+- The number line ruler uses `preserveAspectRatio="none"` on the SVG, which distorts tick mark heights on non-square viewports — is this acceptable or should it be addressed?
+- Should the calibration step be re-enterable without resetting the whole stage config?
+
 ## Product questions
 
-- What is the next feature step after Step 7? (Announcements and Activity are scaffolded but no product decision has been made.)
+- What is the next feature step after Step 8? (Announcements and Activity are scaffolded but no product decision has been made.)
 - Should productions have additional statuses beyond draft/active/archived?
 - Should there be a notification system when reports are filed or documents uploaded?
 - Should the "requested role" from signup trigger any workflow (e.g., admin approval queue)?

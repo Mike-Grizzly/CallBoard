@@ -1,8 +1,8 @@
 # Current Status
 
-**Last updated:** 2026-05-05
+**Last updated:** 2026-05-07
 
-**Current milestone:** Steps 1-7 have been built.
+**Current milestone:** Steps 1-8 complete. Blocking Tool Phase 1 shipped.
 
 ## Feature status
 
@@ -76,6 +76,23 @@
 - Storage RLS policies: authenticated users can insert/select/delete
 - Signed URLs generated server-side with 1-hour expiry
 - File size validation: 25MB for documents, 10MB for report attachments
+
+### Step 8: Blocking Tool (Phase 1) — IMPLEMENTED
+
+- **New role:** `choreographer` (7th role, has `blocking:edit` + standard director-level caps)
+- **New capabilities:** `blocking:view` (all roles), `blocking:edit` (admin, producer, director, choreographer, stage_manager)
+- **New DB tables:** `production_scenes`, `scene_beats`, `stage_configurations`, `blocking_positions`
+- **Schema change:** `production_memberships` now has `character_name` (nullable)
+- **New feature modules:** `features/scenes/` (queries, actions, validation), `features/blocking/` (queries, actions, constants)
+- **Set piece library:** 15 SVG shapes (chair, armchair, couch, loveseat, beds, tables, desk, stairs, door, window, grand piano, podium, platform)
+- **Routes:** `/productions/[slug]/blocking` (canvas), `/productions/[slug]/blocking/setup` (wizard)
+- **Blocking canvas:** PDF background (rendered via pdfjs-dist v5), number line ruler overlay with toggleable SL/SR and US/DS grids, drag-and-drop actor tokens + set pieces (@dnd-kit/core), autosave per beat, in-session undo (50 states)
+- **Actor tokens:** Circle with initials, actor name + character name (italic), auto color-coded
+- **Scene/Beat manager:** Left panel — Act/Scene/Beat hierarchy, add/delete; "Capture Beat" button records current layout as a beat and advances to the next automatically
+- **Stage setup wizard:** 2-step flow — select ground plan PDF + enter proscenium width/depth, then 2-point click calibration on PDF for scale; original PDF in Document Center is untouched
+- **Number line ruler:** Proscenium baseline with tick marks every 2', labels every 5'; SL/SR and US/DS grid lines are toggleable (both off by default)
+- **Permissions:** SM/Director/Choreographer/Admin/Producer can drag and edit; Cast/Crew view only
+- **Known limitations (Phase 2):** Set piece rotation UI, character name assignment UI in member management, multi-page ground plan support, print/export
 
 ## Scaffolded only (not implemented)
 

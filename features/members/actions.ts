@@ -132,6 +132,8 @@ export async function assignProductionMember(
     return { error: "Select at least one member." };
   }
 
+  const characterName = (formData.get("character_name") as string | null)?.trim() || null;
+
   for (const userId of userIds) {
     const existing = await db
       .select()
@@ -147,13 +149,14 @@ export async function assignProductionMember(
     if (existing.length > 0) {
       await db
         .update(productionMemberships)
-        .set({ role })
+        .set({ role, ...(characterName !== null ? { characterName } : {}) })
         .where(eq(productionMemberships.id, existing[0].id));
     } else {
       await db.insert(productionMemberships).values({
         userId,
         productionId,
         role,
+        characterName,
       });
     }
   }
