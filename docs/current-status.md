@@ -94,7 +94,7 @@
 - **Permissions:** SM/Director/Choreographer/Admin/Producer can drag and edit; Cast/Crew view only
 - **Known limitations (Phase 2):** Set piece rotation UI, character name assignment UI in member management, multi-page ground plan support, print/export
 
-### Step 9: Notes — IMPLEMENTED (not fully verified)
+### Step 9: Notes — IMPLEMENTED
 
 - Two-panel Notion-like interface per production (`/productions/[slug]/notes`)
 - Notes list with filter tabs (All, To-do, Pinned, Notes, Done)
@@ -105,8 +105,7 @@
 - Admin/producer/director/stage_manager can add/remove tags via tag manager modal
 - TipTap rich text editor with auto-save (600ms debounce)
 - Notes added as card on production overview and tab in production nav
-- **Not verified:** All permission edge cases, auto-save under slow network, optimistic create race conditions
-- **Known limitation:** Visibility toggle is display-only — no query-level enforcement; all team members see all notes
+- **Known limitation:** Visibility toggle is display-only — no query-level enforcement; all team members see all notes (deferred)
 
 ## Scaffolded only (not implemented)
 

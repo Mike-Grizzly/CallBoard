@@ -1,6 +1,6 @@
 # Feature Spec: Notes
 
-## Status: IMPLEMENTED (not fully verified)
+## Status: IMPLEMENTED
 
 ## Overview
 
