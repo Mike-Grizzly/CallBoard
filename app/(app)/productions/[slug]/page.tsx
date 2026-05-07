@@ -19,12 +19,10 @@ import {
   getProductionMembers,
   getProductionMembership,
 } from "@/features/members/queries";
-import {
-  getReportsByProduction,
-  getLatestReportNextCall,
-} from "@/features/reports/queries";
+import { getReportsByProduction } from "@/features/reports/queries";
 import { getDocumentsByProduction } from "@/features/documents/queries";
 import { getAnnouncementsByProduction } from "@/features/announcements/queries";
+import { getNextCall } from "@/features/calls/queries";
 import { ProductionTabs } from "./production-tabs";
 
 const STATUS_DISPLAY: Record<string, { label: string; dot: string }> = {
@@ -140,13 +138,13 @@ export default async function ProductionDetailPage({
   const canViewBlocking = can(user.role, "blocking:view");
   const canViewNotes = can(user.role, "notes:view");
 
-  const [members, reports, documents, announcements, nextCallReport] =
+  const [members, reports, documents, announcements, nextCall] =
     await Promise.all([
       getProductionMembers(production.id),
       getReportsByProduction(production.id),
       getDocumentsByProduction(production.id),
       getAnnouncementsByProduction(production.id, org.id),
-      getLatestReportNextCall(production.id),
+      getNextCall(production.id),
     ]);
 
   const tabs = [
@@ -181,16 +179,19 @@ export default async function ProductionDetailPage({
 
   const daysToOpen = daysUntil(production.openingDate);
 
-  const nextCall =
-    nextCallReport?.nextRehearsalDate
-      ? {
-          ...formatCallDate(nextCallReport.nextRehearsalDate),
-          dateStr: nextCallReport.nextRehearsalDate,
-          time: nextCallReport.nextRehearsalTime,
-          location: nextCallReport.nextRehearsalLocation,
-          isToday: isToday(nextCallReport.nextRehearsalDate),
-        }
-      : null;
+  const callDisplay = nextCall
+    ? {
+        ...formatCallDate(nextCall.callDate),
+        id: nextCall.id,
+        time: nextCall.callTime,
+        location: nextCall.location,
+        focus: nextCall.focus,
+        scenes: nextCall.scenes,
+        castCalled: nextCall.castCalled,
+        notes: nextCall.notes,
+        isToday: isToday(nextCall.callDate),
+      }
+    : null;
 
   // Build recent activity feed from reports, documents, announcements
   const activity = [
@@ -292,6 +293,13 @@ export default async function ProductionDetailPage({
               </Link>
             )}
             {canCreateReports && (
+              <Link href={`/productions/${slug}/calls/new`}>
+                <Button variant="outline" size="sm">
+                  Schedule call
+                </Button>
+              </Link>
+            )}
+            {canCreateReports && (
               <Link href={`/productions/${slug}/reports/new`}>
                 <Button
                   size="sm"
@@ -308,38 +316,44 @@ export default async function ProductionDetailPage({
       {/* ── Tabs ── */}
       <ProductionTabs slug={slug} tabs={tabs} />
 
-      {/* ── Today's / Upcoming Call ── */}
-      {nextCall && (
+      {/* ── Call Card ── */}
+      {callDisplay ? (
         <div
           className="mb-8 rounded-2xl p-7 text-white overflow-hidden"
-          style={{
-            background:
-              "linear-gradient(135deg, #1e1008 0%, #0c0603 100%)",
-          }}
+          style={{ background: "linear-gradient(135deg, #1e1008 0%, #0c0603 100%)" }}
         >
           {/* Top row */}
-          <div className="flex flex-wrap items-center gap-3 mb-6">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
-                nextCall.isToday
-                  ? "bg-[#c4572a] text-white"
-                  : "bg-white/10 text-white/70"
-              }`}
-            >
-              {nextCall.isToday && (
-                <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <div className="flex flex-wrap items-center gap-3">
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
+                  callDisplay.isToday
+                    ? "bg-[#c4572a] text-white"
+                    : "bg-white/10 text-white/70"
+                }`}
+              >
+                {callDisplay.isToday && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                )}
+                {callDisplay.isToday ? "Live · Today's Call" : "Upcoming Call"}
+              </span>
+              {daysToOpen !== null && daysToOpen > 0 && (
+                <span className="text-white/40 text-sm">
+                  · {daysToOpen} day{daysToOpen !== 1 ? "s" : ""} to opening
+                </span>
               )}
-              {nextCall.isToday ? "Live · Today's Call" : "Upcoming Call"}
-            </span>
-            {daysToOpen !== null && daysToOpen > 0 && (
-              <span className="text-white/40 text-sm">
-                · {daysToOpen} day{daysToOpen !== 1 ? "s" : ""} to opening
-              </span>
-            )}
-            {daysToOpen === 0 && (
-              <span className="text-[#c4572a] text-sm font-medium">
-                · Opening night!
-              </span>
+              {daysToOpen === 0 && (
+                <span className="text-[#c4572a] text-sm font-medium">
+                  · Opening night!
+                </span>
+              )}
+            </div>
+            {canCreateReports && (
+              <Link href={`/productions/${slug}/calls/${callDisplay.id}/edit`}>
+                <span className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-pointer">
+                  Edit call
+                </span>
+              </Link>
             )}
           </div>
 
@@ -347,35 +361,68 @@ export default async function ProductionDetailPage({
           <div className="flex items-end justify-between gap-4 mb-6">
             <div>
               <p className="text-white/40 text-xs font-semibold uppercase tracking-widest mb-1">
-                {nextCall.dayOfWeek}
+                {callDisplay.dayOfWeek}
               </p>
               <p className="text-5xl font-bold leading-none">
-                {nextCall.month}{" "}
-                <span style={{ color: "#c4572a" }}>{nextCall.day}</span>
+                {callDisplay.month}{" "}
+                <span style={{ color: "#c4572a" }}>{callDisplay.day}</span>
               </p>
             </div>
-            {nextCall.time && (
-              <div className="text-right">
-                <p className="text-white/40 text-xs font-semibold uppercase tracking-widest mb-1">
-                  Call
-                </p>
-                <p className="text-4xl font-light tabular-nums">
-                  {nextCall.time}
-                </p>
-              </div>
-            )}
+            <div className="text-right">
+              <p className="text-white/40 text-xs font-semibold uppercase tracking-widest mb-1">
+                Call
+              </p>
+              <p className="text-4xl font-light">
+                {callDisplay.time ?? (
+                  <span className="text-white/30 text-2xl">TBD</span>
+                )}
+              </p>
+            </div>
           </div>
 
-          {/* Location stat */}
-          {nextCall.location && (
-            <div className="border-t border-white/10 pt-4 mb-6">
-              <div className="flex items-center gap-1.5 text-white/40 text-xs uppercase tracking-widest mb-1">
-                <MapPin className="h-3 w-3" />
-                Location
-              </div>
-              <p className="text-white text-sm font-medium">
-                {nextCall.location}
-              </p>
+          {/* Details grid — shows whichever fields are filled */}
+          {(callDisplay.focus ||
+            callDisplay.scenes ||
+            callDisplay.castCalled ||
+            callDisplay.location) && (
+            <div className="border-t border-white/10 pt-5 mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {callDisplay.focus && (
+                <div>
+                  <p className="text-white/40 text-xs font-semibold uppercase tracking-widest mb-1">
+                    Working
+                  </p>
+                  <p className="text-white text-sm">{callDisplay.focus}</p>
+                </div>
+              )}
+              {callDisplay.scenes && (
+                <div>
+                  <p className="text-white/40 text-xs font-semibold uppercase tracking-widest mb-1">
+                    Scenes / Numbers
+                  </p>
+                  <p className="text-white text-sm whitespace-pre-line">
+                    {callDisplay.scenes}
+                  </p>
+                </div>
+              )}
+              {callDisplay.castCalled && (
+                <div>
+                  <p className="text-white/40 text-xs font-semibold uppercase tracking-widest mb-1">
+                    Cast Called
+                  </p>
+                  <p className="text-white text-sm whitespace-pre-line">
+                    {callDisplay.castCalled}
+                  </p>
+                </div>
+              )}
+              {callDisplay.location && (
+                <div>
+                  <div className="flex items-center gap-1.5 text-white/40 text-xs font-semibold uppercase tracking-widest mb-1">
+                    <MapPin className="h-3 w-3" />
+                    Location
+                  </div>
+                  <p className="text-white text-sm">{callDisplay.location}</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -414,6 +461,22 @@ export default async function ProductionDetailPage({
             )}
           </div>
         </div>
+      ) : (
+        canCreateReports && (
+          <div className="mb-8 rounded-2xl border border-dashed border-[color:var(--border)] p-8 text-center">
+            <p className="text-sm font-medium text-[color:var(--foreground)]">
+              No upcoming calls scheduled
+            </p>
+            <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
+              Schedule calls in advance — add details as they're confirmed.
+            </p>
+            <Link href={`/productions/${slug}/calls/new`}>
+              <Button size="sm" className="mt-4">
+                Schedule a call
+              </Button>
+            </Link>
+          </div>
+        )
       )}
 
       {/* ── Two-column body ── */}
