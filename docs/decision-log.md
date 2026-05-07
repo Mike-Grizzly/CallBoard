@@ -116,6 +116,46 @@ Record of durable project decisions. Add new entries at the bottom with date and
 
 ---
 
+## 2026-05-07 — Blocking tool positions stored as canvas percentages
+
+**Decision:** `blocking_positions` stores `x_percent` and `y_percent` (0–100) relative to the canvas container, not absolute pixels or real-world coordinates.
+
+**Reason:** Canvas size varies by screen and window. Percentage-based positions are resolution-independent and survive viewport changes without remapping.
+
+**Impact:** Grid overlay and token rendering must always work in the same percentage coordinate space. Real-world coordinates (feet from center) are derived at render time from calibration data + canvas dimensions.
+
+---
+
+## 2026-05-07 — Choreographer added as 7th role
+
+**Decision:** `choreographer` was added as a distinct role alongside the original six.
+
+**Reason:** Choreographers need `blocking:edit` access (same as directors and stage managers) but are a distinct credit and authority in the production hierarchy. Mapping them to `director` would have been inaccurate.
+
+**Impact:** `types/roles.ts`, `lib/permissions.ts`, and all role-display labels updated. Existing users unaffected — new role only appears when assigned.
+
+---
+
+## 2026-05-07 — PDF rendered to canvas via pdfjs-dist; original file untouched
+
+**Decision:** The blocking tool renders the ground plan PDF to an HTML `<canvas>` element client-side using pdfjs-dist v5. The original document in the Document Center is never modified.
+
+**Reason:** Drag-and-drop tokens require a stable pixel surface. A PDF embed (`<iframe>`) would create z-index and event conflicts. Rendering to canvas gives full control of layering.
+
+**Impact:** pdfjs-dist v5 uses `{ canvas, viewport }` render API (not the older `canvasContext` form). Multi-page support added in Phase 2.
+
+---
+
+## 2026-05-07 — Capture Beat copies positions forward automatically
+
+**Decision:** The "Capture Beat" button creates the next beat and copies all blocking positions from the current beat into it, so each beat starts where the last left off.
+
+**Reason:** In practice, actors don't teleport between beats — they move incrementally. Pre-populating the next beat eliminates repetitive re-placement and matches how directors actually work.
+
+**Impact:** `captureNextBeat` server action inserts a new `scene_beats` row and bulk-copies `blocking_positions`. The client skips the normal DB re-fetch after capture (positions are already in local state).
+
+---
+
 ## 2026-05-05 — Next.js 16 serverActions config under experimental
 
 **Decision:** The `serverActions.bodySizeLimit` config must be placed under `experimental` in `next.config.ts`.

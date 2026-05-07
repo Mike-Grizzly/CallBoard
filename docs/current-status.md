@@ -1,8 +1,8 @@
 # Current Status
 
-**Last updated:** 2026-05-06
+**Last updated:** 2026-05-07
 
-**Current milestone:** Steps 1-8 built. Rehearsal report overhaul (Step 9) implemented and tested.
+**Current milestone:** Steps 1-10 complete. Blocking Tool (Phase 1 + Phase 2) shipped.
 
 ## Feature status
 
@@ -93,6 +93,29 @@
 - 12 fixed department note fields
 - **Email Report** button — sends HTML email via Resend with recipient picker (entire production or individual members)
 - Schema applied via Supabase MCP `apply_migration`; `resend` package added
+
+### Step 10: Blocking Tool (Phase 1 + Phase 2) — IMPLEMENTED
+
+- **New role:** `choreographer` (7th role, has `blocking:edit` + standard director-level caps)
+- **New capabilities:** `blocking:view` (all roles), `blocking:edit` (admin, producer, director, choreographer, stage_manager)
+- **New DB tables:** `production_scenes`, `scene_beats`, `stage_configurations`, `blocking_positions`
+- **Schema changes:** `production_memberships.character_name` (nullable); `stage_configurations.ground_plan_page` (int, default 1)
+- **New feature modules:** `features/scenes/` (queries, actions, validation), `features/blocking/` (queries, actions, constants)
+- **Set piece library:** 15 SVG shapes (chair, armchair, couch, loveseat, beds, tables, desk, stairs, door, window, grand piano, podium, platform)
+- **Routes:** `/productions/[slug]/blocking` (canvas), `/productions/[slug]/blocking/setup` (wizard)
+- **Blocking canvas:** PDF background (rendered via pdfjs-dist v5), number line ruler overlay with toggleable SL/SR and US/DS grids, drag-and-drop actor tokens + set pieces (@dnd-kit/core), autosave per beat, in-session undo (50 states)
+- **Actor tokens:** Initials from firstName[0]+lastName[0]; only character name shown under circle; auto color-coded
+- **Set piece rotation:** ±15° buttons appear on hover; rotation stored and restored per beat
+- **Cross-scene beat copy:** First beat of a new scene automatically inherits positions from the last beat of the previous scene
+- **Multi-page ground plans:** Page selector in setup wizard; prev/next page controls on canvas; `ground_plan_page` stored in stage config
+- **Export PNG:** "Export" button composites PDF canvas + tokens into a downloadable PNG via browser Canvas API
+- **Recalibrate shortcut:** "Recalibrate Only" button skips directly to calibration when an existing config exists
+- **Character name assignment:** Inline editable character name on cast member rows in the production members page
+- **Scene/Beat manager:** Left panel — Act/Scene/Beat hierarchy, add/delete; "Capture Beat" auto-labels and advances
+- **Stage setup wizard:** 2-step — select ground plan PDF + enter proscenium width/depth, then 2-point click calibration
+- **Number line ruler:** Proscenium baseline with ticks every 2', labels every 5'; toggleable SL/SR and US/DS grid lines
+- **Permissions:** SM/Director/Choreographer/Admin/Producer can edit; Cast/Crew view only
+- **Known future work (Phase 3):** Set piece rotation via drag handle (free angle); full beat-breakdown export (multi-page PDF or print view)
 
 ## Scaffolded only (not implemented)
 

@@ -4,12 +4,17 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
+## Blocking tool questions (Phase 3 candidates)
+
+- **Set piece rotation UX:** Current ±15° buttons work but the desired UX is a corner drag handle that can rotate to any angle freely. Requires tracking pointer angle relative to the token center during drag (separate from the @dnd-kit drag-move path).
+- **Full beat breakdown export:** Directors want to print the entire blocking script — all scenes, all beats, each with a canvas snapshot. Approach: loop through every beat, render positions onto an offscreen canvas, assemble into a multi-page PDF (e.g. via `jspdf`) or a print-friendly HTML page. Should include scene/beat label and actor legend per page.
+- The number line ruler uses `preserveAspectRatio="none"` on the SVG, which distorts tick mark heights on non-square viewports — is this acceptable or should it be addressed?
+
 ## Product questions
 
-- Step 8 (Announcements) is complete. Step 9 (Rehearsal Report Overhaul) is planned and specced in `/docs/feature-specs/09-rehearsal-report-overhaul.md`.
-- Should rehearsal report departments be configurable per production, or fixed? Fixed for MVP — revisit later.
-- Should the email export be plain text or HTML? Plain text recommended for cross-client compatibility — confirm with user before implementing.
-- Should attendance tracking be included in Step 9 or deferred to a later pass?
+- Steps 8–10 are complete. What is the next feature step?
+- Should rehearsal report departments be configurable per production, or remain fixed?
+- Should attendance tracking be added to rehearsal reports?
 - Should productions have additional statuses beyond draft/active/archived?
 - Should there be a notification system when reports are filed or documents uploaded?
 - Should the "requested role" from signup trigger any workflow (e.g., admin approval queue)?
