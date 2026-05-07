@@ -98,6 +98,7 @@
 - **Stage setup wizard:** 2-step flow — select ground plan PDF + enter proscenium width/depth, then 2-point click calibration on PDF for scale; original PDF in Document Center is untouched
 - **Number line ruler:** Proscenium baseline with tick marks every 2', labels every 5'; SL/SR and US/DS grid lines are toggleable (both off by default)
 - **Permissions:** SM/Director/Choreographer/Admin/Producer can drag and edit; Cast/Crew view only
+- **Known future work (Phase 3):** Set piece rotation via drag handle (free angle); full beat-breakdown export (all scenes/beats as multi-page PDF or print view)
 
 ## Scaffolded only (not implemented)
 

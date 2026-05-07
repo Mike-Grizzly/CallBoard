@@ -4,15 +4,11 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
-## Blocking tool questions (Phase 2 candidates)
+## Blocking tool questions (Phase 3 candidates)
 
-- Should character names be assignable from the production members UI, or only from a dedicated blocking tool panel?
-- Should the blocking tool support multi-page ground plans (currently only page 1 of the PDF is rendered)?
-- Should blocking snapshots be printable / exportable to PDF?
-- Should set pieces have a rotation control (drag handle or angle input)?
-- Should beat positions be copyable between scenes (e.g., "start Act 2 Scene 1 from the final position of Act 1")?
+- **Set piece rotation UX:** Current ±15° buttons work but the desired UX is a corner drag handle that can rotate to any angle freely. Requires tracking pointer angle relative to the token center during drag (separate from the @dnd-kit drag-move path).
+- **Full beat breakdown export:** Directors want to print the entire blocking script — all scenes, all beats, each with a canvas snapshot. Approach: loop through every beat, render positions onto an offscreen canvas, assemble into a multi-page PDF (e.g. via `jspdf`) or a print-friendly HTML page. Should include scene/beat label and actor legend per page.
 - The number line ruler uses `preserveAspectRatio="none"` on the SVG, which distorts tick mark heights on non-square viewports — is this acceptable or should it be addressed?
-- Should the calibration step be re-enterable without resetting the whole stage config?
 
 ## Product questions
 
