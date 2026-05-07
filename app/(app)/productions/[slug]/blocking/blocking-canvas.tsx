@@ -271,9 +271,9 @@ function NumberGridOverlay({
     }
   }
 
-  const minorTickH = 1.8;  // percent height for minor ticks (2', 4', 6', 8')
-  const majorTickH = 3.0;  // percent height for major ticks (0', 10', 20', ...)
-  const labelY = centerY + 4.5;
+  const minorTickH = 1.5;
+  const majorTickH = 2.8;
+  const labelY = centerY + 4.2;
   const gridColor = "rgba(30,64,175,0.45)";
   const gridShadow = "rgba(255,255,255,0.55)";
 
@@ -285,7 +285,7 @@ function NumberGridOverlay({
       preserveAspectRatio="none"
     >
       {/* ── SL/SR full grid lines (toggle) ─────────────────── */}
-      {showSLSR && ticks.map(({ x, ft }) => (
+      {showSLSR && ticks.map(({ x }) => (
         <g key={`slsr-${x}`}>
           <line x1={x} y1={0} x2={x} y2={100} stroke={gridShadow} strokeWidth="0.4" strokeDasharray="3 3" />
           <line x1={x} y1={0} x2={x} y2={100} stroke={gridColor} strokeWidth="0.25" strokeDasharray="3 3" />
@@ -297,41 +297,42 @@ function NumberGridOverlay({
         <g key={`usds-${y}`}>
           <line x1={calibrationX1!} y1={y} x2={calibrationX2!} y2={y} stroke={gridShadow} strokeWidth="0.4" strokeDasharray="3 3" />
           <line x1={calibrationX1!} y1={y} x2={calibrationX2!} y2={y} stroke={gridColor} strokeWidth="0.25" strokeDasharray="3 3" />
-          {/* Side label */}
-          <rect x={calibrationX1! - 6} y={y - 1.5} width={5.5} height={2.8} fill="rgba(0,0,0,0.5)" rx="0.4" />
-          <text x={calibrationX1! - 3.2} y={y + 0.7} textAnchor="middle" fontSize="1.9" fill="white" style={{ pointerEvents: "none" }}>
+          <text
+            x={calibrationX1! - 2.5} y={y + 0.8}
+            textAnchor="end" fontSize="1.8" fill="rgba(30,64,175,0.9)"
+            stroke="white" strokeWidth="2.5" paintOrder="stroke"
+            style={{ pointerEvents: "none" }}>
             {ft}'
           </text>
         </g>
       ))}
 
       {/* ── Ruler baseline (always on) ──────────────────────── */}
-      {/* Shadow */}
       <line x1={calibrationX1!} y1={centerY} x2={calibrationX2!} y2={centerY}
         stroke="rgba(255,255,255,0.7)" strokeWidth="0.6" />
-      {/* Line */}
       <line x1={calibrationX1!} y1={centerY} x2={calibrationX2!} y2={centerY}
         stroke="rgba(30,64,175,0.8)" strokeWidth="0.35" />
 
-      {/* ── Tick marks + labels (always on) ─────────────────── */}
+      {/* ── Tick marks + labels every 5' (always on) ────────── */}
       {ticks.map(({ x, ft, isMajor }) => {
         const tickH = isMajor ? majorTickH : minorTickH;
+        const showLabel = ft % 5 === 0;
         const label = ft === 0 ? "0" : `${Math.abs(ft)}'`;
         return (
           <g key={`tick-${x}`}>
-            {/* Tick shadow */}
             <line x1={x} y1={centerY} x2={x} y2={centerY - tickH}
               stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
-            {/* Tick */}
             <line x1={x} y1={centerY} x2={x} y2={centerY - tickH}
               stroke="rgba(30,64,175,0.85)" strokeWidth="0.3" />
-            {/* Label background + text */}
-            <rect x={x - 2.4} y={labelY - 2.4} width={4.8} height={2.8} fill="rgba(0,0,0,0.5)" rx="0.4" />
-            <text x={x} y={labelY} textAnchor="middle" fontSize="1.9"
-              fill="white" fontWeight={isMajor ? "bold" : "normal"}
-              style={{ pointerEvents: "none" }}>
-              {label}
-            </text>
+            {showLabel && (
+              <text x={x} y={labelY} textAnchor="middle" fontSize="1.8"
+                fill="rgba(30,64,175,0.9)"
+                stroke="white" strokeWidth="2.5" paintOrder="stroke"
+                fontWeight={isMajor ? "bold" : "normal"}
+                style={{ pointerEvents: "none" }}>
+                {label}
+              </text>
+            )}
           </g>
         );
       })}
