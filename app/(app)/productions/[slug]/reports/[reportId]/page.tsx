@@ -6,13 +6,18 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
-import { getProductionMembership } from "@/features/members/queries";
+import {
+  getProductionMembership,
+  getProductionMembers,
+} from "@/features/members/queries";
 import { getReportById } from "@/features/reports/queries";
+import { DEPARTMENTS } from "@/features/reports/constants";
 import {
   getReportAttachments,
   getAttachmentUrl,
 } from "@/features/reports/attachments";
 import { AttachmentUpload } from "./attachment-upload";
+import { EmailReportButton } from "./email-report-button";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -57,7 +62,10 @@ export default async function ReportDetailPage({
     notFound();
   }
 
-  const attachments = await getReportAttachments(reportId);
+  const [attachments, productionMembers] = await Promise.all([
+    getReportAttachments(reportId),
+    getProductionMembers(production.id),
+  ]);
   const canUpload = can(user.role, "reports:create");
 
   const attachmentUrls = await Promise.all(
@@ -72,6 +80,21 @@ export default async function ReportDetailPage({
       ? `${report.createdByFirstName} ${report.createdByLastName}`.trim()
       : report.createdByEmail;
 
+  const headerTimeBits: string[] = [];
+  if (report.scheduledCall) headerTimeBits.push(`Call ${report.scheduledCall}`);
+  if (report.actualStart) headerTimeBits.push(`Start ${report.actualStart}`);
+  if (report.endTime) headerTimeBits.push(`End ${report.endTime}`);
+
+  const hasNext =
+    report.nextRehearsalDate ||
+    report.nextRehearsalTime ||
+    report.nextRehearsalLocation ||
+    report.nextRehearsalNotes;
+
+  const reportTitle = report.reportNumber
+    ? `Report #${report.reportNumber} — ${formatDate(report.reportDate)}`
+    : `Rehearsal Report — ${formatDate(report.reportDate)}`;
+
   return (
     <div className="mx-auto max-w-4xl">
       <div className="mb-6">
@@ -81,12 +104,22 @@ export default async function ReportDetailPage({
         >
           &larr; Back to reports
         </Link>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight">
-          Rehearsal Report — {formatDate(report.reportDate)}
-        </h1>
-        <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
-          {production.title} · Filed by {authorName}
-        </p>
+        <div className="mt-3 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {reportTitle}
+            </h1>
+            <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
+              {production.title} · Filed by {authorName}
+            </p>
+            {headerTimeBits.length > 0 && (
+              <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
+                {headerTimeBits.join(" · ")}
+              </p>
+            )}
+          </div>
+          <EmailReportButton reportId={reportId} slug={slug} members={productionMembers} />
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -95,12 +128,82 @@ export default async function ReportDetailPage({
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
               General Notes
             </h2>
-            <div
-              className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: report.generalNotes }}
-            />
+            {report.generalNotes ? (
+              <div
+                className="prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: report.generalNotes }}
+              />
+            ) : (
+              <p className="text-sm text-[color:var(--muted-foreground)]">
+                None
+              </p>
+            )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
+              Department Notes
+            </h2>
+            <dl className="divide-y divide-[color:var(--border)]">
+              {DEPARTMENTS.map((dept) => {
+                const value = report[dept.key] as string | null;
+                const display = value && value.trim() ? value.trim() : "None";
+                const isEmpty = !value || !value.trim();
+                return (
+                  <div
+                    key={dept.key}
+                    className="grid grid-cols-1 gap-1 py-2 md:grid-cols-[200px_1fr] md:gap-4"
+                  >
+                    <dt className="text-sm font-medium">{dept.label}</dt>
+                    <dd
+                      className={
+                        isEmpty
+                          ? "whitespace-pre-wrap text-sm text-[color:var(--muted-foreground)]"
+                          : "whitespace-pre-wrap text-sm"
+                      }
+                    >
+                      {display}
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
+          </CardContent>
+        </Card>
+
+        {hasNext && (
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
+                Next Rehearsal
+              </h2>
+              <div className="space-y-1 text-sm">
+                {(report.nextRehearsalDate ||
+                  report.nextRehearsalTime ||
+                  report.nextRehearsalLocation) && (
+                  <p>
+                    {[
+                      report.nextRehearsalDate
+                        ? formatDate(report.nextRehearsalDate)
+                        : null,
+                      report.nextRehearsalTime,
+                      report.nextRehearsalLocation,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
+                {report.nextRehearsalNotes && (
+                  <p className="whitespace-pre-wrap text-[color:var(--muted-foreground)]">
+                    {report.nextRehearsalNotes}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {report.scheduleNotes && (
           <Card>

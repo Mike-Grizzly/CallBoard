@@ -12,7 +12,9 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ## Product questions
 
-- What is the next feature step after Step 8? (Announcements and Activity are scaffolded but no product decision has been made.)
+- Steps 8–10 are complete. What is the next feature step?
+- Should rehearsal report departments be configurable per production, or remain fixed?
+- Should attendance tracking be added to rehearsal reports?
 - Should productions have additional statuses beyond draft/active/archived?
 - Should there be a notification system when reports are filed or documents uploaded?
 - Should the "requested role" from signup trigger any workflow (e.g., admin approval queue)?

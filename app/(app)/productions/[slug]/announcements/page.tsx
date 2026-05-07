@@ -1,11 +1,15 @@
+import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { Megaphone, Pin } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { RichTextDisplay } from "@/components/ui/rich-text-editor";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
-import { getAnnouncementsForUser } from "@/features/announcements/queries";
-import { OrgAnnouncementForm } from "./announcement-form";
+import { getProductionBySlug } from "@/features/productions/queries";
+import { getProductionMembership } from "@/features/members/queries";
+import { getAnnouncementsByProduction } from "@/features/announcements/queries";
+import { AnnouncementForm } from "./announcement-form";
 import { AnnouncementDeleteButton } from "./announcement-delete-button";
 import { AnnouncementPinButton } from "./announcement-pin-button";
 
@@ -17,24 +21,49 @@ function formatDate(date: Date): string {
   });
 }
 
-export default async function AnnouncementsPage() {
+export default async function ProductionAnnouncementsPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
   const user = await requireCurrentUser();
   const org = await getOrCreateDefaultOrganization();
-  const canManage = can(user.role, "productions:manage");
-  const canCreate = can(user.role, "announcements:create");
+  const production = await getProductionBySlug(org.id, slug);
 
-  const items = await getAnnouncementsForUser(user.id, org.id, canManage);
+  if (!production) {
+    notFound();
+  }
+
+  const canManage = can(user.role, "productions:manage");
+  if (!canManage) {
+    const membership = await getProductionMembership(user.id, production.id);
+    if (!membership) {
+      redirect("/productions");
+    }
+  }
+
+  const items = await getAnnouncementsByProduction(production.id, org.id);
+  const canCreate = can(user.role, "announcements:create");
 
   return (
     <div className="mx-auto max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Announcements</h1>
+        <Link
+          href={`/productions/${slug}`}
+          className="text-sm text-[color:var(--muted-foreground)] underline underline-offset-4 hover:text-[color:var(--foreground)]"
+        >
+          &larr; Back to {production.title}
+        </Link>
+        <div className="mt-3">
+          <h1 className="text-2xl font-semibold tracking-tight">Announcements</h1>
+        </div>
         <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
-          Company-wide updates and production notices.
+          {production.title}
         </p>
       </div>
 
-      {canCreate && <OrgAnnouncementForm />}
+      {canCreate && <AnnouncementForm productionId={production.id} />}
 
       {items.length === 0 ? (
         <Card>
@@ -43,7 +72,7 @@ export default async function AnnouncementsPage() {
             <p className="text-sm font-medium">No announcements yet</p>
             <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
               {canCreate
-                ? "Post an org-wide update, or visit a production to post show-specific notices."
+                ? "Post an update for the team."
                 : "No announcements have been posted yet."}
             </p>
           </CardContent>
@@ -72,9 +101,11 @@ export default async function AnnouncementsPage() {
                           <Pin className="h-3.5 w-3.5 shrink-0 text-[color:var(--primary)]" aria-hidden />
                         )}
                         <h2 className="text-sm font-semibold">{item.title}</h2>
-                        <span className="rounded-full bg-[color:var(--accent)] px-2 py-0.5 text-xs font-medium">
-                          {isOrgWide ? "Org-wide" : (item.productionTitle ?? "Production")}
-                        </span>
+                        {isOrgWide && (
+                          <span className="rounded-full bg-[color:var(--accent)] px-2 py-0.5 text-xs font-medium">
+                            Org-wide
+                          </span>
+                        )}
                       </div>
                       <p className="mt-0.5 text-xs text-[color:var(--muted-foreground)]">
                         {authorName} &middot; {formatDate(item.createdAt)}

@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-05-07
 
-**Current milestone:** Steps 1-8 complete. Blocking Tool Phase 2 shipped.
+**Current milestone:** Steps 1-10 complete. Blocking Tool (Phase 1 + Phase 2) shipped.
 
 ## Feature status
 
@@ -48,15 +48,14 @@
 - Non-assigned users without `productions:manage` are redirected from production detail
 - Personalized dashboard with stats (admin) and assigned productions list
 
-### Step 5: Reports — IMPLEMENTED
-- Rehearsal report creation with date, general notes, schedule notes
-- Rich text editor (TipTap) for report content
-- Report list per production, ordered by date
-- Report detail page with HTML rendering
+### Step 5: Reports — IMPLEMENTED (overhauled 2026-05-06)
+- Structured rehearsal report: header (date, scheduled call, actual start, end), TipTap general notes, 12 fixed department text fields, next-rehearsal block
+- Per-production auto-incremented `report_number` (MAX+1 in server action)
+- **Email Report** button: recipient picker (entire production or individual checkboxes), sends HTML email via Resend (`resend` package, `RESEND_API_KEY` + `RESEND_FROM_EMAIL` env vars)
+- Reports list shows `#N — {date}`; legacy `scheduleNotes` still renders if populated
 - Daily log feature: personal rich text notes per user per production
-- "Import from daily log" button when creating a new report
-- Report file attachments via Supabase Storage (10MB limit)
-- Signed URL downloads for attachments (1-hour expiry)
+- "Import from daily log" button when creating a new report (fills general notes)
+- Report file attachments via Supabase Storage (10MB limit), signed URL downloads (1-hour expiry)
 - **Known issue:** TipTap bullet points not working due to Tailwind prose CSS reset
 
 ### Step 6: Documents — IMPLEMENTED
@@ -77,7 +76,25 @@
 - Signed URLs generated server-side with 1-hour expiry
 - File size validation: 25MB for documents, 10MB for report attachments
 
-### Step 8: Blocking Tool (Phase 1 + Phase 2) — IMPLEMENTED
+### Step 8: Announcements — IMPLEMENTED
+- `announcements` table: org-scoped with optional `production_id` (null = org-wide)
+- Production-scoped announcements page at `/productions/[slug]/announcements`
+- Global announcements page at `/announcements` showing all announcements the user can see
+- Rich text body via TipTap (optional)
+- Pinning: admin/producer only
+- Delete: author or admin/producer
+- Org-wide badge on all announcement cards
+- Announcements tab and overview card added to production detail page
+- **Not fully verified:** Live testing in browser pending
+
+### Step 9: Rehearsal Report Overhaul — IMPLEMENTED
+- Structured department-by-department format replacing free-form TipTap
+- Header block: report number, scheduled/actual times, next rehearsal info
+- 12 fixed department note fields
+- **Email Report** button — sends HTML email via Resend with recipient picker (entire production or individual members)
+- Schema applied via Supabase MCP `apply_migration`; `resend` package added
+
+### Step 10: Blocking Tool (Phase 1 + Phase 2) — IMPLEMENTED
 
 - **New role:** `choreographer` (7th role, has `blocking:edit` + standard director-level caps)
 - **New capabilities:** `blocking:view` (all roles), `blocking:edit` (admin, producer, director, choreographer, stage_manager)
@@ -87,22 +104,21 @@
 - **Set piece library:** 15 SVG shapes (chair, armchair, couch, loveseat, beds, tables, desk, stairs, door, window, grand piano, podium, platform)
 - **Routes:** `/productions/[slug]/blocking` (canvas), `/productions/[slug]/blocking/setup` (wizard)
 - **Blocking canvas:** PDF background (rendered via pdfjs-dist v5), number line ruler overlay with toggleable SL/SR and US/DS grids, drag-and-drop actor tokens + set pieces (@dnd-kit/core), autosave per beat, in-session undo (50 states)
-- **Actor tokens (Phase 2):** Initials from firstName[0]+lastName[0]; only character name shown under circle (falls back to actor name if no character set); auto color-coded
-- **Set piece rotation (Phase 2):** ±15° buttons appear on hover; rotation stored and restored per beat
-- **Cross-scene beat copy (Phase 2):** Capturing the first beat of a new scene automatically inherits positions from the last beat of the previous scene
-- **Multi-page ground plans (Phase 2):** Page selector in setup wizard calibration step; prev/next page controls on the blocking canvas; `ground_plan_page` stored in stage config
-- **Export PNG (Phase 2):** "Export" button composites PDF canvas + actor circles + set piece shapes into a downloadable PNG using the browser Canvas API
-- **Recalibrate shortcut (Phase 2):** "Recalibrate Only" button on setup step 1 (when an existing config exists) jumps directly to the calibration step without re-entering dimensions
-- **Character name assignment (Phase 2):** Inline editable character name on each cast member row in the production members page
-- **Scene/Beat manager:** Left panel — Act/Scene/Beat hierarchy, add/delete; "Capture Beat" button records current layout as a beat and advances to the next automatically
-- **Stage setup wizard:** 2-step flow — select ground plan PDF + enter proscenium width/depth, then 2-point click calibration on PDF for scale; original PDF in Document Center is untouched
-- **Number line ruler:** Proscenium baseline with tick marks every 2', labels every 5'; SL/SR and US/DS grid lines are toggleable (both off by default)
-- **Permissions:** SM/Director/Choreographer/Admin/Producer can drag and edit; Cast/Crew view only
-- **Known future work (Phase 3):** Set piece rotation via drag handle (free angle); full beat-breakdown export (all scenes/beats as multi-page PDF or print view)
+- **Actor tokens:** Initials from firstName[0]+lastName[0]; only character name shown under circle; auto color-coded
+- **Set piece rotation:** ±15° buttons appear on hover; rotation stored and restored per beat
+- **Cross-scene beat copy:** First beat of a new scene automatically inherits positions from the last beat of the previous scene
+- **Multi-page ground plans:** Page selector in setup wizard; prev/next page controls on canvas; `ground_plan_page` stored in stage config
+- **Export PNG:** "Export" button composites PDF canvas + tokens into a downloadable PNG via browser Canvas API
+- **Recalibrate shortcut:** "Recalibrate Only" button skips directly to calibration when an existing config exists
+- **Character name assignment:** Inline editable character name on cast member rows in the production members page
+- **Scene/Beat manager:** Left panel — Act/Scene/Beat hierarchy, add/delete; "Capture Beat" auto-labels and advances
+- **Stage setup wizard:** 2-step — select ground plan PDF + enter proscenium width/depth, then 2-point click calibration
+- **Number line ruler:** Proscenium baseline with ticks every 2', labels every 5'; toggleable SL/SR and US/DS grid lines
+- **Permissions:** SM/Director/Choreographer/Admin/Producer can edit; Cast/Crew view only
+- **Known future work (Phase 3):** Set piece rotation via drag handle (free angle); full beat-breakdown export (multi-page PDF or print view)
 
 ## Scaffolded only (not implemented)
 
-- **Announcements** — placeholder page exists, capability defined, feature directory has only .gitkeep
 - **Activity log** — placeholder page exists, capability defined, feature directory has only .gitkeep
 - **AI script analysis** — `documentType` and `processingStatus` fields exist in documents schema, no processing logic
 - **Document comments/annotations** — placeholder sidebar in document viewer, no data model or functionality
