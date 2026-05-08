@@ -3,12 +3,6 @@ import Link from "next/link";
 import {
   Bell,
   ChevronRight,
-  FileText,
-  FolderOpen,
-  Layout as LayoutIcon,
-  Megaphone,
-  Phone,
-  PenLine,
   Plus,
   Search,
   Users,
@@ -25,7 +19,7 @@ import {
 import { getReportsByProduction } from "@/features/reports/queries";
 import { getDocumentsByProduction } from "@/features/documents/queries";
 import { getAnnouncementsByProduction } from "@/features/announcements/queries";
-import { ProductionTabsNav } from "./production-tabs";
+import { ProductionTabsNav, type ProductionTab } from "./production-tabs";
 
 const STATUS_COPY: Record<
   string,
@@ -106,39 +100,33 @@ export default async function ProductionLayout({
 
   const status = STATUS_COPY[production.status] ?? STATUS_COPY.draft;
 
-  type Tab = {
-    label: string;
-    href: string;
-    icon: typeof FileText;
-    count?: number;
-  };
-  const tabs: Tab[] = [
+  const tabs: ProductionTab[] = [
     {
       label: "Overview",
       href: `/productions/${slug}`,
-      icon: LayoutIcon,
+      icon: "Layout",
     },
     {
       label: "Calls",
       href: `/productions/${slug}/calls`,
-      icon: Phone,
+      icon: "Phone",
     },
     {
       label: "Reports",
       href: `/productions/${slug}/reports`,
-      icon: FileText,
+      icon: "FileText",
       count: reports.length,
     },
     {
       label: "Announcements",
       href: `/productions/${slug}/announcements`,
-      icon: Megaphone,
+      icon: "Megaphone",
       count: announcements.length,
     },
     {
       label: "Documents",
       href: `/productions/${slug}/documents`,
-      icon: FolderOpen,
+      icon: "FolderOpen",
       count: documents.length,
     },
   ];
@@ -146,21 +134,21 @@ export default async function ProductionLayout({
     tabs.push({
       label: "Daily Log",
       href: `/productions/${slug}/log`,
-      icon: PenLine,
+      icon: "PenLine",
     });
   }
   if (canViewBlocking) {
     tabs.push({
       label: "Blocking",
       href: `/productions/${slug}/blocking`,
-      icon: LayoutIcon,
+      icon: "Layout",
     });
   }
   if (canViewNotes) {
     tabs.push({
       label: "Notes",
       href: `/productions/${slug}/notes`,
-      icon: PenLine,
+      icon: "PenLine",
     });
   }
 

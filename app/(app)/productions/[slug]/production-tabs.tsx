@@ -2,12 +2,33 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  Bell,
+  FileText,
+  FolderOpen,
+  Layout as LayoutIcon,
+  Megaphone,
+  PenLine,
+  Phone,
+  Users,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+
+const ICONS: Record<string, LucideIcon> = {
+  Layout: LayoutIcon,
+  Phone,
+  FileText,
+  Megaphone,
+  FolderOpen,
+  PenLine,
+  Users,
+  Bell,
+};
 
 export type ProductionTab = {
   label: string;
   href: string;
-  icon: LucideIcon;
+  icon: string;
   count?: number;
 };
 
@@ -24,7 +45,7 @@ export function ProductionTabsNav({ tabs }: { tabs: ProductionTab[] }) {
   return (
     <nav className="tabs" aria-label="Production sections">
       {tabs.map((tab) => {
-        const Icon = tab.icon;
+        const Icon = ICONS[tab.icon] ?? FileText;
         const isOverview = tab.href === overviewHref;
         const active = isOverview
           ? pathname === tab.href
