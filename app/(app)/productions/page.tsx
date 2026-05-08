@@ -19,6 +19,7 @@ export default async function ProductionsPage() {
   ]);
 
   return (
+    <div className="page">
     <div className="mx-auto max-w-4xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
@@ -41,6 +42,7 @@ export default async function ProductionsPage() {
         productions={productionsList}
         accessibleIds={assignedIds}
       />
+    </div>
     </div>
   );
 }

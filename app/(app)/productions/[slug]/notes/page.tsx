@@ -6,7 +6,6 @@ import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
 import { getNotesByProduction, getNoteTagsByOrg } from "@/features/notes/queries";
 import { NotesPanel } from "./notes-panel";
-import { ProductionTabs } from "../production-tabs";
 
 export default async function NotesPage({
   params,
@@ -36,29 +35,8 @@ export default async function NotesPage({
   const canCreate = can(user.role, "notes:create");
   const canManageTags = can(user.role, "notes:manage_tags");
 
-  const tabs = [
-    { label: "Overview", href: `/productions/${slug}` },
-    { label: "Reports", href: `/productions/${slug}/reports` },
-    { label: "Documents", href: `/productions/${slug}/documents` },
-  ];
-  if (can(user.role, "reports:create")) {
-    tabs.push({ label: "Daily Log", href: `/productions/${slug}/log` });
-  }
-  if (can(user.role, "blocking:view")) {
-    tabs.push({ label: "Blocking", href: `/productions/${slug}/blocking` });
-  }
-  tabs.push({ label: "Notes", href: `/productions/${slug}/notes` });
-
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {production.title} — Notes
-        </h1>
-      </div>
-
-      <ProductionTabs slug={slug} tabs={tabs} />
-
       <NotesPanel
         notes={notes}
         tags={tags}

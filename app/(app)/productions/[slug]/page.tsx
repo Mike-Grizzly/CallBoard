@@ -23,13 +23,6 @@ import { getReportsByProduction } from "@/features/reports/queries";
 import { getDocumentsByProduction } from "@/features/documents/queries";
 import { getAnnouncementsByProduction } from "@/features/announcements/queries";
 import { getNextCall } from "@/features/calls/queries";
-import { ProductionTabs } from "./production-tabs";
-
-const STATUS_DISPLAY: Record<string, { label: string; dot: string }> = {
-  active: { label: "In rehearsal", dot: "bg-green-500" },
-  draft: { label: "Draft", dot: "bg-gray-400" },
-  archived: { label: "Archived", dot: "bg-amber-500" },
-};
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
@@ -119,14 +112,6 @@ function formatCallDate(dateStr: string) {
   };
 }
 
-function formatOpeningDate(dateStr: string): string {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export default async function ProductionDetailPage({
   params,
 }: {
@@ -157,37 +142,6 @@ export default async function ProductionDetailPage({
       getAnnouncementsByProduction(production.id, org.id),
       getNextCall(production.id),
     ]);
-
-  const tabs = [
-    { label: "Overview", href: `/productions/${slug}` },
-    { label: "Calls", href: `/productions/${slug}/calls` },
-    {
-      label: "Reports",
-      href: `/productions/${slug}/reports`,
-      count: reports.length,
-    },
-    {
-      label: "Announcements",
-      href: `/productions/${slug}/announcements`,
-      count: announcements.length,
-    },
-    {
-      label: "Documents",
-      href: `/productions/${slug}/documents`,
-      count: documents.length,
-    },
-  ];
-  if (canCreateReports)
-    tabs.push({ label: "Daily Log", href: `/productions/${slug}/log` });
-  if (canViewBlocking)
-    tabs.push({ label: "Blocking", href: `/productions/${slug}/blocking` });
-  if (canViewNotes)
-    tabs.push({ label: "Notes", href: `/productions/${slug}/notes` });
-
-  const director = members.find((m) => m.role === "director");
-  const directorName = director
-    ? memberDisplayName(director.firstName, director.lastName, director.email)
-    : null;
 
   const daysToOpen = daysUntil(production.openingDate);
 
@@ -240,97 +194,9 @@ export default async function ProductionDetailPage({
 
   const principals = members.filter((m) => m.characterName);
   const teamList = principals.length > 0 ? principals : members;
-  const statusInfo = STATUS_DISPLAY[production.status] ?? STATUS_DISPLAY.draft;
 
   return (
     <div className="mx-auto max-w-5xl">
-      {/* ── Header ── */}
-      <div className="mb-6">
-        <nav className="mb-3 flex items-center gap-1.5 text-sm text-[color:var(--muted-foreground)]">
-          <Link
-            href="/productions"
-            className="hover:text-[color:var(--foreground)] transition-colors"
-          >
-            Productions
-          </Link>
-          <span>/</span>
-          <span className="text-[color:var(--foreground)]">
-            {production.title}
-          </span>
-        </nav>
-
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-4xl font-bold tracking-tight leading-tight">
-              {production.title}
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[color:var(--muted-foreground)]">
-              <span
-                className={`inline-block h-1.5 w-1.5 rounded-full ${statusInfo.dot}`}
-              />
-              <span>{statusInfo.label}</span>
-              {production.openingDate && (
-                <>
-                  <span>·</span>
-                  <span>Opens {formatOpeningDate(production.openingDate)}</span>
-                </>
-              )}
-              {production.closingDate && (
-                <>
-                  <span>·</span>
-                  <span>
-                    Closes{" "}
-                    {new Date(
-                      `${production.closingDate}T00:00:00`,
-                    ).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
-                </>
-              )}
-              {directorName && (
-                <>
-                  <span>·</span>
-                  <span>Dir. {directorName}</span>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            {canManage && (
-              <Link href={`/productions/${slug}/members`}>
-                <Button variant="outline" size="sm">
-                  <Users className="h-4 w-4" />
-                  Cast &amp; Crew
-                </Button>
-              </Link>
-            )}
-            {canCreateReports && (
-              <Link href={`/productions/${slug}/calls`}>
-                <Button variant="outline" size="sm">
-                  Calls
-                </Button>
-              </Link>
-            )}
-            {canCreateReports && (
-              <Link href={`/productions/${slug}/reports/new`}>
-                <Button
-                  size="sm"
-                  className="bg-[#c4572a] hover:bg-[#a84320] text-white border-0"
-                >
-                  + New report
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Tabs ── */}
-      <ProductionTabs slug={slug} tabs={tabs} />
-
       {/* ── Call Card ── */}
       {callDisplay ? (
         <div
