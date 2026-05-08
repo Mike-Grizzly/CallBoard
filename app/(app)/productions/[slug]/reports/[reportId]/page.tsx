@@ -40,11 +40,14 @@ export default async function ReportDetailPage({
   params: Promise<{ slug: string; reportId: string }>;
 }) {
   const { slug, reportId } = await params;
+  console.log("[reportId page] params:", { slug, reportId });
   const user = await requireCurrentUser();
   const org = await getOrCreateDefaultOrganization();
   const production = await getProductionBySlug(org.id, slug);
+  console.log("[reportId page] production:", production?.id ?? "(null)");
 
   if (!production) {
+    console.log("[reportId page] 404: production not found for slug", slug);
     notFound();
   }
 
@@ -52,13 +55,16 @@ export default async function ReportDetailPage({
   if (!canManage) {
     const membership = await getProductionMembership(user.id, production.id);
     if (!membership) {
+      console.log("[reportId page] redirect: no membership");
       redirect("/productions");
     }
   }
 
   const report = await getReportById(reportId);
+  console.log("[reportId page] report:", report ? { id: report.id, productionId: report.productionId } : "(null)");
 
   if (!report || report.productionId !== production.id) {
+    console.log("[reportId page] 404: report missing or wrong production. reportId=", reportId, "production.id=", production.id);
     notFound();
   }
 
