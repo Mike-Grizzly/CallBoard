@@ -549,7 +549,7 @@ export default async function ProductionDetailPage({
             <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] divide-y divide-[color:var(--border)]">
               {activity.map((item) => (
                 <Link key={item.id} href={item.href}>
-                  <div className="flex items-start gap-3 px-4 py-3 hover:bg-[color:var(--accent)] transition-colors">
+                  <div className="flex items-start gap-3 px-4 py-3 hover:bg-[color:var(--muted)] transition-colors">
                     <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[color:var(--muted)]">
                       {item.kind === "report" && (
                         <FileText className="h-3.5 w-3.5 text-[color:var(--muted-foreground)]" />

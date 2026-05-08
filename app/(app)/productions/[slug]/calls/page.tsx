@@ -174,14 +174,14 @@ export default async function CallsCalendarPage({
         <div className="flex items-center justify-between px-5 py-4 border-b border-[color:var(--border)]">
           <Link
             href={`/productions/${slug}/calls?month=${prevMonthParam(year, month)}`}
-            className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-[color:var(--accent)] transition-colors text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
+            className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-[color:var(--muted)] transition-colors text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
           >
             <ChevronLeft className="h-4 w-4" />
           </Link>
           <h2 className="text-base font-semibold">{monthLabel}</h2>
           <Link
             href={`/productions/${slug}/calls?month=${nextMonthParam(year, month)}`}
-            className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-[color:var(--accent)] transition-colors text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
+            className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-[color:var(--muted)] transition-colors text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
           >
             <ChevronRight className="h-4 w-4" />
           </Link>
@@ -238,7 +238,7 @@ export default async function CallsCalendarPage({
                   {canSchedule && !isPast && (
                     <Link
                       href={`/productions/${slug}/calls/new?date=${dateStr}`}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-5 w-5 rounded text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)] hover:bg-[color:var(--accent)]"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-5 w-5 rounded text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)] hover:bg-[color:var(--muted)]"
                       title={`Schedule call for ${dateStr}`}
                     >
                       <Plus className="h-3 w-3" />

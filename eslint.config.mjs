@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Reference-only copies of the standalone HTML demo's JSX. Not part of
+    // the build; kept for designers/developers to consult while we port.
+    "design-reference/**",
   ]),
 ]);
 

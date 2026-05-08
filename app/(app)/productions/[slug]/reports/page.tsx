@@ -96,7 +96,7 @@ export default async function ReportsPage({
                 key={report.id}
                 href={`/productions/${slug}/reports/${report.id}`}
               >
-                <Card className="transition-colors hover:bg-[color:var(--accent)]">
+                <Card className="transition-colors hover:bg-[color:var(--muted)]">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="min-w-0 flex-1">

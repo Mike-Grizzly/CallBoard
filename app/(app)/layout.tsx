@@ -1,19 +1,15 @@
 import type { ReactNode } from "react";
-import { Topbar } from "@/components/app-shell/topbar";
-import { Sidebar } from "@/components/app-shell/sidebar";
-import { getCurrentUser } from "@/lib/auth";
+import { Rail } from "@/components/app-shell/rail";
 
-export default async function AppLayout({ children }: { children: ReactNode }) {
-  const user = await getCurrentUser();
-  const role = user?.role ?? "cast";
-
+export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <Topbar />
-      <div className="flex flex-1">
-        <Sidebar role={role} />
-        <main className="flex-1 p-6 md:p-8">{children}</main>
-      </div>
+    <div className="app">
+      <Rail />
+      <main className="main">
+        {/* Default page wrapper. Pages porting to the new design system can
+            opt out by rendering their own .topbar / .page structure. */}
+        <div className="page">{children}</div>
+      </main>
     </div>
   );
 }

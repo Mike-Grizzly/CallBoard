@@ -166,7 +166,7 @@ function CastSelector({
               "rounded-full border px-3 py-1 text-sm font-medium transition-colors",
               mode === opt.key
                 ? "bg-[color:var(--primary)] text-[color:var(--primary-foreground)] border-[color:var(--primary)]"
-                : "border-[color:var(--border)] hover:bg-[color:var(--accent)]",
+                : "border-[color:var(--border)] hover:bg-[color:var(--muted)]",
             )}
           >
             {opt.label}
@@ -179,7 +179,7 @@ function CastSelector({
               setMode(null);
               setSelected(new Set());
             }}
-            className="rounded-full border border-[color:var(--border)] px-3 py-1 text-sm text-[color:var(--muted-foreground)] hover:bg-[color:var(--accent)] transition-colors"
+            className="rounded-full border border-[color:var(--border)] px-3 py-1 text-sm text-[color:var(--muted-foreground)] hover:bg-[color:var(--muted)] transition-colors"
           >
             Clear
           </button>
@@ -247,7 +247,7 @@ function MemberRow({
   onToggle: (id: string) => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-[color:var(--accent)] transition-colors">
+    <label className="flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-[color:var(--muted)] transition-colors">
       <input
         type="checkbox"
         checked={checked}

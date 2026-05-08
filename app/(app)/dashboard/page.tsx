@@ -117,7 +117,7 @@ export default async function DashboardPage() {
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         item.pinned
                           ? "bg-amber-200 text-amber-800"
-                          : "bg-[color:var(--accent)]"
+                          : "bg-[color:var(--muted)]"
                       }`}
                     >
                       {isOrgWide ? "Org-wide" : (item.productionTitle ?? "Production")}
@@ -203,7 +203,7 @@ export default async function DashboardPage() {
               key={production.id}
               href={`/productions/${production.slug}`}
             >
-              <Card className="transition-colors hover:bg-[color:var(--accent)]">
+              <Card className="transition-colors hover:bg-[color:var(--muted)]">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1">

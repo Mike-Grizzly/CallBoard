@@ -773,7 +773,7 @@ export function BlockingCanvas({
           {canEdit && (
             <button
               onClick={() => setAddingScene(true)}
-              className="rounded p-0.5 hover:bg-[color:var(--accent)]"
+              className="rounded p-0.5 hover:bg-[color:var(--muted)]"
               title="Add scene"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -814,7 +814,7 @@ export function BlockingCanvas({
                 </button>
                 <button
                   onClick={() => setAddingScene(false)}
-                  className="rounded px-2 py-0.5 text-xs hover:bg-[color:var(--accent)]"
+                  className="rounded px-2 py-0.5 text-xs hover:bg-[color:var(--muted)]"
                 >
                   Cancel
                 </button>
@@ -831,7 +831,7 @@ export function BlockingCanvas({
             scenesWithBeats.map((scene) => (
               <div key={scene.id} className="mb-2">
                 <div
-                  className={`group flex cursor-pointer items-center justify-between rounded px-1 py-0.5 hover:bg-[color:var(--accent)] ${currentSceneId === scene.id && !currentBeatId ? "bg-[color:var(--accent)]" : ""}`}
+                  className={`group flex cursor-pointer items-center justify-between rounded px-1 py-0.5 hover:bg-[color:var(--muted)] ${currentSceneId === scene.id && !currentBeatId ? "bg-[color:var(--muted)]" : ""}`}
                   onClick={() => { setCurrentSceneId(scene.id); setCurrentBeatId(null); }}
                 >
                   <span className="text-xs font-semibold text-[color:var(--muted-foreground)]">
@@ -877,7 +877,7 @@ export function BlockingCanvas({
                       </button>
                       <button
                         onClick={() => setAddingBeatForScene(null)}
-                        className="rounded px-1.5 py-0.5 text-xs hover:bg-[color:var(--accent)]"
+                        className="rounded px-1.5 py-0.5 text-xs hover:bg-[color:var(--muted)]"
                       >
                         ✕
                       </button>
@@ -892,7 +892,7 @@ export function BlockingCanvas({
                       className={`group flex cursor-pointer items-center justify-between rounded px-1.5 py-0.5 text-xs ${
                         currentBeatId === beat.id
                           ? "bg-[color:var(--primary)] text-[color:var(--primary-foreground)]"
-                          : "hover:bg-[color:var(--accent)]"
+                          : "hover:bg-[color:var(--muted)]"
                       }`}
                       onClick={() => { setCurrentSceneId(scene.id); setCurrentBeatId(beat.id); }}
                     >
@@ -1157,7 +1157,7 @@ export function BlockingCanvas({
                   key={member.userId}
                   disabled={!canEdit || !currentBeatId || isOnCanvas}
                   onClick={() => placeOnCanvas("actor", member.userId)}
-                  className="mb-1 flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs transition-colors hover:bg-[color:var(--accent)] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="mb-1 flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs transition-colors hover:bg-[color:var(--muted)] disabled:cursor-not-allowed disabled:opacity-40"
                   title={
                     isOnCanvas
                       ? "Already on stage"
@@ -1205,7 +1205,7 @@ export function BlockingCanvas({
                 key={piece.key}
                 disabled={!canEdit || !currentBeatId || isOnCanvas}
                 onClick={() => placeOnCanvas("set_piece", piece.key)}
-                className="mb-1 flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs transition-colors hover:bg-[color:var(--accent)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="mb-1 flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs transition-colors hover:bg-[color:var(--muted)] disabled:cursor-not-allowed disabled:opacity-40"
                 title={
                   isOnCanvas
                     ? "Already on stage"

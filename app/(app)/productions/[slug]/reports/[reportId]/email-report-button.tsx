@@ -117,7 +117,7 @@ export function EmailReportButton({
           </div>
 
           <div className="max-h-64 overflow-y-auto p-2">
-            <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-[color:var(--accent)]">
+            <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-[color:var(--muted)]">
               <input
                 type="checkbox"
                 checked={allSelected}
@@ -132,7 +132,7 @@ export function EmailReportButton({
             {members.map((m) => (
               <label
                 key={m.userId}
-                className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-[color:var(--accent)]"
+                className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-[color:var(--muted)]"
               >
                 <input
                   type="checkbox"

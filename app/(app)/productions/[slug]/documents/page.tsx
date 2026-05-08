@@ -98,7 +98,7 @@ export default async function DocumentsPage({
                 : doc.uploadedByEmail;
 
             return (
-              <Card key={doc.id} className="transition-colors hover:bg-[color:var(--accent)]">
+              <Card key={doc.id} className="transition-colors hover:bg-[color:var(--muted)]">
                 <CardContent className="flex items-center justify-between p-4">
                   <Link
                     href={`/productions/${slug}/documents/${doc.id}`}
@@ -109,7 +109,7 @@ export default async function DocumentsPage({
                       <h2 className="truncate text-sm font-semibold">
                         {doc.title}
                       </h2>
-                      <span className="shrink-0 rounded-full bg-[color:var(--accent)] px-2 py-0.5 text-xs">
+                      <span className="shrink-0 rounded-full bg-[color:var(--muted)] px-2 py-0.5 text-xs">
                         {getTypeLabel(doc.documentType)}
                       </span>
                     </div>

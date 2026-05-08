@@ -318,7 +318,7 @@ export function SetupWizard({
                   className={`rounded px-2 py-0.5 text-sm ${
                     selectedPage === p
                       ? "bg-[color:var(--primary)] text-[color:var(--primary-foreground)]"
-                      : "hover:bg-[color:var(--accent)]"
+                      : "hover:bg-[color:var(--muted)]"
                   }`}
                 >
                   {p}

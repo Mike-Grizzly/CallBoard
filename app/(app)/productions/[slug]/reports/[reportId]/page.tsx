@@ -233,7 +233,7 @@ export default async function ReportDetailPage({
                     href={a.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-md border border-[color:var(--border)] p-3 text-sm transition-colors hover:bg-[color:var(--accent)]"
+                    className="flex items-center gap-2 rounded-md border border-[color:var(--border)] p-3 text-sm transition-colors hover:bg-[color:var(--muted)]"
                   >
                     <Paperclip className="h-4 w-4 text-[color:var(--muted-foreground)]" aria-hidden />
                     <span className="flex-1 truncate font-medium">

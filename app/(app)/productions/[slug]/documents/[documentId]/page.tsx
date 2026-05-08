@@ -74,7 +74,7 @@ export default async function DocumentDetailPage({
             <h1 className="text-xl font-semibold tracking-tight">
               {doc.title}
             </h1>
-            <span className="rounded-full bg-[color:var(--accent)] px-2 py-0.5 text-xs">
+            <span className="rounded-full bg-[color:var(--muted)] px-2 py-0.5 text-xs">
               {getTypeLabel(doc.documentType)}
             </span>
           </div>

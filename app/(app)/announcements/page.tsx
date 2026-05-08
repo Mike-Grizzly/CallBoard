@@ -72,7 +72,7 @@ export default async function AnnouncementsPage() {
                           <Pin className="h-3.5 w-3.5 shrink-0 text-[color:var(--primary)]" aria-hidden />
                         )}
                         <h2 className="text-sm font-semibold">{item.title}</h2>
-                        <span className="rounded-full bg-[color:var(--accent)] px-2 py-0.5 text-xs font-medium">
+                        <span className="rounded-full bg-[color:var(--muted)] px-2 py-0.5 text-xs font-medium">
                           {isOrgWide ? "Org-wide" : (item.productionTitle ?? "Production")}
                         </span>
                       </div>
