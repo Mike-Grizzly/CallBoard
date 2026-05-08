@@ -56,6 +56,13 @@ export default async function EditCallPage({
             {production.title}
           </Link>
           <span>/</span>
+          <Link
+            href={`/productions/${slug}/calls`}
+            className="hover:text-[color:var(--foreground)] transition-colors"
+          >
+            Calls
+          </Link>
+          <span>/</span>
           <span className="text-[color:var(--foreground)]">Edit call</span>
         </nav>
         <div className="flex items-start justify-between gap-4">

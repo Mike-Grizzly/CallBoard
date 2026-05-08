@@ -46,6 +46,7 @@ export async function createCall(
     createdBy: user.id,
     callDate,
     callTime: trim(formData.get("call_time")),
+    endTime: trim(formData.get("end_time")),
     location: trim(formData.get("location")),
     focus: trim(formData.get("focus")),
     scenes: trim(formData.get("scenes")),
@@ -56,7 +57,8 @@ export async function createCall(
 
   const slug = await getSlug(productionId);
   revalidatePath(`/productions/${slug}`);
-  redirect(`/productions/${slug}`);
+  revalidatePath(`/productions/${slug}/calls`);
+  redirect(`/productions/${slug}/calls`);
 }
 
 export async function updateCall(
@@ -80,6 +82,7 @@ export async function updateCall(
     .set({
       callDate,
       callTime: trim(formData.get("call_time")),
+      endTime: trim(formData.get("end_time")),
       location: trim(formData.get("location")),
       focus: trim(formData.get("focus")),
       scenes: trim(formData.get("scenes")),
@@ -92,7 +95,8 @@ export async function updateCall(
 
   const slug = await getSlug(productionId);
   revalidatePath(`/productions/${slug}`);
-  redirect(`/productions/${slug}`);
+  revalidatePath(`/productions/${slug}/calls`);
+  redirect(`/productions/${slug}/calls`);
 }
 
 export async function deleteCall(formData: FormData): Promise<void> {
@@ -107,5 +111,6 @@ export async function deleteCall(formData: FormData): Promise<void> {
 
   const slug = await getSlug(productionId);
   revalidatePath(`/productions/${slug}`);
-  redirect(`/productions/${slug}`);
+  revalidatePath(`/productions/${slug}/calls`);
+  redirect(`/productions/${slug}/calls`);
 }

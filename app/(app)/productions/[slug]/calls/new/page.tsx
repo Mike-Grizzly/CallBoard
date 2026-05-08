@@ -9,14 +9,16 @@ import { CallForm } from "./call-form";
 
 export default async function NewCallPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ date?: string }>;
 }) {
-  const { slug } = await params;
+  const [{ slug }, { date }] = await Promise.all([params, searchParams]);
   const user = await requireCurrentUser();
 
   if (!can(user.role, "reports:create")) {
-    redirect(`/productions/${slug}`);
+    redirect(`/productions/${slug}/calls`);
   }
 
   const org = await getOrCreateDefaultOrganization();
@@ -31,6 +33,9 @@ export default async function NewCallPage({
 
   const allMembers = await getProductionMembers(production.id);
   const castMembers = allMembers.filter((m) => m.role === "cast");
+
+  // Validate date param format (YYYY-MM-DD)
+  const prefillDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -50,6 +55,13 @@ export default async function NewCallPage({
             {production.title}
           </Link>
           <span>/</span>
+          <Link
+            href={`/productions/${slug}/calls`}
+            className="hover:text-[color:var(--foreground)] transition-colors"
+          >
+            Calls
+          </Link>
+          <span>/</span>
           <span className="text-[color:var(--foreground)]">Schedule call</span>
         </nav>
         <h1 className="text-2xl font-bold tracking-tight">Schedule a call</h1>
@@ -59,7 +71,12 @@ export default async function NewCallPage({
         </p>
       </div>
 
-      <CallForm productionId={production.id} slug={slug} castMembers={castMembers} />
+      <CallForm
+        productionId={production.id}
+        slug={slug}
+        castMembers={castMembers}
+        prefillDate={prefillDate}
+      />
     </div>
   );
 }

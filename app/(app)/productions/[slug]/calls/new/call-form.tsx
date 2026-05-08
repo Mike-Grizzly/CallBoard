@@ -278,11 +278,13 @@ export function CallForm({
   slug,
   existingCall,
   castMembers = [],
+  prefillDate,
 }: {
   productionId: string;
   slug: string;
   existingCall?: Call;
   castMembers?: CastMember[];
+  prefillDate?: string;
 }) {
   const action = existingCall ? updateCall : createCall;
   const [state, formAction, pending] = useActionState<
@@ -310,7 +312,7 @@ export function CallForm({
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
           When &amp; Where
         </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label htmlFor="call_date" className={labelCls}>
               Date <span className="text-red-500">*</span>
@@ -320,7 +322,7 @@ export function CallForm({
               name="call_date"
               type="date"
               required
-              defaultValue={existingCall?.callDate ?? ""}
+              defaultValue={existingCall?.callDate ?? prefillDate ?? ""}
               className={inputCls}
             />
           </div>
@@ -333,6 +335,18 @@ export function CallForm({
               name="call_time"
               type="time"
               defaultValue={toInputTime(existingCall?.callTime)}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label htmlFor="end_time" className={labelCls}>
+              End time
+            </label>
+            <input
+              id="end_time"
+              name="end_time"
+              type="time"
+              defaultValue={toInputTime(existingCall?.endTime)}
               className={inputCls}
             />
           </div>
@@ -439,7 +453,7 @@ export function CallForm({
       </section>
 
       <div className="flex items-center justify-between">
-        <Link href={`/productions/${slug}`}>
+        <Link href={`/productions/${slug}/calls`}>
           <Button type="button" variant="outline">
             Cancel
           </Button>

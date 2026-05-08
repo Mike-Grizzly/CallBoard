@@ -160,6 +160,7 @@ export default async function ProductionDetailPage({
 
   const tabs = [
     { label: "Overview", href: `/productions/${slug}` },
+    { label: "Calls", href: `/productions/${slug}/calls` },
     {
       label: "Reports",
       href: `/productions/${slug}/reports`,
@@ -195,6 +196,7 @@ export default async function ProductionDetailPage({
         ...formatCallDate(nextCall.callDate),
         id: nextCall.id,
         time: formatCallTime(nextCall.callTime),
+        endTime: formatCallTime(nextCall.endTime),
         location: nextCall.location,
         focus: nextCall.focus,
         scenes: nextCall.scenes,
@@ -202,6 +204,7 @@ export default async function ProductionDetailPage({
         schedule: nextCall.schedule,
         notes: nextCall.notes,
         isToday: isToday(nextCall.callDate),
+        isLive: nextCall.isLive,
       }
     : null;
 
@@ -305,9 +308,9 @@ export default async function ProductionDetailPage({
               </Link>
             )}
             {canCreateReports && (
-              <Link href={`/productions/${slug}/calls/new`}>
+              <Link href={`/productions/${slug}/calls`}>
                 <Button variant="outline" size="sm">
-                  Schedule call
+                  Calls
                 </Button>
               </Link>
             )}
@@ -339,15 +342,21 @@ export default async function ProductionDetailPage({
             <div className="flex flex-wrap items-center gap-3">
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
-                  callDisplay.isToday
+                  callDisplay.isLive
                     ? "bg-[#c4572a] text-white"
-                    : "bg-white/10 text-white/70"
+                    : callDisplay.isToday
+                      ? "bg-amber-500/80 text-white"
+                      : "bg-white/10 text-white/70"
                 }`}
               >
-                {callDisplay.isToday && (
+                {callDisplay.isLive && (
                   <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
                 )}
-                {callDisplay.isToday ? "Live · Today's Call" : "Upcoming Call"}
+                {callDisplay.isLive
+                  ? "Live · In Rehearsal"
+                  : callDisplay.isToday
+                    ? "Today's Call"
+                    : "Upcoming Call"}
               </span>
               {daysToOpen !== null && daysToOpen > 0 && (
                 <span className="text-white/40 text-sm">
@@ -389,6 +398,11 @@ export default async function ProductionDetailPage({
                   <span className="text-white/30 text-2xl">TBD</span>
                 )}
               </p>
+              {callDisplay.endTime && (
+                <p className="text-white/40 text-sm mt-0.5">
+                  until {callDisplay.endTime}
+                </p>
+              )}
             </div>
           </div>
 
@@ -502,9 +516,9 @@ export default async function ProductionDetailPage({
             <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
               Schedule calls in advance — add details as they're confirmed.
             </p>
-            <Link href={`/productions/${slug}/calls/new`}>
+            <Link href={`/productions/${slug}/calls`}>
               <Button size="sm" className="mt-4">
-                Schedule a call
+                Open call schedule
               </Button>
             </Link>
           </div>

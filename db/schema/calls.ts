@@ -12,6 +12,7 @@ export const calls = pgTable("calls", {
     .references(() => profiles.id, { onDelete: "cascade" }),
   callDate: date("call_date").notNull(),
   callTime: text("call_time"),
+  endTime: text("end_time"),
   location: text("location"),
   focus: text("focus"),
   scenes: text("scenes"),
