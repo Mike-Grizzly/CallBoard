@@ -1,12 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import {
-  Bell,
-  ChevronRight,
-  Plus,
-  Search,
-  Users,
-} from "lucide-react";
+import { ChevronRight, Search, Bell } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import type { ReactNode } from "react";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -233,7 +228,7 @@ export default async function ProductionLayout({
                 href={`/productions/${slug}/members`}
                 className="btn"
               >
-                <Users className="ico" aria-hidden />
+                <Icon name="Users" className="ico" aria-hidden />
                 <span>Cast &amp; Crew</span>
               </Link>
             )}
@@ -242,7 +237,7 @@ export default async function ProductionLayout({
                 href={`/productions/${slug}/reports/new`}
                 className="btn primary"
               >
-                <Plus className="ico" aria-hidden />
+                <Icon name="Plus" className="ico" aria-hidden />
                 <span>New report</span>
               </Link>
             )}

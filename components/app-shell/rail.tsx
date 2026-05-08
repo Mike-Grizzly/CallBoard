@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Settings as SettingsIcon } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { getUserProductions } from "@/features/productions/queries";
 import { can } from "@/lib/permissions";
+import { Icon } from "@/components/ui/icon";
 import { NAV_ITEMS } from "./nav-items";
 import { RailLink } from "./rail-link";
 import { LogoutButton } from "./logout-button";
@@ -59,15 +59,11 @@ export async function Rail() {
         <div className="rail-section-h">
           <span>Workspace</span>
         </div>
-        {workspaceItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <RailLink key={item.href} href={item.href}>
-              <Icon className="ico" aria-hidden />
-              <span>{item.label}</span>
-            </RailLink>
-          );
-        })}
+        {workspaceItems.map((item) => (
+          <RailLink key={item.href} href={item.href} icon={item.icon}>
+            <span>{item.label}</span>
+          </RailLink>
+        ))}
       </div>
 
       {can(role, "productions:view") && (
@@ -148,7 +144,7 @@ export async function Rail() {
             </div>
             {can(role, "settings:manage") && (
               <Link href="/settings" title="Settings" aria-label="Settings">
-                <SettingsIcon className="ico" aria-hidden />
+                <Icon name="Settings" className="ico" aria-hidden />
               </Link>
             )}
             <LogoutButton />

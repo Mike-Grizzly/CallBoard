@@ -1,15 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import {
-  Users,
-  FileText,
-  FolderOpen,
-  Megaphone,
-  PenLine,
-  MapPin,
-  ChevronRight,
-  Layout,
-} from "lucide-react";
+import { MapPin } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -343,22 +335,22 @@ export default async function ProductionDetailPage({
             {canCreateReports && (
               <Link href={`/productions/${slug}/reports/new`}>
                 <span className="inline-flex items-center gap-2 rounded-full bg-[#c4572a] px-4 py-2 text-sm font-medium text-white hover:bg-[#a84320] transition-colors cursor-pointer">
-                  <FileText className="h-4 w-4" />
+                  <Icon name="FileText" className="h-4 w-4" />
                   File tonight&apos;s report
-                  <ChevronRight className="h-3.5 w-3.5" />
+                  <Icon name="ChevronRight" className="h-3.5 w-3.5" />
                 </span>
               </Link>
             )}
             <Link href={`/productions/${slug}/documents`}>
               <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/[0.15] transition-colors cursor-pointer">
-                <FolderOpen className="h-4 w-4" />
+                <Icon name="FolderOpen" className="h-4 w-4" />
                 Documents
               </span>
             </Link>
             {canViewNotes && (
               <Link href={`/productions/${slug}/notes`}>
                 <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/[0.15] transition-colors cursor-pointer">
-                  <PenLine className="h-4 w-4" />
+                  <Icon name="PenLine" className="h-4 w-4" />
                   My notes
                 </span>
               </Link>
@@ -366,7 +358,7 @@ export default async function ProductionDetailPage({
             {canViewBlocking && (
               <Link href={`/productions/${slug}/blocking`}>
                 <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/[0.15] transition-colors cursor-pointer">
-                  <Layout className="h-4 w-4" />
+                  <Icon name="Layout" className="h-4 w-4" />
                   Stage blocking
                 </span>
               </Link>
@@ -418,13 +410,13 @@ export default async function ProductionDetailPage({
                   <div className="flex items-start gap-3 px-4 py-3 hover:bg-[color:var(--muted)] transition-colors">
                     <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[color:var(--muted)]">
                       {item.kind === "report" && (
-                        <FileText className="h-3.5 w-3.5 text-[color:var(--muted-foreground)]" />
+                        <Icon name="FileText" className="h-3.5 w-3.5 text-[color:var(--muted-foreground)]" />
                       )}
                       {item.kind === "document" && (
-                        <FolderOpen className="h-3.5 w-3.5 text-[color:var(--muted-foreground)]" />
+                        <Icon name="FolderOpen" className="h-3.5 w-3.5 text-[color:var(--muted-foreground)]" />
                       )}
                       {item.kind === "announcement" && (
-                        <Megaphone className="h-3.5 w-3.5 text-[color:var(--muted-foreground)]" />
+                        <Icon name="Megaphone" className="h-3.5 w-3.5 text-[color:var(--muted-foreground)]" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -470,7 +462,7 @@ export default async function ProductionDetailPage({
 
           {members.length === 0 ? (
             <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] px-6 py-10 text-center">
-              <Users className="mx-auto mb-2 h-7 w-7 text-[color:var(--muted-foreground)]" />
+              <Icon name="Users" className="mx-auto mb-2 h-7 w-7 text-[color:var(--muted-foreground)]" />
               <p className="text-sm text-[color:var(--muted-foreground)]">
                 {canManage
                   ? "Assign team members to this production."

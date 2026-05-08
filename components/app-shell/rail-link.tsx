@@ -3,21 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { Icon, type IconName } from "@/components/ui/icon";
 
-/**
- * Workspace nav link with active-state highlighting driven by usePathname.
- * Active when pathname === href or starts with `${href}/`.
- */
 export function RailLink({
   href,
   className = "rail-item",
   matchPrefix = true,
+  icon,
   children,
 }: {
   href: string;
   className?: string;
   matchPrefix?: boolean;
-  children: ReactNode;
+  icon?: IconName;
+  children?: ReactNode;
 }) {
   const pathname = usePathname();
   const active = matchPrefix
@@ -25,6 +24,7 @@ export function RailLink({
     : pathname === href;
   return (
     <Link href={href} className={className} data-active={active ? "1" : "0"}>
+      {icon && <Icon name={icon} className="ico" aria-hidden />}
       {children}
     </Link>
   );
