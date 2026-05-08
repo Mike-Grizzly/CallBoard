@@ -103,11 +103,13 @@ export default async function ReportsPage({
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-[color:var(--muted-foreground)]" aria-hidden />
                           <h2 className="text-sm font-semibold">
-                            {formatDate(report.reportDate)}
+                            {report.reportNumber
+                              ? `#${report.reportNumber} — ${formatDate(report.reportDate)}`
+                              : formatDate(report.reportDate)}
                           </h2>
                         </div>
                         <p className="mt-1 line-clamp-2 text-sm text-[color:var(--muted-foreground)]">
-                          {report.generalNotes}
+                          {report.generalNotes.replace(/<[^>]+>/g, " ")}
                         </p>
                       </div>
                     </div>

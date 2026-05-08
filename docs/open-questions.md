@@ -4,9 +4,17 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
+## Blocking tool questions (Phase 3 candidates)
+
+- **Set piece rotation UX:** Current ±15° buttons work but the desired UX is a corner drag handle that can rotate to any angle freely. Requires tracking pointer angle relative to the token center during drag (separate from the @dnd-kit drag-move path).
+- **Full beat breakdown export:** Directors want to print the entire blocking script — all scenes, all beats, each with a canvas snapshot. Approach: loop through every beat, render positions onto an offscreen canvas, assemble into a multi-page PDF (e.g. via `jspdf`) or a print-friendly HTML page. Should include scene/beat label and actor legend per page.
+- The number line ruler uses `preserveAspectRatio="none"` on the SVG, which distorts tick mark heights on non-square viewports — is this acceptable or should it be addressed?
+
 ## Product questions
 
-- What is the next feature step after Step 7? (Announcements and Activity are scaffolded but no product decision has been made.)
+- Steps 8–11 are complete. What is the next feature step?
+- Should rehearsal report departments be configurable per production, or remain fixed?
+- Should attendance tracking be added to rehearsal reports?
 - Should productions have additional statuses beyond draft/active/archived?
 - Should there be a notification system when reports are filed or documents uploaded?
 - Should the "requested role" from signup trigger any workflow (e.g., admin approval queue)?
@@ -43,6 +51,15 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 - Should there be a search/filter capability on the documents list?
 - Should the production overview cards show more metadata (dates, member count)?
 
+## Notes questions
+
+- **Visibility enforcement:** Private notes are visible to all team members in the current implementation. Should the `getNotesByProduction` query filter by `visibility = 'shared' OR created_by = currentUserId`?
+- **Cross-production notes view:** User wants a dashboard glimpse of notes from all productions. When should this be built?
+- **Real-time updates:** Notes from other team members only appear on reload. Should Supabase Realtime subscriptions be used here?
+- **Note editing rights:** Currently only the author or a manage_tags user can edit a note. Should this be loosened for "shared" notes?
+- **Tag deletion cascade:** Deleting a tag sets `tag_id = null` on all notes (ON DELETE SET NULL). Should users be warned how many notes will lose their tag?
+- **Bullet points in TipTap:** Same issue as reports — Tailwind prose resets list styles. Should a fix be applied globally?
+
 ## Testing / hardening questions
 
 - There are zero test files in the repo. When should testing be introduced?
@@ -57,3 +74,9 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 - Is there a target launch date or user count?
 - Should any of the scaffolded features (announcements, activity) be cut from MVP scope?
 - When should UX polish become a priority vs. feature completion?
+
+## Call schedule questions
+
+- **Real-time live status:** The dashboard header badge reflects state at page load, not in real time. Should the header auto-update (e.g. via Supabase Realtime or a client-side interval revalidation) so it flips to "Live" or advances to the next call without a manual refresh?
+- **Recurring calls:** There is no support for repeating calls (e.g. "Tuesday/Thursday 7–10pm for 8 weeks"). Should a recurrence system be built, or is bulk-creation sufficient?
+- **Cancel vs. delete:** Currently calls can only be deleted. Should there be a "cancel" status that keeps the call visible on the calendar (greyed out) to preserve the history for the production record?
