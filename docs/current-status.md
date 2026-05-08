@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-05-08
 
-**Current milestone:** Steps 1-12 complete. Call schedule calendar shipped.
+**Current milestone:** Steps 1-12 complete. Call schedule calendar shipped. UI port (HTML demo → Next.js app) Phase 1 done — design tokens, fonts, rail shell, and persistent production header/tabs are live. Phase 2 (per-tab visual port) tracked in `docs/ui-port-roadmap.md`.
 
 ## Feature status
 

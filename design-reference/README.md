@@ -34,16 +34,25 @@ data layer, while matching the demo's visuals closely.
 
 ## Port status
 
+Detailed roadmap and per-tab checklist live in `docs/ui-port-roadmap.md`.
+Short version:
+
 - [x] Step 1: tokens, fonts, reset, shell layout primitives ported into
   `app/globals.css`. Geist + Newsreader added via `next/font/google`.
-- [ ] Step 2: rebuild `components/app-shell/{topbar,sidebar}.tsx` to match
-  rail + production-header pattern.
-- [ ] Step 3: port tabs one by one, wired to real `queries.ts`/`actions.ts`.
-  - [ ] Overview
+- [x] Step 2: rail shell (`components/app-shell/rail.tsx`) and persistent
+  production header + tabs (`app/(app)/productions/[slug]/layout.tsx` +
+  `production-tabs.tsx`) replace the old topbar/sidebar.
+- [ ] Step 3: per-tab content port, wired to real `queries.ts`/`actions.ts`.
+  - [ ] Overview (call card already matches; surrounding sections pending)
+  - [ ] Calls
   - [ ] Reports
   - [ ] Notes
   - [ ] Documents
-  - [ ] Blocking (no Video tab — we don't have that feature yet)
+  - [ ] Blocking
+  - [ ] Daily Log
+  - [ ] Announcements
+  - [ ] Top-level dashboard, productions list, settings, auth screens
+  - (no Video tab — we don't have that feature yet)
 
 ## Notes / non-goals
 
