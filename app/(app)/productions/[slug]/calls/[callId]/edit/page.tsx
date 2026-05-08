@@ -6,8 +6,8 @@ import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership, getProductionMembers } from "@/features/members/queries";
 import { getCallById } from "@/features/calls/queries";
-import { deleteCall } from "@/features/calls/actions";
 import { CallForm } from "../../new/call-form";
+import { DeleteCallButton } from "./delete-call-button";
 
 export default async function EditCallPage({
   params,
@@ -72,19 +72,7 @@ export default async function EditCallPage({
               Update details as you get more information closer to the call.
             </p>
           </div>
-          <form action={deleteCall}>
-            <input type="hidden" name="call_id" value={call.id} />
-            <input type="hidden" name="production_id" value={production.id} />
-            <button
-              type="submit"
-              className="text-sm text-red-600 hover:text-red-800 transition-colors"
-              onClick={(e) => {
-                if (!confirm("Delete this call?")) e.preventDefault();
-              }}
-            >
-              Delete call
-            </button>
-          </form>
+          <DeleteCallButton callId={call.id} productionId={production.id} />
         </div>
       </div>
 
