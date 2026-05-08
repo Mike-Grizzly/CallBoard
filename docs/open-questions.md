@@ -74,3 +74,9 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 - Is there a target launch date or user count?
 - Should any of the scaffolded features (announcements, activity) be cut from MVP scope?
 - When should UX polish become a priority vs. feature completion?
+
+## Call schedule questions
+
+- **Real-time live status:** The dashboard header badge reflects state at page load, not in real time. Should the header auto-update (e.g. via Supabase Realtime or a client-side interval revalidation) so it flips to "Live" or advances to the next call without a manual refresh?
+- **Recurring calls:** There is no support for repeating calls (e.g. "Tuesday/Thursday 7–10pm for 8 weeks"). Should a recurrence system be built, or is bulk-creation sufficient?
+- **Cancel vs. delete:** Currently calls can only be deleted. Should there be a "cancel" status that keeps the call visible on the calendar (greyed out) to preserve the history for the production record?
