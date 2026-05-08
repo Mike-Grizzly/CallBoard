@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
@@ -161,7 +161,7 @@ export default async function CallsCalendarPage({
               href={`/productions/${slug}/calls/new`}
               className="inline-flex items-center gap-1.5 rounded-md bg-[color:var(--primary)] px-3 py-2 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity"
             >
-              <Plus className="h-4 w-4" />
+              <Icon name="Plus" className="h-4 w-4" />
               Schedule call
             </Link>
           )}
@@ -176,14 +176,14 @@ export default async function CallsCalendarPage({
             href={`/productions/${slug}/calls?month=${prevMonthParam(year, month)}`}
             className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-[color:var(--muted)] transition-colors text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <Icon name="ChevronLeft" className="h-4 w-4" />
           </Link>
           <h2 className="text-base font-semibold">{monthLabel}</h2>
           <Link
             href={`/productions/${slug}/calls?month=${nextMonthParam(year, month)}`}
             className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-[color:var(--muted)] transition-colors text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
           >
-            <ChevronRight className="h-4 w-4" />
+            <Icon name="ChevronRight" className="h-4 w-4" />
           </Link>
         </div>
 
@@ -241,7 +241,7 @@ export default async function CallsCalendarPage({
                       className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-5 w-5 rounded text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)] hover:bg-[color:var(--muted)]"
                       title={`Schedule call for ${dateStr}`}
                     >
-                      <Plus className="h-3 w-3" />
+                      <Icon name="Plus" className="h-3 w-3" />
                     </Link>
                   )}
                 </div>

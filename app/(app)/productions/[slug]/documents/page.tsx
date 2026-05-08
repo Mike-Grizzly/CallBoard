@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { FileText } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -105,7 +106,7 @@ export default async function DocumentsPage({
                     className="min-w-0 flex-1"
                   >
                     <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 shrink-0 text-[color:var(--muted-foreground)]" aria-hidden />
+                      <Icon name="FileText" className="h-4 w-4 shrink-0 text-[color:var(--muted-foreground)]" aria-hidden />
                       <h2 className="truncate text-sm font-semibold">
                         {doc.title}
                       </h2>
