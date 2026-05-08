@@ -1,8 +1,8 @@
 # Current Status
 
-**Last updated:** 2026-05-07
+**Last updated:** 2026-05-08
 
-**Current milestone:** Steps 1-11 complete. Notes feature shipped.
+**Current milestone:** Steps 1-12 complete. Call schedule calendar shipped.
 
 ## Feature status
 
@@ -129,6 +129,22 @@
 - TipTap rich text editor with auto-save (600ms debounce)
 - Notes added as card on production overview and tab in production nav
 - **Known limitation:** Visibility toggle is display-only — no query-level enforcement; all team members see all notes (deferred)
+
+### Step 12: Call Schedule Calendar — IMPLEMENTED
+
+- `end_time text` column added to `calls` table (Supabase migration applied 2026-05-08)
+- `/productions/[slug]/calls` — month calendar grid: all calls shown as chips per day, colour-coded by status (upcoming/live/past), prev/next month navigation via `?month=YYYY-MM` search param
+- Hover any future day → `+` icon to create a call with that date pre-filled (`?date=YYYY-MM-DD`)
+- Upcoming calls list view below the calendar for linear at-a-glance scheduling
+- `getNextCall` is now time-aware: skips calls whose `end_time` has passed today; returns `isLive` flag when current time is within `callTime–endTime` window
+- Production dashboard header shows three states: **"Live · In Rehearsal"** (orange pulse) when inside window, **"Today's Call"** (amber) when today but not yet started, **"Upcoming Call"** (muted) otherwise
+- End time displayed under call start time on dashboard header card
+- "Schedule call" header button replaced with **"Calls"** → opens calendar
+- **Calls** tab added to production tabs (visible to all members; create/edit gated to `reports:create`)
+- After create/edit/delete, users land back on the calendar
+- Delete button extracted to a client component (`DeleteCallButton`) — fixes pre-existing server-component error (`onClick` on server-rendered form)
+- `features/calls/` has `queries.ts`, `actions.ts` (no new libs introduced)
+- **Not verified:** Real-time live-status flipping without page reload (status is computed server-side at render time)
 
 ## Scaffolded only (not implemented)
 

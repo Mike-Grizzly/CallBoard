@@ -183,3 +183,23 @@ Record of durable project decisions. Add new entries at the bottom with date and
 **Reason:** Next.js 16 moved this config key. Placing it at the top level produces an "Unrecognized key" warning and does not take effect.
 
 **Impact:** `next.config.ts` uses `experimental.serverActions.bodySizeLimit: "25mb"`.
+
+---
+
+## 2026-05-08 — Call live-status computed at render time, not stored
+
+**Decision:** The "live" / "upcoming" / "past" status of a call is derived server-side on every page render from `call_time`, `end_time`, and the current time. No `status` column is flipped by a cron job or background worker.
+
+**Reason:** Storing computed state requires a reliable scheduled job and creates sync risks. The derived approach is simpler, always correct at render time, and requires no infrastructure beyond what already exists.
+
+**Impact:** The dashboard header badge and calendar chip colours reflect state as of page load. A rehearsal that goes live at 7pm will show "Live" on the next page load after 7pm, not in real time. This is acceptable for MVP use.
+
+---
+
+## 2026-05-08 — Calls calendar navigates via URL search params, not client state
+
+**Decision:** The month calendar uses `?month=YYYY-MM` URL search params for navigation rather than React state. The page is a server component.
+
+**Reason:** Keeps the calendar a server component (no client bundle cost, no hydration). Month state is bookmarkable and shareable. No interactivity is needed beyond link clicks.
+
+**Impact:** Each month navigation is a full page navigation. The `searchParams` prop is awaited as a Promise per Next.js 16 convention.
