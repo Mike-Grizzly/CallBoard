@@ -97,13 +97,14 @@ For every tab, the same four steps apply. Use them as a recipe.
 
 ### Reports — `/productions/[slug]/reports`
 
-- [ ] List view — adopt the demo's report row styling (number + date +
-      author chip)
-- [ ] Detail view — port the structured department layout to the demo's
-      card/section style
-- [ ] New/Edit form — restyle headers, fieldsets, attachment uploader
-- [ ] Email Report dialog — restyle recipient picker
-- [ ] Replace Lucide icons inside `<Link>` with `<Icon>`
+Completed via the demo-parity expansion in `docs/feature-specs/11-rehearsal-report-demo-parity.md`.
+
+- [x] List view — status pill column + filter chips (All / Drafts / Distributed)
+- [x] Detail view — 3-col summary (Call times + breaks / Attendance / Scenes) + tabbed bottom (Department notes / Schedule changes / Line notes / Injuries)
+- [x] New form — full demo editor (status flow, dept rich-text modal, breaks, attendance, scenes, schedule changes, line notes, injuries)
+- [x] Edit form — same shared `ReportForm` component, `/reports/[reportId]/edit` route
+- [x] Email Report dialog — demo modal chrome (backdrop + centered card + member avatars)
+- [x] Lucide icons inside `<Link>` routed through `<Icon>`
 
 ### Notes — `/productions/[slug]/notes`
 

@@ -2,7 +2,28 @@
 
 ## Status
 
-**PLANNED.** Draft 2026-05-11. Sequel to `09-rehearsal-report-overhaul.md`.
+**IMPLEMENTED — 2026-05-11.** Sequel to `09-rehearsal-report-overhaul.md`.
+
+Landed across 9 commits on branch `claude/merge-reports-tab-gp3r0`:
+1. Migration `rehearsal_report_demo_parity` + Drizzle schema + TS types
+   (`49e96e9`)
+2. `updateReport` action + `/edit` route shell + restored Edit button
+   (`882c172`)
+3. Save draft / Distribute status flow with server-side no-revert
+   enforcement (`715a46a`)
+4. Department notes become rich text via a per-card TipTap modal
+   (`a4dd160`)
+5. Top summary editors: Call times + breaks, Attendance, Scenes
+   worked (`aca0ee5`)
+6. Bottom subtab editors: Schedule changes, Line notes, Injuries
+   (`b07982e`)
+7. Detail view renders every new section behind a client tab
+   switcher (`9cc283b`)
+8. List view: status pill column + URL-driven filter chips
+   (`579ae17`)
+9. Email Report dialog → demo modal chrome (`9b20951`)
+
+Original draft 2026-05-11 below.
 Brings the rehearsal report data model and UX to full parity with the
 HTML demo (`design-reference/jsx/tab-reports.jsx`) so the Reports tab
 visual port can land on real data instead of restyling around missing
