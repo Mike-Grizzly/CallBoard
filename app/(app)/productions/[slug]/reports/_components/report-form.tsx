@@ -21,7 +21,15 @@ import type {
   Break,
   SceneWorked,
   AttendanceNote,
+  ScheduleChange,
+  LineNote,
+  Injury,
 } from "@/features/reports/types";
+import {
+  ScheduleChangesEditor,
+  LineNotesEditor,
+  InjuriesEditor,
+} from "./subtab-editors";
 
 function formatLongDate(iso: string): string {
   if (!iso) return "";
@@ -85,6 +93,16 @@ export function ReportForm({
   const [attendanceNotes, setAttendanceNotes] = useState<AttendanceNote[]>(
     initial?.attendanceNotes ?? [],
   );
+  const [scheduleChanges, setScheduleChanges] = useState<ScheduleChange[]>(
+    initial?.scheduleChanges ?? [],
+  );
+  const [lineNotes, setLineNotes] = useState<LineNote[]>(
+    initial?.lineNotes ?? [],
+  );
+  const [injuries, setInjuries] = useState<Injury[]>(initial?.injuries ?? []);
+  const [activeTab, setActiveTab] = useState<
+    "notes" | "sched" | "lines" | "injuries"
+  >("notes");
 
   function importFromLog() {
     if (logContent) setGeneralNotes(logContent);
@@ -306,73 +324,126 @@ export function ReportForm({
         )}
       </div>
 
-      <div className="card card-pad">
-        <div className="row-between" style={{ marginBottom: 14 }}>
-          <h3 className="h-card">Department notes</h3>
-          <span className="muted" style={{ fontSize: 12 }}>
-            Click a card to open the editor
-          </span>
+      <div className="card">
+        <div
+          style={{
+            display: "flex",
+            borderBottom: "1px solid var(--border)",
+            padding: "0 16px",
+          }}
+        >
+          {[
+            {
+              id: "notes" as const,
+              label: "Department notes",
+              count: Object.values(deptNotes).filter(
+                (v) => v && v.replace(/<[^>]+>/g, "").trim(),
+              ).length,
+            },
+            {
+              id: "sched" as const,
+              label: "Schedule changes",
+              count: scheduleChanges.length,
+            },
+            {
+              id: "lines" as const,
+              label: "Line notes",
+              count: lineNotes.length,
+            },
+            {
+              id: "injuries" as const,
+              label: "Injuries / incidents",
+              count: injuries.length,
+            },
+          ].map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className="tab"
+              data-active={activeTab === s.id ? "1" : "0"}
+              onClick={() => setActiveTab(s.id)}
+            >
+              <span>{s.label}</span>
+              {s.count > 0 && <span className="count">{s.count}</span>}
+            </button>
+          ))}
         </div>
-        <div className="grid grid-2" style={{ gap: 14 }}>
-          {DEPARTMENTS.map((d) => {
-            const html = deptNotes[d.key];
-            const empty = !html || !html.replace(/<[^>]+>/g, "").trim();
-            return (
-              <div
-                key={d.key}
-                onClick={() => setEditingDept(d.key)}
-                className="dept-note-card"
-                style={{
-                  padding: "14px 16px",
-                  border: "1px solid var(--border)",
-                  borderRadius: "var(--radius-s)",
-                  cursor: "pointer",
-                  minHeight: 108,
-                  transition:
-                    "border-color .12s, background .12s, box-shadow .12s",
-                }}
-              >
-                <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <div style={{ padding: 20 }}>
+          <div style={{ display: activeTab === "notes" ? "block" : "none" }}>
+            <div className="grid grid-2" style={{ gap: 14 }}>
+              {DEPARTMENTS.map((d) => {
+                const html = deptNotes[d.key];
+                const empty = !html || !html.replace(/<[^>]+>/g, "").trim();
+                return (
                   <div
-                    className="notif-ico"
-                    data-c={d.c}
-                    style={{ width: 24, height: 24 }}
-                  >
-                    <Icon name={d.icon} size={13} aria-hidden />
-                  </div>
-                  <b style={{ fontSize: 13, fontWeight: 600 }}>{d.label}</b>
-                  <span
-                    className="dept-note-edit-hint muted"
+                    key={d.key}
+                    onClick={() => setEditingDept(d.key)}
+                    className="dept-note-card"
                     style={{
-                      marginLeft: "auto",
-                      fontSize: 11,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
+                      padding: "14px 16px",
+                      border: "1px solid var(--border)",
+                      borderRadius: "var(--radius-s)",
+                      cursor: "pointer",
+                      minHeight: 108,
+                      transition:
+                        "border-color .12s, background .12s, box-shadow .12s",
                     }}
                   >
-                    <Icon name="PenLine" size={11} aria-hidden />
-                    <span>Edit</span>
-                  </span>
-                </div>
-                {empty ? (
-                  <div
-                    style={{
-                      fontSize: 13,
-                      lineHeight: 1.55,
-                      color: "var(--ink-4)",
-                      fontStyle: "italic",
-                    }}
-                  >
-                    Click to add notes for {d.label.toLowerCase()}…
+                    <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+                      <div
+                        className="notif-ico"
+                        data-c={d.c}
+                        style={{ width: 24, height: 24 }}
+                      >
+                        <Icon name={d.icon} size={13} aria-hidden />
+                      </div>
+                      <b style={{ fontSize: 13, fontWeight: 600 }}>{d.label}</b>
+                      <span
+                        className="dept-note-edit-hint muted"
+                        style={{
+                          marginLeft: "auto",
+                          fontSize: 11,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
+                        <Icon name="PenLine" size={11} aria-hidden />
+                        <span>Edit</span>
+                      </span>
+                    </div>
+                    {empty ? (
+                      <div
+                        style={{
+                          fontSize: 13,
+                          lineHeight: 1.55,
+                          color: "var(--ink-4)",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        Click to add notes for {d.label.toLowerCase()}…
+                      </div>
+                    ) : (
+                      <RichTextDisplay content={html} />
+                    )}
+                    <input type="hidden" name={d.field} value={html} />
                   </div>
-                ) : (
-                  <RichTextDisplay content={html} />
-                )}
-                <input type="hidden" name={d.field} value={html} />
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          </div>
+          <div style={{ display: activeTab === "sched" ? "block" : "none" }}>
+            <ScheduleChangesEditor
+              changes={scheduleChanges}
+              onChange={setScheduleChanges}
+            />
+          </div>
+          <div style={{ display: activeTab === "lines" ? "block" : "none" }}>
+            <LineNotesEditor lines={lineNotes} onChange={setLineNotes} />
+          </div>
+          <div style={{ display: activeTab === "injuries" ? "block" : "none" }}>
+            <InjuriesEditor injuries={injuries} onChange={setInjuries} />
+          </div>
         </div>
       </div>
 
