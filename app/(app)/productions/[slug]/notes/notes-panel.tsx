@@ -592,13 +592,16 @@ function NoteRow({
   tags,
   active,
   onPick,
+  onToggleComplete,
 }: {
   note: NoteWithAuthor;
   tags: NoteTagRow[];
   active: boolean;
   onPick: () => void;
+  onToggleComplete?: () => void;
 }) {
   const tag = tags.find((t) => t.id === note.tagId);
+  const done = note.isCompleted;
 
   return (
     <div
@@ -621,38 +624,47 @@ function NoteRow({
         if (!active) e.currentTarget.style.background = "transparent";
       }}
     >
-      <div
-        style={{
-          color:
-            note.isCompleted
-              ? "var(--c-sage)"
-              : note.isTodo
-                ? "var(--ink-4)"
-                : "var(--ink-3)",
-          paddingTop: 1,
-        }}
-      >
-        {note.isTodo ? (
-          note.isCompleted ? (
+      {/* Icon / check button */}
+      {note.isTodo && onToggleComplete ? (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onToggleComplete(); }}
+          style={{
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            paddingTop: 1,
+            color: done ? "var(--c-sage)" : "var(--ink-4)",
+            transition: "color 0.25s ease",
+          }}
+          title={done ? "Mark incomplete" : "Mark complete"}
+        >
+          {done ? (
             <CheckCircle2 style={{ width: 16, height: 16 }} />
           ) : (
             <Circle style={{ width: 16, height: 16 }} />
-          )
-        ) : (
-          <PenLine style={{ width: 14, height: 14 }} />
-        )}
-      </div>
-      <div style={{ minWidth: 0 }}>
+          )}
+        </button>
+      ) : (
         <div
-          className="truncate"
           style={{
-            fontSize: 13,
-            fontWeight: 500,
-            textDecoration: note.isCompleted ? "line-through" : "none",
-            color: note.isCompleted ? "var(--ink-3)" : "var(--ink)",
+            color: note.isTodo ? "var(--ink-4)" : "var(--ink-3)",
+            paddingTop: 1,
           }}
         >
+          <PenLine style={{ width: 14, height: 14 }} />
+        </div>
+      )}
+
+      <div style={{ minWidth: 0 }}>
+        {/* Animated title */}
+        <div
+          className={`note-row-title truncate${done ? " done" : ""}`}
+          style={{ fontSize: 13, fontWeight: 500 }}
+        >
           {note.title || "Untitled"}
+          <span className={`note-row-strike${done ? " done" : ""}`} />
         </div>
         <div className="row" style={{ gap: 8, marginTop: 3 }}>
           {tag && (
@@ -918,6 +930,16 @@ export function NotesPanel({
     });
   }
 
+  function handleToggleComplete(noteId: string, currentCompleted: boolean) {
+    const next = !currentCompleted;
+    setNotes((prev) =>
+      prev.map((n) => (n.id === noteId ? { ...n, isCompleted: next } : n)),
+    );
+    startTransition(async () => {
+      await updateNote(noteId, productionSlug, { isCompleted: next });
+    });
+  }
+
   function handleNoteUpdated(
     updated: Partial<NoteWithAuthor> & { id: string; _deleted?: boolean },
   ) {
@@ -1009,6 +1031,7 @@ export function NotesPanel({
                   tags={tags}
                   active={selectedId === note.id}
                   onPick={() => setSelectedId(note.id)}
+                  onToggleComplete={() => handleToggleComplete(note.id, note.isCompleted)}
                 />
               ))}
             </div>
@@ -1038,6 +1061,7 @@ export function NotesPanel({
               tags={tags}
               active={selectedId === note.id}
               onPick={() => setSelectedId(note.id)}
+              onToggleComplete={() => handleToggleComplete(note.id, note.isCompleted)}
             />
           ))}
           {filtered.length === 0 && notes.length > 0 && (
