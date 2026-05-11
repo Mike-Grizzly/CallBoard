@@ -113,16 +113,16 @@ export default async function ProductionLayout({
       icon: "Phone",
     },
     {
-      label: "Announcements",
-      href: `/productions/${slug}/announcements`,
-      icon: "Megaphone",
-      count: announcements.length,
-    },
-    {
       label: "Documents",
       href: `/productions/${slug}/documents`,
       icon: "FolderOpen",
       count: documents.length,
+    },
+    {
+      label: "Announcements",
+      href: `/productions/${slug}/announcements`,
+      icon: "Megaphone",
+      count: announcements.length,
     },
   ];
   if (canCreateReports) {

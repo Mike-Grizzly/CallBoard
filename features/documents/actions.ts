@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { documents } from "@/db/schema";
+import { documents, documentFolders } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/auth";
@@ -12,6 +12,27 @@ export type UploadDocumentResult = {
   error?: string;
   success?: boolean;
 };
+
+export const DEFAULT_FOLDERS = [
+  "Director",
+  "Stage Management",
+  "Music",
+  "Choreography",
+  "Costumes",
+  "Props",
+  "Lighting",
+  "Sound",
+] as const;
+
+export async function createDefaultFolders(productionId: string) {
+  await db.insert(documentFolders).values(
+    DEFAULT_FOLDERS.map((name, i) => ({
+      productionId,
+      name,
+      sortOrder: i,
+    })),
+  );
+}
 
 export async function uploadDocument(
   formData: FormData,
@@ -24,7 +45,7 @@ export async function uploadDocument(
 
   const productionId = formData.get("production_id") as string;
   const title = (formData.get("title") as string)?.trim();
-  const documentType = (formData.get("document_type") as string) || "general";
+  const folderId = (formData.get("folder_id") as string) || null;
   const file = formData.get("file") as File;
 
   if (!productionId || !file || file.size === 0) {
@@ -53,12 +74,12 @@ export async function uploadDocument(
   await db.insert(documents).values({
     productionId,
     uploadedBy: user.id,
+    folderId: folderId || undefined,
     title,
     fileName: file.name,
     fileSize: file.size,
     contentType: file.type,
     storagePath,
-    documentType,
   });
 
   revalidatePath("/productions");

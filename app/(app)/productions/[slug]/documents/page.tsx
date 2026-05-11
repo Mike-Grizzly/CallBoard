@@ -4,7 +4,10 @@ import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
-import { getDocumentsByProduction } from "@/features/documents/queries";
+import {
+  getDocumentsByProduction,
+  getFoldersByProduction,
+} from "@/features/documents/queries";
 import { DocumentsClient } from "./documents-client";
 
 export default async function DocumentsPage({
@@ -29,12 +32,17 @@ export default async function DocumentsPage({
     }
   }
 
-  const documents = await getDocumentsByProduction(production.id);
+  const [documents, folders] = await Promise.all([
+    getDocumentsByProduction(production.id),
+    getFoldersByProduction(production.id),
+  ]);
+
   const canUpload = can(user.role, "documents:upload");
 
   return (
     <DocumentsClient
       documents={documents}
+      folders={folders}
       productionId={production.id}
       productionTitle={production.title}
       slug={slug}
