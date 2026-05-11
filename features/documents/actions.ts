@@ -34,6 +34,43 @@ export async function createDefaultFolders(productionId: string) {
   );
 }
 
+export type CreateFolderResult = { error?: string; success?: boolean };
+
+export async function createFolder(
+  formData: FormData,
+): Promise<CreateFolderResult> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "documents:upload")) {
+    return { error: "You don't have permission to create folders." };
+  }
+
+  const productionId = formData.get("production_id") as string;
+  const name = (formData.get("name") as string)?.trim();
+
+  if (!productionId || !name) {
+    return { error: "Folder name is required." };
+  }
+
+  if (name.length > 50) {
+    return { error: "Folder name must be 50 characters or less." };
+  }
+
+  const existing = await db
+    .select({ id: documentFolders.id })
+    .from(documentFolders)
+    .where(eq(documentFolders.productionId, productionId));
+
+  await db.insert(documentFolders).values({
+    productionId,
+    name,
+    sortOrder: existing.length,
+  });
+
+  revalidatePath("/productions");
+  return { success: true };
+}
+
 export async function uploadDocument(
   formData: FormData,
 ): Promise<UploadDocumentResult> {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   File,
   Upload as UploadIcon,
@@ -11,8 +12,10 @@ import {
   ExternalLink,
   X,
   Folder,
+  FolderPlus,
+  Check,
 } from "lucide-react";
-import { getDocumentUrl } from "@/features/documents/actions";
+import { getDocumentUrl, createFolder } from "@/features/documents/actions";
 import { DocumentUploadForm } from "./document-upload-form";
 import { DocumentDeleteButton } from "./document-delete-button";
 import type {
@@ -102,10 +105,51 @@ export function DocumentsClient({
   slug,
   canUpload,
 }: Props) {
+  const router = useRouter();
   const [activeFolder, setActiveFolder] = useState(ALL_FILES);
   const [view, setView] = useState<"list" | "grid">("list");
   const [sel, setSel] = useState<DocumentWithUploader | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [addingFolder, setAddingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [folderError, setFolderError] = useState<string | null>(null);
+  const [isSavingFolder, startFolderTransition] = useTransition();
+  const folderInputRef = useRef<HTMLInputElement>(null);
+
+  function handleAddFolderClick() {
+    setAddingFolder(true);
+    setNewFolderName("");
+    setFolderError(null);
+    setTimeout(() => folderInputRef.current?.focus(), 0);
+  }
+
+  function handleFolderKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Escape") {
+      setAddingFolder(false);
+      setNewFolderName("");
+    } else if (e.key === "Enter") {
+      submitNewFolder();
+    }
+  }
+
+  function submitNewFolder() {
+    const name = newFolderName.trim();
+    if (!name) return;
+    setFolderError(null);
+    const formData = new FormData();
+    formData.set("production_id", productionId);
+    formData.set("name", name);
+    startFolderTransition(async () => {
+      const result = await createFolder(formData);
+      if (result.error) {
+        setFolderError(result.error);
+      } else {
+        setAddingFolder(false);
+        setNewFolderName("");
+        router.refresh();
+      }
+    });
+  }
 
   // Visible docs based on selected folder rail item
   const visible =
@@ -173,6 +217,81 @@ export function DocumentsClient({
             />
           )}
         </div>
+
+        {/* New folder */}
+        {canUpload && (
+          <div style={{ marginTop: 6 }}>
+            {addingFolder ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 4px 4px 10px" }}>
+                <FolderPlus size={13} style={{ color: "var(--ink-4)", flexShrink: 0 }} />
+                <input
+                  ref={folderInputRef}
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={handleFolderKeyDown}
+                  placeholder="Folder name"
+                  maxLength={50}
+                  style={{
+                    flex: 1,
+                    fontSize: 13,
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--radius-s)",
+                    padding: "3px 6px",
+                    background: "var(--bg-elev)",
+                    color: "var(--ink)",
+                    outline: "none",
+                    minWidth: 0,
+                  }}
+                />
+                <button
+                  className="btn-icon"
+                  onClick={submitNewFolder}
+                  disabled={isSavingFolder || !newFolderName.trim()}
+                  title="Create folder"
+                  style={{
+                    width: 24, height: 24, border: "none", background: "none",
+                    cursor: "pointer", color: "var(--accent)", flexShrink: 0,
+                    display: "grid", placeItems: "center",
+                  }}
+                >
+                  <Check size={13} />
+                </button>
+                <button
+                  className="btn-icon"
+                  onClick={() => { setAddingFolder(false); setNewFolderName(""); }}
+                  title="Cancel"
+                  style={{
+                    width: 24, height: 24, border: "none", background: "none",
+                    cursor: "pointer", color: "var(--ink-4)", flexShrink: 0,
+                    display: "grid", placeItems: "center",
+                  }}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleAddFolderClick}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "6px 10px", borderRadius: 6, cursor: "pointer",
+                  fontSize: 12, border: "none", width: "100%", background: "none",
+                  color: "var(--ink-4)", textAlign: "left",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-2)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-4)"; }}
+              >
+                <FolderPlus size={13} />
+                <span>New folder</span>
+              </button>
+            )}
+            {folderError && (
+              <p style={{ fontSize: 11.5, color: "var(--c-clay)", padding: "2px 10px" }}>
+                {folderError}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="h-eyebrow" style={{ marginTop: 24, marginBottom: 10 }}>
           Storage
