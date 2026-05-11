@@ -12,6 +12,16 @@ import type { ReportDetail } from "@/features/reports/queries";
 import { RichTextEditor, RichTextDisplay } from "@/components/ui/rich-text-editor";
 import { Icon } from "@/components/ui/icon";
 import { DeptNoteModal } from "./dept-note-modal";
+import {
+  CallTimesEditor,
+  AttendanceEditor,
+  ScenesWorkedEditor,
+} from "./summary-editors";
+import type {
+  Break,
+  SceneWorked,
+  AttendanceNote,
+} from "@/features/reports/types";
 
 function formatLongDate(iso: string): string {
   if (!iso) return "";
@@ -63,6 +73,18 @@ export function ReportForm({
   });
   const [editingDept, setEditingDept] = useState<string | null>(null);
   const editingDeptDef = DEPARTMENTS.find((d) => d.key === editingDept) ?? null;
+  const [breaks, setBreaks] = useState<Break[]>(initial?.breaks ?? []);
+  const [scenesWorked, setScenesWorked] = useState<SceneWorked[]>(
+    initial?.scenesWorked ?? [],
+  );
+  const [present, setPresent] = useState<number>(
+    initial?.attendancePresent ?? 0,
+  );
+  const [absent, setAbsent] = useState<number>(initial?.attendanceAbsent ?? 0);
+  const [late, setLate] = useState<number>(initial?.attendanceLate ?? 0);
+  const [attendanceNotes, setAttendanceNotes] = useState<AttendanceNote[]>(
+    initial?.attendanceNotes ?? [],
+  );
 
   function importFromLog() {
     if (logContent) setGeneralNotes(logContent);
@@ -184,98 +206,74 @@ export function ReportForm({
         </div>
       )}
 
-      <div className="grid grid-2" style={{ gap: 16 }}>
-        <div className="card card-pad">
-          <h3 className="h-card" style={{ marginBottom: 10 }}>Call times</h3>
-          <div className="grid grid-2" style={{ gap: 10 }}>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div className="label">Date</div>
-              <input
-                type="date"
-                name="report_date"
-                value={reportDate}
-                onChange={(e) => setReportDate(e.target.value)}
-                required
-                className="field"
-              />
-              {state?.errors?.report_date && (
-                <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 4 }}>
-                  {state.errors.report_date}
-                </div>
-              )}
-            </div>
-            <div>
-              <div className="label">Scheduled call</div>
-              <input
-                type="time"
-                name="scheduled_call"
-                defaultValue={initial?.scheduledCall ?? ""}
-                className="field"
-              />
-            </div>
-            <div>
-              <div className="label">Actual start</div>
-              <input
-                type="time"
-                name="actual_start"
-                defaultValue={initial?.actualStart ?? ""}
-                className="field"
-              />
-            </div>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div className="label">End time</div>
-              <input
-                type="time"
-                name="end_time"
-                defaultValue={initial?.endTime ?? ""}
-                className="field"
-              />
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-3" style={{ gap: 16 }}>
+        <CallTimesEditor
+          reportDate={reportDate}
+          onReportDateChange={setReportDate}
+          errorReportDate={state?.errors?.report_date}
+          scheduledCall={initial?.scheduledCall ?? ""}
+          actualStart={initial?.actualStart ?? ""}
+          endTime={initial?.endTime ?? ""}
+          breaks={breaks}
+          onBreaksChange={setBreaks}
+        />
+        <AttendanceEditor
+          present={present}
+          absent={absent}
+          late={late}
+          notes={attendanceNotes}
+          onPresentChange={setPresent}
+          onAbsentChange={setAbsent}
+          onLateChange={setLate}
+          onNotesChange={setAttendanceNotes}
+        />
+        <ScenesWorkedEditor
+          scenes={scenesWorked}
+          onChange={setScenesWorked}
+        />
+      </div>
 
-        <div className="card card-pad">
-          <h3 className="h-card" style={{ marginBottom: 10 }}>Next rehearsal</h3>
-          <div className="grid grid-2" style={{ gap: 10 }}>
-            <div>
-              <div className="label">Date</div>
-              <input
-                type="date"
-                name="next_rehearsal_date"
-                defaultValue={initial?.nextRehearsalDate ?? ""}
-                className="field"
-              />
-            </div>
-            <div>
-              <div className="label">Time</div>
-              <input
-                type="text"
-                name="next_rehearsal_time"
-                placeholder="7:00 PM"
-                defaultValue={initial?.nextRehearsalTime ?? ""}
-                className="field"
-              />
-            </div>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div className="label">Location</div>
-              <input
-                type="text"
-                name="next_rehearsal_location"
-                placeholder="Studio A"
-                defaultValue={initial?.nextRehearsalLocation ?? ""}
-                className="field"
-              />
-            </div>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div className="label">What will be covered</div>
-              <textarea
-                name="next_rehearsal_notes"
-                rows={3}
-                defaultValue={initial?.nextRehearsalNotes ?? ""}
-                className="field"
-                style={{ resize: "vertical", minHeight: 64 }}
-              />
-            </div>
+      <div className="card card-pad">
+        <h3 className="h-card" style={{ marginBottom: 10 }}>Next rehearsal</h3>
+        <div className="grid grid-3" style={{ gap: 10 }}>
+          <div>
+            <div className="label">Date</div>
+            <input
+              type="date"
+              name="next_rehearsal_date"
+              defaultValue={initial?.nextRehearsalDate ?? ""}
+              className="field"
+            />
+          </div>
+          <div>
+            <div className="label">Time</div>
+            <input
+              type="text"
+              name="next_rehearsal_time"
+              placeholder="7:00 PM"
+              defaultValue={initial?.nextRehearsalTime ?? ""}
+              className="field"
+            />
+          </div>
+          <div>
+            <div className="label">Location</div>
+            <input
+              type="text"
+              name="next_rehearsal_location"
+              placeholder="Studio A"
+              defaultValue={initial?.nextRehearsalLocation ?? ""}
+              className="field"
+            />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <div className="label">What will be covered</div>
+            <textarea
+              name="next_rehearsal_notes"
+              rows={3}
+              defaultValue={initial?.nextRehearsalNotes ?? ""}
+              className="field"
+              style={{ resize: "vertical", minHeight: 64 }}
+            />
           </div>
         </div>
       </div>

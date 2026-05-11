@@ -86,6 +86,15 @@ export async function createReport(
       deptVideo: data!.departments.deptVideo,
       deptCrew: data!.departments.deptCrew,
       deptOther: data!.departments.deptOther,
+      attendancePresent: data!.attendancePresent,
+      attendanceAbsent: data!.attendanceAbsent,
+      attendanceLate: data!.attendanceLate,
+      breaks: data!.breaks,
+      scenesWorked: data!.scenesWorked,
+      scheduleChanges: data!.scheduleChanges,
+      attendanceNotes: data!.attendanceNotes,
+      lineNotes: data!.lineNotes,
+      injuries: data!.injuries,
       distributedAt: data!.status === "distributed" ? new Date() : null,
     })
     .returning({ id: rehearsalReports.id });
@@ -178,6 +187,15 @@ export async function updateReport(
       deptVideo: data!.departments.deptVideo,
       deptCrew: data!.departments.deptCrew,
       deptOther: data!.departments.deptOther,
+      attendancePresent: data!.attendancePresent,
+      attendanceAbsent: data!.attendanceAbsent,
+      attendanceLate: data!.attendanceLate,
+      breaks: data!.breaks,
+      scenesWorked: data!.scenesWorked,
+      scheduleChanges: data!.scheduleChanges,
+      attendanceNotes: data!.attendanceNotes,
+      lineNotes: data!.lineNotes,
+      injuries: data!.injuries,
       updatedAt: new Date(),
     })
     .where(eq(rehearsalReports.id, reportId));
