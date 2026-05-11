@@ -251,77 +251,80 @@ export function ReportForm({
         />
       </div>
 
-      <div className="card card-pad">
-        <h3 className="h-card" style={{ marginBottom: 10 }}>Next rehearsal</h3>
-        <div className="grid grid-3" style={{ gap: 10 }}>
-          <div>
-            <div className="label">Date</div>
-            <input
-              type="date"
-              name="next_rehearsal_date"
-              defaultValue={initial?.nextRehearsalDate ?? ""}
-              className="field"
-            />
+      {/* General notes + Next rehearsal share a row to reduce scrolling */}
+      <div className="grid grid-3" style={{ gap: 16 }}>
+        <div className="card card-pad" style={{ gridColumn: "span 2" }}>
+          <div className="row-between" style={{ marginBottom: 10 }}>
+            <h3 className="h-card">General notes</h3>
+            {logContent && !isEdit && (
+              <button
+                type="button"
+                onClick={importFromLog}
+                className="btn ghost"
+                style={{ height: 28, padding: "0 10px", fontSize: 12 }}
+              >
+                <Icon name="Download" size={12} aria-hidden />
+                <span>Import from daily log</span>
+              </button>
+            )}
           </div>
-          <div>
-            <div className="label">Time</div>
-            <input
-              type="text"
-              name="next_rehearsal_time"
-              placeholder="7:00 PM"
-              defaultValue={initial?.nextRehearsalTime ?? ""}
-              className="field"
-            />
-          </div>
-          <div>
-            <div className="label">Location</div>
-            <input
-              type="text"
-              name="next_rehearsal_location"
-              placeholder="Studio A"
-              defaultValue={initial?.nextRehearsalLocation ?? ""}
-              className="field"
-            />
-          </div>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <div className="label">What will be covered</div>
-            <textarea
-              name="next_rehearsal_notes"
-              rows={3}
-              defaultValue={initial?.nextRehearsalNotes ?? ""}
-              className="field"
-              style={{ resize: "vertical", minHeight: 64 }}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="card card-pad">
-        <div className="row-between" style={{ marginBottom: 10 }}>
-          <h3 className="h-card">General notes</h3>
-          {logContent && !isEdit && (
-            <button
-              type="button"
-              onClick={importFromLog}
-              className="btn ghost"
-              style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-            >
-              <Icon name="Download" size={12} aria-hidden />
-              <span>Import from daily log</span>
-            </button>
+          <RichTextEditor
+            content={generalNotes}
+            onChange={setGeneralNotes}
+            placeholder="Overall summary of the day's rehearsal…"
+            minHeight="180px"
+          />
+          {state?.errors?.general_notes && (
+            <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 6 }}>
+              {state.errors.general_notes}
+            </div>
           )}
         </div>
-        <RichTextEditor
-          content={generalNotes}
-          onChange={setGeneralNotes}
-          placeholder="Overall summary of the day's rehearsal…"
-          minHeight="180px"
-        />
-        {state?.errors?.general_notes && (
-          <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 6 }}>
-            {state.errors.general_notes}
+
+        <div className="card card-pad">
+          <h3 className="h-card" style={{ marginBottom: 10 }}>Next rehearsal</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div>
+              <div className="label">Date</div>
+              <input
+                type="date"
+                name="next_rehearsal_date"
+                defaultValue={initial?.nextRehearsalDate ?? ""}
+                className="field"
+              />
+            </div>
+            <div>
+              <div className="label">Time</div>
+              <input
+                type="text"
+                name="next_rehearsal_time"
+                placeholder="7:00 PM"
+                defaultValue={initial?.nextRehearsalTime ?? ""}
+                className="field"
+              />
+            </div>
+            <div>
+              <div className="label">Location</div>
+              <input
+                type="text"
+                name="next_rehearsal_location"
+                placeholder="Studio A"
+                defaultValue={initial?.nextRehearsalLocation ?? ""}
+                className="field"
+              />
+            </div>
+            <div>
+              <div className="label">What will be covered</div>
+              <textarea
+                name="next_rehearsal_notes"
+                rows={3}
+                defaultValue={initial?.nextRehearsalNotes ?? ""}
+                className="field"
+                style={{ resize: "vertical", minHeight: 64 }}
+              />
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       <div className="card">

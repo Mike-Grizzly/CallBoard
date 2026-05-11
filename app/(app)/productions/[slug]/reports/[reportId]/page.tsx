@@ -297,33 +297,36 @@ export default async function ReportDetailPage({
         </div>
       </div>
 
-      {/* Next rehearsal (our addition; not in demo) */}
-      {hasNext && (
-        <div className="card card-pad">
-          <h3 className="h-card" style={{ marginBottom: 10 }}>Next rehearsal</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <div style={{ fontSize: 13.5 }}>
-              {[
-                report.nextRehearsalDate ? formatShortDate(report.nextRehearsalDate) : null,
-                report.nextRehearsalTime,
-                report.nextRehearsalLocation,
-              ]
-                .filter(Boolean)
-                .join(" · ") || "—"}
+      {/* General notes + Next rehearsal share a row to reduce scrolling */}
+      {((report.generalNotes && report.generalNotes.replace(/<[^>]+>/g, "").trim()) || hasNext) && (
+        <div className="grid grid-3" style={{ gap: 16 }}>
+          {report.generalNotes && report.generalNotes.replace(/<[^>]+>/g, "").trim() ? (
+            <div className="card card-pad" style={{ gridColumn: hasNext ? "span 2" : "1 / -1" }}>
+              <h3 className="h-card" style={{ marginBottom: 10 }}>General notes</h3>
+              <RichTextDisplay content={report.generalNotes} />
             </div>
-            {report.nextRehearsalNotes && (
-              <div className="muted" style={{ fontSize: 12.5, whiteSpace: "pre-wrap" }}>
-                {report.nextRehearsalNotes}
+          ) : null}
+          {hasNext && (
+            <div className="card card-pad">
+              <h3 className="h-card" style={{ marginBottom: 10 }}>Next rehearsal</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ fontSize: 13.5 }}>
+                  {[
+                    report.nextRehearsalDate ? formatShortDate(report.nextRehearsalDate) : null,
+                    report.nextRehearsalTime,
+                    report.nextRehearsalLocation,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "—"}
+                </div>
+                {report.nextRehearsalNotes && (
+                  <div className="muted" style={{ fontSize: 12.5, whiteSpace: "pre-wrap" }}>
+                    {report.nextRehearsalNotes}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {report.generalNotes && report.generalNotes.replace(/<[^>]+>/g, "").trim() && (
-        <div className="card card-pad">
-          <h3 className="h-card" style={{ marginBottom: 10 }}>General notes</h3>
-          <RichTextDisplay content={report.generalNotes} />
+            </div>
+          )}
         </div>
       )}
 
