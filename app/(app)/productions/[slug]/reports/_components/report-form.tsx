@@ -101,7 +101,7 @@ export function ReportForm({
   );
   const [injuries, setInjuries] = useState<Injury[]>(initial?.injuries ?? []);
   const [activeTab, setActiveTab] = useState<
-    "notes" | "sched" | "lines" | "injuries"
+    "notes" | "sched" | "lines" | "injuries" | "general" | "next"
   >("notes");
 
   function importFromLog() {
@@ -167,9 +167,52 @@ export function ReportForm({
                 : "New rehearsal report"}
             </div>
             <h2 className="h-section">{formatLongDate(reportDate)}</h2>
-            <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-              {productionTitle}
+            <div
+              className="muted"
+              style={{
+                fontSize: 13,
+                marginTop: 4,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                flexWrap: "wrap",
+              }}
+            >
+              {reportNumLabel && (
+                <>
+                  <span>Report number {reportNumLabel}</span>
+                  <span>·</span>
+                </>
+              )}
+              <span>{productionTitle}</span>
+              <span>·</span>
+              <label
+                style={{ display: "inline-flex", alignItems: "center", gap: 4, cursor: "pointer" }}
+              >
+                <Icon name="Calendar" size={12} aria-hidden />
+                <input
+                  type="date"
+                  name="report_date"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                  required
+                  style={{
+                    border: 0,
+                    background: "transparent",
+                    padding: 0,
+                    fontSize: 13,
+                    color: "inherit",
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                  }}
+                />
+              </label>
             </div>
+            {state?.errors?.report_date && (
+              <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 4 }}>
+                {state.errors.report_date}
+              </div>
+            )}
           </div>
           <div className="row" style={{ gap: 8 }}>
             {isAlreadyDistributed ? (
@@ -224,12 +267,17 @@ export function ReportForm({
         </div>
       )}
 
-      <div className="grid grid-3" style={{ gap: 16 }}>
+      {/* Preserve scheduledCall on edit even though it isn't shown in the form */}
+      {isEdit && initial?.scheduledCall && (
+        <input
+          type="hidden"
+          name="scheduled_call"
+          value={initial.scheduledCall}
+        />
+      )}
+
+      <div className="grid grid-3" style={{ gap: 16, alignItems: "start" }}>
         <CallTimesEditor
-          reportDate={reportDate}
-          onReportDateChange={setReportDate}
-          errorReportDate={state?.errors?.report_date}
-          scheduledCall={initial?.scheduledCall ?? ""}
           actualStart={initial?.actualStart ?? ""}
           endTime={initial?.endTime ?? ""}
           breaks={breaks}
@@ -251,81 +299,6 @@ export function ReportForm({
         />
       </div>
 
-      {/* General notes + Next rehearsal share a row to reduce scrolling */}
-      <div className="grid grid-3" style={{ gap: 16 }}>
-        <div className="card card-pad" style={{ gridColumn: "span 2" }}>
-          <div className="row-between" style={{ marginBottom: 10 }}>
-            <h3 className="h-card">General notes</h3>
-            {logContent && !isEdit && (
-              <button
-                type="button"
-                onClick={importFromLog}
-                className="btn ghost"
-                style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-              >
-                <Icon name="Download" size={12} aria-hidden />
-                <span>Import from daily log</span>
-              </button>
-            )}
-          </div>
-          <RichTextEditor
-            content={generalNotes}
-            onChange={setGeneralNotes}
-            placeholder="Overall summary of the day's rehearsal…"
-            minHeight="180px"
-          />
-          {state?.errors?.general_notes && (
-            <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 6 }}>
-              {state.errors.general_notes}
-            </div>
-          )}
-        </div>
-
-        <div className="card card-pad">
-          <h3 className="h-card" style={{ marginBottom: 10 }}>Next rehearsal</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div>
-              <div className="label">Date</div>
-              <input
-                type="date"
-                name="next_rehearsal_date"
-                defaultValue={initial?.nextRehearsalDate ?? ""}
-                className="field"
-              />
-            </div>
-            <div>
-              <div className="label">Time</div>
-              <input
-                type="text"
-                name="next_rehearsal_time"
-                placeholder="7:00 PM"
-                defaultValue={initial?.nextRehearsalTime ?? ""}
-                className="field"
-              />
-            </div>
-            <div>
-              <div className="label">Location</div>
-              <input
-                type="text"
-                name="next_rehearsal_location"
-                placeholder="Studio A"
-                defaultValue={initial?.nextRehearsalLocation ?? ""}
-                className="field"
-              />
-            </div>
-            <div>
-              <div className="label">What will be covered</div>
-              <textarea
-                name="next_rehearsal_notes"
-                rows={3}
-                defaultValue={initial?.nextRehearsalNotes ?? ""}
-                className="field"
-                style={{ resize: "vertical", minHeight: 64 }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div className="card">
         <div
@@ -357,6 +330,22 @@ export function ReportForm({
               id: "injuries" as const,
               label: "Injuries / incidents",
               count: injuries.length,
+            },
+            {
+              id: "general" as const,
+              label: "General notes",
+              count: generalNotes.replace(/<[^>]+>/g, "").trim() ? 1 : 0,
+            },
+            {
+              id: "next" as const,
+              label: "Next rehearsal",
+              count:
+                (initial?.nextRehearsalDate ||
+                initial?.nextRehearsalTime ||
+                initial?.nextRehearsalLocation ||
+                initial?.nextRehearsalNotes)
+                  ? 1
+                  : 0,
             },
           ].map((s) => (
             <button
@@ -446,6 +435,78 @@ export function ReportForm({
           </div>
           <div style={{ display: activeTab === "injuries" ? "block" : "none" }}>
             <InjuriesEditor injuries={injuries} onChange={setInjuries} />
+          </div>
+          <div style={{ display: activeTab === "general" ? "block" : "none" }}>
+            {logContent && !isEdit && (
+              <div className="row-between" style={{ marginBottom: 10 }}>
+                <span className="muted" style={{ fontSize: 12 }}>
+                  Overall summary of the day's rehearsal
+                </span>
+                <button
+                  type="button"
+                  onClick={importFromLog}
+                  className="btn ghost"
+                  style={{ height: 28, padding: "0 10px", fontSize: 12 }}
+                >
+                  <Icon name="Download" size={12} aria-hidden />
+                  <span>Import from daily log</span>
+                </button>
+              </div>
+            )}
+            <RichTextEditor
+              content={generalNotes}
+              onChange={setGeneralNotes}
+              placeholder="Overall summary of the day's rehearsal…"
+              minHeight="220px"
+            />
+            {state?.errors?.general_notes && (
+              <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 6 }}>
+                {state.errors.general_notes}
+              </div>
+            )}
+          </div>
+          <div style={{ display: activeTab === "next" ? "block" : "none" }}>
+            <div className="grid grid-3" style={{ gap: 10 }}>
+              <div>
+                <div className="label">Date</div>
+                <input
+                  type="date"
+                  name="next_rehearsal_date"
+                  defaultValue={initial?.nextRehearsalDate ?? ""}
+                  className="field"
+                />
+              </div>
+              <div>
+                <div className="label">Time</div>
+                <input
+                  type="text"
+                  name="next_rehearsal_time"
+                  placeholder="7:00 PM"
+                  defaultValue={initial?.nextRehearsalTime ?? ""}
+                  className="field"
+                />
+              </div>
+              <div>
+                <div className="label">Location</div>
+                <input
+                  type="text"
+                  name="next_rehearsal_location"
+                  placeholder="Studio A"
+                  defaultValue={initial?.nextRehearsalLocation ?? ""}
+                  className="field"
+                />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <div className="label">What will be covered</div>
+                <textarea
+                  name="next_rehearsal_notes"
+                  rows={3}
+                  defaultValue={initial?.nextRehearsalNotes ?? ""}
+                  className="field"
+                  style={{ resize: "vertical", minHeight: 64 }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

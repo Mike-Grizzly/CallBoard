@@ -11,23 +11,15 @@ import type {
 // ─── Call times + breaks ──────────────────────────────────────────────
 
 export function CallTimesEditor({
-  scheduledCall,
   actualStart,
   endTime,
   breaks,
   onBreaksChange,
-  errorReportDate,
-  reportDate,
-  onReportDateChange,
 }: {
-  scheduledCall: string;
   actualStart: string;
   endTime: string;
   breaks: Break[];
   onBreaksChange: (next: Break[]) => void;
-  errorReportDate?: string;
-  reportDate: string;
-  onReportDateChange: (v: string) => void;
 }) {
   const update = (i: number, patch: Partial<Break>) =>
     onBreaksChange(breaks.map((b, j) => (j === i ? { ...b, ...patch } : b)));
@@ -39,36 +31,7 @@ export function CallTimesEditor({
   return (
     <div className="card card-pad">
       <h3 className="h-card" style={{ marginBottom: 10 }}>Call times</h3>
-      <div className="grid grid-2" style={{ gap: 10, marginBottom: 10 }}>
-        <div style={{ gridColumn: "1 / -1" }}>
-          <div className="label">Date</div>
-          <input
-            type="date"
-            name="report_date"
-            value={reportDate}
-            onChange={(e) => onReportDateChange(e.target.value)}
-            required
-            className="field"
-            style={{ height: 32 }}
-          />
-          {errorReportDate && (
-            <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 4 }}>
-              {errorReportDate}
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="grid grid-3" style={{ gap: 8 }}>
-        <div>
-          <div className="label">Call</div>
-          <input
-            type="time"
-            name="scheduled_call"
-            defaultValue={scheduledCall}
-            className="field"
-            style={{ height: 32, fontSize: 12.5 }}
-          />
-        </div>
+      <div className="grid grid-2" style={{ gap: 10 }}>
         <div>
           <div className="label">Start</div>
           <input
