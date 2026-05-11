@@ -11,15 +11,18 @@ import {
   type ReportFormErrors,
 } from "./validation";
 
-export type CreateReportResult = {
+export type ReportActionResult = {
   errors?: ReportFormErrors;
   error?: string;
 };
 
+export type CreateReportResult = ReportActionResult;
+export type UpdateReportResult = ReportActionResult;
+
 export async function createReport(
-  _prevState: CreateReportResult | undefined,
+  _prevState: ReportActionResult | undefined,
   formData: FormData,
-): Promise<CreateReportResult> {
+): Promise<ReportActionResult> {
   const user = await requireCurrentUser();
 
   if (!can(user.role, "reports:create")) {
@@ -83,4 +86,81 @@ export async function createReport(
   });
 
   redirect(`/productions/${production[0].slug}/reports`);
+}
+
+export async function updateReport(
+  _prevState: ReportActionResult | undefined,
+  formData: FormData,
+): Promise<ReportActionResult> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "reports:create")) {
+    return { error: "You don't have permission to edit reports." };
+  }
+
+  const reportId = formData.get("report_id") as string;
+  const productionId = formData.get("production_id") as string;
+
+  if (!reportId || !productionId) {
+    return { error: "Missing report or production." };
+  }
+
+  const existing = await db
+    .select({
+      id: rehearsalReports.id,
+      productionId: rehearsalReports.productionId,
+    })
+    .from(rehearsalReports)
+    .where(eq(rehearsalReports.id, reportId))
+    .limit(1);
+
+  if (existing.length === 0 || existing[0].productionId !== productionId) {
+    return { error: "Report not found." };
+  }
+
+  const production = await db
+    .select({ slug: productions.slug })
+    .from(productions)
+    .where(eq(productions.id, productionId))
+    .limit(1);
+
+  if (production.length === 0) {
+    return { error: "Production not found." };
+  }
+
+  const { data, errors } = validateReportForm(formData);
+
+  if (errors) {
+    return { errors };
+  }
+
+  await db
+    .update(rehearsalReports)
+    .set({
+      reportDate: data!.reportDate,
+      generalNotes: data!.generalNotes,
+      scheduledCall: data!.scheduledCall,
+      actualStart: data!.actualStart,
+      endTime: data!.endTime,
+      nextRehearsalDate: data!.nextRehearsalDate,
+      nextRehearsalTime: data!.nextRehearsalTime,
+      nextRehearsalLocation: data!.nextRehearsalLocation,
+      nextRehearsalNotes: data!.nextRehearsalNotes,
+      deptScenery: data!.departments.deptScenery,
+      deptProps: data!.departments.deptProps,
+      deptCostumes: data!.departments.deptCostumes,
+      deptHairMakeup: data!.departments.deptHairMakeup,
+      deptLighting: data!.departments.deptLighting,
+      deptSound: data!.departments.deptSound,
+      deptSoundEffects: data!.departments.deptSoundEffects,
+      deptMusic: data!.departments.deptMusic,
+      deptChoreography: data!.departments.deptChoreography,
+      deptVideo: data!.departments.deptVideo,
+      deptCrew: data!.departments.deptCrew,
+      deptOther: data!.departments.deptOther,
+      updatedAt: new Date(),
+    })
+    .where(eq(rehearsalReports.id, reportId));
+
+  redirect(`/productions/${production[0].slug}/reports/${reportId}`);
 }

@@ -4,9 +4,11 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import {
   createReport,
-  type CreateReportResult,
+  updateReport,
+  type ReportActionResult,
 } from "@/features/reports/actions";
 import { DEPARTMENTS } from "@/features/reports/constants";
+import type { ReportDetail } from "@/features/reports/queries";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Icon } from "@/components/ui/icon";
 
@@ -21,25 +23,36 @@ function formatLongDate(iso: string): string {
   });
 }
 
-export function CreateReportForm({
+type Mode = "create" | "edit";
+
+export function ReportForm({
+  mode,
   productionId,
   productionTitle,
   slug,
   logContent,
+  initial,
 }: {
+  mode: Mode;
   productionId: string;
   productionTitle: string;
   slug: string;
   logContent: string | null;
+  initial?: ReportDetail;
 }) {
+  const action = mode === "edit" ? updateReport : createReport;
   const [state, formAction, pending] = useActionState<
-    CreateReportResult | undefined,
+    ReportActionResult | undefined,
     FormData
-  >(createReport, undefined);
+  >(action, undefined);
 
   const today = new Date().toISOString().split("T")[0];
-  const [reportDate, setReportDate] = useState(today);
-  const [generalNotes, setGeneralNotes] = useState("");
+  const [reportDate, setReportDate] = useState(
+    initial?.reportDate ?? today,
+  );
+  const [generalNotes, setGeneralNotes] = useState(
+    initial?.generalNotes ?? "",
+  );
 
   function importFromLog() {
     if (logContent) setGeneralNotes(logContent);
@@ -50,6 +63,12 @@ export function CreateReportForm({
     formAction(formData);
   }
 
+  const isEdit = mode === "edit";
+  const reportNumLabel =
+    initial?.reportNumber !== null && initial?.reportNumber !== undefined
+      ? `R-${String(initial.reportNumber).padStart(2, "0")}`
+      : null;
+
   return (
     <form
       action={handleSubmit}
@@ -57,29 +76,37 @@ export function CreateReportForm({
       style={{ display: "flex", flexDirection: "column", gap: 16 }}
     >
       <input type="hidden" name="production_id" value={productionId} />
+      {isEdit && initial && (
+        <input type="hidden" name="report_id" value={initial.id} />
+      )}
 
-      {/* Header card */}
       <div className="card card-pad">
         <div className="row" style={{ gap: 8, marginBottom: 8 }}>
           <Link
-            href={`/productions/${slug}/reports`}
+            href={
+              isEdit && initial
+                ? `/productions/${slug}/reports/${initial.id}`
+                : `/productions/${slug}/reports`
+            }
             prefetch
             className="btn ghost"
             style={{ padding: "0 8px" }}
           >
             <Icon name="ChevronLeft" size={14} aria-hidden />
-            <span>Cancel</span>
+            <span>{isEdit ? "Back" : "Cancel"}</span>
           </Link>
           <span className="muted">·</span>
           <span className="pill" data-c="amber">
             <span className="dot" />
-            New draft
+            {isEdit ? "Editing" : "New draft"}
           </span>
         </div>
         <div className="row-between">
           <div>
             <div className="h-eyebrow" style={{ marginBottom: 4 }}>
-              New rehearsal report
+              {isEdit
+                ? `Rehearsal Report${reportNumLabel ? ` · ${reportNumLabel}` : ""}`
+                : "New rehearsal report"}
             </div>
             <h2 className="h-section">{formatLongDate(reportDate)}</h2>
             <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
@@ -88,7 +115,11 @@ export function CreateReportForm({
           </div>
           <div className="row" style={{ gap: 8 }}>
             <Link
-              href={`/productions/${slug}/reports`}
+              href={
+                isEdit && initial
+                  ? `/productions/${slug}/reports/${initial.id}`
+                  : `/productions/${slug}/reports`
+              }
               prefetch
               className="btn"
             >
@@ -96,8 +127,16 @@ export function CreateReportForm({
               <span>Cancel</span>
             </Link>
             <button type="submit" className="btn primary" disabled={pending}>
-              <Icon name="Send" size={14} aria-hidden />
-              <span>{pending ? "Submitting…" : "Submit report"}</span>
+              <Icon name={isEdit ? "Check" : "Send"} size={14} aria-hidden />
+              <span>
+                {pending
+                  ? isEdit
+                    ? "Saving…"
+                    : "Submitting…"
+                  : isEdit
+                    ? "Save changes"
+                    : "Submit report"}
+              </span>
             </button>
           </div>
         </div>
@@ -116,7 +155,6 @@ export function CreateReportForm({
         </div>
       )}
 
-      {/* Summary cards: report date + call times | next rehearsal */}
       <div className="grid grid-2" style={{ gap: 16 }}>
         <div className="card card-pad">
           <h3 className="h-card" style={{ marginBottom: 10 }}>Call times</h3>
@@ -142,6 +180,7 @@ export function CreateReportForm({
               <input
                 type="time"
                 name="scheduled_call"
+                defaultValue={initial?.scheduledCall ?? ""}
                 className="field"
               />
             </div>
@@ -150,6 +189,7 @@ export function CreateReportForm({
               <input
                 type="time"
                 name="actual_start"
+                defaultValue={initial?.actualStart ?? ""}
                 className="field"
               />
             </div>
@@ -158,6 +198,7 @@ export function CreateReportForm({
               <input
                 type="time"
                 name="end_time"
+                defaultValue={initial?.endTime ?? ""}
                 className="field"
               />
             </div>
@@ -172,6 +213,7 @@ export function CreateReportForm({
               <input
                 type="date"
                 name="next_rehearsal_date"
+                defaultValue={initial?.nextRehearsalDate ?? ""}
                 className="field"
               />
             </div>
@@ -181,6 +223,7 @@ export function CreateReportForm({
                 type="text"
                 name="next_rehearsal_time"
                 placeholder="7:00 PM"
+                defaultValue={initial?.nextRehearsalTime ?? ""}
                 className="field"
               />
             </div>
@@ -190,6 +233,7 @@ export function CreateReportForm({
                 type="text"
                 name="next_rehearsal_location"
                 placeholder="Studio A"
+                defaultValue={initial?.nextRehearsalLocation ?? ""}
                 className="field"
               />
             </div>
@@ -198,6 +242,7 @@ export function CreateReportForm({
               <textarea
                 name="next_rehearsal_notes"
                 rows={3}
+                defaultValue={initial?.nextRehearsalNotes ?? ""}
                 className="field"
                 style={{ resize: "vertical", minHeight: 64 }}
               />
@@ -206,11 +251,10 @@ export function CreateReportForm({
         </div>
       </div>
 
-      {/* General notes */}
       <div className="card card-pad">
         <div className="row-between" style={{ marginBottom: 10 }}>
           <h3 className="h-card">General notes</h3>
-          {logContent && (
+          {logContent && !isEdit && (
             <button
               type="button"
               onClick={importFromLog}
@@ -235,7 +279,6 @@ export function CreateReportForm({
         )}
       </div>
 
-      {/* Department notes */}
       <div className="card card-pad">
         <div className="row-between" style={{ marginBottom: 14 }}>
           <h3 className="h-card">Department notes</h3>
@@ -266,6 +309,7 @@ export function CreateReportForm({
                 name={d.field}
                 rows={3}
                 placeholder={`Notes for ${d.label.toLowerCase()}…`}
+                defaultValue={(initial?.[d.key] as string | null) ?? ""}
                 className="field"
                 style={{ resize: "vertical", minHeight: 64, fontSize: 13 }}
               />
@@ -274,18 +318,29 @@ export function CreateReportForm({
         </div>
       </div>
 
-      {/* Footer action row */}
       <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
         <Link
-          href={`/productions/${slug}/reports`}
+          href={
+            isEdit && initial
+              ? `/productions/${slug}/reports/${initial.id}`
+              : `/productions/${slug}/reports`
+          }
           prefetch
           className="btn"
         >
           <span>Cancel</span>
         </Link>
         <button type="submit" className="btn primary" disabled={pending}>
-          <Icon name="Send" size={14} aria-hidden />
-          <span>{pending ? "Submitting…" : "Submit report"}</span>
+          <Icon name={isEdit ? "Check" : "Send"} size={14} aria-hidden />
+          <span>
+            {pending
+              ? isEdit
+                ? "Saving…"
+                : "Submitting…"
+              : isEdit
+                ? "Save changes"
+                : "Submit report"}
+          </span>
         </button>
       </div>
     </form>
