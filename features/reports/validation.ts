@@ -1,12 +1,15 @@
 import { DEPARTMENTS } from "./constants";
+import type { ReportStatus } from "./types";
 
 export type ReportFormErrors = {
   report_date?: string;
   general_notes?: string;
+  status?: string;
 };
 
 export type ReportFormData = {
   reportDate: string;
+  status: ReportStatus;
   generalNotes: string;
   scheduledCall: string | null;
   actualStart: string | null;
@@ -29,6 +32,9 @@ export function validateReportForm(formData: FormData): {
 } {
   const reportDate = (formData.get("report_date") as string)?.trim();
   const generalNotes = (formData.get("general_notes") as string)?.trim() ?? "";
+  const rawStatus = (formData.get("status") as string | null)?.trim() ?? "draft";
+  const status: ReportStatus =
+    rawStatus === "distributed" ? "distributed" : "draft";
 
   const errors: ReportFormErrors = {};
 
@@ -36,8 +42,8 @@ export function validateReportForm(formData: FormData): {
     errors.report_date = "Report date is required.";
   }
 
-  if (!generalNotes) {
-    errors.general_notes = "General notes are required.";
+  if (status === "distributed" && !generalNotes) {
+    errors.general_notes = "General notes are required to distribute.";
   }
 
   if (Object.keys(errors).length > 0) {
@@ -52,6 +58,7 @@ export function validateReportForm(formData: FormData): {
   return {
     data: {
       reportDate,
+      status,
       generalNotes,
       scheduledCall: nullableText(formData, "scheduled_call"),
       actualStart: nullableText(formData, "actual_start"),

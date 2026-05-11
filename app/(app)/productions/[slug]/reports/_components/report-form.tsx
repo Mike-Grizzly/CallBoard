@@ -64,10 +64,18 @@ export function ReportForm({
   }
 
   const isEdit = mode === "edit";
+  const initialStatus = initial?.status ?? "draft";
+  const isAlreadyDistributed = isEdit && initialStatus === "distributed";
   const reportNumLabel =
     initial?.reportNumber !== null && initial?.reportNumber !== undefined
       ? `R-${String(initial.reportNumber).padStart(2, "0")}`
       : null;
+
+  const headerPill = isAlreadyDistributed
+    ? { c: "sage" as const, label: "Distributed" }
+    : isEdit
+      ? { c: "amber" as const, label: "Editing draft" }
+      : { c: "amber" as const, label: "New draft" };
 
   return (
     <form
@@ -96,9 +104,9 @@ export function ReportForm({
             <span>{isEdit ? "Back" : "Cancel"}</span>
           </Link>
           <span className="muted">·</span>
-          <span className="pill" data-c="amber">
+          <span className="pill" data-c={headerPill.c}>
             <span className="dot" />
-            {isEdit ? "Editing" : "New draft"}
+            {headerPill.label}
           </span>
         </div>
         <div className="row-between">
@@ -114,30 +122,41 @@ export function ReportForm({
             </div>
           </div>
           <div className="row" style={{ gap: 8 }}>
-            <Link
-              href={
-                isEdit && initial
-                  ? `/productions/${slug}/reports/${initial.id}`
-                  : `/productions/${slug}/reports`
-              }
-              prefetch
-              className="btn"
-            >
-              <Icon name="X" size={14} aria-hidden />
-              <span>Cancel</span>
-            </Link>
-            <button type="submit" className="btn primary" disabled={pending}>
-              <Icon name={isEdit ? "Check" : "Send"} size={14} aria-hidden />
-              <span>
-                {pending
-                  ? isEdit
-                    ? "Saving…"
-                    : "Submitting…"
-                  : isEdit
-                    ? "Save changes"
-                    : "Submit report"}
-              </span>
-            </button>
+            {isAlreadyDistributed ? (
+              <button
+                type="submit"
+                name="status"
+                value="distributed"
+                className="btn primary"
+                disabled={pending}
+              >
+                <Icon name="Check" size={14} aria-hidden />
+                <span>{pending ? "Saving…" : "Save changes"}</span>
+              </button>
+            ) : (
+              <>
+                <button
+                  type="submit"
+                  name="status"
+                  value="draft"
+                  className="btn"
+                  disabled={pending}
+                >
+                  <Icon name="Check" size={14} aria-hidden />
+                  <span>Save draft</span>
+                </button>
+                <button
+                  type="submit"
+                  name="status"
+                  value="distributed"
+                  className="btn primary"
+                  disabled={pending}
+                >
+                  <Icon name="Send" size={14} aria-hidden />
+                  <span>Distribute</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -318,31 +337,6 @@ export function ReportForm({
         </div>
       </div>
 
-      <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
-        <Link
-          href={
-            isEdit && initial
-              ? `/productions/${slug}/reports/${initial.id}`
-              : `/productions/${slug}/reports`
-          }
-          prefetch
-          className="btn"
-        >
-          <span>Cancel</span>
-        </Link>
-        <button type="submit" className="btn primary" disabled={pending}>
-          <Icon name={isEdit ? "Check" : "Send"} size={14} aria-hidden />
-          <span>
-            {pending
-              ? isEdit
-                ? "Saving…"
-                : "Submitting…"
-              : isEdit
-                ? "Save changes"
-                : "Submit report"}
-          </span>
-        </button>
-      </div>
     </form>
   );
 }
