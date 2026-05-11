@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { FileText } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -98,18 +99,18 @@ export default async function DocumentsPage({
                 : doc.uploadedByEmail;
 
             return (
-              <Card key={doc.id} className="transition-colors hover:bg-[color:var(--accent)]">
+              <Card key={doc.id} className="transition-colors hover:bg-[color:var(--muted)]">
                 <CardContent className="flex items-center justify-between p-4">
                   <Link
                     href={`/productions/${slug}/documents/${doc.id}`}
                     className="min-w-0 flex-1"
                   >
                     <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 shrink-0 text-[color:var(--muted-foreground)]" aria-hidden />
+                      <Icon name="FileText" className="h-4 w-4 shrink-0 text-[color:var(--muted-foreground)]" aria-hidden />
                       <h2 className="truncate text-sm font-semibold">
                         {doc.title}
                       </h2>
-                      <span className="shrink-0 rounded-full bg-[color:var(--accent)] px-2 py-0.5 text-xs">
+                      <span className="shrink-0 rounded-full bg-[color:var(--muted)] px-2 py-0.5 text-xs">
                         {getTypeLabel(doc.documentType)}
                       </span>
                     </div>

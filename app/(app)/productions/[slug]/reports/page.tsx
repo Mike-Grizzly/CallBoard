@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { Plus, FileText, Calendar } from "lucide-react";
+import { FileText } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireCurrentUser } from "@/lib/auth";
@@ -60,7 +61,7 @@ export default async function ReportsPage({
           {canCreate && (
             <Link href={`/productions/${slug}/reports/new`}>
               <Button>
-                <Plus className="h-4 w-4" aria-hidden />
+                <Icon name="Plus" className="h-4 w-4" aria-hidden />
                 New report
               </Button>
             </Link>
@@ -96,12 +97,12 @@ export default async function ReportsPage({
                 key={report.id}
                 href={`/productions/${slug}/reports/${report.id}`}
               >
-                <Card className="transition-colors hover:bg-[color:var(--accent)]">
+                <Card className="transition-colors hover:bg-[color:var(--muted)]">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-[color:var(--muted-foreground)]" aria-hidden />
+                          <Icon name="Calendar" className="h-4 w-4 text-[color:var(--muted-foreground)]" aria-hidden />
                           <h2 className="text-sm font-semibold">
                             {report.reportNumber
                               ? `#${report.reportNumber} — ${formatDate(report.reportDate)}`

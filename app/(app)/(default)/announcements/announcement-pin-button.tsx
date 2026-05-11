@@ -27,7 +27,7 @@ export function AnnouncementPinButton({
       type="button"
       onClick={handleClick}
       disabled={isPending}
-      className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--accent)] hover:text-[color:var(--foreground)]"
+      className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--muted)] hover:text-[color:var(--foreground)]"
       title={pinned ? "Unpin announcement" : "Pin announcement"}
     >
       {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}

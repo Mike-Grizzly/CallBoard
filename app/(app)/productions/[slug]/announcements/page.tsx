@@ -102,7 +102,7 @@ export default async function ProductionAnnouncementsPage({
                         )}
                         <h2 className="text-sm font-semibold">{item.title}</h2>
                         {isOrgWide && (
-                          <span className="rounded-full bg-[color:var(--accent)] px-2 py-0.5 text-xs font-medium">
+                          <span className="rounded-full bg-[color:var(--muted)] px-2 py-0.5 text-xs font-medium">
                             Org-wide
                           </span>
                         )}

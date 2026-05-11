@@ -42,8 +42,8 @@ function ToolbarButton({
       onClick={onClick}
       title={title}
       className={cn(
-        "rounded p-1.5 hover:bg-[color:var(--accent)]",
-        active && "bg-[color:var(--accent)] text-[color:var(--primary)]",
+        "rounded p-1.5 hover:bg-[color:var(--muted)]",
+        active && "bg-[color:var(--muted)] text-[color:var(--primary)]",
       )}
     >
       {children}

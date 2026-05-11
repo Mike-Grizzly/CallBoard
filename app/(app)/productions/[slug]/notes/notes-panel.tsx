@@ -64,8 +64,8 @@ function ToolbarBtn({
       onClick={onClick}
       title={title}
       className={cn(
-        "rounded p-1 hover:bg-[color:var(--accent)]",
-        active && "bg-[color:var(--accent)] text-[color:var(--primary)]",
+        "rounded p-1 hover:bg-[color:var(--muted)]",
+        active && "bg-[color:var(--muted)] text-[color:var(--primary)]",
       )}
     >
       {children}
@@ -317,7 +317,7 @@ function NoteEditor({
               "flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium",
               selectedTag
                 ? "text-white"
-                : "bg-[color:var(--accent)] text-[color:var(--muted-foreground)]",
+                : "bg-[color:var(--muted)] text-[color:var(--muted-foreground)]",
               canEdit && "hover:opacity-80",
             )}
             style={selectedTag ? { backgroundColor: selectedTag.color } : {}}
@@ -332,7 +332,7 @@ function NoteEditor({
               <button
                 type="button"
                 onClick={() => handleTagChange(null)}
-                className="w-full rounded px-2 py-1 text-left text-xs text-[color:var(--muted-foreground)] hover:bg-[color:var(--accent)]"
+                className="w-full rounded px-2 py-1 text-left text-xs text-[color:var(--muted-foreground)] hover:bg-[color:var(--muted)]"
               >
                 No tag
               </button>
@@ -341,7 +341,7 @@ function NoteEditor({
                   key={t.id}
                   type="button"
                   onClick={() => handleTagChange(t.id)}
-                  className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs hover:bg-[color:var(--accent)]"
+                  className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs hover:bg-[color:var(--muted)]"
                 >
                   <span
                     className="h-2 w-2 rounded-full"
@@ -382,7 +382,7 @@ function NoteEditor({
               onClick={handleTodoToggle}
               title={isTodo ? "Remove to-do" : "Make to-do"}
               className={cn(
-                "rounded p-1.5 hover:bg-[color:var(--accent)]",
+                "rounded p-1.5 hover:bg-[color:var(--muted)]",
                 isTodo && "text-[color:var(--primary)]",
               )}
             >
@@ -402,7 +402,7 @@ function NoteEditor({
               title={
                 visibility === "private" ? "Visible only to you" : "Shared with team"
               }
-              className="rounded p-1.5 hover:bg-[color:var(--accent)]"
+              className="rounded p-1.5 hover:bg-[color:var(--muted)]"
             >
               {visibility === "shared" ? (
                 <Eye className="h-4 w-4" />
@@ -419,7 +419,7 @@ function NoteEditor({
               onClick={handlePinToggle}
               title={isPinned ? "Unpin" : "Pin"}
               className={cn(
-                "rounded p-1.5 hover:bg-[color:var(--accent)]",
+                "rounded p-1.5 hover:bg-[color:var(--muted)]",
                 isPinned && "text-amber-500",
               )}
             >
@@ -442,7 +442,7 @@ function NoteEditor({
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1.5 hover:bg-[color:var(--accent)]"
+            className="rounded p-1.5 hover:bg-[color:var(--muted)]"
             title="Close"
           >
             <X className="h-4 w-4" />
@@ -546,8 +546,8 @@ function NoteListItem({
       className={cn(
         "relative w-full rounded-lg px-3 py-2.5 text-left transition-colors",
         selected
-          ? "bg-[color:var(--accent)]"
-          : "hover:bg-[color:var(--accent)]/50",
+          ? "bg-[color:var(--muted)]"
+          : "hover:bg-[color:var(--muted)]/50",
       )}
     >
       <div className="flex items-start gap-2">
@@ -648,7 +648,7 @@ function TagManager({
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 hover:bg-[color:var(--accent)]"
+            className="rounded p-1 hover:bg-[color:var(--muted)]"
           >
             <X className="h-4 w-4" />
           </button>
@@ -830,7 +830,7 @@ export function NotesPanel({
                 type="button"
                 onClick={() => setShowTagManager(true)}
                 title="Manage tags"
-                className="rounded p-1.5 text-[color:var(--muted-foreground)] hover:bg-[color:var(--accent)]"
+                className="rounded p-1.5 text-[color:var(--muted-foreground)] hover:bg-[color:var(--muted)]"
               >
                 <Settings className="h-4 w-4" />
               </button>
@@ -859,7 +859,7 @@ export function NotesPanel({
                 className={cn(
                   "shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
                   filter === f
-                    ? "bg-[color:var(--accent)] text-[color:var(--foreground)]"
+                    ? "bg-[color:var(--muted)] text-[color:var(--foreground)]"
                     : "text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]",
                 )}
               >

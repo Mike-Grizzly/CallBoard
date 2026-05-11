@@ -40,7 +40,7 @@ export function DocumentViewButton({
         type="button"
         onClick={handleView}
         disabled={isPending}
-        className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--accent)] hover:text-[color:var(--foreground)]"
+        className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--muted)] hover:text-[color:var(--foreground)]"
         title="View"
       >
         <Eye className="h-4 w-4" />
@@ -49,7 +49,7 @@ export function DocumentViewButton({
         type="button"
         onClick={handleDownload}
         disabled={isPending}
-        className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--accent)] hover:text-[color:var(--foreground)]"
+        className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--muted)] hover:text-[color:var(--foreground)]"
         title="Download"
       >
         <Download className="h-4 w-4" />

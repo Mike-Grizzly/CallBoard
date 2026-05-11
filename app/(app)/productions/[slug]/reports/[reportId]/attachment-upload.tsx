@@ -34,7 +34,7 @@ export function AttachmentUpload({ reportId }: { reportId: string }) {
 
   return (
     <div>
-      <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-[color:var(--border)] bg-transparent px-3 py-1.5 text-sm font-medium transition-colors hover:bg-[color:var(--accent)]">
+      <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-[color:var(--border)] bg-transparent px-3 py-1.5 text-sm font-medium transition-colors hover:bg-[color:var(--muted)]">
         <Paperclip className="h-4 w-4" aria-hidden />
         {isPending ? "Uploading..." : "Attach file"}
         <input

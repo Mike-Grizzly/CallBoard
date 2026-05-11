@@ -203,3 +203,19 @@ Record of durable project decisions. Add new entries at the bottom with date and
 **Reason:** Keeps the calendar a server component (no client bundle cost, no hydration). Month state is bookmarkable and shareable. No interactivity is needed beyond link clicks.
 
 **Impact:** Each month navigation is a full page navigation. The `searchParams` prop is awaited as a Promise per Next.js 16 convention.
+
+
+---
+
+## 2026-05-08 — UI port: design system first, tabs second; lucide icons routed through a client `<Icon>` wrapper
+
+**Decision:** Port the standalone HTML demo onto the existing app in two phases. Phase 1: warm theatre tokens, Geist+Newsreader fonts, rail shell, persistent production header + tabs. Phase 2: visual port of every tab content, tracked in `docs/ui-port-roadmap.md`. The data layer (Drizzle, Supabase, server actions, permissions) stays frozen during the port.
+
+**Reason:** Doing the design system + shell first means every later tab port lands inside a coherent container, and every tab can be ported independently against existing `queries.ts`/`actions.ts` without rewriting the backend.
+
+**Impact:**
+- New token set in `app/globals.css` with legacy aliases so unported pages still render.
+- `--accent` now means curtain crimson; soft-hover surfaces use `--muted`.
+- `app/(app)/productions/[slug]/layout.tsx` owns the production header and tabs so sub-routes navigate without reload.
+- New `components/ui/icon.tsx` ("use client") with a name→LucideIcon lookup. lucide-react 0.468 ships forwardRef components without `"use client"`, so passing them as children of any client component (Next.js `Link`, `RailLink`, etc.) from a server component breaks RSC serialization. Server components must use `<Icon name="..." />` for any icon that crosses a client boundary; raw Lucide imports are still fine inside DOM elements (`div`, `span`, `button`).
+- Every future tab port must do the same icon swap before shipping.

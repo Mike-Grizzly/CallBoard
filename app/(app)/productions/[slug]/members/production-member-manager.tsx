@@ -114,7 +114,7 @@ function BulkAssignForm({
         {availableMembers.map((m) => (
           <label
             key={m.userId}
-            className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-[color:var(--accent)]"
+            className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-[color:var(--muted)]"
           >
             <input
               type="checkbox"
@@ -215,7 +215,7 @@ function CharacterNameEditor({
       <button
         type="button"
         onClick={() => setEditing(false)}
-        className="rounded p-0.5 text-[color:var(--muted-foreground)] hover:bg-[color:var(--accent)]"
+        className="rounded p-0.5 text-[color:var(--muted-foreground)] hover:bg-[color:var(--muted)]"
       >
         <X className="h-3.5 w-3.5" />
       </button>
