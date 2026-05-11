@@ -1071,6 +1071,8 @@ textarea.field {
 .notif-ico[data-c="amber"]  { background: var(--c-amber-soft); color: color-mix(in oklch, var(--c-amber) 50%, var(--ink)); }
 .notif-ico[data-c="sage"]   { background: var(--c-sage-soft);  color: color-mix(in oklch, var(--c-sage)  60%, var(--ink)); }
 .notif-ico[data-c="accent"] { background: var(--accent-soft);  color: var(--accent-ink); }
+.notif-ico[data-c="plum"]   { background: var(--c-plum-soft);  color: color-mix(in oklch, var(--c-plum)  55%, var(--ink)); }
+.grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .gap-lg {
   gap: 20px;
 }

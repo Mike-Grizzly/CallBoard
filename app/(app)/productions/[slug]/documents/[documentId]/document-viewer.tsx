@@ -1,7 +1,6 @@
 "use client";
 
-import { FileText, Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Download, File } from "lucide-react";
 
 export function DocumentViewer({
   url,
@@ -24,45 +23,68 @@ export function DocumentViewer({
 
   if (contentType.startsWith("image/")) {
     return (
-      <div className="flex h-full items-center justify-center p-4">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+          minHeight: 600,
+          background: "var(--bg-sunken)",
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={url}
           alt={fileName}
-          className="max-h-[600px] max-w-full rounded object-contain"
+          style={{ maxHeight: 600, maxWidth: "100%", borderRadius: 6, objectFit: "contain" }}
         />
       </div>
     );
   }
 
-  if (
-    contentType.startsWith("text/") ||
-    contentType === "application/json"
-  ) {
+  if (contentType.startsWith("text/") || contentType === "application/json") {
     return (
       <iframe
         src={url}
-        className="h-full min-h-[600px] w-full bg-white"
+        className="h-full min-h-[600px] w-full"
+        style={{ background: "white" }}
         title={fileName}
       />
     );
   }
 
   return (
-    <div className="flex h-full min-h-[600px] flex-col items-center justify-center gap-4 p-8 text-center">
-      <FileText className="h-16 w-16 text-[color:var(--muted-foreground)]" />
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 16,
+        padding: 48,
+        minHeight: 600,
+        textAlign: "center",
+      }}
+    >
+      <File
+        size={48}
+        strokeWidth={1.2}
+        style={{ color: "var(--ink-4)" }}
+      />
       <div>
-        <p className="text-sm font-medium">
+        <p style={{ fontSize: 14, fontWeight: 500 }}>
           Preview not available for this file type
         </p>
-        <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
+        <p style={{ fontSize: 13, color: "var(--ink-3)", marginTop: 4 }}>
           {fileName}
         </p>
       </div>
       <a href={url} download={fileName}>
-        <Button variant="outline" size="sm">
-          <Download className="h-4 w-4" aria-hidden />
-          Download to view
-        </Button>
+        <button className="btn" style={{ gap: 6 }}>
+          <Download size={14} />
+          <span>Download to view</span>
+        </button>
       </a>
     </div>
   );
