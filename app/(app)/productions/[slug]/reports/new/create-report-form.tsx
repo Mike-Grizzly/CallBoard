@@ -8,15 +8,27 @@ import {
 } from "@/features/reports/actions";
 import { DEPARTMENTS } from "@/features/reports/constants";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { Button } from "@/components/ui/button";
-import { FileDown } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
+
+function formatLongDate(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(`${iso}T00:00:00`);
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export function CreateReportForm({
   productionId,
+  productionTitle,
   slug,
   logContent,
 }: {
   productionId: string;
+  productionTitle: string;
   slug: string;
   logContent: string | null;
 }) {
@@ -25,13 +37,12 @@ export function CreateReportForm({
     FormData
   >(createReport, undefined);
 
-  const [generalNotes, setGeneralNotes] = useState("");
   const today = new Date().toISOString().split("T")[0];
+  const [reportDate, setReportDate] = useState(today);
+  const [generalNotes, setGeneralNotes] = useState("");
 
   function importFromLog() {
-    if (logContent) {
-      setGeneralNotes(logContent);
-    }
+    if (logContent) setGeneralNotes(logContent);
   }
 
   function handleSubmit(formData: FormData) {
@@ -39,202 +50,243 @@ export function CreateReportForm({
     formAction(formData);
   }
 
-  const inputCls =
-    "w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]";
-  const labelCls = "mb-1.5 block text-sm font-medium";
-
   return (
     <form
       action={handleSubmit}
-      className="space-y-6"
+      className="page-narrow anim-in"
+      style={{ display: "flex", flexDirection: "column", gap: 16 }}
     >
       <input type="hidden" name="production_id" value={productionId} />
 
+      {/* Header card */}
+      <div className="card card-pad">
+        <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+          <Link
+            href={`/productions/${slug}/reports`}
+            prefetch
+            className="btn ghost"
+            style={{ padding: "0 8px" }}
+          >
+            <Icon name="ChevronLeft" size={14} aria-hidden />
+            <span>Cancel</span>
+          </Link>
+          <span className="muted">·</span>
+          <span className="pill" data-c="amber">
+            <span className="dot" />
+            New draft
+          </span>
+        </div>
+        <div className="row-between">
+          <div>
+            <div className="h-eyebrow" style={{ marginBottom: 4 }}>
+              New rehearsal report
+            </div>
+            <h2 className="h-section">{formatLongDate(reportDate)}</h2>
+            <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+              {productionTitle}
+            </div>
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            <Link
+              href={`/productions/${slug}/reports`}
+              prefetch
+              className="btn"
+            >
+              <Icon name="X" size={14} aria-hidden />
+              <span>Cancel</span>
+            </Link>
+            <button type="submit" className="btn primary" disabled={pending}>
+              <Icon name="Send" size={14} aria-hidden />
+              <span>{pending ? "Submitting…" : "Submit report"}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {state?.error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+        <div
+          className="card card-pad"
+          style={{
+            background: "var(--c-amber-soft)",
+            borderColor: "transparent",
+            fontSize: 13,
+          }}
+        >
           {state.error}
         </div>
       )}
 
-      <section className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-          Report Header
-        </h2>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label htmlFor="report_date" className={labelCls}>
-              Report date
-            </label>
-            <input
-              id="report_date"
-              name="report_date"
-              type="date"
-              required
-              defaultValue={today}
-              className={inputCls}
-            />
-            {state?.errors?.report_date && (
-              <p className="mt-1 text-sm text-red-600">
-                {state.errors.report_date}
-              </p>
-            )}
-          </div>
-          <div>
-            <label htmlFor="scheduled_call" className={labelCls}>
-              Scheduled call
-            </label>
-            <input
-              id="scheduled_call"
-              name="scheduled_call"
-              type="time"
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label htmlFor="actual_start" className={labelCls}>
-              Actual start
-            </label>
-            <input
-              id="actual_start"
-              name="actual_start"
-              type="time"
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label htmlFor="end_time" className={labelCls}>
-              End time
-            </label>
-            <input
-              id="end_time"
-              name="end_time"
-              type="time"
-              className={inputCls}
-            />
+      {/* Summary cards: report date + call times | next rehearsal */}
+      <div className="grid grid-2" style={{ gap: 16 }}>
+        <div className="card card-pad">
+          <h3 className="h-card" style={{ marginBottom: 10 }}>Call times</h3>
+          <div className="grid grid-2" style={{ gap: 10 }}>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <div className="label">Date</div>
+              <input
+                type="date"
+                name="report_date"
+                value={reportDate}
+                onChange={(e) => setReportDate(e.target.value)}
+                required
+                className="field"
+              />
+              {state?.errors?.report_date && (
+                <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 4 }}>
+                  {state.errors.report_date}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="label">Scheduled call</div>
+              <input
+                type="time"
+                name="scheduled_call"
+                className="field"
+              />
+            </div>
+            <div>
+              <div className="label">Actual start</div>
+              <input
+                type="time"
+                name="actual_start"
+                className="field"
+              />
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <div className="label">End time</div>
+              <input
+                type="time"
+                name="end_time"
+                className="field"
+              />
+            </div>
           </div>
         </div>
-      </section>
 
-      <section className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-6 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-            General Notes
-          </h2>
+        <div className="card card-pad">
+          <h3 className="h-card" style={{ marginBottom: 10 }}>Next rehearsal</h3>
+          <div className="grid grid-2" style={{ gap: 10 }}>
+            <div>
+              <div className="label">Date</div>
+              <input
+                type="date"
+                name="next_rehearsal_date"
+                className="field"
+              />
+            </div>
+            <div>
+              <div className="label">Time</div>
+              <input
+                type="text"
+                name="next_rehearsal_time"
+                placeholder="7:00 PM"
+                className="field"
+              />
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <div className="label">Location</div>
+              <input
+                type="text"
+                name="next_rehearsal_location"
+                placeholder="Studio A"
+                className="field"
+              />
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <div className="label">What will be covered</div>
+              <textarea
+                name="next_rehearsal_notes"
+                rows={3}
+                className="field"
+                style={{ resize: "vertical", minHeight: 64 }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* General notes */}
+      <div className="card card-pad">
+        <div className="row-between" style={{ marginBottom: 10 }}>
+          <h3 className="h-card">General notes</h3>
           {logContent && (
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
               onClick={importFromLog}
-              className="text-xs"
+              className="btn ghost"
+              style={{ height: 28, padding: "0 10px", fontSize: 12 }}
             >
-              <FileDown className="h-3 w-3" aria-hidden />
-              Import from daily log
-            </Button>
+              <Icon name="Download" size={12} aria-hidden />
+              <span>Import from daily log</span>
+            </button>
           )}
         </div>
         <RichTextEditor
           content={generalNotes}
           onChange={setGeneralNotes}
-          placeholder="Overall summary of the day's rehearsal..."
+          placeholder="Overall summary of the day's rehearsal…"
           minHeight="180px"
         />
         {state?.errors?.general_notes && (
-          <p className="mt-1 text-sm text-red-600">
+          <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 6 }}>
             {state.errors.general_notes}
-          </p>
+          </div>
         )}
-      </section>
+      </div>
 
-      <section className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-          Department Notes
-        </h2>
-        <p className="mb-4 text-xs text-[color:var(--muted-foreground)]">
-          Leave blank for any department with nothing to report — empty fields
-          will display as &ldquo;None&rdquo; on the report.
-        </p>
-        <div className="space-y-4">
-          {DEPARTMENTS.map((dept) => (
-            <div key={dept.key}>
-              <label htmlFor={dept.field} className={labelCls}>
-                {dept.label}
-              </label>
+      {/* Department notes */}
+      <div className="card card-pad">
+        <div className="row-between" style={{ marginBottom: 14 }}>
+          <h3 className="h-card">Department notes</h3>
+          <span className="muted" style={{ fontSize: 12 }}>
+            Leave blank for departments with nothing to report
+          </span>
+        </div>
+        <div className="grid grid-2" style={{ gap: 14 }}>
+          {DEPARTMENTS.map((d) => (
+            <div
+              key={d.key}
+              style={{
+                padding: "14px 16px",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-s)",
+              }}
+            >
+              <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+                <div className="notif-ico" data-c={d.c} style={{ width: 24, height: 24 }}>
+                  <Icon name={d.icon} size={13} aria-hidden />
+                </div>
+                <label htmlFor={d.field} style={{ fontSize: 13, fontWeight: 600 }}>
+                  {d.label}
+                </label>
+              </div>
               <textarea
-                id={dept.field}
-                name={dept.field}
-                rows={2}
-                className={inputCls}
+                id={d.field}
+                name={d.field}
+                rows={3}
+                placeholder={`Notes for ${d.label.toLowerCase()}…`}
+                className="field"
+                style={{ resize: "vertical", minHeight: 64, fontSize: 13 }}
               />
             </div>
           ))}
         </div>
-      </section>
+      </div>
 
-      <section className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-          Next Rehearsal
-        </h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div>
-            <label htmlFor="next_rehearsal_date" className={labelCls}>
-              Date
-            </label>
-            <input
-              id="next_rehearsal_date"
-              name="next_rehearsal_date"
-              type="date"
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label htmlFor="next_rehearsal_time" className={labelCls}>
-              Time
-            </label>
-            <input
-              id="next_rehearsal_time"
-              name="next_rehearsal_time"
-              type="text"
-              placeholder="7:00 PM"
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label htmlFor="next_rehearsal_location" className={labelCls}>
-              Location
-            </label>
-            <input
-              id="next_rehearsal_location"
-              name="next_rehearsal_location"
-              type="text"
-              placeholder="Studio A"
-              className={inputCls}
-            />
-          </div>
-        </div>
-        <div className="mt-4">
-          <label htmlFor="next_rehearsal_notes" className={labelCls}>
-            What will be covered
-          </label>
-          <textarea
-            id="next_rehearsal_notes"
-            name="next_rehearsal_notes"
-            rows={3}
-            className={inputCls}
-          />
-        </div>
-      </section>
-
-      <div className="flex items-center justify-end gap-3">
-        <Link href={`/productions/${slug}/reports`}>
-          <Button type="button" variant="outline">
-            Cancel
-          </Button>
+      {/* Footer action row */}
+      <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
+        <Link
+          href={`/productions/${slug}/reports`}
+          prefetch
+          className="btn"
+        >
+          <span>Cancel</span>
         </Link>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Submitting..." : "Submit report"}
-        </Button>
+        <button type="submit" className="btn primary" disabled={pending}>
+          <Icon name="Send" size={14} aria-hidden />
+          <span>{pending ? "Submitting…" : "Submit report"}</span>
+        </button>
       </div>
     </form>
   );

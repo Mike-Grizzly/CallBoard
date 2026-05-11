@@ -75,7 +75,6 @@ export default async function ReportDetailPage({
     getProductionMembers(production.id),
   ]);
   const canUpload = can(user.role, "reports:create");
-  const canEdit = can(user.role, "reports:create");
 
   const attachmentUrls = await Promise.all(
     attachments.map(async (a) => ({
@@ -135,14 +134,6 @@ export default async function ReportDetailPage({
           </div>
           <div className="row" style={{ gap: 8 }}>
             <EmailReportButton reportId={reportId} slug={slug} members={productionMembers} />
-            {canEdit && (
-              <Link href={`/productions/${slug}/reports/${reportId}/edit`} prefetch>
-                <button className="btn primary">
-                  <Icon name="PenLine" size={14} aria-hidden />
-                  <span>Edit</span>
-                </button>
-              </Link>
-            )}
           </div>
         </div>
       </div>
