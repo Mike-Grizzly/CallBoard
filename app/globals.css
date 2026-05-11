@@ -621,6 +621,17 @@ select {
   padding: 18px 20px;
 }
 
+.report-row {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.report-row:hover {
+  background: var(--bg-muted);
+}
+.report-row:last-child {
+  border-bottom: 0 !important;
+}
+
 .h-eyebrow {
   font-size: 11px;
   font-weight: 600;
