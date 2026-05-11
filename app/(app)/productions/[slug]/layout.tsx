@@ -107,6 +107,15 @@ export default async function ProductionLayout({
       icon: "FileText",
       count: reports.length,
     },
+  ];
+  if (canViewNotes) {
+    tabs.push({
+      label: "Notes",
+      href: `/productions/${slug}/notes`,
+      icon: "PenLine",
+    });
+  }
+  tabs.push(
     {
       label: "Calls",
       href: `/productions/${slug}/calls`,
@@ -124,7 +133,7 @@ export default async function ProductionLayout({
       icon: "FolderOpen",
       count: documents.length,
     },
-  ];
+  );
   if (canCreateReports) {
     tabs.push({
       label: "Daily Log",
@@ -137,13 +146,6 @@ export default async function ProductionLayout({
       label: "Blocking",
       href: `/productions/${slug}/blocking`,
       icon: "Layout",
-    });
-  }
-  if (canViewNotes) {
-    tabs.push({
-      label: "Notes",
-      href: `/productions/${slug}/notes`,
-      icon: "PenLine",
     });
   }
 

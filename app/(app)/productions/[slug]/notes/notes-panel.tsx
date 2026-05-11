@@ -15,16 +15,6 @@ import {
   Settings,
   X,
   Check,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import TextAlign from "@tiptap/extension-text-align";
-import { TextStyle } from "@tiptap/extension-text-style";
-import Color from "@tiptap/extension-color";
-import Highlight from "@tiptap/extension-highlight";
-import {
   Bold,
   Italic,
   Underline as UnderlineIcon,
@@ -34,6 +24,13 @@ import {
   Undo,
   Redo,
 } from "lucide-react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
+import TextAlign from "@tiptap/extension-text-align";
+import { TextStyle } from "@tiptap/extension-text-style";
+import Color from "@tiptap/extension-color";
+import Highlight from "@tiptap/extension-highlight";
 import type { NoteWithAuthor, NoteTagRow } from "@/features/notes/queries";
 import type { NoteFilter } from "@/features/notes/constants";
 import { TAG_COLOR_OPTIONS } from "@/features/notes/constants";
@@ -63,10 +60,13 @@ function ToolbarBtn({
       type="button"
       onClick={onClick}
       title={title}
-      className={cn(
-        "rounded p-1 hover:bg-[color:var(--muted)]",
-        active && "bg-[color:var(--muted)] text-[color:var(--primary)]",
-      )}
+      className="btn ghost btn-icon"
+      data-active={active ? "1" : "0"}
+      style={{
+        width: 26,
+        height: 26,
+        color: active ? "var(--accent)" : "var(--ink-3)",
+      }}
     >
       {children}
     </button>
@@ -80,77 +80,85 @@ function EditorToolbar({
 }) {
   if (!editor) return null;
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b border-[color:var(--border)] px-2 py-1.5">
+    <div
+      className="row"
+      style={{
+        flexWrap: "wrap",
+        gap: 2,
+        borderBottom: "1px solid var(--border)",
+        padding: "6px 10px",
+      }}
+    >
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleBold().run()}
         active={editor.isActive("bold")}
         title="Bold"
       >
-        <Bold className="h-3.5 w-3.5" />
+        <Bold style={{ width: 13, height: 13 }} />
       </ToolbarBtn>
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleItalic().run()}
         active={editor.isActive("italic")}
         title="Italic"
       >
-        <Italic className="h-3.5 w-3.5" />
+        <Italic style={{ width: 13, height: 13 }} />
       </ToolbarBtn>
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleUnderline().run()}
         active={editor.isActive("underline")}
         title="Underline"
       >
-        <UnderlineIcon className="h-3.5 w-3.5" />
+        <UnderlineIcon style={{ width: 13, height: 13 }} />
       </ToolbarBtn>
-      <div className="mx-1 h-4 w-px bg-[color:var(--border)]" />
+      <div style={{ width: 1, height: 16, background: "var(--border)", margin: "0 4px" }} />
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
         active={editor.isActive("heading", { level: 2 })}
         title="Heading"
       >
-        <Heading2 className="h-3.5 w-3.5" />
+        <Heading2 style={{ width: 13, height: 13 }} />
       </ToolbarBtn>
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleBulletList().run()}
         active={editor.isActive("bulletList")}
         title="Bullet list"
       >
-        <List className="h-3.5 w-3.5" />
+        <List style={{ width: 13, height: 13 }} />
       </ToolbarBtn>
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
         active={editor.isActive("orderedList")}
         title="Numbered list"
       >
-        <ListOrdered className="h-3.5 w-3.5" />
+        <ListOrdered style={{ width: 13, height: 13 }} />
       </ToolbarBtn>
-      <div className="mx-1 h-4 w-px bg-[color:var(--border)]" />
+      <div style={{ width: 1, height: 16, background: "var(--border)", margin: "0 4px" }} />
       <ToolbarBtn
         onClick={() => editor.chain().focus().setTextAlign("left").run()}
         active={editor.isActive({ textAlign: "left" })}
         title="Align left"
       >
-        <span className="text-xs font-medium">L</span>
+        <span style={{ fontSize: 11, fontWeight: 600 }}>L</span>
       </ToolbarBtn>
       <ToolbarBtn
         onClick={() => editor.chain().focus().setTextAlign("center").run()}
         active={editor.isActive({ textAlign: "center" })}
         title="Align center"
       >
-        <span className="text-xs font-medium">C</span>
+        <span style={{ fontSize: 11, fontWeight: 600 }}>C</span>
       </ToolbarBtn>
-      <div className="mx-1 h-4 w-px bg-[color:var(--border)]" />
+      <div style={{ width: 1, height: 16, background: "var(--border)", margin: "0 4px" }} />
       <ToolbarBtn
         onClick={() => editor.chain().focus().undo().run()}
         title="Undo"
       >
-        <Undo className="h-3.5 w-3.5" />
+        <Undo style={{ width: 13, height: 13 }} />
       </ToolbarBtn>
       <ToolbarBtn
         onClick={() => editor.chain().focus().redo().run()}
         title="Redo"
       >
-        <Redo className="h-3.5 w-3.5" />
+        <Redo style={{ width: 13, height: 13 }} />
       </ToolbarBtn>
     </div>
   );
@@ -187,8 +195,8 @@ function NoteEditor({
   const [, startTransition] = useTransition();
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const isAuthor = note.createdBy === currentUserId;
+  const canEdit = isAuthor || canManageTags;
 
   const scheduleSave = useCallback(
     (fields: Parameters<typeof updateNote>[2]) => {
@@ -221,7 +229,8 @@ function NoteEditor({
     },
     editorProps: {
       attributes: {
-        class: "prose prose-sm max-w-none px-4 py-3 focus:outline-none min-h-[200px]",
+        class: "prose prose-sm max-w-none px-4 py-3 focus:outline-none",
+        style: "min-height:200px",
       },
     },
   });
@@ -249,11 +258,7 @@ function NoteEditor({
         isTodo: next,
         isCompleted: next ? isCompleted : false,
       });
-      onNoteUpdated({
-        id: note.id,
-        isTodo: next,
-        isCompleted: next ? isCompleted : false,
-      });
+      onNoteUpdated({ id: note.id, isTodo: next, isCompleted: next ? isCompleted : false });
     });
   }
 
@@ -302,188 +307,262 @@ function NoteEditor({
       ? `${note.createdByFirstName} ${note.createdByLastName}`.trim()
       : note.createdByEmail;
 
-  const canEdit = isAuthor || canManageTags;
-
   return (
-    <div className="flex h-full flex-col">
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Header row */}
-      <div className="flex items-center gap-2 border-b border-[color:var(--border)] px-4 py-2">
-        {/* Tag badge */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => canEdit && setShowTagPicker((p) => !p)}
-            className={cn(
-              "flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium",
-              selectedTag
-                ? "text-white"
-                : "bg-[color:var(--muted)] text-[color:var(--muted-foreground)]",
-              canEdit && "hover:opacity-80",
-            )}
-            style={selectedTag ? { backgroundColor: selectedTag.color } : {}}
-            title={canEdit ? "Change tag" : undefined}
-          >
-            <Tag className="h-3 w-3" />
-            {selectedTag ? selectedTag.name : "No tag"}
-          </button>
+      <div
+        className="row-between"
+        style={{ padding: "12px 18px", borderBottom: "1px solid var(--border)" }}
+      >
+        <div className="row" style={{ gap: 8 }}>
+          {/* Todo complete toggle */}
+          {isTodo && canEdit && (
+            <button
+              type="button"
+              onClick={handleCompleteToggle}
+              style={{
+                background: "none",
+                border: 0,
+                cursor: "pointer",
+                padding: 0,
+                color: isCompleted ? "var(--c-sage)" : "var(--ink-4)",
+              }}
+              title={isCompleted ? "Mark incomplete" : "Mark complete"}
+            >
+              {isCompleted ? (
+                <CheckCircle2 style={{ width: 18, height: 18 }} />
+              ) : (
+                <Circle style={{ width: 18, height: 18 }} />
+              )}
+            </button>
+          )}
 
-          {showTagPicker && (
-            <div className="absolute left-0 top-full z-10 mt-1 w-44 rounded-md border border-[color:var(--border)] bg-[color:var(--card)] p-1 shadow-md">
-              <button
-                type="button"
-                onClick={() => handleTagChange(null)}
-                className="w-full rounded px-2 py-1 text-left text-xs text-[color:var(--muted-foreground)] hover:bg-[color:var(--muted)]"
-              >
-                No tag
-              </button>
-              {tags.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => handleTagChange(t.id)}
-                  className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs hover:bg-[color:var(--muted)]"
+          {/* Tag badge */}
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              onClick={() => canEdit && setShowTagPicker((p) => !p)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: canEdit ? "pointer" : "default",
+                padding: 0,
+              }}
+              title={canEdit ? "Change tag" : undefined}
+            >
+              {selectedTag ? (
+                <span
+                  className="pill"
+                  style={{
+                    backgroundColor: selectedTag.color,
+                    color: "white",
+                    borderRadius: 999,
+                  }}
                 >
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: t.color }}
-                  />
-                  {t.name}
-                  {t.id === tagId && <Check className="ml-auto h-3 w-3" />}
+                  {selectedTag.name}
+                </span>
+              ) : (
+                <span className="pill">
+                  <Tag style={{ width: 10, height: 10 }} />
+                  No tag
+                </span>
+              )}
+            </button>
+
+            {showTagPicker && (
+              <div
+                className="card"
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: "100%",
+                  zIndex: 10,
+                  marginTop: 4,
+                  width: 176,
+                  padding: 4,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => handleTagChange(null)}
+                  style={{
+                    width: "100%",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    padding: "4px 8px",
+                    borderRadius: "var(--radius-s)",
+                    fontSize: 12,
+                    color: "var(--ink-3)",
+                  }}
+                  className="hover-bg"
+                >
+                  No tag
                 </button>
-              ))}
-            </div>
+                {tags.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => handleTagChange(t.id)}
+                    className="row hover-bg"
+                    style={{
+                      width: "100%",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      padding: "4px 8px",
+                      borderRadius: "var(--radius-s)",
+                      fontSize: 12,
+                      gap: 8,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        backgroundColor: t.color,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ flex: 1, textAlign: "left" }}>{t.name}</span>
+                    {t.id === tagId && <Check style={{ width: 11, height: 11 }} />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Due date */}
+          {canEdit && (
+            <span className="row" style={{ gap: 4, fontSize: 12, color: "var(--ink-4)" }}>
+              <Calendar style={{ width: 11, height: 11 }} />
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => handleDueDateChange(e.target.value)}
+                style={{
+                  border: 0,
+                  background: "transparent",
+                  fontSize: 12,
+                  color: "var(--ink-4)",
+                  outline: "none",
+                  cursor: "pointer",
+                }}
+              />
+            </span>
+          )}
+          {!canEdit && dueDate && (
+            <span className="pill">
+              <Calendar style={{ width: 10, height: 10 }} />
+              {dueDate}
+            </span>
+          )}
+          {isPinned && (
+            <span className="pill" data-c="accent">
+              <Pin style={{ width: 10, height: 10 }} />
+              Pinned
+            </span>
           )}
         </div>
 
-        {/* Due date */}
-        {canEdit && (
-          <div className="flex items-center gap-1 text-xs text-[color:var(--muted-foreground)]">
-            <Calendar className="h-3 w-3" />
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => handleDueDateChange(e.target.value)}
-              className="border-0 bg-transparent text-xs text-[color:var(--muted-foreground)] focus:outline-none"
-            />
-          </div>
-        )}
-        {!canEdit && dueDate && (
-          <span className="flex items-center gap-1 text-xs text-[color:var(--muted-foreground)]">
-            <Calendar className="h-3 w-3" />
-            {dueDate}
-          </span>
-        )}
-
-        <div className="ml-auto flex items-center gap-1">
-          {/* To-do toggle */}
+        <div className="row" style={{ gap: 4 }}>
           {canEdit && (
             <button
               type="button"
               onClick={handleTodoToggle}
               title={isTodo ? "Remove to-do" : "Make to-do"}
-              className={cn(
-                "rounded p-1.5 hover:bg-[color:var(--muted)]",
-                isTodo && "text-[color:var(--primary)]",
-              )}
+              className="btn ghost btn-icon"
+              style={{ color: isTodo ? "var(--accent)" : "var(--ink-4)" }}
             >
               {isTodo ? (
-                <CheckCircle2 className="h-4 w-4" />
+                <CheckCircle2 style={{ width: 14, height: 14 }} />
               ) : (
-                <Circle className="h-4 w-4" />
+                <Circle style={{ width: 14, height: 14 }} />
               )}
             </button>
           )}
-
-          {/* Visibility toggle */}
           {canEdit && (
             <button
               type="button"
               onClick={handleVisibilityToggle}
-              title={
-                visibility === "private" ? "Visible only to you" : "Shared with team"
-              }
-              className="rounded p-1.5 hover:bg-[color:var(--muted)]"
+              title={visibility === "private" ? "Visible only to you" : "Shared with team"}
+              className="btn ghost btn-icon"
             >
               {visibility === "shared" ? (
-                <Eye className="h-4 w-4" />
+                <Eye style={{ width: 14, height: 14 }} />
               ) : (
-                <EyeOff className="h-4 w-4" />
+                <EyeOff style={{ width: 14, height: 14 }} />
               )}
             </button>
           )}
-
-          {/* Pin */}
           {canEdit && (
             <button
               type="button"
               onClick={handlePinToggle}
               title={isPinned ? "Unpin" : "Pin"}
-              className={cn(
-                "rounded p-1.5 hover:bg-[color:var(--muted)]",
-                isPinned && "text-amber-500",
-              )}
+              className="btn ghost btn-icon"
+              style={{ color: isPinned ? "var(--c-amber)" : undefined }}
             >
-              <Pin className="h-4 w-4" />
+              <Pin style={{ width: 14, height: 14 }} />
             </button>
           )}
-
-          {/* Delete */}
           {canEdit && (
             <button
               type="button"
               onClick={handleDelete}
               title="Delete note"
-              className="rounded p-1.5 text-[color:var(--muted-foreground)] hover:bg-red-50 hover:text-red-600"
+              className="btn ghost btn-icon"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 style={{ width: 14, height: 14 }} />
             </button>
           )}
-
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1.5 hover:bg-[color:var(--muted)]"
+            className="btn ghost btn-icon"
             title="Close"
           >
-            <X className="h-4 w-4" />
+            <X style={{ width: 14, height: 14 }} />
           </button>
         </div>
       </div>
 
       {/* Title */}
-      <div className="px-6 pt-6">
-        {isTodo && canEdit && (
-          <button
-            type="button"
-            onClick={handleCompleteToggle}
-            className="mb-3 flex items-center gap-2 text-sm text-[color:var(--muted-foreground)]"
-          >
-            {isCompleted ? (
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-            ) : (
-              <Circle className="h-5 w-5" />
-            )}
-            <span>{isCompleted ? "Mark incomplete" : "Mark complete"}</span>
-          </button>
-        )}
-
+      <div style={{ padding: "22px 28px 0" }}>
         {canEdit ? (
           <input
             type="text"
             value={title}
             onChange={(e) => handleTitleChange(e.target.value)}
             placeholder="Untitled"
-            className={cn(
-              "w-full border-0 bg-transparent text-3xl font-semibold tracking-tight focus:outline-none",
-              isCompleted && "text-[color:var(--muted-foreground)] line-through",
-            )}
+            style={{
+              border: 0,
+              padding: 0,
+              fontSize: 24,
+              fontWeight: 600,
+              fontFamily: "var(--font-display)",
+              letterSpacing: "-0.012em",
+              background: "transparent",
+              width: "100%",
+              outline: "none",
+              color: isCompleted ? "var(--ink-4)" : "var(--ink)",
+              textDecoration: isCompleted ? "line-through" : "none",
+            }}
           />
         ) : (
           <h2
-            className={cn(
-              "text-3xl font-semibold tracking-tight",
-              isCompleted && "text-[color:var(--muted-foreground)] line-through",
-            )}
+            style={{
+              fontSize: 24,
+              fontWeight: 600,
+              fontFamily: "var(--font-display)",
+              letterSpacing: "-0.012em",
+              margin: 0,
+              color: isCompleted ? "var(--ink-4)" : "var(--ink)",
+              textDecoration: isCompleted ? "line-through" : "none",
+            }}
           >
             {title || "Untitled"}
           </h2>
@@ -491,29 +570,39 @@ function NoteEditor({
       </div>
 
       {/* Editor */}
-      <div className="flex-1 overflow-y-auto">
+      <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
         {canEdit ? (
-          <div className="mx-4 mt-4 overflow-hidden rounded-md border border-[color:var(--border)]">
+          <div className="card" style={{ overflow: "hidden" }}>
             <EditorToolbar editor={editor} />
             <EditorContent editor={editor} />
           </div>
         ) : (
           <div
-            className="prose prose-sm max-w-none px-6 py-4"
+            className="prose prose-sm"
+            style={{ maxWidth: "none", padding: "0 12px" }}
             dangerouslySetInnerHTML={{ __html: note.content }}
           />
         )}
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between border-t border-[color:var(--border)] px-4 py-2 text-xs text-[color:var(--muted-foreground)]">
+      <div
+        className="row-between"
+        style={{
+          borderTop: "1px solid var(--border)",
+          padding: "10px 18px",
+          fontSize: 11.5,
+          color: "var(--ink-4)",
+        }}
+      >
         <span>
           {saveStatus === "saving" ? "Saving…" : "Saved automatically"}
           {" · "}
           {visibility === "shared" ? "Visible to team" : "Visible only to you"}
         </span>
-        <span>
-          {authorName} ·{" "}
+        <span className="row" style={{ gap: 6 }}>
+          {authorName}
+          {" · "}
           {new Date(note.updatedAt).toLocaleTimeString("en-US", {
             hour: "numeric",
             minute: "2-digit",
@@ -524,75 +613,99 @@ function NoteEditor({
   );
 }
 
-// ── Note list item ────────────────────────────────────────────────────────────
+// ── Note list item (NoteRow) ──────────────────────────────────────────────────
 
-function NoteListItem({
+function NoteRow({
   note,
   tags,
-  selected,
-  onClick,
+  active,
+  onPick,
 }: {
   note: NoteWithAuthor;
   tags: NoteTagRow[];
-  selected: boolean;
-  onClick: () => void;
+  active: boolean;
+  onPick: () => void;
 }) {
   const tag = tags.find((t) => t.id === note.tagId);
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "relative w-full rounded-lg px-3 py-2.5 text-left transition-colors",
-        selected
-          ? "bg-[color:var(--muted)]"
-          : "hover:bg-[color:var(--muted)]/50",
-      )}
+    <div
+      onClick={onPick}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "22px 1fr auto",
+        gap: 10,
+        padding: "10px 12px",
+        borderRadius: "var(--radius-s)",
+        cursor: "pointer",
+        border: "1px solid " + (active ? "var(--border-strong)" : "transparent"),
+        background: active ? "var(--bg-elev)" : "transparent",
+        boxShadow: active ? "var(--shadow-1)" : "none",
+      }}
+      onMouseEnter={(e) => {
+        if (!active) e.currentTarget.style.background = "var(--bg-muted)";
+      }}
+      onMouseLeave={(e) => {
+        if (!active) e.currentTarget.style.background = "transparent";
+      }}
     >
-      <div className="flex items-start gap-2">
-        <div className="mt-0.5 shrink-0 text-[color:var(--muted-foreground)]">
-          {note.isTodo ? (
-            note.isCompleted ? (
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-            ) : (
-              <Circle className="h-4 w-4" />
-            )
+      <div
+        style={{
+          color:
+            note.isCompleted
+              ? "var(--c-sage)"
+              : note.isTodo
+                ? "var(--ink-4)"
+                : "var(--ink-3)",
+          paddingTop: 1,
+        }}
+      >
+        {note.isTodo ? (
+          note.isCompleted ? (
+            <CheckCircle2 style={{ width: 16, height: 16 }} />
           ) : (
-            <PenLine className="h-4 w-4" />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p
-            className={cn(
-              "truncate text-sm font-medium",
-              note.isCompleted &&
-                "text-[color:var(--muted-foreground)] line-through",
-            )}
-          >
-            {note.title || "Untitled"}
-          </p>
-          <div className="mt-1 flex items-center gap-2">
-            {tag && (
-              <span
-                className="rounded px-1.5 py-0.5 text-xs font-medium text-white"
-                style={{ backgroundColor: tag.color }}
-              >
-                {tag.name}
-              </span>
-            )}
-            {note.dueDate && (
-              <span className="text-xs text-[color:var(--muted-foreground)]">
-                {note.dueDate}
-              </span>
-            )}
-          </div>
-        </div>
-        {note.isPinned && (
-          <Pin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+            <Circle style={{ width: 16, height: 16 }} />
+          )
+        ) : (
+          <PenLine style={{ width: 14, height: 14 }} />
         )}
       </div>
-    </button>
+      <div style={{ minWidth: 0 }}>
+        <div
+          className="truncate"
+          style={{
+            fontSize: 13,
+            fontWeight: 500,
+            textDecoration: note.isCompleted ? "line-through" : "none",
+            color: note.isCompleted ? "var(--ink-3)" : "var(--ink)",
+          }}
+        >
+          {note.title || "Untitled"}
+        </div>
+        <div className="row" style={{ gap: 8, marginTop: 3 }}>
+          {tag && (
+            <span
+              className="pill"
+              style={{
+                fontSize: 10.5,
+                height: 16,
+                padding: "0 6px",
+                backgroundColor: tag.color,
+                color: "white",
+              }}
+            >
+              {tag.name}
+            </span>
+          )}
+          {note.dueDate && (
+            <span style={{ fontSize: 11, color: "var(--ink-4)" }}>{note.dueDate}</span>
+          )}
+        </div>
+      </div>
+      {note.isPinned && (
+        <Pin style={{ width: 12, height: 12, color: "var(--c-amber)", marginTop: 2 }} />
+      )}
+    </div>
   );
 }
 
@@ -641,81 +754,100 @@ function TagManager({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-sm rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold">Manage Tags</h2>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 50,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(0,0,0,.4)",
+      }}
+    >
+      <div
+        className="card"
+        style={{ width: "100%", maxWidth: 360, padding: 24 }}
+      >
+        <div className="row-between" style={{ marginBottom: 16 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Manage Tags</h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 hover:bg-[color:var(--muted)]"
+            className="btn ghost btn-icon"
           >
-            <X className="h-4 w-4" />
+            <X style={{ width: 14, height: 14 }} />
           </button>
         </div>
 
-        <div className="mb-4 space-y-2">
+        <div style={{ marginBottom: 16, display: "flex", flexDirection: "column", gap: 6 }}>
           {tags.map((tag) => (
             <div
               key={tag.id}
-              className="flex items-center justify-between rounded-lg border border-[color:var(--border)] px-3 py-2"
+              className="row-between card"
+              style={{ padding: "8px 12px" }}
             >
-              <div className="flex items-center gap-2">
+              <div className="row" style={{ gap: 8 }}>
                 <span
-                  className="h-3 w-3 rounded-full"
-                  style={{ backgroundColor: tag.color }}
+                  style={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: "50%",
+                    backgroundColor: tag.color,
+                    flexShrink: 0,
+                  }}
                 />
-                <span className="text-sm">{tag.name}</span>
+                <span style={{ fontSize: 13 }}>{tag.name}</span>
               </div>
               <button
                 type="button"
                 onClick={() => handleRemove(tag.id)}
-                className="rounded p-0.5 text-[color:var(--muted-foreground)] hover:text-red-600"
+                className="btn ghost btn-icon"
+                style={{ width: 24, height: 24 }}
               >
-                <X className="h-3.5 w-3.5" />
+                <X style={{ width: 12, height: 12 }} />
               </button>
             </div>
           ))}
           {tags.length === 0 && (
-            <p className="text-center text-sm text-[color:var(--muted-foreground)]">
+            <p style={{ textAlign: "center", fontSize: 13, color: "var(--ink-4)" }}>
               No tags yet.
             </p>
           )}
         </div>
 
-        <div className="space-y-2 border-t border-[color:var(--border)] pt-4">
-          <p className="text-xs font-medium text-[color:var(--muted-foreground)]">
-            Add tag
-          </p>
+        <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+          <p className="h-eyebrow" style={{ marginBottom: 8 }}>Add tag</p>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Tag name"
-            className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[color:var(--primary)]"
+            className="field"
+            style={{ marginBottom: 8 }}
           />
-          <div className="flex flex-wrap gap-1.5">
+          <div className="row" style={{ gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
             {TAG_COLOR_OPTIONS.map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => setColor(c)}
-                className={cn(
-                  "h-6 w-6 rounded-full border-2",
-                  color === c
-                    ? "border-[color:var(--foreground)]"
-                    : "border-transparent",
-                )}
-                style={{ backgroundColor: c }}
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: "50%",
+                  border: `2px solid ${color === c ? "var(--ink-2)" : "transparent"}`,
+                  backgroundColor: c,
+                  cursor: "pointer",
+                  padding: 0,
+                }}
               />
             ))}
           </div>
-          {error && <p className="text-xs text-red-600">{error}</p>}
-          <button
-            type="button"
-            onClick={handleAdd}
-            className="w-full rounded-md bg-[color:var(--primary)] px-3 py-1.5 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90"
-          >
+          {error && (
+            <p style={{ fontSize: 12, color: "#dc2626", marginBottom: 6 }}>{error}</p>
+          )}
+          <button type="button" onClick={handleAdd} className="btn primary" style={{ width: "100%" }}>
             Add Tag
           </button>
         </div>
@@ -779,7 +911,6 @@ export function NotesPanel({
     startTransition(async () => {
       const result = await createNote(productionId, productionSlug);
       if (result.id) {
-        // Add optimistic note
         const optimistic: NoteWithAuthor = {
           id: result.id,
           productionId,
@@ -818,107 +949,116 @@ export function NotesPanel({
   }
 
   return (
-    <div className="flex h-[calc(100vh-220px)] gap-0 overflow-hidden rounded-xl border border-[color:var(--border)]">
+    <div
+      className="anim-in"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "360px 1fr",
+        gap: 16,
+        maxWidth: 1180,
+        margin: "0 auto",
+      }}
+    >
       {/* Left sidebar */}
-      <div className="flex w-72 shrink-0 flex-col border-r border-[color:var(--border)]">
-        {/* Sidebar header */}
-        <div className="flex items-center justify-between px-4 py-3">
-          <h2 className="text-base font-semibold">Notes</h2>
-          <div className="flex items-center gap-1">
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
+        {/* Header */}
+        <div className="row-between">
+          <h2 className="h-section">My notes</h2>
+          <div className="row" style={{ gap: 6 }}>
             {canManageTags && (
               <button
                 type="button"
                 onClick={() => setShowTagManager(true)}
                 title="Manage tags"
-                className="rounded p-1.5 text-[color:var(--muted-foreground)] hover:bg-[color:var(--muted)]"
+                className="btn ghost btn-icon"
               >
-                <Settings className="h-4 w-4" />
+                <Settings style={{ width: 14, height: 14 }} />
               </button>
             )}
             {canCreate && (
               <button
                 type="button"
                 onClick={handleCreate}
-                className="flex items-center gap-1 rounded-md bg-[color:var(--primary)] px-2.5 py-1 text-xs font-medium text-[color:var(--primary-foreground)] hover:opacity-90"
+                className="btn primary"
+                style={{ height: 30, padding: "0 10px" }}
               >
-                <Plus className="h-3.5 w-3.5" />
-                New
+                <Plus style={{ width: 14, height: 14 }} />
+                <span>New</span>
               </button>
             )}
           </div>
         </div>
 
         {/* Filter tabs */}
-        <div className="flex gap-0.5 overflow-x-auto border-b border-[color:var(--border)] px-2 pb-2">
-          {(["all", "todo", "pinned", "notes", "done"] as NoteFilter[]).map(
-            (f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className={cn(
-                  "shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                  filter === f
-                    ? "bg-[color:var(--muted)] text-[color:var(--foreground)]"
-                    : "text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]",
-                )}
-              >
-                {FILTER_LABELS[f]}
-              </button>
-            ),
-          )}
+        <div className="row" style={{ gap: 4, flexWrap: "wrap" }}>
+          {(["all", "todo", "pinned", "notes", "done"] as NoteFilter[]).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              className="btn ghost"
+              data-active={filter === f ? "1" : "0"}
+              style={{
+                height: 26,
+                padding: "0 10px",
+                fontSize: 12,
+                background: filter === f ? "var(--bg-sunken)" : "transparent",
+                color: filter === f ? "var(--ink)" : "var(--ink-3)",
+                fontWeight: filter === f ? 500 : 400,
+              }}
+            >
+              {FILTER_LABELS[f]}
+            </button>
+          ))}
         </div>
 
-        {/* Note list */}
-        <div className="flex-1 overflow-y-auto p-2">
-          {notes.length === 0 && (
-            <div className="mt-8 text-center">
-              <PenLine className="mx-auto mb-2 h-8 w-8 text-[color:var(--muted-foreground)]" />
-              <p className="text-sm text-[color:var(--muted-foreground)]">
-                No notes yet.
-              </p>
-              {canCreate && (
-                <p className="mt-1 text-xs text-[color:var(--muted-foreground)]">
-                  Click + New to get started.
-                </p>
-              )}
+        {/* Pinned group */}
+        {pinned.length > 0 && (
+          <>
+            <div className="h-eyebrow row" style={{ gap: 4, marginTop: 4 }}>
+              <Pin style={{ width: 11, height: 11 }} /> Pinned
             </div>
-          )}
-
-          {pinned.length > 0 && (
-            <>
-              <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-                Pinned
-              </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {pinned.map((note) => (
-                <NoteListItem
+                <NoteRow
                   key={note.id}
                   note={note}
                   tags={tags}
-                  selected={selectedId === note.id}
-                  onClick={() => setSelectedId(note.id)}
+                  active={selectedId === note.id}
+                  onPick={() => setSelectedId(note.id)}
                 />
               ))}
-              {unpinned.length > 0 && (
-                <p className="mb-1 mt-3 px-1 text-xs font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-                  All
-                </p>
-              )}
-            </>
-          )}
+            </div>
+          </>
+        )}
 
+        {/* All/Items section label */}
+        <div className="h-eyebrow" style={{ marginTop: 8 }}>
+          {pinned.length > 0 ? "All" : "Items"}
+        </div>
+
+        {/* Note list */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {notes.length === 0 && (
+            <div style={{ marginTop: 24, textAlign: "center", color: "var(--ink-4)" }}>
+              <PenLine style={{ width: 28, height: 28, margin: "0 auto 8px" }} />
+              <p style={{ fontSize: 13 }}>No notes yet.</p>
+              {canCreate && (
+                <p style={{ fontSize: 12, marginTop: 4 }}>Click + New to get started.</p>
+              )}
+            </div>
+          )}
           {unpinned.map((note) => (
-            <NoteListItem
+            <NoteRow
               key={note.id}
               note={note}
               tags={tags}
-              selected={selectedId === note.id}
-              onClick={() => setSelectedId(note.id)}
+              active={selectedId === note.id}
+              onPick={() => setSelectedId(note.id)}
             />
           ))}
-
           {filtered.length === 0 && notes.length > 0 && (
-            <p className="mt-4 text-center text-sm text-[color:var(--muted-foreground)]">
+            <p style={{ marginTop: 16, textAlign: "center", fontSize: 13, color: "var(--ink-4)" }}>
               No notes match this filter.
             </p>
           )}
@@ -926,7 +1066,10 @@ export function NotesPanel({
       </div>
 
       {/* Right panel */}
-      <div className="flex-1 overflow-hidden">
+      <div
+        className="card"
+        style={{ display: "flex", flexDirection: "column", minHeight: 540 }}
+      >
         {selectedNote ? (
           <NoteEditor
             key={selectedNote.id}
@@ -939,18 +1082,23 @@ export function NotesPanel({
             onNoteUpdated={handleNoteUpdated}
           />
         ) : (
-          <div className="flex h-full flex-col items-center justify-center text-center">
-            <PenLine className="mb-3 h-10 w-10 text-[color:var(--muted-foreground)]" />
-            <p className="text-sm font-medium text-[color:var(--muted-foreground)]">
-              Select a note to view it
-            </p>
+          <div
+            style={{
+              margin: "auto",
+              textAlign: "center",
+              color: "var(--ink-3)",
+            }}
+          >
+            <PenLine style={{ width: 28, height: 28, margin: "0 auto 8px" }} />
+            <div style={{ fontSize: 13 }}>Pick a note or create a new one</div>
             {canCreate && (
               <button
                 type="button"
                 onClick={handleCreate}
-                className="mt-3 flex items-center gap-1.5 rounded-md bg-[color:var(--primary)] px-3 py-1.5 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90"
+                className="btn primary"
+                style={{ marginTop: 14 }}
               >
-                <Plus className="h-4 w-4" />
+                <Plus style={{ width: 14, height: 14 }} />
                 New note
               </button>
             )}
@@ -965,9 +1113,7 @@ export function NotesPanel({
           organizationId={organizationId}
           onClose={() => setShowTagManager(false)}
           onTagAdded={(tag) => setTags((prev) => [...prev, tag])}
-          onTagRemoved={(id) =>
-            setTags((prev) => prev.filter((t) => t.id !== id))
-          }
+          onTagRemoved={(id) => setTags((prev) => prev.filter((t) => t.id !== id))}
         />
       )}
     </div>
