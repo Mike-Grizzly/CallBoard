@@ -110,7 +110,7 @@ export default async function ProductionLayout({
   ];
   if (canViewNotes) {
     tabs.push({
-      label: "Notes",
+      label: "My Notes",
       href: `/productions/${slug}/notes`,
       icon: "PenLine",
     });
