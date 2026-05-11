@@ -591,17 +591,19 @@ function NoteRow({
   note,
   tags,
   active,
+  visuallyDone,
   onPick,
   onToggleComplete,
 }: {
   note: NoteWithAuthor;
   tags: NoteTagRow[];
   active: boolean;
+  visuallyDone: boolean;
   onPick: () => void;
   onToggleComplete?: () => void;
 }) {
   const tag = tags.find((t) => t.id === note.tagId);
-  const done = note.isCompleted;
+  const done = visuallyDone;
 
   return (
     <div
@@ -878,6 +880,7 @@ export function NotesPanel({
   );
   const [filter, setFilter] = useState<NoteFilter>("all");
   const [showTagManager, setShowTagManager] = useState(false);
+  const [pendingComplete, setPendingComplete] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
 
   const selectedNote = notes.find((n) => n.id === selectedId) ?? null;
@@ -889,12 +892,14 @@ export function NotesPanel({
     return true;
   });
 
-  // In the to-do view, completed items sink to the bottom
+  // In the to-do view, completed items sink to the bottom.
+  // Items still animating (pendingComplete) stay in place until the
+  // strikethrough animation finishes before re-sorting.
   const sortedFiltered =
     filter === "todo"
       ? [
-          ...filtered.filter((n) => !n.isCompleted),
-          ...filtered.filter((n) => n.isCompleted),
+          ...filtered.filter((n) => !n.isCompleted || pendingComplete.has(n.id)),
+          ...filtered.filter((n) => n.isCompleted && !pendingComplete.has(n.id)),
         ]
       : filtered;
 
@@ -932,9 +937,32 @@ export function NotesPanel({
 
   function handleToggleComplete(noteId: string, currentCompleted: boolean) {
     const next = !currentCompleted;
-    setNotes((prev) =>
-      prev.map((n) => (n.id === noteId ? { ...n, isCompleted: next } : n)),
-    );
+
+    if (next) {
+      // Mark as visually done immediately so the animation plays in place,
+      // then commit the sort-affecting state update after the animation finishes.
+      setPendingComplete((prev) => new Set([...prev, noteId]));
+      setTimeout(() => {
+        setNotes((prev) =>
+          prev.map((n) => (n.id === noteId ? { ...n, isCompleted: true } : n)),
+        );
+        setPendingComplete((prev) => {
+          const s = new Set(prev);
+          s.delete(noteId);
+          return s;
+        });
+      }, 420);
+    } else {
+      setNotes((prev) =>
+        prev.map((n) => (n.id === noteId ? { ...n, isCompleted: false } : n)),
+      );
+      setPendingComplete((prev) => {
+        const s = new Set(prev);
+        s.delete(noteId);
+        return s;
+      });
+    }
+
     startTransition(async () => {
       await updateNote(noteId, productionSlug, { isCompleted: next });
     });
@@ -1030,6 +1058,7 @@ export function NotesPanel({
                   note={note}
                   tags={tags}
                   active={selectedId === note.id}
+                  visuallyDone={note.isCompleted || pendingComplete.has(note.id)}
                   onPick={() => setSelectedId(note.id)}
                   onToggleComplete={() => handleToggleComplete(note.id, note.isCompleted)}
                 />
@@ -1060,6 +1089,7 @@ export function NotesPanel({
               note={note}
               tags={tags}
               active={selectedId === note.id}
+              visuallyDone={note.isCompleted || pendingComplete.has(note.id)}
               onPick={() => setSelectedId(note.id)}
               onToggleComplete={() => handleToggleComplete(note.id, note.isCompleted)}
             />
