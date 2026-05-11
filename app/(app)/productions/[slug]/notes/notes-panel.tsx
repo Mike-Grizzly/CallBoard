@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback, useTransition } from "react";
+import { useState, useRef, useCallback, useTransition, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Pin,
   Trash2,
@@ -713,7 +714,10 @@ function TagManager({
   const [name, setName] = useState("");
   const [color, setColor] = useState(TAG_COLOR_OPTIONS[0]);
   const [error, setError] = useState("");
+  const [mounted, setMounted] = useState(false);
   const [, startTransition] = useTransition();
+
+  useEffect(() => { setMounted(true); }, []);
 
   function handleAdd() {
     if (!name.trim()) {
@@ -739,29 +743,36 @@ function TagManager({
     });
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 50,
+        zIndex: 9999,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "rgba(0,0,0,.4)",
+        background: "rgba(20,15,10,.45)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
       }}
     >
       <div
         className="card"
-        style={{ width: "100%", maxWidth: 360, padding: 24 }}
+        style={{
+          width: "100%",
+          maxWidth: 380,
+          margin: "0 16px",
+          padding: 24,
+          boxShadow: "var(--shadow-3)",
+        }}
       >
-        <div className="row-between" style={{ marginBottom: 16 }}>
+        <div className="row-between" style={{ marginBottom: 18 }}>
           <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Manage Tags</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn ghost btn-icon"
-          >
+          <button type="button" onClick={onClose} className="btn ghost btn-icon">
             <X style={{ width: 14, height: 14 }} />
           </button>
         </div>
@@ -770,14 +781,18 @@ function TagManager({
           {tags.map((tag) => (
             <div
               key={tag.id}
-              className="row-between card"
-              style={{ padding: "8px 12px" }}
+              className="row-between"
+              style={{
+                padding: "8px 12px",
+                borderRadius: "var(--radius-s)",
+                border: "1px solid var(--border)",
+              }}
             >
-              <div className="row" style={{ gap: 8 }}>
+              <div className="row" style={{ gap: 10 }}>
                 <span
                   style={{
-                    width: 12,
-                    height: 12,
+                    width: 10,
+                    height: 10,
                     borderRadius: "50%",
                     backgroundColor: tag.color,
                     flexShrink: 0,
@@ -789,14 +804,14 @@ function TagManager({
                 type="button"
                 onClick={() => handleRemove(tag.id)}
                 className="btn ghost btn-icon"
-                style={{ width: 24, height: 24 }}
+                style={{ width: 24, height: 24, color: "var(--ink-4)" }}
               >
                 <X style={{ width: 12, height: 12 }} />
               </button>
             </div>
           ))}
           {tags.length === 0 && (
-            <p style={{ textAlign: "center", fontSize: 13, color: "var(--ink-4)" }}>
+            <p style={{ textAlign: "center", fontSize: 13, color: "var(--ink-4)", padding: "8px 0" }}>
               No tags yet.
             </p>
           )}
@@ -808,11 +823,12 @@ function TagManager({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
             placeholder="Tag name"
             className="field"
-            style={{ marginBottom: 8 }}
+            style={{ marginBottom: 10 }}
           />
-          <div className="row" style={{ gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+          <div className="row" style={{ gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
             {TAG_COLOR_OPTIONS.map((c) => (
               <button
                 key={c}
@@ -823,22 +839,26 @@ function TagManager({
                   height: 22,
                   borderRadius: "50%",
                   border: `2px solid ${color === c ? "var(--ink-2)" : "transparent"}`,
+                  outline: color === c ? "2px solid var(--border)" : "none",
+                  outlineOffset: 1,
                   backgroundColor: c,
                   cursor: "pointer",
                   padding: 0,
+                  transition: "outline 0.1s",
                 }}
               />
             ))}
           </div>
           {error && (
-            <p style={{ fontSize: 12, color: "#dc2626", marginBottom: 6 }}>{error}</p>
+            <p style={{ fontSize: 12, color: "#dc2626", marginBottom: 8 }}>{error}</p>
           )}
           <button type="button" onClick={handleAdd} className="btn primary" style={{ width: "100%" }}>
             Add Tag
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
