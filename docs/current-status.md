@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-05-11
 
-**Current milestone:** Steps 1-12 complete. Call schedule calendar shipped. UI port Phase 1 (design tokens / shell) done, Phase 2 (per-tab visual port) in progress. Overview tab ported. Reports tab now at full demo parity — schema expanded with status, attendance, breaks, scenes, schedule changes, line notes, injuries; new editor matches the demo exactly; edit flow exists; email dialog uses the demo's modal chrome. RLS enabled on all public tables. See `docs/feature-specs/11-rehearsal-report-demo-parity.md` for the full scope.
+**Current milestone:** Steps 1-12 complete. Call schedule calendar shipped. UI port Phase 1 (design tokens / shell) done, Phase 2 (per-tab visual port) in progress. Overview tab ported. Rehearsal Reports tab now at full demo parity — schema expanded with status, attendance, breaks, scenes, schedule changes, line notes, injuries; new editor matches the demo exactly; edit flow exists; email dialog uses the demo's modal chrome. The per-production tab is now labelled "Rehearsal Reports" and sits second after Overview. RLS enabled on all public tables. See `docs/feature-specs/11-rehearsal-report-demo-parity.md` for the full scope.
 
 ## Feature status
 

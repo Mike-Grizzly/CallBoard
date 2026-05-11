@@ -102,15 +102,15 @@ export default async function ProductionLayout({
       icon: "Layout",
     },
     {
-      label: "Calls",
-      href: `/productions/${slug}/calls`,
-      icon: "Phone",
-    },
-    {
-      label: "Reports",
+      label: "Rehearsal Reports",
       href: `/productions/${slug}/reports`,
       icon: "FileText",
       count: reports.length,
+    },
+    {
+      label: "Calls",
+      href: `/productions/${slug}/calls`,
+      icon: "Phone",
     },
     {
       label: "Announcements",
