@@ -75,7 +75,7 @@ export function DocumentUploadForm({ productionId }: { productionId: string }) {
             type="file"
             name="file"
             required
-            className="w-full text-sm file:mr-2 file:rounded-md file:border-0 file:bg-[color:var(--accent)] file:px-3 file:py-1.5 file:text-sm file:font-medium"
+            className="w-full text-sm file:mr-2 file:rounded-md file:border-0 file:bg-[color:var(--muted)] file:px-3 file:py-1.5 file:text-sm file:font-medium"
           />
         </div>
       </div>

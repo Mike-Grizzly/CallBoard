@@ -2,40 +2,69 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import {
+  Bell,
+  FileText,
+  FolderOpen,
+  Layout as LayoutIcon,
+  Megaphone,
+  PenLine,
+  Phone,
+  Users,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-export function ProductionTabs({
-  slug,
-  tabs,
-}: {
-  slug: string;
-  tabs: { label: string; href: string }[];
-}) {
+const ICONS: Record<string, LucideIcon> = {
+  Layout: LayoutIcon,
+  Phone,
+  FileText,
+  Megaphone,
+  FolderOpen,
+  PenLine,
+  Users,
+  Bell,
+};
+
+export type ProductionTab = {
+  label: string;
+  href: string;
+  icon: string;
+  count?: number;
+};
+
+/**
+ * Persistent tab strip for the production header. Matches the demo's
+ * `.tabs` style (underline + accent active state). Active when the
+ * current URL equals the tab href, or — for non-overview tabs — starts
+ * with it. Overview only matches exactly so it isn't always active.
+ */
+export function ProductionTabsNav({ tabs }: { tabs: ProductionTab[] }) {
   const pathname = usePathname();
+  const overviewHref = tabs[0]?.href;
 
   return (
-    <div className="mb-6 flex gap-1 border-b border-[color:var(--border)]">
+    <nav className="tabs" aria-label="Production sections">
       {tabs.map((tab) => {
-        const isActive =
-          pathname === tab.href ||
-          (tab.href !== `/productions/${slug}` &&
-            pathname.startsWith(tab.href));
-
+        const Icon = ICONS[tab.icon] ?? FileText;
+        const isOverview = tab.href === overviewHref;
+        const active = isOverview
+          ? pathname === tab.href
+          : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
         return (
           <Link
             key={tab.href}
             href={tab.href}
-            className={cn(
-              "-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors",
-              isActive
-                ? "border-[color:var(--primary)] text-[color:var(--foreground)]"
-                : "border-transparent text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]",
-            )}
+            className="tab"
+            data-active={active ? "1" : "0"}
           >
-            {tab.label}
+            <Icon className="ico" aria-hidden />
+            <span>{tab.label}</span>
+            {tab.count != null && tab.count > 0 && (
+              <span className="count">{tab.count}</span>
+            )}
           </Link>
         );
       })}
-    </div>
+    </nav>
   );
 }

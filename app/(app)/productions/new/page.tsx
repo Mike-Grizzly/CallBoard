@@ -12,6 +12,7 @@ export default async function NewProductionPage() {
   }
 
   return (
+    <div className="page">
     <div className="mx-auto max-w-lg">
       <div className="mb-6">
         <Link
@@ -29,6 +30,7 @@ export default async function NewProductionPage() {
       </div>
 
       <CreateProductionForm />
+    </div>
     </div>
   );
 }

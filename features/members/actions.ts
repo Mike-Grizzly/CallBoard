@@ -132,6 +132,8 @@ export async function assignProductionMember(
     return { error: "Select at least one member." };
   }
 
+  const characterName = (formData.get("character_name") as string | null)?.trim() || null;
+
   for (const userId of userIds) {
     const existing = await db
       .select()
@@ -147,16 +149,42 @@ export async function assignProductionMember(
     if (existing.length > 0) {
       await db
         .update(productionMemberships)
-        .set({ role })
+        .set({ role, ...(characterName !== null ? { characterName } : {}) })
         .where(eq(productionMemberships.id, existing[0].id));
     } else {
       await db.insert(productionMemberships).values({
         userId,
         productionId,
         role,
+        characterName,
       });
     }
   }
+
+  revalidatePath(`/productions`);
+  return {};
+}
+
+export async function updateCharacterName(
+  _prevState: MemberActionResult | undefined,
+  formData: FormData,
+): Promise<MemberActionResult> {
+  const currentUser = await requireCurrentUser();
+
+  if (!can(currentUser.role, "productions:manage")) {
+    return { error: "You don't have permission to manage productions." };
+  }
+
+  const membershipId = formData.get("membership_id") as string;
+  const characterName =
+    (formData.get("character_name") as string | null)?.trim() || null;
+
+  if (!membershipId) return { error: "Missing membership ID." };
+
+  await db
+    .update(productionMemberships)
+    .set({ characterName })
+    .where(eq(productionMemberships.id, membershipId));
 
   revalidatePath(`/productions`);
   return {};

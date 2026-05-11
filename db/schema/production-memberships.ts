@@ -11,6 +11,7 @@ export const productionMemberships = pgTable("production_memberships", {
     .notNull()
     .references(() => productions.id, { onDelete: "cascade" }),
   role: text("role").notNull(),
+  characterName: text("character_name"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
