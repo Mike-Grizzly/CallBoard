@@ -412,7 +412,7 @@ export default async function ProductionDetailPage({
               No activity yet — file the first report to get started.
             </div>
           ) : (
-            <div style={{ paddingBottom: 8 }}>
+            <div style={{ padding: "4px 0 12px" }}>
               {activity.map((item) => (
                 <Link key={item.id} href={item.href} style={{ textDecoration: "none" }}>
                   <div
@@ -432,14 +432,14 @@ export default async function ProductionDetailPage({
                       {item.kind === "announcement" && <Icon name="Megaphone" size={14} />}
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {item.title}
                       </div>
-                      <div style={{ fontSize: 12, color: "var(--ink-4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <div className="muted" style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {item.subtitle}
                       </div>
                     </div>
-                    <span style={{ fontSize: 11.5, color: "var(--ink-4)", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+                    <span className="muted" style={{ fontSize: 11.5, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
                       {relativeTime(item.createdAt)}
                     </span>
                   </div>
@@ -481,7 +481,7 @@ export default async function ProductionDetailPage({
               )}
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {teamList.slice(0, 10).map((member) => {
                 const name = memberDisplayName(member.firstName, member.lastName, member.email);
                 const initials = memberInitials(member.firstName, member.lastName, member.email);
@@ -497,11 +497,11 @@ export default async function ProductionDetailPage({
                       {initials}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {member.characterName ?? name}
                       </div>
                       {member.characterName && (
-                        <div style={{ fontSize: 11.5, color: "var(--ink-4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <div className="muted" style={{ fontSize: 11.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {name}
                         </div>
                       )}

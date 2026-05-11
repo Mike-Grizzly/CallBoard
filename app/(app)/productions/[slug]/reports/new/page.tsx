@@ -13,21 +13,16 @@ export default async function NewReportPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  console.log("[reports/new page] hit, slug=", slug);
   const user = await requireCurrentUser();
-  console.log("[reports/new page] user:", user.id, "role:", user.role);
 
   if (!can(user.role, "reports:create")) {
-    console.log("[reports/new page] redirect: lacks reports:create");
     redirect(`/productions/${slug}/reports`);
   }
 
   const org = await getOrCreateDefaultOrganization();
   const production = await getProductionBySlug(org.id, slug);
-  console.log("[reports/new page] production:", production?.id ?? "(null)");
 
   if (!production) {
-    console.log("[reports/new page] 404: production not found");
     notFound();
   }
 

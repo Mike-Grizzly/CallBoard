@@ -84,9 +84,9 @@ For every tab, the same four steps apply. Use them as a recipe.
 
 - [x] Persistent production header (now in layout)
 - [x] Today's call hero card (already matches demo styling)
-- [ ] Recent activity list — restyle as the demo's grouped feed
-- [ ] Principals/Team rail item — restyle to match the demo's compact list
-- [ ] Quick stats / counts row (if the demo includes one)
+- [x] Recent activity list — restyled as demo's grouped feed (notif-ico + title/muted body + relative timestamp)
+- [x] Principals/Team section — restyled to match demo's compact list (avatar + name/actor + pill, gap 8)
+- [x] Quick stats / counts row — N/A, demo does not include one outside the hero
 
 ### Calls — `/productions/[slug]/calls`
 
