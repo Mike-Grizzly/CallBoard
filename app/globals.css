@@ -1106,3 +1106,126 @@ textarea.field {
     padding: 8px;
   }
 }
+
+/* ─── Rich text rendering ─────────────────────────────────────────────
+ * Used by the TipTap editor body and the read-only RichTextDisplay.
+ * Tailwind v4's preflight strips list-style and heading sizes; we
+ * restore them inside .prose so bullets, numbered lists, and headers
+ * render correctly. The @tailwindcss/typography plugin is NOT
+ * installed; these rules replace it with values tuned to the warm
+ * theatre tokens. */
+.prose {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.prose > * + * {
+  margin-top: 0.5em;
+}
+.prose h1,
+.prose h2,
+.prose h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  margin-top: 1em;
+}
+.prose h1 {
+  font-size: 22px;
+}
+.prose h2 {
+  font-size: 18px;
+}
+.prose h3 {
+  font-size: 16px;
+}
+.prose p {
+  margin: 0;
+}
+.prose ul {
+  list-style: disc;
+  padding-left: 1.5em;
+}
+.prose ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+}
+.prose li {
+  margin: 0.2em 0;
+}
+.prose li > p {
+  margin: 0;
+  display: inline;
+}
+.prose li::marker {
+  color: var(--ink-3);
+}
+.prose strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+.prose em {
+  font-style: italic;
+}
+.prose u {
+  text-decoration: underline;
+}
+.prose s {
+  text-decoration: line-through;
+  color: var(--ink-3);
+}
+.prose blockquote {
+  border-left: 3px solid var(--border-strong);
+  padding-left: 12px;
+  color: var(--ink-2);
+  font-style: italic;
+}
+.prose code {
+  font-family: var(--font-mono);
+  background: var(--bg-muted);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 0.9em;
+}
+.prose pre {
+  background: var(--bg-sunken);
+  border-radius: 6px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.prose pre code {
+  background: transparent;
+  padding: 0;
+}
+.prose a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1em 0;
+}
+.prose mark {
+  background: var(--c-amber-soft);
+  padding: 0 2px;
+  border-radius: 2px;
+  color: inherit;
+}
+
+/* TipTap's editable container: the placeholder shown when empty */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--ink-4);
+  pointer-events: none;
+  height: 0;
+}
+.ProseMirror:focus {
+  outline: none;
+}

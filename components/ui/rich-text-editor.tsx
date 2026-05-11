@@ -7,6 +7,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
+import Placeholder from "@tiptap/extension-placeholder";
 import {
   Bold,
   Italic,
@@ -204,6 +205,7 @@ export function RichTextEditor({
       Color,
       Highlight,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
+      Placeholder.configure({ placeholder: placeholder ?? "" }),
     ],
     content,
     onUpdate: ({ editor: e }) => {
@@ -211,7 +213,7 @@ export function RichTextEditor({
     },
     editorProps: {
       attributes: {
-        class: `prose prose-sm max-w-none px-4 py-3 focus:outline-none`,
+        class: `prose max-w-none px-4 py-3 focus:outline-none`,
         style: `min-height: ${minHeight}`,
       },
     },
