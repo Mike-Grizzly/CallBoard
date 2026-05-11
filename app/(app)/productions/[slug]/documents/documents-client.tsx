@@ -271,15 +271,12 @@ export function DocumentsClient({
               </div>
             ) : (
               <button
+                className="btn ghost"
                 onClick={handleAddFolderClick}
                 style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "6px 10px", borderRadius: 6, cursor: "pointer",
-                  fontSize: 12, border: "none", width: "100%", background: "none",
-                  color: "var(--ink-4)", textAlign: "left",
+                  marginTop: 10, height: 28, padding: "0 10px",
+                  fontSize: 12, width: "100%", justifyContent: "flex-start", gap: 6,
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-2)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-4)"; }}
               >
                 <FolderPlus size={13} />
                 <span>New folder</span>
