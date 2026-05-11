@@ -7,22 +7,12 @@ import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { DEFAULT_FOLDERS } from "./constants";
 
 export type UploadDocumentResult = {
   error?: string;
   success?: boolean;
 };
-
-export const DEFAULT_FOLDERS = [
-  "Director",
-  "Stage Management",
-  "Music",
-  "Choreography",
-  "Costumes",
-  "Props",
-  "Lighting",
-  "Sound",
-] as const;
 
 export async function createDefaultFolders(productionId: string) {
   await db.insert(documentFolders).values(
