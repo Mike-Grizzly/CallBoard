@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { documents, documentFolders, profiles } from "@/db/schema";
+import { documents, documentFolders, documentComments, profiles } from "@/db/schema";
 import { eq, desc, asc } from "drizzle-orm";
 
 export async function getFoldersByProduction(productionId: string) {
@@ -65,10 +65,31 @@ export async function getDocumentById(documentId: string) {
   return rows[0] ?? null;
 }
 
+export async function getDocumentComments(documentId: string) {
+  return db
+    .select({
+      id: documentComments.id,
+      body: documentComments.body,
+      createdAt: documentComments.createdAt,
+      authorId: documentComments.authorId,
+      authorFirstName: profiles.firstName,
+      authorLastName: profiles.lastName,
+      authorEmail: profiles.email,
+    })
+    .from(documentComments)
+    .innerJoin(profiles, eq(documentComments.authorId, profiles.id))
+    .where(eq(documentComments.documentId, documentId))
+    .orderBy(asc(documentComments.createdAt));
+}
+
 export type DocumentFolder = Awaited<
   ReturnType<typeof getFoldersByProduction>
 >[number];
 
 export type DocumentWithUploader = Awaited<
   ReturnType<typeof getDocumentsByProduction>
+>[number];
+
+export type DocumentCommentRow = Awaited<
+  ReturnType<typeof getDocumentComments>
 >[number];

@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, Search, Bell } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import type { ReactNode } from "react";
 import { requireCurrentUser } from "@/lib/auth";
@@ -14,6 +14,8 @@ import {
 import { getReportsByProduction } from "@/features/reports/queries";
 import { getDocumentsByProduction } from "@/features/documents/queries";
 import { getAnnouncementsByProduction } from "@/features/announcements/queries";
+import { getUnreadNotificationCount } from "@/features/notifications/actions";
+import { NotificationBell } from "./notification-bell";
 import { ProductionTabsNav, type ProductionTab } from "./production-tabs";
 
 const STATUS_COPY: Record<
@@ -81,12 +83,14 @@ export default async function ProductionLayout({
   const canViewBlocking = can(user.role, "blocking:view");
   const canViewNotes = can(user.role, "notes:view");
 
-  const [members, reports, documents, announcements] = await Promise.all([
-    getProductionMembers(production.id),
-    getReportsByProduction(production.id),
-    getDocumentsByProduction(production.id),
-    getAnnouncementsByProduction(production.id, org.id),
-  ]);
+  const [members, reports, documents, announcements, unreadCount] =
+    await Promise.all([
+      getProductionMembers(production.id),
+      getReportsByProduction(production.id),
+      getDocumentsByProduction(production.id),
+      getAnnouncementsByProduction(production.id, org.id),
+      getUnreadNotificationCount(),
+    ]);
 
   const director = members.find((m) => m.role === "director");
   const directorName = director
@@ -217,14 +221,7 @@ export default async function ProductionLayout({
             >
               <Search className="ico" aria-hidden />
             </button>
-            <button
-              type="button"
-              className="btn ghost btn-icon"
-              title="Notifications"
-              aria-label="Notifications"
-            >
-              <Bell className="ico" aria-hidden />
-            </button>
+            <NotificationBell initialUnread={unreadCount} />
             {canManage && (
               <Link
                 href={`/productions/${slug}/members`}

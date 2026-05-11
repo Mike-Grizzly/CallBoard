@@ -3,7 +3,10 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
-import { getProductionMembership } from "@/features/members/queries";
+import {
+  getProductionMembers,
+  getProductionMembership,
+} from "@/features/members/queries";
 import {
   getDocumentsByProduction,
   getFoldersByProduction,
@@ -12,10 +15,15 @@ import { DocumentsClient } from "./documents-client";
 
 export default async function DocumentsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ doc?: string }>;
 }) {
-  const { slug } = await params;
+  const [{ slug }, { doc: initialDocId }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const user = await requireCurrentUser();
   const org = await getOrCreateDefaultOrganization();
   const production = await getProductionBySlug(org.id, slug);
@@ -32,9 +40,10 @@ export default async function DocumentsPage({
     }
   }
 
-  const [documents, folders] = await Promise.all([
+  const [documents, folders, members] = await Promise.all([
     getDocumentsByProduction(production.id),
     getFoldersByProduction(production.id),
+    getProductionMembers(production.id),
   ]);
 
   const canUpload = can(user.role, "documents:upload");
@@ -43,10 +52,12 @@ export default async function DocumentsPage({
     <DocumentsClient
       documents={documents}
       folders={folders}
+      members={members}
       productionId={production.id}
       productionTitle={production.title}
       slug={slug}
       canUpload={canUpload}
+      initialDocId={initialDocId}
     />
   );
 }

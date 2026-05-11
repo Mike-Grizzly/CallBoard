@@ -37,6 +37,21 @@ export const documents = pgTable("documents", {
     .defaultNow(),
 });
 
+export const documentComments = pgTable("document_comments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  documentId: uuid("document_id")
+    .notNull()
+    .references(() => documents.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type DocumentFolder = typeof documentFolders.$inferSelect;
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
+export type DocumentComment = typeof documentComments.$inferSelect;
