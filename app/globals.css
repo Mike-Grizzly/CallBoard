@@ -632,6 +632,26 @@ select {
   border-bottom: 0 !important;
 }
 
+.skeleton-line {
+  background: linear-gradient(
+    90deg,
+    var(--bg-muted) 0%,
+    var(--bg-sunken) 50%,
+    var(--bg-muted) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 .h-eyebrow {
   font-size: 11px;
   font-weight: 600;
