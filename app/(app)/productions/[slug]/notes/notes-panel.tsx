@@ -10,8 +10,6 @@ import {
   PenLine,
   Tag,
   Calendar,
-  Eye,
-  EyeOff,
   Settings,
   X,
   Check,
@@ -189,7 +187,6 @@ function NoteEditor({
   const [isCompleted, setIsCompleted] = useState(note.isCompleted);
   const [tagId, setTagId] = useState<string | null>(note.tagId ?? null);
   const [dueDate, setDueDate] = useState(note.dueDate ?? "");
-  const [visibility, setVisibility] = useState(note.visibility);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved");
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [, startTransition] = useTransition();
@@ -283,15 +280,6 @@ function NoteEditor({
   function handleDueDateChange(val: string) {
     setDueDate(val);
     scheduleSave({ dueDate: val || null });
-  }
-
-  function handleVisibilityToggle() {
-    const next = visibility === "private" ? "shared" : "private";
-    setVisibility(next);
-    startTransition(async () => {
-      await updateNote(note.id, productionSlug, { visibility: next });
-      onNoteUpdated({ id: note.id, visibility: next });
-    });
   }
 
   async function handleDelete() {
@@ -487,20 +475,6 @@ function NoteEditor({
           {canEdit && (
             <button
               type="button"
-              onClick={handleVisibilityToggle}
-              title={visibility === "private" ? "Visible only to you" : "Shared with team"}
-              className="btn ghost btn-icon"
-            >
-              {visibility === "shared" ? (
-                <Eye style={{ width: 14, height: 14 }} />
-              ) : (
-                <EyeOff style={{ width: 14, height: 14 }} />
-              )}
-            </button>
-          )}
-          {canEdit && (
-            <button
-              type="button"
               onClick={handlePinToggle}
               title={isPinned ? "Unpin" : "Pin"}
               className="btn ghost btn-icon"
@@ -597,8 +571,6 @@ function NoteEditor({
       >
         <span>
           {saveStatus === "saving" ? "Saving…" : "Saved automatically"}
-          {" · "}
-          {visibility === "shared" ? "Visible to team" : "Visible only to you"}
         </span>
         <span className="row" style={{ gap: 6 }}>
           {authorName}
@@ -866,6 +838,8 @@ const FILTER_LABELS: Record<NoteFilter, string> = {
   done: "Done",
 };
 
+const VISIBLE_FILTERS = ["all", "todo", "pinned", "notes"] as const;
+
 export function NotesPanel({
   notes: initialNotes,
   tags: initialTags,
@@ -897,20 +871,29 @@ export function NotesPanel({
   const selectedNote = notes.find((n) => n.id === selectedId) ?? null;
 
   const filtered = notes.filter((n) => {
-    if (filter === "todo") return n.isTodo && !n.isCompleted;
+    if (filter === "todo") return n.isTodo;
     if (filter === "pinned") return n.isPinned;
     if (filter === "notes") return !n.isTodo;
-    if (filter === "done") return n.isCompleted;
     return true;
   });
 
-  const pinned = filtered.filter((n) => n.isPinned);
-  const unpinned = filtered.filter((n) => !n.isPinned);
+  // In the to-do view, completed items sink to the bottom
+  const sortedFiltered =
+    filter === "todo"
+      ? [
+          ...filtered.filter((n) => !n.isCompleted),
+          ...filtered.filter((n) => n.isCompleted),
+        ]
+      : filtered;
+
+  const pinned = sortedFiltered.filter((n) => n.isPinned);
+  const unpinned = sortedFiltered.filter((n) => !n.isPinned);
 
   function handleCreate() {
     startTransition(async () => {
       const result = await createNote(productionId, productionSlug);
       if (result.id) {
+        const today = new Date().toISOString().split("T")[0];
         const optimistic: NoteWithAuthor = {
           id: result.id,
           productionId,
@@ -921,7 +904,7 @@ export function NotesPanel({
           isCompleted: false,
           isPinned: false,
           tagId: null,
-          dueDate: null,
+          dueDate: today,
           visibility: "private",
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -991,7 +974,7 @@ export function NotesPanel({
 
         {/* Filter tabs */}
         <div className="row" style={{ gap: 4, flexWrap: "wrap" }}>
-          {(["all", "todo", "pinned", "notes", "done"] as NoteFilter[]).map((f) => (
+          {(VISIBLE_FILTERS as unknown as NoteFilter[]).map((f) => (
             <button
               key={f}
               type="button"
