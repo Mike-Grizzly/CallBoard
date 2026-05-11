@@ -632,6 +632,31 @@ select {
   border-bottom: 0 !important;
 }
 
+/* Notes list row — animated strikethrough + fade */
+.note-row-title {
+  position: relative;
+  overflow: hidden;
+  transition: color 0.3s ease;
+  color: var(--ink);
+}
+.note-row-title.done {
+  color: var(--ink-3);
+}
+.note-row-strike {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 1.5px;
+  width: 0;
+  background: var(--ink-3);
+  pointer-events: none;
+  transition: width 0.35s ease;
+  transform: translateY(-50%);
+}
+.note-row-strike.done {
+  width: 100%;
+}
+
 .dept-note-card .dept-note-edit-hint {
   opacity: 0;
   transition: opacity 0.12s;

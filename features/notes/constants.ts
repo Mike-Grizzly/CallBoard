@@ -1,11 +1,10 @@
 export const DEFAULT_NOTE_TAGS = [
-  { name: "Calls", color: "#ef4444" },
-  { name: "Props", color: "#f97316" },
-  { name: "Admin", color: "#eab308" },
-  { name: "Music", color: "#22c55e" },
-  { name: "Safety", color: "#3b82f6" },
-  { name: "Blocking", color: "#8b5cf6" },
-  { name: "Reports", color: "#ec4899" },
+  { name: "Follow-up", color: "#c0392b" },
+  { name: "Blocking",  color: "#8b5cf6" },
+  { name: "Props",     color: "#d97706" },
+  { name: "Costumes",  color: "#db2777" },
+  { name: "Technical", color: "#2563eb" },
+  { name: "Safety",    color: "#16a34a" },
 ] as const;
 
 export const TAG_COLOR_OPTIONS = [
