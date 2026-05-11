@@ -219,3 +219,17 @@ Record of durable project decisions. Add new entries at the bottom with date and
 - `app/(app)/productions/[slug]/layout.tsx` owns the production header and tabs so sub-routes navigate without reload.
 - New `components/ui/icon.tsx` ("use client") with a name→LucideIcon lookup. lucide-react 0.468 ships forwardRef components without `"use client"`, so passing them as children of any client component (Next.js `Link`, `RailLink`, etc.) from a server component breaks RSC serialization. Server components must use `<Icon name="..." />` for any icon that crosses a client boundary; raw Lucide imports are still fine inside DOM elements (`div`, `span`, `button`).
 - Every future tab port must do the same icon swap before shipping.
+
+---
+
+## 2026-05-11 — RLS enabled on all public tables; policies intentionally omitted
+
+**Decision:** Turn on Row Level Security for the 9 remaining unsecured tables (`organizations`, `productions`, `announcements`, `production_scenes`, `scene_beats`, `stage_configurations`, `blocking_positions`, `note_tags`, `production_notes`) without writing any policies. Migration `enable_rls_on_public_tables` applied via Supabase MCP.
+
+**Reason:** The app's data layer (Drizzle via `DATABASE_URL`) connects through the Supabase Postgres pooler with a role that bypasses RLS, so RLS-enabled-no-policies leaves the app working while closing the anon-key REST access path. Seven other tables (`profiles`, `rehearsal_reports`, `documents`, etc.) were already configured this way and continue to work; this brings the remaining tables in line with that convention. Defense-in-depth policies were considered but deferred — adding them would require auditing every read/write path and risks breaking access if the connection role ever changes; out of scope for the current Reports demo-parity work.
+
+**Impact:**
+- The Supabase advisory `rls_disabled` clears.
+- Anon-key REST clients can no longer read or write any public table directly. All access goes through the Next.js server.
+- If a future change moves data access from Drizzle to the Supabase JS client (anon key), policies will need to be written before that change ships.
+- `calls` is the only table with actual policies; that remains a one-off until we revisit defense-in-depth.

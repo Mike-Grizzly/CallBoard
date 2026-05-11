@@ -3,19 +3,19 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
-import { getProductionLog } from "@/features/logs/queries";
-import { ReportForm } from "../_components/report-form";
+import { getReportById } from "@/features/reports/queries";
+import { ReportForm } from "../../_components/report-form";
 
-export default async function NewReportPage({
+export default async function EditReportPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string; reportId: string }>;
 }) {
-  const { slug } = await params;
+  const { slug, reportId } = await params;
   const user = await requireCurrentUser();
 
   if (!can(user.role, "reports:create")) {
-    redirect(`/productions/${slug}/reports`);
+    redirect(`/productions/${slug}/reports/${reportId}`);
   }
 
   const org = await getOrCreateDefaultOrganization();
@@ -25,15 +25,20 @@ export default async function NewReportPage({
     notFound();
   }
 
-  const log = await getProductionLog(production.id, user.id);
+  const report = await getReportById(reportId);
+
+  if (!report || report.productionId !== production.id) {
+    notFound();
+  }
 
   return (
     <ReportForm
-      mode="create"
+      mode="edit"
       productionId={production.id}
       productionTitle={production.title}
       slug={slug}
-      logContent={log?.content ?? null}
+      logContent={null}
+      initial={report}
     />
   );
 }
