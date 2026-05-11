@@ -9,8 +9,9 @@ import {
 } from "@/features/reports/actions";
 import { DEPARTMENTS } from "@/features/reports/constants";
 import type { ReportDetail } from "@/features/reports/queries";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { RichTextEditor, RichTextDisplay } from "@/components/ui/rich-text-editor";
 import { Icon } from "@/components/ui/icon";
+import { DeptNoteModal } from "./dept-note-modal";
 
 function formatLongDate(iso: string): string {
   if (!iso) return "";
@@ -53,6 +54,15 @@ export function ReportForm({
   const [generalNotes, setGeneralNotes] = useState(
     initial?.generalNotes ?? "",
   );
+  const [deptNotes, setDeptNotes] = useState<Record<string, string>>(() => {
+    const m: Record<string, string> = {};
+    for (const d of DEPARTMENTS) {
+      m[d.key] = ((initial?.[d.key] as string | null) ?? "") || "";
+    }
+    return m;
+  });
+  const [editingDept, setEditingDept] = useState<string | null>(null);
+  const editingDeptDef = DEPARTMENTS.find((d) => d.key === editingDept) ?? null;
 
   function importFromLog() {
     if (logContent) setGeneralNotes(logContent);
@@ -302,41 +312,86 @@ export function ReportForm({
         <div className="row-between" style={{ marginBottom: 14 }}>
           <h3 className="h-card">Department notes</h3>
           <span className="muted" style={{ fontSize: 12 }}>
-            Leave blank for departments with nothing to report
+            Click a card to open the editor
           </span>
         </div>
         <div className="grid grid-2" style={{ gap: 14 }}>
-          {DEPARTMENTS.map((d) => (
-            <div
-              key={d.key}
-              style={{
-                padding: "14px 16px",
-                border: "1px solid var(--border)",
-                borderRadius: "var(--radius-s)",
-              }}
-            >
-              <div className="row" style={{ gap: 8, marginBottom: 8 }}>
-                <div className="notif-ico" data-c={d.c} style={{ width: 24, height: 24 }}>
-                  <Icon name={d.icon} size={13} aria-hidden />
+          {DEPARTMENTS.map((d) => {
+            const html = deptNotes[d.key];
+            const empty = !html || !html.replace(/<[^>]+>/g, "").trim();
+            return (
+              <div
+                key={d.key}
+                onClick={() => setEditingDept(d.key)}
+                className="dept-note-card"
+                style={{
+                  padding: "14px 16px",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-s)",
+                  cursor: "pointer",
+                  minHeight: 108,
+                  transition:
+                    "border-color .12s, background .12s, box-shadow .12s",
+                }}
+              >
+                <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+                  <div
+                    className="notif-ico"
+                    data-c={d.c}
+                    style={{ width: 24, height: 24 }}
+                  >
+                    <Icon name={d.icon} size={13} aria-hidden />
+                  </div>
+                  <b style={{ fontSize: 13, fontWeight: 600 }}>{d.label}</b>
+                  <span
+                    className="dept-note-edit-hint muted"
+                    style={{
+                      marginLeft: "auto",
+                      fontSize: 11,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <Icon name="PenLine" size={11} aria-hidden />
+                    <span>Edit</span>
+                  </span>
                 </div>
-                <label htmlFor={d.field} style={{ fontSize: 13, fontWeight: 600 }}>
-                  {d.label}
-                </label>
+                {empty ? (
+                  <div
+                    style={{
+                      fontSize: 13,
+                      lineHeight: 1.55,
+                      color: "var(--ink-4)",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Click to add notes for {d.label.toLowerCase()}…
+                  </div>
+                ) : (
+                  <RichTextDisplay content={html} />
+                )}
+                <input type="hidden" name={d.field} value={html} />
               </div>
-              <textarea
-                id={d.field}
-                name={d.field}
-                rows={3}
-                placeholder={`Notes for ${d.label.toLowerCase()}…`}
-                defaultValue={(initial?.[d.key] as string | null) ?? ""}
-                className="field"
-                style={{ resize: "vertical", minHeight: 64, fontSize: 13 }}
-              />
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
+      {editingDeptDef && (
+        <DeptNoteModal
+          open={!!editingDept}
+          title={editingDeptDef.label}
+          icon={editingDeptDef.icon}
+          accentColor={editingDeptDef.c}
+          value={deptNotes[editingDeptDef.key]}
+          onSave={(html) => {
+            setDeptNotes((prev) => ({ ...prev, [editingDeptDef.key]: html }));
+            setEditingDept(null);
+          }}
+          onClose={() => setEditingDept(null)}
+        />
+      )}
     </form>
   );
 }

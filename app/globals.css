@@ -632,6 +632,18 @@ select {
   border-bottom: 0 !important;
 }
 
+.dept-note-card .dept-note-edit-hint {
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.dept-note-card:hover {
+  border-color: var(--border-strong) !important;
+  box-shadow: var(--shadow-1);
+}
+.dept-note-card:hover .dept-note-edit-hint {
+  opacity: 1;
+}
+
 .skeleton-line {
   background: linear-gradient(
     90deg,

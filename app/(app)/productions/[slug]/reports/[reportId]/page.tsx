@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
+import { RichTextDisplay } from "@/components/ui/rich-text-editor";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
@@ -238,9 +239,7 @@ export default async function ReportDetailPage({
                     No notes
                   </div>
                 ) : (
-                  <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
-                    {value}
-                  </div>
+                  <RichTextDisplay content={value} />
                 )}
               </div>
             );
