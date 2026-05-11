@@ -1,6 +1,23 @@
-import { pgTable, uuid, text, date, integer, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  uuid,
+  text,
+  date,
+  integer,
+  timestamp,
+  jsonb,
+} from "drizzle-orm/pg-core";
 import { productions } from "./productions";
 import { profiles } from "./users";
+import type {
+  Break,
+  SceneWorked,
+  ScheduleChange,
+  AttendanceNote,
+  LineNote,
+  Injury,
+  ReportStatus,
+} from "@/features/reports/types";
 
 export const rehearsalReports = pgTable("rehearsal_reports", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -12,6 +29,7 @@ export const rehearsalReports = pgTable("rehearsal_reports", {
     .references(() => profiles.id, { onDelete: "cascade" }),
   reportNumber: integer("report_number"),
   reportDate: date("report_date").notNull(),
+  status: text("status").$type<ReportStatus>().notNull().default("draft"),
   scheduledCall: text("scheduled_call"),
   actualStart: text("actual_start"),
   endTime: text("end_time"),
@@ -21,6 +39,15 @@ export const rehearsalReports = pgTable("rehearsal_reports", {
   nextRehearsalTime: text("next_rehearsal_time"),
   nextRehearsalLocation: text("next_rehearsal_location"),
   nextRehearsalNotes: text("next_rehearsal_notes"),
+  attendancePresent: integer("attendance_present").notNull().default(0),
+  attendanceAbsent: integer("attendance_absent").notNull().default(0),
+  attendanceLate: integer("attendance_late").notNull().default(0),
+  breaks: jsonb("breaks").$type<Break[]>().notNull().default([]),
+  scenesWorked: jsonb("scenes_worked").$type<SceneWorked[]>().notNull().default([]),
+  scheduleChanges: jsonb("schedule_changes").$type<ScheduleChange[]>().notNull().default([]),
+  attendanceNotes: jsonb("attendance_notes").$type<AttendanceNote[]>().notNull().default([]),
+  lineNotes: jsonb("line_notes").$type<LineNote[]>().notNull().default([]),
+  injuries: jsonb("injuries").$type<Injury[]>().notNull().default([]),
   deptScenery: text("dept_scenery"),
   deptProps: text("dept_props"),
   deptCostumes: text("dept_costumes"),
@@ -33,7 +60,11 @@ export const rehearsalReports = pgTable("rehearsal_reports", {
   deptVideo: text("dept_video"),
   deptCrew: text("dept_crew"),
   deptOther: text("dept_other"),
+  distributedAt: timestamp("distributed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });
