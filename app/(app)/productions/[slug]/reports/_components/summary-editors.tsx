@@ -39,7 +39,7 @@ export function CallTimesEditor({
   return (
     <div className="card card-pad">
       <h3 className="h-card" style={{ marginBottom: 10 }}>Call times</h3>
-      <div className="grid grid-2" style={{ gap: 10 }}>
+      <div className="grid grid-2" style={{ gap: 10, marginBottom: 10 }}>
         <div style={{ gridColumn: "1 / -1" }}>
           <div className="label">Date</div>
           <input
@@ -49,6 +49,7 @@ export function CallTimesEditor({
             onChange={(e) => onReportDateChange(e.target.value)}
             required
             className="field"
+            style={{ height: 32 }}
           />
           {errorReportDate && (
             <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 4 }}>
@@ -56,13 +57,16 @@ export function CallTimesEditor({
             </div>
           )}
         </div>
+      </div>
+      <div className="grid grid-3" style={{ gap: 8 }}>
         <div>
-          <div className="label">Scheduled</div>
+          <div className="label">Call</div>
           <input
             type="time"
             name="scheduled_call"
             defaultValue={scheduledCall}
             className="field"
+            style={{ height: 32, fontSize: 12.5 }}
           />
         </div>
         <div>
@@ -72,77 +76,83 @@ export function CallTimesEditor({
             name="actual_start"
             defaultValue={actualStart}
             className="field"
+            style={{ height: 32, fontSize: 12.5 }}
           />
         </div>
-        <div style={{ gridColumn: "1 / -1" }}>
+        <div>
           <div className="label">End</div>
           <input
             type="time"
             name="end_time"
             defaultValue={endTime}
             className="field"
+            style={{ height: 32, fontSize: 12.5 }}
           />
         </div>
       </div>
 
-      <div style={{ marginTop: 14 }}>
-        <div className="label">Breaks</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {breaks.map((b, i) => (
-            <div key={i} className="row" style={{ gap: 6 }}>
-              <input
-                type="time"
-                value={b.start}
-                placeholder="Start"
-                onChange={(e) => update(i, { start: e.target.value })}
-                className="field"
-                style={{ width: 90, fontSize: 12 }}
-              />
-              <input
-                type="time"
-                value={b.end}
-                placeholder="End"
-                onChange={(e) => update(i, { end: e.target.value })}
-                className="field"
-                style={{ width: 90, fontSize: 12 }}
-              />
-              <select
-                value={b.kind}
-                onChange={(e) =>
-                  update(i, { kind: e.target.value as BreakKind })
-                }
-                className="field"
-                style={{ flex: 1 }}
-              >
-                <option value="5-min">5-min</option>
-                <option value="10-min">10-min</option>
-                <option value="Meal">Meal</option>
-              </select>
-              <button
-                type="button"
-                onClick={() => remove(i)}
-                className="btn ghost btn-icon"
-                aria-label="Remove break"
-              >
-                <Icon name="X" size={13} aria-hidden />
-              </button>
+      <div style={{ marginTop: 12 }}>
+        {breaks.length > 0 && (
+          <>
+            <div className="label">Breaks</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 6 }}>
+              {breaks.map((b, i) => (
+                <div key={i} className="row" style={{ gap: 6 }}>
+                  <input
+                    type="time"
+                    value={b.start}
+                    placeholder="Start"
+                    onChange={(e) => update(i, { start: e.target.value })}
+                    className="field"
+                    style={{ width: 88, fontSize: 12, height: 28 }}
+                  />
+                  <input
+                    type="time"
+                    value={b.end}
+                    placeholder="End"
+                    onChange={(e) => update(i, { end: e.target.value })}
+                    className="field"
+                    style={{ width: 88, fontSize: 12, height: 28 }}
+                  />
+                  <select
+                    value={b.kind}
+                    onChange={(e) =>
+                      update(i, { kind: e.target.value as BreakKind })
+                    }
+                    className="field"
+                    style={{ flex: 1, height: 28, fontSize: 12 }}
+                  >
+                    <option value="5-min">5-min</option>
+                    <option value="10-min">10-min</option>
+                    <option value="Meal">Meal</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => remove(i)}
+                    className="btn ghost btn-icon"
+                    aria-label="Remove break"
+                  >
+                    <Icon name="X" size={13} aria-hidden />
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
-          <button
-            type="button"
-            onClick={add}
-            className="btn ghost"
-            style={{
-              alignSelf: "flex-start",
-              height: 28,
-              padding: "0 10px",
-              fontSize: 12,
-            }}
-          >
-            <Icon name="Plus" size={12} aria-hidden />
-            <span>Add break</span>
-          </button>
-        </div>
+          </>
+        )}
+        <button
+          type="button"
+          onClick={add}
+          className="btn ghost"
+          style={{
+            alignSelf: "flex-start",
+            height: 26,
+            padding: "0 10px",
+            fontSize: 12,
+          }}
+        >
+          <Icon name="Plus" size={12} aria-hidden />
+          <span>Add break</span>
+        </button>
       </div>
       <input type="hidden" name="breaks_json" value={JSON.stringify(breaks)} />
     </div>
@@ -202,7 +212,9 @@ export function AttendanceEditor({
           c=""
         />
       </div>
-      <div className="label" style={{ marginTop: 6 }}>Notes</div>
+      {notes.length > 0 && (
+        <div className="label" style={{ marginTop: 6 }}>Notes</div>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {notes.map((n, i) => (
           <div key={i} className="row" style={{ gap: 6 }}>
@@ -277,7 +289,7 @@ function NumberStat({
     <div
       style={{
         textAlign: "center",
-        padding: "10px 4px",
+        padding: "6px 4px",
         background: bg,
         borderRadius: 6,
       }}
@@ -293,7 +305,7 @@ function NumberStat({
           border: 0,
           background: "transparent",
           textAlign: "center",
-          fontSize: 22,
+          fontSize: 20,
           fontWeight: 600,
           color: fg,
           fontVariantNumeric: "tabular-nums",
@@ -329,7 +341,7 @@ export function ScenesWorkedEditor({
           <div
             key={i}
             style={{
-              padding: "10px 12px",
+              padding: "8px 10px",
               background: "var(--bg-sunken)",
               borderRadius: 6,
             }}

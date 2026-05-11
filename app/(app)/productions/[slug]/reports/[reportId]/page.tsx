@@ -183,24 +183,24 @@ export default async function ReportDetailPage({
       </div>
 
       {/* 3-col summary: Call times / Attendance / Scenes worked */}
-      <div className="grid grid-3" style={{ gap: 16 }}>
+      <div className="grid grid-3" style={{ gap: 16, alignItems: "start" }}>
         <div className="card card-pad">
-          <h3 className="h-card" style={{ marginBottom: 10 }}>Call times</h3>
-          <div className="row" style={{ gap: 16, marginBottom: 10 }}>
+          <h3 className="h-card" style={{ marginBottom: 8 }}>Call times</h3>
+          <div className="row" style={{ gap: 16, marginBottom: report.breaks.length > 0 ? 10 : 0 }}>
             <div>
-              <div className="h-eyebrow" style={{ marginBottom: 4 }}>Call</div>
+              <div className="h-eyebrow" style={{ marginBottom: 2 }}>Call</div>
               <div className="mono" style={{ fontSize: 16, fontWeight: 500 }}>
                 {report.scheduledCall || "—"}
               </div>
             </div>
             <div>
-              <div className="h-eyebrow" style={{ marginBottom: 4 }}>Start</div>
+              <div className="h-eyebrow" style={{ marginBottom: 2 }}>Start</div>
               <div className="mono" style={{ fontSize: 16, fontWeight: 500 }}>
                 {report.actualStart || "—"}
               </div>
             </div>
             <div style={{ marginLeft: "auto", textAlign: "right" }}>
-              <div className="h-eyebrow" style={{ marginBottom: 4 }}>End</div>
+              <div className="h-eyebrow" style={{ marginBottom: 2 }}>End</div>
               <div className="mono" style={{ fontSize: 16, fontWeight: 500 }}>
                 {report.endTime || "—"}
               </div>
@@ -348,12 +348,12 @@ export default async function ReportDetailPage({
                   <div
                     key={d.key}
                     style={{
-                      padding: "14px 16px",
+                      padding: "10px 12px",
                       border: "1px solid var(--border)",
                       borderRadius: "var(--radius-s)",
                     }}
                   >
-                    <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+                    <div className="row" style={{ gap: 8, marginBottom: 6 }}>
                       <div className="notif-ico" data-c={d.c} style={{ width: 24, height: 24 }}>
                         <Icon name={d.icon} size={13} aria-hidden />
                       </div>

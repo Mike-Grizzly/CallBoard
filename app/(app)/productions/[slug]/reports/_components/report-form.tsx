@@ -383,16 +383,16 @@ export function ReportForm({
                     onClick={() => setEditingDept(d.key)}
                     className="dept-note-card"
                     style={{
-                      padding: "14px 16px",
+                      padding: "10px 12px",
                       border: "1px solid var(--border)",
                       borderRadius: "var(--radius-s)",
                       cursor: "pointer",
-                      minHeight: 108,
+                      minHeight: 80,
                       transition:
                         "border-color .12s, background .12s, box-shadow .12s",
                     }}
                   >
-                    <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+                    <div className="row" style={{ gap: 8, marginBottom: 6 }}>
                       <div
                         className="notif-ico"
                         data-c={d.c}
