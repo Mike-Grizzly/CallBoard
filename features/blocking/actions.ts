@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { stageConfigurations, blockingPositions } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { stageConfigurations, blockingPositions, beatComments, profiles } from "@/db/schema";
+import { eq, and, asc } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 
@@ -185,5 +185,87 @@ export async function removeBlockingPosition(
       ),
     );
 
+  return {};
+}
+
+// ─── Beat Comments ──────────────────────────────────────────────────
+
+export async function getBeatComments(beatId: string) {
+  await requireCurrentUser();
+  return db
+    .select({
+      id: beatComments.id,
+      beatId: beatComments.beatId,
+      createdBy: beatComments.createdBy,
+      body: beatComments.body,
+      mentionedUserIds: beatComments.mentionedUserIds,
+      createdAt: beatComments.createdAt,
+      authorFirstName: profiles.firstName,
+      authorLastName: profiles.lastName,
+      authorEmail: profiles.email,
+    })
+    .from(beatComments)
+    .innerJoin(profiles, eq(beatComments.createdBy, profiles.id))
+    .where(eq(beatComments.beatId, beatId))
+    .orderBy(asc(beatComments.createdAt));
+}
+
+export type BeatCommentWithAuthor = Awaited<ReturnType<typeof getBeatComments>>[number];
+
+export type CreateBeatCommentPayload = {
+  beatId: string;
+  body: string;
+  mentionedUserIds: string[];
+};
+
+export async function createBeatComment(
+  payload: CreateBeatCommentPayload,
+): Promise<BlockingActionResult & { id?: string }> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "blocking:view")) {
+    return { error: "You don't have permission to comment here." };
+  }
+
+  const { beatId, body, mentionedUserIds } = payload;
+  const trimmed = body.trim();
+  if (!trimmed) return { error: "Comment cannot be empty." };
+  if (trimmed.length > 2000) return { error: "Comment is too long." };
+
+  const [row] = await db
+    .insert(beatComments)
+    .values({
+      beatId,
+      createdBy: user.id,
+      body: trimmed,
+      mentionedUserIds,
+    })
+    .returning({ id: beatComments.id });
+
+  revalidatePath("/productions");
+  return { id: row.id };
+}
+
+export async function deleteBeatComment(
+  commentId: string,
+): Promise<BlockingActionResult> {
+  const user = await requireCurrentUser();
+
+  const existing = await db
+    .select({ createdBy: beatComments.createdBy })
+    .from(beatComments)
+    .where(eq(beatComments.id, commentId))
+    .limit(1);
+
+  if (!existing[0]) return { error: "Comment not found." };
+
+  const isOwner = existing[0].createdBy === user.id;
+  const canModerate = can(user.role, "blocking:edit");
+
+  if (!isOwner && !canModerate) {
+    return { error: "You don't have permission to delete this comment." };
+  }
+
+  await db.delete(beatComments).where(eq(beatComments.id, commentId));
+  revalidatePath("/productions");
   return {};
 }

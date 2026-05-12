@@ -16,7 +16,9 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Settings, Plus, Trash2, ChevronRight, RotateCcw, Aperture, Download, RotateCw, ChevronLeft } from "lucide-react";
+import { Settings, Plus, Trash2, ChevronRight, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, MessageSquare } from "lucide-react";
+import { BeatCommentSection } from "@/components/blocking/beat-comment-section";
+import type { ProductionMember } from "@/features/members/queries";
 import {
   saveBlockingPosition,
   removeBlockingPosition,
@@ -47,6 +49,7 @@ type Props = {
   stageConfig: StageConfiguration | null;
   scenesWithBeats: SceneWithBeats[];
   castMembers: CastMember[];
+  productionMembers: ProductionMember[];
   pdfUrl: string | null;
   canEdit: boolean;
   currentUserId: string;
@@ -410,6 +413,7 @@ export function BlockingCanvas({
   stageConfig,
   scenesWithBeats,
   castMembers,
+  productionMembers,
   pdfUrl,
   canEdit,
   currentUserId,
@@ -1330,7 +1334,7 @@ export function BlockingCanvas({
           <div className="h-eyebrow">Set Pieces</div>
           <span className="muted" style={{ fontSize: 10.5 }}>click to place</span>
         </div>
-        <div className="scroll flex-1 overflow-y-auto p-2">
+        <div className="scroll overflow-y-auto p-2" style={{ maxHeight: 180 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {SET_PIECES.map((piece) => {
               const key = `set_piece:${piece.key}`;
@@ -1386,6 +1390,20 @@ export function BlockingCanvas({
             })}
           </div>
         </div>
+
+        {/* Beat comments */}
+        <div className="row-between border-b border-t border-[color:var(--border)] px-3 py-2.5">
+          <div className="h-eyebrow" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <MessageSquare className="h-3 w-3" style={{ color: "var(--ink-3)" }} />
+            Beat Comments
+          </div>
+        </div>
+        <BeatCommentSection
+          beatId={currentBeatId}
+          currentUserId={currentUserId}
+          productionMembers={productionMembers}
+          canModerate={canEdit}
+        />
       </div>
     </div>
   );
