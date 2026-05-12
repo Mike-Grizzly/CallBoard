@@ -17,7 +17,6 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Settings, Plus, Trash2, ChevronRight, RotateCcw, Aperture, Download, RotateCw, ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   saveBlockingPosition,
   removeBlockingPosition,
@@ -113,14 +112,40 @@ function ActorToken({
           </button>
         )}
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white text-sm font-bold text-white shadow-md"
-          style={{ backgroundColor: color }}
+          className="avatar"
+          style={{
+            width: 38,
+            height: 38,
+            fontSize: 13,
+            fontWeight: 600,
+            background: color,
+            color: "white",
+            boxShadow: isDragging
+              ? "0 0 0 3px var(--accent), 0 4px 12px rgba(0,0,0,.18)"
+              : "0 2px 6px rgba(0,0,0,.18)",
+            border: "2px solid white",
+          }}
         >
           {initials}
         </div>
         {label && (
-          <div className="mt-0.5 max-w-[80px] rounded bg-black/60 px-1 text-center text-[10px] leading-tight text-white">
-            <div className="truncate">{label}</div>
+          <div
+            style={{
+              marginTop: 2,
+              whiteSpace: "nowrap",
+              fontSize: 10.5,
+              fontWeight: 500,
+              color: "var(--ink)",
+              background: "rgba(255,255,255,.85)",
+              backdropFilter: "blur(4px)",
+              padding: "1px 6px",
+              borderRadius: 3,
+              maxWidth: 80,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {label}
           </div>
         )}
       </div>
@@ -228,7 +253,18 @@ function SetPieceToken({
             />
           </svg>
         </div>
-        <div className="mt-0.5 text-center text-[9px] text-white/90 bg-black/50 rounded px-1">
+        <div
+          style={{
+            marginTop: 2,
+            textAlign: "center",
+            fontSize: 9,
+            background: "rgba(255,255,255,.85)",
+            backdropFilter: "blur(4px)",
+            color: "var(--ink-2)",
+            padding: "1px 4px",
+            borderRadius: 3,
+          }}
+        >
           {label}
         </div>
       </div>
@@ -272,7 +308,6 @@ function NumberGridOverlay({
   const halfWidthFt = Math.ceil(prosceniumWidthFt / 2);
   const depthLines = Math.floor(stageDepthFt / 2);
 
-  // Tick positions along proscenium (every 2')
   const ticks: { x: number; ft: number; isMajor: boolean }[] = [];
   for (let ft = -halfWidthFt; ft <= halfWidthFt; ft += 2) {
     const x = centerX + ft * footPercent;
@@ -281,7 +316,6 @@ function NumberGridOverlay({
     }
   }
 
-  // US/DS horizontal positions (every 2', upstage from proscenium)
   const depthTicks: { y: number; ft: number }[] = [];
   for (let i = 1; i <= depthLines; i++) {
     const y = centerY - i * 2 * footPercent;
@@ -303,7 +337,6 @@ function NumberGridOverlay({
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
     >
-      {/* ── SL/SR full grid lines (toggle) ─────────────────── */}
       {showSLSR && ticks.map(({ x }) => (
         <g key={`slsr-${x}`}>
           <line x1={x} y1={0} x2={x} y2={100} stroke={gridShadow} strokeWidth="0.4" strokeDasharray="3 3" />
@@ -311,7 +344,6 @@ function NumberGridOverlay({
         </g>
       ))}
 
-      {/* ── US/DS full grid lines (toggle) ─────────────────── */}
       {showUSDS && depthTicks.map(({ y, ft }) => (
         <g key={`usds-${y}`}>
           <line x1={calibrationX1!} y1={y} x2={calibrationX2!} y2={y} stroke={gridShadow} strokeWidth="0.4" strokeDasharray="3 3" />
@@ -321,18 +353,16 @@ function NumberGridOverlay({
             textAnchor="end" fontSize="1.8" fill="rgba(30,64,175,0.9)"
             stroke="white" strokeWidth="2.5" paintOrder="stroke"
             style={{ pointerEvents: "none" }}>
-            {ft}'
+            {ft}&apos;
           </text>
         </g>
       ))}
 
-      {/* ── Ruler baseline (always on) ──────────────────────── */}
       <line x1={calibrationX1!} y1={centerY} x2={calibrationX2!} y2={centerY}
         stroke="rgba(255,255,255,0.7)" strokeWidth="0.6" />
       <line x1={calibrationX1!} y1={centerY} x2={calibrationX2!} y2={centerY}
         stroke="rgba(30,64,175,0.8)" strokeWidth="0.35" />
 
-      {/* ── Tick marks + labels every 5' (always on) ────────── */}
       {ticks.map(({ x, ft, isMajor }) => {
         const tickH = isMajor ? majorTickH : minorTickH;
         const showLabel = ft % 5 === 0;
@@ -414,8 +444,6 @@ export function BlockingCanvas({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
-  // Load positions when beat changes.
-  // skipNextBeatLoad is set when capturing — positions are already copied in DB and current state is correct.
   const isFirstBeat = useRef(true);
   const skipNextBeatLoad = useRef(false);
   useEffect(() => {
@@ -442,7 +470,6 @@ export function BlockingCanvas({
   const [currentPdfPage, setCurrentPdfPage] = useState(groundPlanPage);
   const [numPdfPages, setNumPdfPages] = useState(1);
 
-  // Render PDF background
   useEffect(() => {
     if (!pdfUrl || !pdfCanvasRef.current) return;
     let cancelled = false;
@@ -505,7 +532,6 @@ export function BlockingCanvas({
     };
     setPositions(updated);
 
-    // Autosave
     const [entityType, entityId] = id.split(":") as [
       "actor" | "set_piece",
       string,
@@ -561,11 +587,10 @@ export function BlockingCanvas({
     if (pdfCanvas) {
       ctx.drawImage(pdfCanvas, 0, 0);
     } else {
-      ctx.fillStyle = "#171717";
+      ctx.fillStyle = "#f5f0e8";
       ctx.fillRect(0, 0, w, h);
     }
 
-    // Draw actor tokens
     for (const member of castMembers) {
       const key = `actor:${member.userId}`;
       const pos = positions[key];
@@ -596,15 +621,14 @@ export function BlockingCanvas({
         const fs = r * 0.75;
         ctx.font = `${fs}px sans-serif`;
         const tw = ctx.measureText(lbl).width;
-        ctx.fillStyle = "rgba(0,0,0,0.65)";
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
         ctx.fillRect(x - tw / 2 - 4, y + r + 2, tw + 8, fs + 4);
-        ctx.fillStyle = "white";
+        ctx.fillStyle = "#333";
         ctx.textBaseline = "top";
         ctx.fillText(lbl, x, y + r + 4);
       }
     }
 
-    // Draw set piece tokens
     for (const piece of SET_PIECES) {
       const key = `set_piece:${piece.key}`;
       const pos = positions[key];
@@ -645,7 +669,7 @@ export function BlockingCanvas({
   function placeOnCanvas(entityType: "actor" | "set_piece", entityId: string) {
     if (!canEdit || !currentBeatId) return;
     const key = `${entityType}:${entityId}`;
-    if (positions[key]) return; // already placed
+    if (positions[key]) return;
     pushHistory(positions);
     const pos = { xPercent: 50, yPercent: 50, rotation: 0 };
     setPositions((prev) => ({ ...prev, [key]: pos }));
@@ -682,10 +706,7 @@ export function BlockingCanvas({
     fd.set("title", newSceneTitle);
     fd.set("act_number", newSceneAct);
     fd.set("scene_number", newSceneNum);
-    fd.set(
-      "order_index",
-      String(scenesWithBeats.length),
-    );
+    fd.set("order_index", String(scenesWithBeats.length));
     await createScene(undefined, fd);
     setAddingScene(false);
     setNewSceneTitle("");
@@ -729,8 +750,6 @@ export function BlockingCanvas({
     const nextIndex = scene.beats.length;
     const nextLabel = `Beat ${nextIndex + 1}`;
 
-    // If no current beat (first beat of this scene), inherit positions from the
-    // last beat of the previous scene so actors carry forward across scene breaks.
     let sourceBeatId = currentBeatId;
     if (!sourceBeatId) {
       const sceneIndex = scenesWithBeats.findIndex((s) => s.id === sceneId);
@@ -742,7 +761,6 @@ export function BlockingCanvas({
 
     const result = await captureNextBeat(sceneId, nextLabel, nextIndex, sourceBeatId);
     if (result.beatId) {
-      // Keep current positions in state — the new beat already has them copied in DB
       setHistory([]);
       skipNextBeatLoad.current = true;
       setCurrentBeatId(result.beatId);
@@ -758,63 +776,76 @@ export function BlockingCanvas({
   const currentScene = scenesWithBeats.find((s) =>
     s.beats.some((b) => b.id === currentBeatId),
   );
-  const currentBeat = currentScene?.beats.find(
-    (b) => b.id === currentBeatId,
-  );
+  const currentBeat = currentScene?.beats.find((b) => b.id === currentBeatId);
+
+  const offStageCount = castMembers.filter(
+    (m) => !positions[`actor:${m.userId}`],
+  ).length;
 
   return (
-    <div className="-m-6 md:-m-8 flex h-[calc(100vh-64px)] overflow-hidden">
+    <div className="anim-in -m-6 md:-m-8 flex h-[calc(100vh-64px)] overflow-hidden">
+
       {/* ─── Left panel: Scenes & Beats ─────────────────────── */}
-      <div className="flex w-56 flex-col border-r border-[color:var(--border)] bg-[color:var(--background)]">
-        <div className="flex items-center justify-between border-b border-[color:var(--border)] px-3 py-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-            Scenes
-          </span>
+      <div
+        className="flex flex-col border-r border-[color:var(--border)]"
+        style={{ width: 260, background: "var(--bg)", flexShrink: 0 }}
+      >
+        <div className="row-between border-b border-[color:var(--border)] px-3 py-2.5">
+          <div className="h-eyebrow">Scenes</div>
           {canEdit && (
             <button
               onClick={() => setAddingScene(true)}
-              className="rounded p-0.5 hover:bg-[color:var(--muted)]"
+              className="btn ghost"
+              style={{ height: 24, padding: "0 8px", fontSize: 11 }}
               title="Add scene"
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="h-3 w-3" /><span>Add</span>
             </button>
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 text-sm">
+        <div className="scroll flex-1 overflow-y-auto p-2">
           {addingScene && (
-            <div className="mb-2 space-y-1 rounded border border-[color:var(--border)] p-2">
+            <div
+              className="mb-2 space-y-1 rounded border border-[color:var(--border)] p-2"
+              style={{ background: "var(--bg-elev)" }}
+            >
               <input
                 autoFocus
                 placeholder="Scene title"
                 value={newSceneTitle}
                 onChange={(e) => setNewSceneTitle(e.target.value)}
-                className="w-full rounded border border-[color:var(--border)] px-2 py-0.5 text-xs"
+                className="field"
+                style={{ fontSize: 12, height: 30 }}
               />
               <div className="flex gap-1">
                 <input
                   placeholder="Act"
                   value={newSceneAct}
                   onChange={(e) => setNewSceneAct(e.target.value)}
-                  className="w-12 rounded border border-[color:var(--border)] px-2 py-0.5 text-xs"
+                  className="field"
+                  style={{ width: 52, fontSize: 12, height: 30 }}
                 />
                 <input
                   placeholder="Scene"
                   value={newSceneNum}
                   onChange={(e) => setNewSceneNum(e.target.value)}
-                  className="w-12 rounded border border-[color:var(--border)] px-2 py-0.5 text-xs"
+                  className="field"
+                  style={{ width: 52, fontSize: 12, height: 30 }}
                 />
               </div>
               <div className="flex gap-1">
                 <button
                   onClick={handleCreateScene}
-                  className="rounded bg-[color:var(--primary)] px-2 py-0.5 text-xs text-[color:var(--primary-foreground)]"
+                  className="btn primary"
+                  style={{ height: 26, padding: "0 10px", fontSize: 12 }}
                 >
                   Add
                 </button>
                 <button
                   onClick={() => setAddingScene(false)}
-                  className="rounded px-2 py-0.5 text-xs hover:bg-[color:var(--muted)]"
+                  className="btn ghost"
+                  style={{ height: 26, padding: "0 10px", fontSize: 12 }}
                 >
                   Cancel
                 </button>
@@ -823,187 +854,228 @@ export function BlockingCanvas({
           )}
 
           {scenesWithBeats.length === 0 ? (
-            <p className="px-1 text-xs text-[color:var(--muted-foreground)]">
-              No scenes yet.{" "}
-              {canEdit && "Click + to add one."}
+            <p className="muted px-2 py-3" style={{ fontSize: 12 }}>
+              No scenes yet.{canEdit && " Click Add to create one."}
             </p>
           ) : (
-            scenesWithBeats.map((scene) => (
-              <div key={scene.id} className="mb-2">
-                <div
-                  className={`group flex cursor-pointer items-center justify-between rounded px-1 py-0.5 hover:bg-[color:var(--muted)] ${currentSceneId === scene.id && !currentBeatId ? "bg-[color:var(--muted)]" : ""}`}
-                  onClick={() => { setCurrentSceneId(scene.id); setCurrentBeatId(null); }}
-                >
-                  <span className="text-xs font-semibold text-[color:var(--muted-foreground)]">
-                    Act {scene.actNumber} Sc {scene.sceneNumber} — {scene.title}
-                  </span>
-                  {canEdit && (
-                    <div className="hidden gap-0.5 group-hover:flex">
-                      <button
-                        onClick={() => setAddingBeatForScene(scene.id)}
-                        title="Add beat"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteScene(scene.id)}
-                        title="Delete scene"
-                      >
-                        <Trash2 className="h-3 w-3 text-red-400" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {addingBeatForScene === scene.id && (
-                  <div className="ml-3 mt-1 space-y-1 rounded border border-[color:var(--border)] p-1.5">
-                    <input
-                      autoFocus
-                      placeholder="Beat label"
-                      value={newBeatLabel}
-                      onChange={(e) => setNewBeatLabel(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleCreateBeat(scene.id);
-                        if (e.key === "Escape") setAddingBeatForScene(null);
-                      }}
-                      className="w-full rounded border border-[color:var(--border)] px-1.5 py-0.5 text-xs"
-                    />
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handleCreateBeat(scene.id)}
-                        className="rounded bg-[color:var(--primary)] px-1.5 py-0.5 text-xs text-[color:var(--primary-foreground)]"
-                      >
-                        Add
-                      </button>
-                      <button
-                        onClick={() => setAddingBeatForScene(null)}
-                        className="rounded px-1.5 py-0.5 text-xs hover:bg-[color:var(--muted)]"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="ml-3 mt-0.5 space-y-0.5">
-                  {scene.beats.map((beat) => (
-                    <div
-                      key={beat.id}
-                      className={`group flex cursor-pointer items-center justify-between rounded px-1.5 py-0.5 text-xs ${
-                        currentBeatId === beat.id
-                          ? "bg-[color:var(--primary)] text-[color:var(--primary-foreground)]"
-                          : "hover:bg-[color:var(--muted)]"
-                      }`}
-                      onClick={() => { setCurrentSceneId(scene.id); setCurrentBeatId(beat.id); }}
-                    >
-                      <div className="flex items-center gap-1">
-                        <ChevronRight className="h-2.5 w-2.5 opacity-50" />
-                        {beat.label}
-                      </div>
-                      {canEdit && currentBeatId !== beat.id && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteBeat(beat.id);
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {scenesWithBeats.map((scene) => (
+                <div key={scene.id}>
+                  {/* Scene card */}
+                  <div
+                    className="group"
+                    onClick={() => { setCurrentSceneId(scene.id); setCurrentBeatId(null); }}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      background: currentSceneId === scene.id ? "var(--bg-elev)" : "transparent",
+                      boxShadow: currentSceneId === scene.id ? "var(--shadow-1)" : "none",
+                      border: "1px solid " + (currentSceneId === scene.id ? "var(--border-strong)" : "transparent"),
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          className="truncate"
+                          style={{
+                            fontSize: 12.5,
+                            fontWeight: currentSceneId === scene.id ? 500 : 400,
+                            color: currentSceneId === scene.id ? "var(--ink)" : "var(--ink-2)",
                           }}
-                          className="hidden group-hover:block"
                         >
-                          <Trash2 className="h-2.5 w-2.5 text-red-400" />
-                        </button>
+                          {scene.title}
+                        </div>
+                        <div className="muted" style={{ fontSize: 11, marginTop: 1 }}>
+                          Act {scene.actNumber} · Sc {scene.sceneNumber}
+                        </div>
+                      </div>
+                      {canEdit && (
+                        <div className="hidden gap-0.5 group-hover:flex flex-shrink-0">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setAddingBeatForScene(scene.id); }}
+                            className="rounded p-0.5 hover:bg-[color:var(--bg-muted)]"
+                            title="Add beat"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteScene(scene.id); }}
+                            className="rounded p-0.5 hover:bg-[color:var(--bg-muted)]"
+                            title="Delete scene"
+                          >
+                            <Trash2 className="h-3 w-3" style={{ color: "var(--accent)" }} />
+                          </button>
+                        </div>
                       )}
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Add beat inline form */}
+                  {addingBeatForScene === scene.id && (
+                    <div
+                      className="ml-3 mt-1 space-y-1 rounded border border-[color:var(--border)] p-1.5"
+                      style={{ background: "var(--bg-elev)" }}
+                    >
+                      <input
+                        autoFocus
+                        placeholder="Beat label"
+                        value={newBeatLabel}
+                        onChange={(e) => setNewBeatLabel(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleCreateBeat(scene.id);
+                          if (e.key === "Escape") setAddingBeatForScene(null);
+                        }}
+                        className="field"
+                        style={{ fontSize: 12, height: 28 }}
+                      />
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleCreateBeat(scene.id)}
+                          className="btn primary"
+                          style={{ height: 24, padding: "0 8px", fontSize: 11 }}
+                        >
+                          Add
+                        </button>
+                        <button
+                          onClick={() => setAddingBeatForScene(null)}
+                          className="btn ghost"
+                          style={{ height: 24, padding: "0 8px", fontSize: 11 }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Beat list */}
+                  <div style={{ marginLeft: 12, marginTop: 2, display: "flex", flexDirection: "column", gap: 1 }}>
+                    {scene.beats.map((beat) => (
+                      <div
+                        key={beat.id}
+                        className="group flex cursor-pointer items-center justify-between"
+                        onClick={() => { setCurrentSceneId(scene.id); setCurrentBeatId(beat.id); }}
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: 5,
+                          fontSize: 12,
+                          background: currentBeatId === beat.id ? "var(--accent-soft)" : "transparent",
+                          color: currentBeatId === beat.id ? "var(--accent-ink)" : "var(--ink-3)",
+                          fontWeight: currentBeatId === beat.id ? 500 : 400,
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          <ChevronRight className="h-2.5 w-2.5 opacity-50" />
+                          {beat.label}
+                        </div>
+                        {canEdit && currentBeatId !== beat.id && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteBeat(beat.id); }}
+                            className="hidden group-hover:block"
+                          >
+                            <Trash2 className="h-2.5 w-2.5" style={{ color: "var(--accent)" }} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
       </div>
 
       {/* ─── Center: Canvas ─────────────────────────────────── */}
-      <div className="relative flex flex-1 flex-col overflow-hidden bg-neutral-900">
+      <div
+        className="relative flex flex-1 flex-col overflow-hidden"
+        style={{ background: pdfUrl ? "rgb(23,23,23)" : "var(--bg)" }}
+      >
         {/* Toolbar */}
-        <div className="flex items-center justify-between border-b border-neutral-700 bg-neutral-800 px-3 py-1.5">
-          <div className="text-sm text-white">
+        <div
+          className="row-between border-b border-[color:var(--border)] px-3 py-2"
+          style={{ background: "var(--bg-elev)", boxShadow: "var(--shadow-1)", flexShrink: 0 }}
+        >
+          <div style={{ fontSize: 13, color: "var(--ink)" }}>
             {currentScene && currentBeat ? (
               <span>
-                Act {currentScene.actNumber} Sc {currentScene.sceneNumber} —{" "}
                 {currentScene.title}{" "}
-                <span className="text-neutral-400">/ {currentBeat.label}</span>
+                <span style={{ color: "var(--ink-3)" }}>· {currentBeat.label}</span>
               </span>
             ) : (
-              <span className="text-neutral-400">
+              <span className="muted" style={{ fontSize: 13 }}>
                 {scenesWithBeats.length === 0
                   ? "Add a scene to begin"
                   : "Select a beat to start blocking"}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {/* Grid toggles — only shown when calibration exists */}
+          <div className="row" style={{ gap: 6 }}>
             {stageConfig?.calibrationX1 != null && (
-              <div className="flex items-center gap-1 border-r border-neutral-700 pr-2">
+              <>
                 <button
                   onClick={() => setShowSLSR((v) => !v)}
-                  className={`rounded px-2 py-1 text-xs transition-colors ${
-                    showSLSR
-                      ? "bg-blue-700 text-white"
-                      : "text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
-                  }`}
+                  className="btn ghost"
+                  style={{
+                    height: 28,
+                    padding: "0 10px",
+                    fontSize: 12,
+                    background: showSLSR ? "var(--bg-sunken)" : undefined,
+                  }}
                   title="Toggle stage left/right grid lines"
                 >
-                  SL/SR
+                  <span>SL/SR</span>
                 </button>
                 <button
                   onClick={() => setShowUSDS((v) => !v)}
-                  className={`rounded px-2 py-1 text-xs transition-colors ${
-                    showUSDS
-                      ? "bg-blue-700 text-white"
-                      : "text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
-                  }`}
+                  className="btn ghost"
+                  style={{
+                    height: 28,
+                    padding: "0 10px",
+                    fontSize: 12,
+                    background: showUSDS ? "var(--bg-sunken)" : undefined,
+                  }}
                   title="Toggle upstage/downstage grid lines"
                 >
-                  US/DS
+                  <span>US/DS</span>
                 </button>
-              </div>
+              </>
             )}
             {canEdit && history.length > 0 && (
               <button
                 onClick={handleUndo}
-                className="flex items-center gap-1 rounded px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-700"
+                className="btn ghost"
+                style={{ height: 28, padding: "0 10px", fontSize: 12 }}
                 title="Undo last move"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
-                Undo
+                <RotateCcw className="h-3.5 w-3.5" /><span>Undo</span>
               </button>
             )}
             {canEdit && currentSceneId && (
               <button
                 onClick={handleCaptureBeat}
-                className="flex items-center gap-1.5 rounded bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-500"
+                className="btn primary"
+                style={{ height: 28, padding: "0 12px", fontSize: 12 }}
                 title="Save current positions as a beat and advance to the next one"
               >
-                <Aperture className="h-3.5 w-3.5" />
-                Capture Beat
+                <Aperture className="h-3.5 w-3.5" /><span>Capture Beat</span>
               </button>
             )}
             <button
               onClick={handleExportPng}
-              className="flex items-center gap-1 rounded px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-700"
+              className="btn ghost"
+              style={{ height: 28, padding: "0 10px", fontSize: 12 }}
               title="Export current beat as PNG"
             >
-              <Download className="h-3.5 w-3.5" />
-              Export
+              <Download className="h-3.5 w-3.5" /><span>Export</span>
             </button>
             {canEdit && (
               <button
-                onClick={() =>
-                  router.push(`/productions/${production.slug}/blocking/setup`)
-                }
-                className="flex items-center gap-1 rounded px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-700"
+                onClick={() => router.push(`/productions/${production.slug}/blocking/setup`)}
+                className="btn ghost"
+                style={{ height: 28, padding: "0 10px", fontSize: 12 }}
               >
-                <Settings className="h-3.5 w-3.5" />
-                Stage Setup
+                <Settings className="h-3.5 w-3.5" /><span>Stage Setup</span>
               </button>
             )}
           </div>
@@ -1011,23 +1083,24 @@ export function BlockingCanvas({
 
         {/* Multi-page controls */}
         {pdfUrl && numPdfPages > 1 && (
-          <div className="flex items-center justify-center gap-2 border-b border-neutral-700 bg-neutral-800 py-1 text-xs text-neutral-300">
+          <div
+            className="row border-b border-[color:var(--border)] py-1 justify-center gap-2"
+            style={{ background: "var(--bg-elev)", fontSize: 12, color: "var(--ink-2)", flexShrink: 0 }}
+          >
             <button
               onClick={() => setCurrentPdfPage((p) => Math.max(1, p - 1))}
               disabled={currentPdfPage <= 1}
-              className="rounded p-0.5 hover:bg-neutral-700 disabled:opacity-40"
+              className="btn ghost"
+              style={{ height: 24, padding: "0 6px" }}
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
-            <span>
-              Page {currentPdfPage} of {numPdfPages}
-            </span>
+            <span>Page {currentPdfPage} of {numPdfPages}</span>
             <button
-              onClick={() =>
-                setCurrentPdfPage((p) => Math.min(numPdfPages, p + 1))
-              }
+              onClick={() => setCurrentPdfPage((p) => Math.min(numPdfPages, p + 1))}
               disabled={currentPdfPage >= numPdfPages}
-              className="rounded p-0.5 hover:bg-neutral-700 disabled:opacity-40"
+              className="btn ghost"
+              style={{ height: 24, padding: "0 6px" }}
             >
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
@@ -1047,14 +1120,32 @@ export function BlockingCanvas({
                 style={{ zIndex: 1 }}
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div
-                  className="h-full w-full"
-                  style={{
-                    backgroundImage:
-                      "repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.05) 39px, rgba(255,255,255,0.05) 40px), repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.05) 39px, rgba(255,255,255,0.05) 40px)",
-                  }}
-                />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: "linear-gradient(180deg, oklch(0.96 0.015 60) 0%, oklch(0.94 0.02 60) 100%)",
+                }}
+              >
+                {/* Proscenium SVG overlay */}
+                <svg
+                  viewBox="0 0 800 500"
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+                >
+                  <defs>
+                    <pattern id="stage-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="oklch(0.85 0.01 60)" strokeWidth="1" />
+                    </pattern>
+                  </defs>
+                  <rect width="800" height="500" fill="url(#stage-grid)" />
+                  <rect x="20" y="20" width="760" height="440" fill="none" stroke="oklch(0.55 0.16 25)" strokeWidth="2" strokeDasharray="4 6" rx="4" />
+                  <line x1="400" y1="20" x2="400" y2="460" stroke="oklch(0.78 0.01 60)" strokeWidth="1" strokeDasharray="2 4" />
+                  <path d="M 60 460 Q 400 510 740 460" fill="oklch(0.92 0.018 60)" stroke="oklch(0.7 0.01 60)" strokeWidth="1" />
+                </svg>
+                {/* Stage direction labels */}
+                <div style={{ position: "absolute", top: 8, left: 10, fontSize: 10, letterSpacing: ".1em", color: "var(--ink-4)", textTransform: "uppercase" }}>Upstage</div>
+                <div style={{ position: "absolute", bottom: 8, left: 10, fontSize: 10, letterSpacing: ".1em", color: "var(--ink-4)", textTransform: "uppercase" }}>Downstage · Audience</div>
+                <div style={{ position: "absolute", top: "50%", left: 6, fontSize: 10, letterSpacing: ".1em", color: "var(--ink-4)", textTransform: "uppercase", writingMode: "vertical-rl", transform: "rotate(180deg) translateY(50%)" }}>Stage Right</div>
+                <div style={{ position: "absolute", top: "50%", right: 6, fontSize: 10, letterSpacing: ".1em", color: "var(--ink-4)", textTransform: "uppercase", writingMode: "vertical-rl", transform: "translateY(-50%)" }}>Stage Left</div>
               </div>
             )}
 
@@ -1066,6 +1157,7 @@ export function BlockingCanvas({
               />
             )}
 
+            {/* Actor tokens */}
             {currentBeatId &&
               castMembers.map((member) => {
                 const key = `actor:${member.userId}`;
@@ -1098,6 +1190,7 @@ export function BlockingCanvas({
                 );
               })}
 
+            {/* Set piece tokens */}
             {currentBeatId &&
               SET_PIECES.map((piece) => {
                 const key = `set_piece:${piece.key}`;
@@ -1118,46 +1211,147 @@ export function BlockingCanvas({
                   />
                 );
               })}
+
+            {/* Empty-state hint */}
+            {!currentBeatId && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  color: "var(--ink-4)",
+                  fontSize: 13,
+                  pointerEvents: "none",
+                }}
+              >
+                {scenesWithBeats.length === 0
+                  ? "Add a scene and beat to begin"
+                  : "Select a beat to start blocking"}
+              </div>
+            )}
           </div>
         </DndContext>
       </div>
 
-      {/* ─── Right panel: Cast & Set Pieces ─────────────────── */}
-      <div className="flex w-48 flex-col border-l border-[color:var(--border)] bg-[color:var(--background)]">
-        {/* Cast */}
-        <div className="border-b border-[color:var(--border)] px-3 py-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-            Cast
-          </span>
+      {/* ─── Right panel: Off-stage Cast & Set Pieces ────────── */}
+      <div
+        className="flex flex-col border-l border-[color:var(--border)]"
+        style={{ width: 220, background: "var(--bg)", flexShrink: 0 }}
+      >
+        {/* Off-stage cast */}
+        <div className="row-between border-b border-[color:var(--border)] px-3 py-2.5">
+          <div className="h-eyebrow">Off stage · {offStageCount}</div>
+          <span className="muted" style={{ fontSize: 10.5 }}>click to place</span>
         </div>
-        <div className="max-h-52 overflow-y-auto p-2">
+        <div className="scroll overflow-y-auto p-2" style={{ maxHeight: 220 }}>
           {castMembers.length === 0 ? (
-            <p className="text-xs text-[color:var(--muted-foreground)]">
-              No cast assigned.
-            </p>
+            <p className="muted px-1 py-2" style={{ fontSize: 12 }}>No cast assigned.</p>
           ) : (
-            castMembers.map((member) => {
-              const key = `actor:${member.userId}`;
-              const isOnCanvas = !!positions[key];
-              const actorName =
-                member.firstName || member.lastName
-                  ? `${member.firstName} ${member.lastName}`.trim()
-                  : member.email;
-              const color = actorColors[member.userId];
-              const ini =
-                (
-                  (member.firstName?.[0] ?? "") +
-                  (member.lastName?.[0] ?? "")
-                ).toUpperCase() ||
-                member.email[0]?.toUpperCase() ||
-                "?";
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {castMembers.map((member) => {
+                const key = `actor:${member.userId}`;
+                const isOnCanvas = !!positions[key];
+                const actorName =
+                  member.firstName || member.lastName
+                    ? `${member.firstName} ${member.lastName}`.trim()
+                    : member.email;
+                const color = actorColors[member.userId];
+                const ini =
+                  (
+                    (member.firstName?.[0] ?? "") +
+                    (member.lastName?.[0] ?? "")
+                  ).toUpperCase() ||
+                  member.email[0]?.toUpperCase() ||
+                  "?";
 
+                return (
+                  <button
+                    key={member.userId}
+                    disabled={!canEdit || !currentBeatId || isOnCanvas}
+                    onClick={() => placeOnCanvas("actor", member.userId)}
+                    className="w-full text-left"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "6px 8px",
+                      borderRadius: 6,
+                      cursor: isOnCanvas || !currentBeatId ? "default" : "pointer",
+                      border: "1px dashed " + (isOnCanvas ? "var(--border)" : "var(--border-strong)"),
+                      background: isOnCanvas ? "transparent" : "var(--bg-muted)",
+                      opacity: (!canEdit || !currentBeatId) ? 0.4 : isOnCanvas ? 0.45 : 1,
+                    }}
+                    title={
+                      isOnCanvas
+                        ? "Already on stage"
+                        : !currentBeatId
+                          ? "Select a beat first"
+                          : "Click to place on stage"
+                    }
+                  >
+                    <div
+                      className="avatar flex-shrink-0"
+                      style={{ width: 24, height: 24, fontSize: 10, background: color }}
+                    >
+                      {ini}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {member.characterName ? (
+                        <>
+                          <div
+                            className="truncate"
+                            style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink)" }}
+                          >
+                            {member.characterName}
+                          </div>
+                          <div className="muted truncate" style={{ fontSize: 10.5 }}>
+                            {actorName}
+                          </div>
+                        </>
+                      ) : (
+                        <div
+                          className="truncate"
+                          style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink)" }}
+                        >
+                          {actorName}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Set pieces */}
+        <div className="row-between border-b border-t border-[color:var(--border)] px-3 py-2.5">
+          <div className="h-eyebrow">Set Pieces</div>
+          <span className="muted" style={{ fontSize: 10.5 }}>click to place</span>
+        </div>
+        <div className="scroll flex-1 overflow-y-auto p-2">
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {SET_PIECES.map((piece) => {
+              const key = `set_piece:${piece.key}`;
+              const isOnCanvas = !!positions[key];
               return (
                 <button
-                  key={member.userId}
+                  key={piece.key}
                   disabled={!canEdit || !currentBeatId || isOnCanvas}
-                  onClick={() => placeOnCanvas("actor", member.userId)}
-                  className="mb-1 flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs transition-colors hover:bg-[color:var(--muted)] disabled:cursor-not-allowed disabled:opacity-40"
+                  onClick={() => placeOnCanvas("set_piece", piece.key)}
+                  className="w-full text-left"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "5px 8px",
+                    borderRadius: 6,
+                    cursor: isOnCanvas || !currentBeatId ? "default" : "pointer",
+                    border: "1px dashed " + (isOnCanvas ? "var(--border)" : "var(--border-strong)"),
+                    background: isOnCanvas ? "transparent" : "var(--bg-muted)",
+                    opacity: (!canEdit || !currentBeatId) ? 0.4 : isOnCanvas ? 0.45 : 1,
+                  }}
                   title={
                     isOnCanvas
                       ? "Already on stage"
@@ -1166,68 +1360,31 @@ export function BlockingCanvas({
                         : "Click to place on stage"
                   }
                 >
-                  <div
-                    className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                    style={{ backgroundColor: color }}
+                  <svg
+                    viewBox="0 0 80 60"
+                    width={28}
+                    height={21}
+                    className="flex-shrink-0"
                   >
-                    {ini}
-                  </div>
-                  <div className="min-w-0">
-                    {member.characterName ? (
-                      <>
-                        <div className="truncate font-medium">{member.characterName}</div>
-                        <div className="truncate text-[10px] text-[color:var(--muted-foreground)]">
-                          {actorName}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="truncate font-medium">{actorName}</div>
-                    )}
-                  </div>
+                    <path
+                      d={piece.svgPath}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span
+                    className="truncate"
+                    style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-2)" }}
+                  >
+                    {piece.label}
+                  </span>
                 </button>
               );
-            })
-          )}
-        </div>
-
-        {/* Set Pieces */}
-        <div className="border-b border-t border-[color:var(--border)] px-3 py-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-            Set Pieces
-          </span>
-        </div>
-        <div className="flex-1 overflow-y-auto p-2">
-          {SET_PIECES.map((piece) => {
-            const key = `set_piece:${piece.key}`;
-            const isOnCanvas = !!positions[key];
-            return (
-              <button
-                key={piece.key}
-                disabled={!canEdit || !currentBeatId || isOnCanvas}
-                onClick={() => placeOnCanvas("set_piece", piece.key)}
-                className="mb-1 flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs transition-colors hover:bg-[color:var(--muted)] disabled:cursor-not-allowed disabled:opacity-40"
-                title={
-                  isOnCanvas
-                    ? "Already on stage"
-                    : !currentBeatId
-                      ? "Select a beat first"
-                      : "Click to place on stage"
-                }
-              >
-                <svg viewBox="0 0 80 60" width={28} height={21} className="flex-shrink-0">
-                  <path
-                    d={piece.svgPath}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="truncate">{piece.label}</span>
-              </button>
-            );
-          })}
+            })}
+          </div>
         </div>
       </div>
     </div>
