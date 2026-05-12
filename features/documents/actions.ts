@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { documents, documentFolders, documentComments, notifications, profiles, productions } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNotNull, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -312,4 +312,23 @@ export async function moveDocument(
 
   revalidatePath("/productions");
   return { success: true };
+}
+
+export async function fetchDeletedDocumentsByProduction(productionId: string) {
+  await requireCurrentUser();
+  return db
+    .select({
+      id: documents.id,
+      title: documents.title,
+      fileName: documents.fileName,
+      fileSize: documents.fileSize,
+      contentType: documents.contentType,
+      storagePath: documents.storagePath,
+      folderName: documentFolders.name,
+      deletedAt: documents.deletedAt,
+    })
+    .from(documents)
+    .leftJoin(documentFolders, eq(documents.folderId, documentFolders.id))
+    .where(and(eq(documents.productionId, productionId), isNotNull(documents.deletedAt)))
+    .orderBy(desc(documents.deletedAt));
 }

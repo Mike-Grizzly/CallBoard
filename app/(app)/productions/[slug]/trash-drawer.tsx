@@ -13,14 +13,14 @@ import {
   permanentlyDeleteReport,
 } from "@/features/reports/actions";
 import {
-  getDeletedDocumentsByProduction,
-} from "@/features/documents/queries";
+  fetchDeletedDocumentsByProduction,
+} from "@/features/documents/actions";
 import {
-  getDeletedReportsByProduction,
-} from "@/features/reports/queries";
+  fetchDeletedReportsByProduction,
+} from "@/features/reports/actions";
 
-type DeletedDoc = Awaited<ReturnType<typeof getDeletedDocumentsByProduction>>[number];
-type DeletedReport = Awaited<ReturnType<typeof getDeletedReportsByProduction>>[number];
+type DeletedDoc = Awaited<ReturnType<typeof fetchDeletedDocumentsByProduction>>[number];
+type DeletedReport = Awaited<ReturnType<typeof fetchDeletedReportsByProduction>>[number];
 
 interface Props {
   productionId: string;
@@ -55,8 +55,8 @@ export function TrashDrawer({ productionId, initialTrashCount }: Props) {
 
   const reload = useCallback(async () => {
     const [d, r] = await Promise.all([
-      getDeletedDocumentsByProduction(productionId),
-      getDeletedReportsByProduction(productionId),
+      fetchDeletedDocumentsByProduction(productionId),
+      fetchDeletedReportsByProduction(productionId),
     ]);
     setDocs(d);
     setReports(r);

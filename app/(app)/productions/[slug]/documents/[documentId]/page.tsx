@@ -59,7 +59,7 @@ export default async function DocumentDetailPage({
       ? `${doc.uploadedByFirstName ?? ""} ${doc.uploadedByLastName ?? ""}`.trim()
       : doc.uploadedByEmail;
 
-  const meta = TYPE_META[doc.documentType] ?? TYPE_META.general;
+  const meta = TYPE_META.general;
 
   return (
     <div style={{ maxWidth: 1280, margin: "0 auto" }}>
@@ -86,14 +86,7 @@ export default async function DocumentDetailPage({
             data-c={meta.color || undefined}
             style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }}
           >
-            <span style={{ fontSize: 20, lineHeight: 1 }}>
-              {doc.documentType === "script" && "📄"}
-              {doc.documentType === "schedule" && "📅"}
-              {doc.documentType === "design" && "🎨"}
-              {doc.documentType === "music" && "🎵"}
-              {doc.documentType === "reference" && "📚"}
-              {doc.documentType === "general" && "📁"}
-            </span>
+            <span style={{ fontSize: 20, lineHeight: 1 }}>📁</span>
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>

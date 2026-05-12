@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Trash2, Send } from "lucide-react";
 import {
   getBeatComments,
@@ -8,6 +8,9 @@ import {
   deleteBeatComment,
 } from "@/features/blocking/actions";
 import type { BeatCommentWithAuthor } from "@/features/blocking/actions";
+import { MentionTextarea, memberFullName } from "@/components/ui/mention-textarea";
+import { MentionBody } from "@/components/ui/mention-body";
+import type { MentionMember } from "@/components/ui/mention-textarea";
 import type { ProductionMember } from "@/features/members/queries";
 
 type Props = {
@@ -16,48 +19,6 @@ type Props = {
   productionMembers: ProductionMember[];
   canModerate: boolean;
 };
-
-// ─── @mention helpers ────────────────────────────────────────────────
-
-function getMentionTrigger(text: string, cursorPos: number): string | null {
-  const before = text.slice(0, cursorPos);
-  const match = before.match(/@([\w]*)$/);
-  return match ? match[1] : null;
-}
-
-function memberDisplayName(m: ProductionMember): string {
-  return m.firstName || m.lastName
-    ? `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim()
-    : m.email;
-}
-
-// Parse body text and highlight @mentions in rendered comments
-function renderBody(body: string, members: ProductionMember[]) {
-  const nameMap = new Map(members.map((m) => [memberDisplayName(m), m.userId]));
-  const parts = body.split(/(@\S+)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("@")) {
-      const name = part.slice(1);
-      if (nameMap.has(name)) {
-        return (
-          <span
-            key={i}
-            style={{
-              background: "var(--accent-soft)",
-              color: "var(--accent-ink)",
-              borderRadius: 3,
-              padding: "0 3px",
-              fontWeight: 500,
-            }}
-          >
-            {part}
-          </span>
-        );
-      }
-    }
-    return <span key={i}>{part}</span>;
-  });
-}
 
 function formatTime(date: Date | string) {
   const d = new Date(date);
@@ -71,7 +32,25 @@ function formatTime(date: Date | string) {
   return d.toLocaleDateString();
 }
 
-// ─── Main Component ──────────────────────────────────────────────────
+function toMentionMember(m: ProductionMember): MentionMember {
+  return {
+    id: m.userId,
+    firstName: m.firstName,
+    lastName: m.lastName,
+    email: m.email,
+    role: m.role,
+  };
+}
+
+// Extract mentioned user IDs from @{Full Name} tokens using member list
+function extractMentionedIds(body: string, members: ProductionMember[]): string[] {
+  const tokens = body.match(/@\{([^}]+)\}/g) ?? [];
+  return tokens.flatMap((token) => {
+    const name = token.slice(2, -1);
+    const match = members.find((m) => memberFullName(toMentionMember(m)) === name);
+    return match ? [match.userId] : [];
+  });
+}
 
 export function BeatCommentSection({
   beatId,
@@ -82,17 +61,12 @@ export function BeatCommentSection({
   const [comments, setComments] = useState<BeatCommentWithAuthor[]>([]);
   const [loading, setLoading] = useState(false);
   const [body, setBody] = useState("");
-  const [mentionedIds, setMentionedIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // @mention picker state
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [mentionIndex, setMentionIndex] = useState(0);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const listEndRef = useRef<HTMLDivElement>(null);
 
-  // Load comments when beat changes
+  const mentionMembers = productionMembers.map(toMentionMember);
+
   useEffect(() => {
     if (!beatId) {
       setComments([]);
@@ -104,80 +78,9 @@ export function BeatCommentSection({
       .finally(() => setLoading(false));
   }, [beatId]);
 
-  // Scroll to bottom when new comments arrive
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [comments.length]);
-
-  const filteredMembers =
-    mentionQuery !== null
-      ? productionMembers.filter((m) =>
-          memberDisplayName(m)
-            .toLowerCase()
-            .startsWith(mentionQuery.toLowerCase()),
-        )
-      : [];
-
-  const handleInput = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const val = e.target.value;
-      setBody(val);
-      const cursor = e.target.selectionStart ?? val.length;
-      const trigger = getMentionTrigger(val, cursor);
-      setMentionQuery(trigger);
-      setMentionIndex(0);
-    },
-    [],
-  );
-
-  function insertMention(member: ProductionMember) {
-    if (!textareaRef.current) return;
-    const cursor = textareaRef.current.selectionStart ?? body.length;
-    const before = body.slice(0, cursor);
-    const after = body.slice(cursor);
-    // Replace the @query with @FullName
-    const replaced = before.replace(/@[\w]*$/, `@${memberDisplayName(member)} `);
-    setBody(replaced + after);
-    setMentionedIds((prev) => new Set([...prev, member.userId]));
-    setMentionQuery(null);
-    // Restore focus
-    setTimeout(() => {
-      if (!textareaRef.current) return;
-      const pos = replaced.length;
-      textareaRef.current.focus();
-      textareaRef.current.setSelectionRange(pos, pos);
-    }, 0);
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (mentionQuery !== null && filteredMembers.length > 0) {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setMentionIndex((i) => Math.min(i + 1, filteredMembers.length - 1));
-        return;
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setMentionIndex((i) => Math.max(i - 1, 0));
-        return;
-      }
-      if (e.key === "Enter" || e.key === "Tab") {
-        e.preventDefault();
-        insertMention(filteredMembers[mentionIndex]);
-        return;
-      }
-      if (e.key === "Escape") {
-        setMentionQuery(null);
-        return;
-      }
-    }
-
-    // Submit on Ctrl/Cmd+Enter when no picker open
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-      e.preventDefault();
-      handleSubmit();
-    }
-  }
 
   async function handleSubmit() {
     if (!beatId || !body.trim() || submitting) return;
@@ -186,14 +89,12 @@ export function BeatCommentSection({
     const result = await createBeatComment({
       beatId,
       body: body.trim(),
-      mentionedUserIds: [...mentionedIds],
+      mentionedUserIds: extractMentionedIds(body, productionMembers),
     });
     if (result.error) {
       setError(result.error);
     } else {
       setBody("");
-      setMentionedIds(new Set());
-      // Optimistically reload
       const fresh = await getBeatComments(beatId);
       setComments(fresh);
     }
@@ -224,13 +125,9 @@ export function BeatCommentSection({
       {/* Comment list */}
       <div className="scroll flex-1 overflow-y-auto p-2" style={{ minHeight: 0 }}>
         {loading ? (
-          <div className="muted" style={{ fontSize: 12, padding: "8px 4px" }}>
-            Loading…
-          </div>
+          <div className="muted" style={{ fontSize: 12, padding: "8px 4px" }}>Loading…</div>
         ) : comments.length === 0 ? (
-          <div className="muted" style={{ fontSize: 12, padding: "8px 4px" }}>
-            No comments yet.
-          </div>
+          <div className="muted" style={{ fontSize: 12, padding: "8px 4px" }}>No comments yet.</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {comments.map((c) => {
@@ -253,13 +150,7 @@ export function BeatCommentSection({
                   }}
                 >
                   <div className="row-between" style={{ marginBottom: 4 }}>
-                    <span
-                      style={{
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        color: "var(--ink)",
-                      }}
-                    >
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--ink)" }}>
                       {authorName}
                     </span>
                     <div className="row" style={{ gap: 4 }}>
@@ -272,16 +163,13 @@ export function BeatCommentSection({
                           className="hidden group-hover:block rounded p-0.5 hover:bg-[color:var(--bg-muted)]"
                           title="Delete comment"
                         >
-                          <Trash2
-                            className="h-3 w-3"
-                            style={{ color: "var(--accent)" }}
-                          />
+                          <Trash2 className="h-3 w-3" style={{ color: "var(--accent)" }} />
                         </button>
                       )}
                     </div>
                   </div>
                   <div style={{ fontSize: 12.5, color: "var(--ink-2)", lineHeight: 1.45 }}>
-                    {renderBody(c.body, productionMembers)}
+                    <MentionBody body={c.body} />
                   </div>
                 </div>
               );
@@ -292,88 +180,21 @@ export function BeatCommentSection({
       </div>
 
       {/* Input area */}
-      <div
-        style={{
-          borderTop: "1px solid var(--border)",
-          padding: "8px 8px 10px",
-          position: "relative",
-          flexShrink: 0,
-        }}
-      >
-        {/* @mention picker */}
-        {mentionQuery !== null && filteredMembers.length > 0 && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: "100%",
-              left: 8,
-              right: 8,
-              background: "var(--bg-elev)",
-              border: "1px solid var(--border-strong)",
-              borderRadius: 6,
-              boxShadow: "var(--shadow-2)",
-              zIndex: 50,
-              overflow: "hidden",
-            }}
-          >
-            {filteredMembers.slice(0, 6).map((m, i) => {
-              const name = memberDisplayName(m);
-              return (
-                <button
-                  key={m.userId}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    insertMention(m);
-                  }}
-                  className="w-full text-left"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "6px 10px",
-                    fontSize: 12.5,
-                    background: i === mentionIndex ? "var(--bg-muted)" : "transparent",
-                    color: "var(--ink)",
-                    cursor: "pointer",
-                  }}
-                >
-                  <span style={{ fontWeight: 500 }}>{name}</span>
-                  {m.characterName && (
-                    <span className="muted" style={{ fontSize: 11 }}>
-                      · {m.characterName}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        <textarea
-          ref={textareaRef}
+      <div style={{ borderTop: "1px solid var(--border)", padding: "8px 8px 10px", flexShrink: 0 }}>
+        <MentionTextarea
           value={body}
-          onChange={handleInput}
-          onKeyDown={handleKeyDown}
+          onChange={setBody}
+          onSubmit={handleSubmit}
+          members={mentionMembers}
           placeholder="Add a comment… type @ to mention"
-          className="field scroll"
-          style={{
-            minHeight: 60,
-            maxHeight: 120,
-            fontSize: 12.5,
-            resize: "none",
-            width: "100%",
-          }}
+          rows={2}
           disabled={submitting}
         />
         {error && (
-          <div style={{ fontSize: 11.5, color: "var(--accent)", marginTop: 4 }}>
-            {error}
-          </div>
+          <div style={{ fontSize: 11.5, color: "var(--accent)", marginTop: 4 }}>{error}</div>
         )}
         <div className="row-between" style={{ marginTop: 6 }}>
-          <span className="muted" style={{ fontSize: 10.5 }}>
-            ⌘↵ to send · @ to mention
-          </span>
+          <span className="muted" style={{ fontSize: 10.5 }}>↵ to send · @ to mention</span>
           <button
             onClick={handleSubmit}
             disabled={!body.trim() || submitting}

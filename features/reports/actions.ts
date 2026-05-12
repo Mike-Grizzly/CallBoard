@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { rehearsalReports, productions } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, isNotNull, desc } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
@@ -264,4 +264,19 @@ export async function permanentlyDeleteReport(
 
   revalidatePath("/productions");
   return { success: true };
+}
+
+export async function fetchDeletedReportsByProduction(productionId: string) {
+  await requireCurrentUser();
+  return db
+    .select({
+      id: rehearsalReports.id,
+      reportNumber: rehearsalReports.reportNumber,
+      reportDate: rehearsalReports.reportDate,
+      status: rehearsalReports.status,
+      deletedAt: rehearsalReports.deletedAt,
+    })
+    .from(rehearsalReports)
+    .where(and(eq(rehearsalReports.productionId, productionId), isNotNull(rehearsalReports.deletedAt)))
+    .orderBy(desc(rehearsalReports.deletedAt));
 }
