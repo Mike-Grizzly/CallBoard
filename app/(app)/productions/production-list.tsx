@@ -58,7 +58,7 @@ export function ProductionList({
         if (hasAccess) {
           return (
             <Link key={production.id} href={`/productions/${production.slug}`}>
-              <Card className="transition-colors hover:bg-[color:var(--accent)]">
+              <Card className="transition-colors hover:bg-[color:var(--muted)]">
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3">

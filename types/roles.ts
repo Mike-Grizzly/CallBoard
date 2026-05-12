@@ -8,6 +8,7 @@ export const ROLES = [
   "admin",
   "producer",
   "director",
+  "choreographer",
   "stage_manager",
   "cast",
   "crew",

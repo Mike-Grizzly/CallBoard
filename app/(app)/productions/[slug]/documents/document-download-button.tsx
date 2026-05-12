@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { Eye, Download } from "lucide-react";
-import { getDocumentUrl } from "@/features/documents/actions";
+import { getDocumentUrl, getDocumentDownloadUrl } from "@/features/documents/actions";
 
 export function DocumentViewButton({
   storagePath,
@@ -24,12 +24,14 @@ export function DocumentViewButton({
 
   function handleDownload() {
     startTransition(async () => {
-      const url = await getDocumentUrl(storagePath);
+      const url = await getDocumentDownloadUrl(storagePath, fileName);
       if (url) {
         const a = document.createElement("a");
         a.href = url;
         a.download = fileName;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
       }
     });
   }
@@ -40,7 +42,7 @@ export function DocumentViewButton({
         type="button"
         onClick={handleView}
         disabled={isPending}
-        className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--accent)] hover:text-[color:var(--foreground)]"
+        className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--muted)] hover:text-[color:var(--foreground)]"
         title="View"
       >
         <Eye className="h-4 w-4" />
@@ -49,7 +51,7 @@ export function DocumentViewButton({
         type="button"
         onClick={handleDownload}
         disabled={isPending}
-        className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--accent)] hover:text-[color:var(--foreground)]"
+        className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--muted)] hover:text-[color:var(--foreground)]"
         title="Download"
       >
         <Download className="h-4 w-4" />

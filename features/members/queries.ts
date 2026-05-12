@@ -36,6 +36,7 @@ export async function getProductionMembers(productionId: string) {
       firstName: profiles.firstName,
       lastName: profiles.lastName,
       role: productionMemberships.role,
+      characterName: productionMemberships.characterName,
       createdAt: productionMemberships.createdAt,
     })
     .from(productionMemberships)
