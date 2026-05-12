@@ -16,7 +16,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Settings, Plus, Trash2, ChevronRight, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, MessageSquare } from "lucide-react";
+import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, MessageSquare } from "lucide-react";
 import { BeatCommentSection } from "@/components/blocking/beat-comment-section";
 import type { ProductionMember } from "@/features/members/queries";
 import {
@@ -275,6 +275,86 @@ function SetPieceToken({
   );
 }
 
+// ─── Off-stage Actor Tile (draggable) ──────────────────────────────
+
+function OffstageActorTile({
+  member,
+  color,
+  ini,
+  isOnCanvas,
+  isDisabled,
+  onClickPlace,
+}: {
+  member: CastMember;
+  color: string;
+  ini: string;
+  isOnCanvas: boolean;
+  isDisabled: boolean;
+  onClickPlace: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
+    id: `offstage:${member.userId}`,
+    disabled: isDisabled || isOnCanvas,
+  });
+
+  const actorName =
+    member.firstName || member.lastName
+      ? `${member.firstName} ${member.lastName}`.trim()
+      : member.email;
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={isDisabled || isOnCanvas ? undefined : onClickPlace}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "6px 8px",
+        borderRadius: 6,
+        cursor: isOnCanvas || isDisabled ? "default" : isDragging ? "grabbing" : "grab",
+        border: "1px dashed " + (isOnCanvas ? "var(--border)" : "var(--border-strong)"),
+        background: isOnCanvas ? "transparent" : "var(--bg-muted)",
+        opacity: isDisabled ? 0.4 : isOnCanvas ? 0.4 : isDragging ? 0.5 : 1,
+        transform: CSS.Translate.toString(transform),
+        touchAction: "none",
+        userSelect: "none",
+        zIndex: isDragging ? 50 : undefined,
+      }}
+      title={
+        isOnCanvas
+          ? "Already on stage"
+          : isDisabled
+            ? "Select a beat first"
+            : "Drag onto stage or click to place at center"
+      }
+    >
+      <div
+        className="avatar"
+        style={{ width: 24, height: 24, fontSize: 10, background: color, flexShrink: 0 }}
+      >
+        {ini}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {member.characterName ? (
+          <>
+            <div className="truncate" style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink)" }}>
+              {member.characterName}
+            </div>
+            <div className="muted truncate" style={{ fontSize: 10.5 }}>{actorName}</div>
+          </>
+        ) : (
+          <div className="truncate" style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink)" }}>
+            {actorName}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Number Grid Overlay ────────────────────────────────────────────
 
 function NumberGridOverlay({
@@ -443,6 +523,8 @@ export function BlockingCanvas({
   const [newSceneNum, setNewSceneNum] = useState("1");
   const [addingBeatForScene, setAddingBeatForScene] = useState<string | null>(null);
   const [newBeatLabel, setNewBeatLabel] = useState("");
+  const [setPiecesOpen, setSetPiecesOpen] = useState(true);
+  const [commentsOpen, setCommentsOpen] = useState(true);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -510,13 +592,47 @@ export function BlockingCanvas({
   }
 
   function handleDragEnd(event: DragEndEvent) {
-    if (!canEdit || !currentBeatId) return;
     const { active, delta } = event;
+    const id = active.id as string;
+
+    // Off-stage actor dragged onto canvas
+    if (id.startsWith("offstage:")) {
+      if (!canEdit || !currentBeatId) return;
+      const entityId = id.replace("offstage:", "");
+      const container = canvasContainerRef.current;
+      if (!container) return;
+      const translated = active.rect.current.translated;
+      if (!translated) return;
+      const containerRect = container.getBoundingClientRect();
+      const centerX = translated.left + translated.width / 2;
+      const centerY = translated.top + translated.height / 2;
+      const xPercent = ((centerX - containerRect.left) / containerRect.width) * 100;
+      const yPercent = ((centerY - containerRect.top) / containerRect.height) * 100;
+      if (xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100) return;
+      const clampedX = Math.max(4, Math.min(96, xPercent));
+      const clampedY = Math.max(4, Math.min(96, yPercent));
+      pushHistory(positions);
+      const key = `actor:${entityId}`;
+      setPositions((prev) => ({ ...prev, [key]: { xPercent: clampedX, yPercent: clampedY, rotation: 0 } }));
+      startTransition(async () => {
+        await saveBlockingPosition({
+          beatId: currentBeatId,
+          entityType: "actor",
+          entityId,
+          xPercent: clampedX,
+          yPercent: clampedY,
+          rotation: 0,
+        });
+      });
+      return;
+    }
+
+    // Existing actor/set-piece repositioning
+    if (!canEdit || !currentBeatId) return;
     if (!delta.x && !delta.y) return;
     const container = canvasContainerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
-    const id = active.id as string;
     const current = positions[id];
     if (!current) return;
 
@@ -787,9 +903,10 @@ export function BlockingCanvas({
   ).length;
 
   return (
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
     <div
       className="anim-in"
-      style={{ display: "grid", gridTemplateColumns: "264px 1fr 280px", gap: 16, maxWidth: 1400, margin: "0 auto" }}
+      style={{ display: "grid", gridTemplateColumns: "248px 1fr 264px", gap: 16, maxWidth: 1400, margin: "0 auto" }}
     >
 
       {/* ─── Left panel: Scenes & Off-stage Cast ────────────── */}
@@ -1021,10 +1138,6 @@ export function BlockingCanvas({
               castMembers.map((member) => {
                 const key = `actor:${member.userId}`;
                 const isOnCanvas = !!positions[key];
-                const actorName =
-                  member.firstName || member.lastName
-                    ? `${member.firstName} ${member.lastName}`.trim()
-                    : member.email;
                 const color = actorColors[member.userId];
                 const ini =
                   (
@@ -1035,59 +1148,15 @@ export function BlockingCanvas({
                   "?";
 
                 return (
-                  <button
+                  <OffstageActorTile
                     key={member.userId}
-                    disabled={!canEdit || !currentBeatId || isOnCanvas}
-                    onClick={() => placeOnCanvas("actor", member.userId)}
-                    className="w-full text-left"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "6px 8px",
-                      borderRadius: 6,
-                      cursor: isOnCanvas || !currentBeatId ? "default" : "pointer",
-                      border: "1px dashed " + (isOnCanvas ? "var(--border)" : "var(--border-strong)"),
-                      background: isOnCanvas ? "transparent" : "var(--bg-muted)",
-                      opacity: (!canEdit || !currentBeatId) ? 0.4 : isOnCanvas ? 0.45 : 1,
-                    }}
-                    title={
-                      isOnCanvas
-                        ? "Already on stage"
-                        : !currentBeatId
-                          ? "Select a beat first"
-                          : "Click to place on stage"
-                    }
-                  >
-                    <div
-                      className="avatar"
-                      style={{ width: 24, height: 24, fontSize: 10, background: color, flexShrink: 0 }}
-                    >
-                      {ini}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      {member.characterName ? (
-                        <>
-                          <div
-                            className="truncate"
-                            style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink)" }}
-                          >
-                            {member.characterName}
-                          </div>
-                          <div className="muted truncate" style={{ fontSize: 10.5 }}>
-                            {actorName}
-                          </div>
-                        </>
-                      ) : (
-                        <div
-                          className="truncate"
-                          style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink)" }}
-                        >
-                          {actorName}
-                        </div>
-                      )}
-                    </div>
-                  </button>
+                    member={member}
+                    color={color}
+                    ini={ini}
+                    isOnCanvas={isOnCanvas}
+                    isDisabled={!canEdit || !currentBeatId}
+                    onClickPlace={() => placeOnCanvas("actor", member.userId)}
+                  />
                 );
               })
             )}
@@ -1174,14 +1243,13 @@ export function BlockingCanvas({
         </div>
 
         {/* Canvas card */}
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div
             className="card"
             style={{
               padding: 0,
               position: "relative",
               overflow: "hidden",
-              aspectRatio: "16 / 10",
+              aspectRatio: "4 / 3",
               background: pdfUrl ? "rgb(23,23,23)" : undefined,
             }}
           >
@@ -1302,8 +1370,6 @@ export function BlockingCanvas({
               )}
             </div>
           </div>
-        </DndContext>
-
         {/* PDF multi-page controls */}
         {pdfUrl && numPdfPages > 1 && (
           <div className="row justify-center" style={{ gap: 8, fontSize: 12, color: "var(--ink-2)" }}>
@@ -1344,74 +1410,138 @@ export function BlockingCanvas({
       </div>
 
       {/* ─── Right panel: Set Pieces & Beat Comments ─────────── */}
-      <div className="card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-          <div className="h-card">Set Pieces</div>
-          <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>click to place on stage</div>
+      <div
+        className="card"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          position: "sticky",
+          top: 16,
+          maxHeight: "calc(100vh - 80px)",
+        }}
+      >
+        {/* Set Pieces — collapsible */}
+        <div style={{ borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => setSetPiecesOpen((v) => !v)}
+            className="row-between"
+            style={{
+              width: "100%",
+              padding: "13px 16px",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+            <div>
+              <div className="h-card">Set Pieces</div>
+              <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>click to place on stage</div>
+            </div>
+            <ChevronDown
+              size={14}
+              style={{
+                color: "var(--ink-3)",
+                flexShrink: 0,
+                transform: setPiecesOpen ? "rotate(0deg)" : "rotate(-90deg)",
+                transition: "transform 0.15s",
+              }}
+            />
+          </button>
+          {setPiecesOpen && (
+            <div className="scroll overflow-y-auto" style={{ padding: "0 12px 10px", maxHeight: 220 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {SET_PIECES.map((piece) => {
+                  const key = `set_piece:${piece.key}`;
+                  const isOnCanvas = !!positions[key];
+                  return (
+                    <button
+                      key={piece.key}
+                      disabled={!canEdit || !currentBeatId || isOnCanvas}
+                      onClick={() => placeOnCanvas("set_piece", piece.key)}
+                      className="w-full text-left"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "6px 10px",
+                        borderRadius: 6,
+                        cursor: isOnCanvas || !currentBeatId ? "default" : "pointer",
+                        border: "1px dashed " + (isOnCanvas ? "var(--border)" : "var(--border-strong)"),
+                        background: isOnCanvas ? "transparent" : "var(--bg-muted)",
+                        opacity: (!canEdit || !currentBeatId) ? 0.4 : isOnCanvas ? 0.45 : 1,
+                      }}
+                      title={
+                        isOnCanvas
+                          ? "Already on stage"
+                          : !currentBeatId
+                            ? "Select a beat first"
+                            : "Click to place on stage"
+                      }
+                    >
+                      <svg viewBox="0 0 80 60" width={28} height={21} style={{ flexShrink: 0 }}>
+                        <path
+                          d={piece.svgPath}
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <span className="truncate" style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-2)" }}>
+                        {piece.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="scroll overflow-y-auto" style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {SET_PIECES.map((piece) => {
-              const key = `set_piece:${piece.key}`;
-              const isOnCanvas = !!positions[key];
-              return (
-                <button
-                  key={piece.key}
-                  disabled={!canEdit || !currentBeatId || isOnCanvas}
-                  onClick={() => placeOnCanvas("set_piece", piece.key)}
-                  className="w-full text-left"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "6px 10px",
-                    borderRadius: 6,
-                    cursor: isOnCanvas || !currentBeatId ? "default" : "pointer",
-                    border: "1px dashed " + (isOnCanvas ? "var(--border)" : "var(--border-strong)"),
-                    background: isOnCanvas ? "transparent" : "var(--bg-muted)",
-                    opacity: (!canEdit || !currentBeatId) ? 0.4 : isOnCanvas ? 0.45 : 1,
-                  }}
-                  title={
-                    isOnCanvas
-                      ? "Already on stage"
-                      : !currentBeatId
-                        ? "Select a beat first"
-                        : "Click to place on stage"
-                  }
-                >
-                  <svg viewBox="0 0 80 60" width={28} height={21} style={{ flexShrink: 0 }}>
-                    <path
-                      d={piece.svgPath}
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <span className="truncate" style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-2)" }}>
-                    {piece.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+        {/* Beat Comments — collapsible */}
+        <div style={{ flexShrink: 0, borderBottom: "1px solid var(--border)" }}>
+          <button
+            type="button"
+            onClick={() => setCommentsOpen((v) => !v)}
+            className="row-between"
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+            <div className="h-eyebrow" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <MessageSquare className="h-3 w-3" style={{ color: "var(--ink-3)" }} />
+              Beat Comments
+            </div>
+            <ChevronDown
+              size={14}
+              style={{
+                color: "var(--ink-3)",
+                flexShrink: 0,
+                transform: commentsOpen ? "rotate(0deg)" : "rotate(-90deg)",
+                transition: "transform 0.15s",
+              }}
+            />
+          </button>
         </div>
-
-        <div style={{ padding: "12px 16px 8px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-          <div className="h-eyebrow" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <MessageSquare className="h-3 w-3" style={{ color: "var(--ink-3)" }} />
-            Beat Comments
-          </div>
-        </div>
-        <BeatCommentSection
-          beatId={currentBeatId}
-          currentUserId={currentUserId}
-          productionMembers={productionMembers}
-          canModerate={canEdit}
-        />
+        {commentsOpen && (
+          <BeatCommentSection
+            beatId={currentBeatId}
+            currentUserId={currentUserId}
+            productionMembers={productionMembers}
+            canModerate={canEdit}
+          />
+        )}
       </div>
     </div>
+    </DndContext>
   );
 }
