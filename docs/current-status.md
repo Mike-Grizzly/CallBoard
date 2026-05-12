@@ -1,8 +1,8 @@
 # Current Status
 
-**Last updated:** 2026-05-11
+**Last updated:** 2026-05-12
 
-**Current milestone:** Steps 1-12 complete. Notes tab UI ported to warm theatre design system. Call schedule calendar shipped. UI port Phase 1 (design tokens / shell) done, Phase 2 (per-tab visual port) in progress — Overview and Notes tabs fully ported, Rehearsal Reports at full demo parity. RLS enabled on all public tables.
+**Current milestone:** Steps 1-12 complete + Document Center overhaul. Document drawer with PDF viewer, @mention comments, notification bell, folder assignment, 3-dot row menu, soft delete/Trash drawer all shipped. RLS enabled on all public tables.
 
 ## Feature status
 
@@ -58,15 +58,22 @@
 - Report file attachments via Supabase Storage (10MB limit), signed URL downloads (1-hour expiry)
 - **Known issue:** TipTap bullet points not working due to Tailwind prose CSS reset
 
-### Step 6: Documents — IMPLEMENTED
+### Step 6: Documents — IMPLEMENTED + OVERHAULED (2026-05-12)
 - Document center per production
 - Upload form with title, document type (6 categories), file picker
-- Document list with type badges, file size, uploader info
-- Delete with confirmation dialog
-- In-app document viewer (PDF iframe, image display, text iframe, fallback download)
-- Download via signed URLs (1-hour expiry)
-- Comments sidebar placeholder in viewer (no data model yet)
+- Document list with folder grouping, type badges, file size, uploader info
+- **Document drawer**: right-side panel opened by clicking a row; shows inline PDF/image viewer at `min(1400px, 92vw)` width
+- **Inline comments panel**: collapsible 320px right column with @mention support; mentions create in-app notifications
+- **@Mention system**: `MentionTextarea` and `MentionBody` reusable components in `components/ui/`; Tab key inserts top suggestion; `@{First Last}` token format stored in DB; rendered as highlighted spans in `MentionBody`
+- **Fullscreen PDF mode**: dedicated 40px dark bar above iframe (no UI clash) with exit button; Escape key exits fullscreen first then closes drawer
+- **Folder assignment picker**: inline `<select>` on each row to move a document between folders; calls `moveDocument` server action
+- **3-dot row menu**: replaces trash icon; options: Download (forced download via `Content-Disposition: attachment`), Share (copies URL with `?doc=ID` param to clipboard; fallback for HTTP), Delete (red, soft delete)
+- **Soft delete**: `deleteDocument` sets `deleted_at` only; Supabase Storage file preserved until permanent delete
+- **Trash drawer**: topbar icon with amber dot badge; portal-rendered right drawer lists soft-deleted docs and reports per production; per-item Restore and permanent Delete; purge countdown warning (≤3 days before 30-day window closes)
+- **Notification bell**: topbar bell icon with red unread-count badge; dropdown lists all notifications with link navigation; marks all read on open
+- **Direct download**: `getDocumentDownloadUrl` uses Supabase `{ download: fileName }` option for forced browser download
 - Schema includes `processingStatus` field for future AI script analysis
+- **Known limitation:** `getDocumentUrl()` still has no production-membership permission check
 
 ### Step 7: File Uploads — IMPLEMENTED
 - Supabase Storage integration using `attachments` bucket
@@ -152,7 +159,7 @@
 
 - **Activity log** — placeholder page exists, capability defined, feature directory has only .gitkeep
 - **AI script analysis** — `documentType` and `processingStatus` fields exist in documents schema, no processing logic
-- **Document comments/annotations** — placeholder sidebar in document viewer, no data model or functionality
+- **Automated trash purge** — 30-day purge window shown in UI; no cron job or edge function to auto-permanently-delete expired items
 
 ## Not implemented
 

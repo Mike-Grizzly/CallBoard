@@ -12,12 +12,13 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ## Product questions
 
-- Steps 8–11 are complete. What is the next feature step?
+- Document Center overhaul complete. What is the next feature step?
 - Should rehearsal report departments be configurable per production, or remain fixed?
 - Should attendance tracking be added to rehearsal reports?
 - Should productions have additional statuses beyond draft/active/archived?
-- Should there be a notification system when reports are filed or documents uploaded?
+- Should notifications be created when reports are filed (currently only on @mention in document comments)?
 - Should the "requested role" from signup trigger any workflow (e.g., admin approval queue)?
+- Should there be an automated purge for trash items older than 30 days (Supabase edge function / cron)? Currently manual only.
 
 ## Architecture questions
 
@@ -47,9 +48,10 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 - TipTap bullet points do not render due to Tailwind prose CSS reset. When should this be fixed?
 - Mobile navigation: sidebar is hidden on mobile with no alternative. When should a mobile drawer be added?
-- Should the document viewer support page-by-page navigation for multi-page PDFs?
+- Should the document viewer support page-by-page navigation for multi-page PDFs? (currently only #navpanes=0 suppression)
 - Should there be a search/filter capability on the documents list?
 - Should the production overview cards show more metadata (dates, member count)?
+- @mention name-change edge case: if a user's display name changes, old `@{First Last}` tokens still render but won't re-match for new notifications. Is this acceptable for MVP?
 
 ## Notes questions
 

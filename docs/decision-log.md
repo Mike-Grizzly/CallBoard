@@ -222,6 +222,36 @@ Record of durable project decisions. Add new entries at the bottom with date and
 
 ---
 
+## 2026-05-12 — Soft delete for documents and reports; no automated purge
+
+**Decision:** `deleteDocument` and `deleteReport` soft-delete by setting `deleted_at`. Supabase Storage files are preserved until permanent delete. A 30-day purge window is shown in the Trash drawer UI, but no automated purge (cron/edge function) exists.
+
+**Reason:** Soft delete is needed for undo. Automated purge adds infrastructure complexity out of scope for MVP. The 30-day window is communicated to users; admins can manually permanent-delete from the Trash drawer.
+
+**Impact:** `deleted_at` columns added to `documents` and `rehearsal_reports` via Supabase MCP migration. All production queries filter `deleted_at IS NULL`. Two new indexes added. Permanent delete action removes Storage file then hard-deletes the row.
+
+---
+
+## 2026-05-12 — createPortal to document.body for all floating UI (menus, drawers)
+
+**Decision:** Any popover, dropdown, or drawer that must appear above transformed ancestors uses `createPortal(content, document.body)`. Position is calculated from `element.getBoundingClientRect()`.
+
+**Reason:** The `.anim-in` CSS class applies `transform: translateY(4px)` during the fade-up animation, which creates a CSS stacking context. `position: fixed` children of a stacking-context ancestor are positioned relative to that ancestor, not the viewport — causing menus to appear at wrong coordinates (middle of screen).
+
+**Impact:** `document-row-menu.tsx`, `trash-drawer.tsx`, and the tag modal in notes all use this pattern. Any future floating UI that might be rendered inside an animated ancestor should follow the same approach.
+
+---
+
+## 2026-05-12 — @mention token format: `@{First Last}`
+
+**Decision:** Mention tokens are stored verbatim in comment body text as `@{First Last}`. Rendering splits on this pattern and wraps matches in accent-colored spans (`MentionBody`). Notification targeting parses names from mentions and matches against `profiles` by full name.
+
+**Reason:** A structured format (e.g. `@[id]`) would require resolving IDs client-side during rendering. The name-based format is human-readable in raw storage, survives profile ID changes gracefully, and the match is deterministic for notification dispatch.
+
+**Impact:** Name-change edge case: if a user changes their display name after being mentioned, old tokens still render but won't re-match for future notification dispatch. Acceptable for MVP.
+
+---
+
 ## 2026-05-11 — RLS enabled on all public tables; policies intentionally omitted
 
 **Decision:** Turn on Row Level Security for the 9 remaining unsecured tables (`organizations`, `productions`, `announcements`, `production_scenes`, `scene_beats`, `stage_configurations`, `blocking_positions`, `note_tags`, `production_notes`) without writing any policies. Migration `enable_rls_on_public_tables` applied via Supabase MCP.
