@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { X, File, Download, MessageSquare, MessageSquareOff } from "lucide-react";
+import {
+  X,
+  File,
+  Download,
+  MessageSquare,
+  MessageSquareOff,
+  Maximize2,
+  Minimize2,
+} from "lucide-react";
 import { getDocumentUrl } from "@/features/documents/actions";
 import { DocumentCommentsPanel } from "./document-comments-panel";
 import type { DocumentWithUploader } from "@/features/documents/queries";
@@ -18,6 +26,12 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Append PDF viewer params to suppress the page thumbnail sidebar.
+// #navpanes=0 works in Chrome; pagemode=none closes the sidebar in Firefox.
+function pdfViewerUrl(url: string): string {
+  return `${url}#navpanes=0&pagemode=none`;
 }
 
 function DownloadButton({
@@ -64,6 +78,7 @@ export function DocumentDrawer({ doc, members, onClose }: Props) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loadingUrl, setLoadingUrl] = useState(true);
   const [showComments, setShowComments] = useState(true);
+  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
     let canceled = false;
@@ -80,11 +95,17 @@ export function DocumentDrawer({ doc, members, onClose }: Props) {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (fullscreen) {
+          setFullscreen(false);
+        } else {
+          onClose();
+        }
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [fullscreen, onClose]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -97,11 +118,60 @@ export function DocumentDrawer({ doc, members, onClose }: Props) {
   const isPdf = doc.contentType === "application/pdf";
   const isImage = doc.contentType.startsWith("image/");
 
+  const viewerContent =
+    loadingUrl ? (
+      <div style={{ margin: "auto", color: "var(--ink-4)", fontSize: 13 }}>
+        Loading preview…
+      </div>
+    ) : isPdf && signedUrl ? (
+      <iframe
+        src={pdfViewerUrl(signedUrl)}
+        style={{ width: "100%", height: "100%", border: "none" }}
+        title={doc.title}
+      />
+    ) : isImage && signedUrl ? (
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 20,
+        }}
+      >
+        <img
+          src={signedUrl}
+          alt={doc.title}
+          style={{
+            maxWidth: "100%",
+            maxHeight: "100%",
+            objectFit: "contain",
+            borderRadius: 4,
+          }}
+        />
+      </div>
+    ) : (
+      <div style={{ margin: "auto", textAlign: "center", padding: "48px 32px" }}>
+        <File
+          size={52}
+          strokeWidth={1.1}
+          style={{ color: "var(--ink-4)", marginBottom: 14 }}
+        />
+        <p style={{ fontSize: 15, fontWeight: 500 }}>{doc.fileName}</p>
+        <p style={{ fontSize: 13, color: "var(--ink-3)", margin: "6px 0 20px" }}>
+          Preview not available for this file type
+        </p>
+        {signedUrl && (
+          <DownloadButton storagePath={doc.storagePath} fileName={doc.fileName} />
+        )}
+      </div>
+    );
+
   return (
     <>
       {/* Backdrop */}
       <div
-        onClick={onClose}
+        onClick={fullscreen ? undefined : onClose}
         style={{
           position: "fixed",
           inset: 0,
@@ -109,6 +179,48 @@ export function DocumentDrawer({ doc, members, onClose }: Props) {
           background: "rgba(0,0,0,0.4)",
         }}
       />
+
+      {/* Fullscreen overlay — sits above the drawer */}
+      {fullscreen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 210,
+            background: "#1a1a1a",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {/* Fullscreen viewer */}
+          <div style={{ flex: 1, overflow: "hidden" }}>{viewerContent}</div>
+
+          {/* Floating exit button */}
+          <button
+            onClick={() => setFullscreen(false)}
+            title="Exit fullscreen (Esc)"
+            style={{
+              position: "absolute",
+              top: 16,
+              right: 16,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "6px 12px",
+              background: "rgba(0,0,0,0.6)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: 6,
+              color: "#fff",
+              fontSize: 13,
+              cursor: "pointer",
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            <Minimize2 size={14} />
+            <span>Exit fullscreen</span>
+          </button>
+        </div>
+      )}
 
       {/* Drawer panel */}
       <div
@@ -178,6 +290,15 @@ export function DocumentDrawer({ doc, members, onClose }: Props) {
             </div>
           </div>
           <DownloadButton storagePath={doc.storagePath} fileName={doc.fileName} />
+          {(isPdf || isImage) && (
+            <button
+              className="btn ghost btn-icon"
+              onClick={() => setFullscreen(true)}
+              title="Fullscreen"
+            >
+              <Maximize2 size={16} />
+            </button>
+          )}
           <button
             className="btn ghost btn-icon"
             onClick={() => setShowComments((v) => !v)}
@@ -218,74 +339,7 @@ export function DocumentDrawer({ doc, members, onClose }: Props) {
               flexDirection: "column",
             }}
           >
-            {loadingUrl ? (
-              <div
-                style={{
-                  margin: "auto",
-                  color: "var(--ink-4)",
-                  fontSize: 13,
-                }}
-              >
-                Loading preview…
-              </div>
-            ) : isPdf && signedUrl ? (
-              <iframe
-                src={signedUrl}
-                style={{ width: "100%", height: "100%", border: "none" }}
-                title={doc.title}
-              />
-            ) : isImage && signedUrl ? (
-              <div
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: 20,
-                }}
-              >
-                <img
-                  src={signedUrl}
-                  alt={doc.title}
-                  style={{
-                    maxWidth: "100%",
-                    maxHeight: "100%",
-                    objectFit: "contain",
-                    borderRadius: 4,
-                  }}
-                />
-              </div>
-            ) : (
-              <div
-                style={{
-                  margin: "auto",
-                  textAlign: "center",
-                  padding: "48px 32px",
-                }}
-              >
-                <File
-                  size={52}
-                  strokeWidth={1.1}
-                  style={{ color: "var(--ink-4)", marginBottom: 14 }}
-                />
-                <p style={{ fontSize: 15, fontWeight: 500 }}>{doc.fileName}</p>
-                <p
-                  style={{
-                    fontSize: 13,
-                    color: "var(--ink-3)",
-                    margin: "6px 0 20px",
-                  }}
-                >
-                  Preview not available for this file type
-                </p>
-                {signedUrl && (
-                  <DownloadButton
-                    storagePath={doc.storagePath}
-                    fileName={doc.fileName}
-                  />
-                )}
-              </div>
-            )}
+            {viewerContent}
           </div>
 
           {/* Comments */}
