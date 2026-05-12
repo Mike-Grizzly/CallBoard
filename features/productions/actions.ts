@@ -10,6 +10,7 @@ import {
   validateProductionForm,
   type ProductionFormErrors,
 } from "./validation";
+import { createDefaultFolders } from "@/features/documents/actions";
 
 export type CreateProductionResult = {
   errors?: ProductionFormErrors;
@@ -34,14 +35,19 @@ export async function createProduction(
 
   const org = await getOrCreateDefaultOrganization();
 
-  await db.insert(productions).values({
-    organizationId: org.id,
-    title: data!.title,
-    slug: data!.slug,
-    status: data!.status,
-    openingDate: data!.openingDate,
-    closingDate: data!.closingDate,
-  });
+  const [newProduction] = await db
+    .insert(productions)
+    .values({
+      organizationId: org.id,
+      title: data!.title,
+      slug: data!.slug,
+      status: data!.status,
+      openingDate: data!.openingDate,
+      closingDate: data!.closingDate,
+    })
+    .returning({ id: productions.id });
+
+  await createDefaultFolders(newProduction.id);
 
   redirect("/productions");
 }

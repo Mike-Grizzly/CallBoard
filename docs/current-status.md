@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-05-11
 
-**Current milestone:** Steps 1-12 complete. Call schedule calendar shipped. UI port Phase 1 (design tokens / shell) done, Phase 2 (per-tab visual port) in progress. Overview tab ported. Rehearsal Reports tab now at full demo parity — schema expanded with status, attendance, breaks, scenes, schedule changes, line notes, injuries; new editor matches the demo exactly; edit flow exists; email dialog uses the demo's modal chrome. The per-production tab is now labelled "Rehearsal Reports" and sits second after Overview. RLS enabled on all public tables. See `docs/feature-specs/11-rehearsal-report-demo-parity.md` for the full scope.
+**Current milestone:** Steps 1-12 complete. Notes tab UI ported to warm theatre design system. Call schedule calendar shipped. UI port Phase 1 (design tokens / shell) done, Phase 2 (per-tab visual port) in progress — Overview and Notes tabs fully ported, Rehearsal Reports at full demo parity. RLS enabled on all public tables.
 
 ## Feature status
 
@@ -117,18 +117,20 @@
 - **Permissions:** SM/Director/Choreographer/Admin/Producer can edit; Cast/Crew view only
 - **Known future work (Phase 3):** Set piece rotation via drag handle (free angle); full beat-breakdown export (multi-page PDF or print view)
 
-### Step 11: Notes — IMPLEMENTED
+### Step 11: Notes ("My Notes") — IMPLEMENTED + UI PORTED
 
-- Two-panel Notion-like interface per production (`/productions/[slug]/notes`)
-- Notes list with filter tabs (All, To-do, Pinned, Notes, Done)
-- Pinned notes grouped at top of list
-- Unified note type with optional to-do checkbox and completion toggle
-- Pin toggle, visibility toggle (private/shared), due date field
-- Org-level tag library with colored tags; seeded with 7 defaults on first access
-- Admin/producer/director/stage_manager can add/remove tags via tag manager modal
+- Tab labelled **"My Notes"**, 3rd position in production tab strip (after Rehearsal Reports)
+- Two-column grid layout (360px list + 1fr editor) matching the warm theatre design system
+- Notes are **always private** — visibility toggle removed from UI; stored as "private" in DB
+- Filter tabs: All, To-do, Pinned, Notes (Done filter removed; completed to-dos sort to bottom of To-do view)
+- To-do rows have a **clickable circle** in the list — checks off without opening the note
+- **Animated strikethrough:** line draws across title over 350ms + colour fade; item holds list position during animation before sinking (~420ms)
+- **Auto-date:** new notes pre-fill due date with today
+- Pinned notes grouped at top; tag picker dropdown in editor header
+- Org-level tag library seeded with 6 defaults: Follow-up, Blocking, Props, Costumes, Technical, Safety
+- Tag manager modal uses **React portal** (escapes CSS transform stacking context), **backdrop blur**, click-outside-to-close
 - TipTap rich text editor with auto-save (600ms debounce)
-- Notes added as card on production overview and tab in production nav
-- **Known limitation:** Visibility toggle is display-only — no query-level enforcement; all team members see all notes (deferred)
+- **Known limitation:** Privacy not enforced at query level — all production members can technically read all notes in DB
 
 ### Step 12: Call Schedule Calendar — IMPLEMENTED
 

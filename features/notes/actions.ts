@@ -18,6 +18,8 @@ export async function createNote(
     return { error: "You don't have permission to create notes." };
   }
 
+  const today = new Date().toISOString().split("T")[0];
+
   const rows = await db
     .insert(productionNotes)
     .values({
@@ -26,6 +28,7 @@ export async function createNote(
       title: "",
       content: "",
       visibility: "private",
+      dueDate: today,
     })
     .returning({ id: productionNotes.id });
 

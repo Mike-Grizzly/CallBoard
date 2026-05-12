@@ -67,6 +67,7 @@ export const rehearsalReports = pgTable("rehearsal_reports", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
 export type RehearsalReport = typeof rehearsalReports.$inferSelect;

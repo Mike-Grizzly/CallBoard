@@ -15,3 +15,4 @@ export * from "./note-tags";
 export * from "./production-notes";
 export * from "./calls";
 export * from "./beat-comments";
+export * from "./notifications";
