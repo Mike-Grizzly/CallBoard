@@ -9,8 +9,10 @@ import {
 import { useRouter } from "next/navigation";
 import {
   DndContext,
+  DragOverlay,
   useDraggable,
   type DragEndEvent,
+  type DragStartEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -292,7 +294,7 @@ function OffstageActorTile({
   isDisabled: boolean;
   onClickPlace: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `offstage:${member.userId}`,
     disabled: isDisabled || isOnCanvas,
   });
@@ -317,11 +319,9 @@ function OffstageActorTile({
         cursor: isOnCanvas || isDisabled ? "default" : isDragging ? "grabbing" : "grab",
         border: "1px dashed " + (isOnCanvas ? "var(--border)" : "var(--border-strong)"),
         background: isOnCanvas ? "transparent" : "var(--bg-muted)",
-        opacity: isDisabled ? 0.4 : isOnCanvas ? 0.4 : isDragging ? 0.5 : 1,
-        transform: CSS.Translate.toString(transform),
+        opacity: isDisabled ? 0.4 : isOnCanvas ? 0.4 : isDragging ? 0.3 : 1,
         touchAction: "none",
         userSelect: "none",
-        zIndex: isDragging ? 50 : undefined,
       }}
       title={
         isOnCanvas
@@ -351,6 +351,68 @@ function OffstageActorTile({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Off-stage Set Piece Tile (draggable) ───────────────────────────
+
+function OffstageSetPieceTile({
+  piece,
+  isOnCanvas,
+  isDisabled,
+  onClickPlace,
+}: {
+  piece: { key: string; label: string; svgPath: string };
+  isOnCanvas: boolean;
+  isDisabled: boolean;
+  onClickPlace: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `offstage-piece:${piece.key}`,
+    disabled: isDisabled || isOnCanvas,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={isDisabled || isOnCanvas ? undefined : onClickPlace}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "6px 10px",
+        borderRadius: 6,
+        cursor: isOnCanvas || isDisabled ? "default" : isDragging ? "grabbing" : "grab",
+        border: "1px dashed " + (isOnCanvas ? "var(--border)" : "var(--border-strong)"),
+        background: isOnCanvas ? "transparent" : "var(--bg-muted)",
+        opacity: isDisabled ? 0.4 : isOnCanvas ? 0.4 : isDragging ? 0.3 : 1,
+        touchAction: "none",
+        userSelect: "none",
+      }}
+      title={
+        isOnCanvas
+          ? "Already on stage"
+          : isDisabled
+            ? "Select a beat first"
+            : "Drag onto stage or click to place at center"
+      }
+    >
+      <svg viewBox="0 0 80 60" width={28} height={21} style={{ flexShrink: 0 }}>
+        <path
+          d={piece.svgPath}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <span className="truncate" style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-2)" }}>
+        {piece.label}
+      </span>
     </div>
   );
 }
@@ -525,6 +587,7 @@ export function BlockingCanvas({
   const [newBeatLabel, setNewBeatLabel] = useState("");
   const [setPiecesOpen, setSetPiecesOpen] = useState(true);
   const [commentsOpen, setCommentsOpen] = useState(true);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -591,7 +654,16 @@ export function BlockingCanvas({
     setPositions(prev);
   }
 
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as string);
+  }
+
+  function handleDragCancel() {
+    setActiveId(null);
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    setActiveId(null);
     const { active, delta } = event;
     const id = active.id as string;
 
@@ -618,6 +690,38 @@ export function BlockingCanvas({
         await saveBlockingPosition({
           beatId: currentBeatId,
           entityType: "actor",
+          entityId,
+          xPercent: clampedX,
+          yPercent: clampedY,
+          rotation: 0,
+        });
+      });
+      return;
+    }
+
+    // Off-stage set piece dragged onto canvas
+    if (id.startsWith("offstage-piece:")) {
+      if (!canEdit || !currentBeatId) return;
+      const entityId = id.replace("offstage-piece:", "");
+      const container = canvasContainerRef.current;
+      if (!container) return;
+      const translated = active.rect.current.translated;
+      if (!translated) return;
+      const containerRect = container.getBoundingClientRect();
+      const centerX = translated.left + translated.width / 2;
+      const centerY = translated.top + translated.height / 2;
+      const xPercent = ((centerX - containerRect.left) / containerRect.width) * 100;
+      const yPercent = ((centerY - containerRect.top) / containerRect.height) * 100;
+      if (xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100) return;
+      const clampedX = Math.max(4, Math.min(96, xPercent));
+      const clampedY = Math.max(4, Math.min(96, yPercent));
+      pushHistory(positions);
+      const key = `set_piece:${entityId}`;
+      setPositions((prev) => ({ ...prev, [key]: { xPercent: clampedX, yPercent: clampedY, rotation: 0 } }));
+      startTransition(async () => {
+        await saveBlockingPosition({
+          beatId: currentBeatId,
+          entityType: "set_piece",
           entityId,
           xPercent: clampedX,
           yPercent: clampedY,
@@ -903,7 +1007,12 @@ export function BlockingCanvas({
   ).length;
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
     <div
       className="anim-in"
       style={{ display: "grid", gridTemplateColumns: "248px 1fr 264px", gap: 16, maxWidth: 1400, margin: "0 auto" }}
@@ -1457,44 +1566,13 @@ export function BlockingCanvas({
                   const key = `set_piece:${piece.key}`;
                   const isOnCanvas = !!positions[key];
                   return (
-                    <button
+                    <OffstageSetPieceTile
                       key={piece.key}
-                      disabled={!canEdit || !currentBeatId || isOnCanvas}
-                      onClick={() => placeOnCanvas("set_piece", piece.key)}
-                      className="w-full text-left"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "6px 10px",
-                        borderRadius: 6,
-                        cursor: isOnCanvas || !currentBeatId ? "default" : "pointer",
-                        border: "1px dashed " + (isOnCanvas ? "var(--border)" : "var(--border-strong)"),
-                        background: isOnCanvas ? "transparent" : "var(--bg-muted)",
-                        opacity: (!canEdit || !currentBeatId) ? 0.4 : isOnCanvas ? 0.45 : 1,
-                      }}
-                      title={
-                        isOnCanvas
-                          ? "Already on stage"
-                          : !currentBeatId
-                            ? "Select a beat first"
-                            : "Click to place on stage"
-                      }
-                    >
-                      <svg viewBox="0 0 80 60" width={28} height={21} style={{ flexShrink: 0 }}>
-                        <path
-                          d={piece.svgPath}
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      <span className="truncate" style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-2)" }}>
-                        {piece.label}
-                      </span>
-                    </button>
+                      piece={piece}
+                      isOnCanvas={isOnCanvas}
+                      isDisabled={!canEdit || !currentBeatId}
+                      onClickPlace={() => placeOnCanvas("set_piece", piece.key)}
+                    />
                   );
                 })}
               </div>
@@ -1542,6 +1620,93 @@ export function BlockingCanvas({
         )}
       </div>
     </div>
+
+    {/* Drag ghost — follows cursor for off-stage drags */}
+    <DragOverlay dropAnimation={null}>
+      {(() => {
+        if (!activeId) return null;
+
+        if (activeId.startsWith("offstage:")) {
+          const userId = activeId.replace("offstage:", "");
+          const member = castMembers.find((m) => m.userId === userId);
+          if (!member) return null;
+          const color = actorColors[member.userId];
+          const ini =
+            ((member.firstName?.[0] ?? "") + (member.lastName?.[0] ?? "")).toUpperCase() ||
+            member.email[0]?.toUpperCase() || "?";
+          const displayName =
+            member.characterName ??
+            (member.firstName || member.lastName
+              ? `${member.firstName ?? ""} ${member.lastName ?? ""}`.trim()
+              : member.email);
+          return (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "6px 10px",
+                borderRadius: 8,
+                background: "var(--bg-elev)",
+                border: "1px solid var(--border-strong)",
+                boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
+                pointerEvents: "none",
+                minWidth: 120,
+                opacity: 0.96,
+              }}
+            >
+              <div
+                className="avatar"
+                style={{ width: 28, height: 28, fontSize: 11, background: color, flexShrink: 0 }}
+              >
+                {ini}
+              </div>
+              <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink)", whiteSpace: "nowrap" }}>
+                {displayName}
+              </span>
+            </div>
+          );
+        }
+
+        if (activeId.startsWith("offstage-piece:")) {
+          const key = activeId.replace("offstage-piece:", "");
+          const piece = SET_PIECES.find((p) => p.key === key);
+          if (!piece) return null;
+          return (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "6px 10px",
+                borderRadius: 8,
+                background: "var(--bg-elev)",
+                border: "1px solid var(--border-strong)",
+                boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
+                pointerEvents: "none",
+                opacity: 0.96,
+              }}
+            >
+              <svg viewBox="0 0 80 60" width={28} height={21} style={{ flexShrink: 0 }}>
+                <path
+                  d={piece.svgPath}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-2)", whiteSpace: "nowrap" }}>
+                {piece.label}
+              </span>
+            </div>
+          );
+        }
+
+        return null;
+      })()}
+    </DragOverlay>
     </DndContext>
   );
 }
