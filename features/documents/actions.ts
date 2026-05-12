@@ -238,3 +238,42 @@ export async function getDocumentUrl(storagePath: string): Promise<string> {
 
   return data?.signedUrl ?? "";
 }
+
+export async function getDocumentDownloadUrl(
+  storagePath: string,
+  fileName: string,
+): Promise<string> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.storage
+    .from("attachments")
+    .createSignedUrl(storagePath, 3600, { download: fileName });
+
+  return data?.signedUrl ?? "";
+}
+
+export type MoveDocumentResult = { error?: string; success?: boolean };
+
+export async function moveDocument(
+  formData: FormData,
+): Promise<MoveDocumentResult> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "documents:upload")) {
+    return { error: "You don't have permission to move documents." };
+  }
+
+  const documentId = formData.get("document_id") as string;
+  const folderId = (formData.get("folder_id") as string) || null;
+
+  if (!documentId) {
+    return { error: "Missing document ID." };
+  }
+
+  await db
+    .update(documents)
+    .set({ folderId })
+    .where(eq(documents.id, documentId));
+
+  revalidatePath("/productions");
+  return { success: true };
+}

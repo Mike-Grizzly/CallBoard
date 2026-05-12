@@ -10,8 +10,10 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
-import { getDocumentUrl } from "@/features/documents/actions";
+import { getDocumentUrl, getDocumentDownloadUrl } from "@/features/documents/actions";
 import { DocumentCommentsPanel } from "./document-comments-panel";
+import { FolderSelect } from "./folder-select";
+import type { FolderOption } from "./folder-select";
 import type { DocumentWithUploader } from "@/features/documents/queries";
 import type { ProductionMember } from "@/features/members/queries";
 
@@ -45,12 +47,14 @@ function DownloadButton({
 
   function handleDownload() {
     startTransition(async () => {
-      const url = await getDocumentUrl(storagePath);
+      const url = await getDocumentDownloadUrl(storagePath, fileName);
       if (url) {
         const a = document.createElement("a");
         a.href = url;
         a.download = fileName;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
       }
     });
   }
@@ -71,10 +75,11 @@ function DownloadButton({
 interface Props {
   doc: DocumentWithUploader;
   members: ProductionMember[];
+  folders: FolderOption[];
   onClose: () => void;
 }
 
-export function DocumentDrawer({ doc, members, onClose }: Props) {
+export function DocumentDrawer({ doc, members, folders, onClose }: Props) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loadingUrl, setLoadingUrl] = useState(true);
   const [showComments, setShowComments] = useState(true);
@@ -300,11 +305,11 @@ export function DocumentDrawer({ doc, members, onClose }: Props) {
                 flexWrap: "wrap",
               }}
             >
-              {doc.folderName && (
-                <span className="pill" data-c={color || undefined}>
-                  {doc.folderName}
-                </span>
-              )}
+              <FolderSelect
+                documentId={doc.id}
+                currentFolderId={doc.folderId}
+                folders={folders}
+              />
               <span>
                 {doc.fileName} · {formatFileSize(doc.fileSize)}
               </span>

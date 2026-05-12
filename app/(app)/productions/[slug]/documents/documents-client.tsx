@@ -16,6 +16,7 @@ import { createFolder } from "@/features/documents/actions";
 import { DocumentUploadForm } from "./document-upload-form";
 import { DocumentDeleteButton } from "./document-delete-button";
 import { DocumentDrawer } from "./document-drawer";
+import { FolderSelect } from "./folder-select";
 import type {
   DocumentWithUploader,
   DocumentFolder,
@@ -511,19 +512,14 @@ export function DocumentsClient({
                         {doc.fileName} · {formatFileSize(doc.fileSize)}
                       </div>
                     </div>
-                    {doc.folderName ? (
-                      <span
-                        className="pill"
-                        data-c={color || undefined}
-                        style={{ justifySelf: "start" }}
-                      >
-                        {doc.folderName}
-                      </span>
-                    ) : (
-                      <span style={{ color: "var(--ink-4)", fontSize: 12 }}>
-                        —
-                      </span>
-                    )}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <FolderSelect
+                        documentId={doc.id}
+                        currentFolderId={doc.folderId}
+                        folders={folders}
+                        stopPropagation
+                      />
+                    </div>
                     <span
                       style={{
                         color: "var(--ink-3)",
@@ -618,6 +614,7 @@ export function DocumentsClient({
         <DocumentDrawer
           doc={openDoc}
           members={members}
+          folders={folders}
           onClose={() => setOpenDoc(null)}
         />
       )}
