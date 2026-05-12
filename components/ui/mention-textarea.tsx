@@ -65,6 +65,9 @@ export function MentionTextarea({
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Escape") {
       setMention(null);
+    } else if (e.key === "Tab" && mention && filteredMembers.length > 0) {
+      e.preventDefault();
+      insertMention(filteredMembers[0]);
     } else if (e.key === "Enter" && !e.shiftKey && !mention) {
       if (onSubmit) {
         e.preventDefault();
@@ -109,7 +112,7 @@ export function MentionTextarea({
             overflowY: "auto",
           }}
         >
-          {filteredMembers.map((m) => (
+          {filteredMembers.map((m, i) => (
             <button
               key={m.id}
               onMouseDown={(e) => {
@@ -117,13 +120,15 @@ export function MentionTextarea({
                 insertMention(m);
               }}
               style={{
-                display: "block",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
                 width: "100%",
                 textAlign: "left",
                 padding: "8px 12px",
                 fontSize: 13,
                 border: "none",
-                background: "transparent",
+                background: i === 0 ? "var(--bg-muted)" : "transparent",
                 cursor: "pointer",
                 color: "var(--ink)",
               }}
@@ -133,15 +138,33 @@ export function MentionTextarea({
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.background =
-                  "transparent";
+                  i === 0 ? "var(--bg-muted)" : "transparent";
               }}
             >
-              {memberFullName(m)}
-              {m.role && (
+              <span>
+                {memberFullName(m)}
+                {m.role && (
+                  <span
+                    style={{ color: "var(--ink-4)", fontSize: 11, marginLeft: 6 }}
+                  >
+                    {m.role}
+                  </span>
+                )}
+              </span>
+              {i === 0 && (
                 <span
-                  style={{ color: "var(--ink-4)", fontSize: 11, marginLeft: 6 }}
+                  style={{
+                    fontSize: 10,
+                    color: "var(--ink-4)",
+                    background: "var(--bg-sunken)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 3,
+                    padding: "1px 5px",
+                    fontFamily: "monospace",
+                    flexShrink: 0,
+                  }}
                 >
-                  {m.role}
+                  Tab
                 </span>
               )}
             </button>

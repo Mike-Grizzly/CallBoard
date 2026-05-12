@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { X, File, Download } from "lucide-react";
+import { X, File, Download, MessageSquare, MessageSquareOff } from "lucide-react";
 import { getDocumentUrl } from "@/features/documents/actions";
 import { DocumentCommentsPanel } from "./document-comments-panel";
 import type { DocumentWithUploader } from "@/features/documents/queries";
@@ -63,6 +63,7 @@ interface Props {
 export function DocumentDrawer({ doc, members, onClose }: Props) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loadingUrl, setLoadingUrl] = useState(true);
+  const [showComments, setShowComments] = useState(true);
 
   useEffect(() => {
     let canceled = false;
@@ -117,7 +118,7 @@ export function DocumentDrawer({ doc, members, onClose }: Props) {
           top: 0,
           right: 0,
           bottom: 0,
-          width: "min(1000px, 85vw)",
+          width: "min(1400px, 92vw)",
           zIndex: 201,
           background: "var(--bg-elev)",
           boxShadow: "-8px 0 40px rgba(0,0,0,.18)",
@@ -179,6 +180,18 @@ export function DocumentDrawer({ doc, members, onClose }: Props) {
           <DownloadButton storagePath={doc.storagePath} fileName={doc.fileName} />
           <button
             className="btn ghost btn-icon"
+            onClick={() => setShowComments((v) => !v)}
+            title={showComments ? "Hide comments" : "Show comments"}
+            style={{ color: showComments ? "var(--accent)" : undefined }}
+          >
+            {showComments ? (
+              <MessageSquare size={16} />
+            ) : (
+              <MessageSquareOff size={16} />
+            )}
+          </button>
+          <button
+            className="btn ghost btn-icon"
             onClick={onClose}
             title="Close (Esc)"
           >
@@ -191,7 +204,7 @@ export function DocumentDrawer({ doc, members, onClose }: Props) {
           style={{
             flex: 1,
             display: "grid",
-            gridTemplateColumns: "1fr 320px",
+            gridTemplateColumns: showComments ? "1fr 320px" : "1fr",
             overflow: "hidden",
             minHeight: 0,
           }}
@@ -199,7 +212,7 @@ export function DocumentDrawer({ doc, members, onClose }: Props) {
           {/* Document viewer */}
           <div
             style={{
-              overflow: "auto",
+              overflow: "hidden",
               background: "var(--bg-sunken)",
               display: "flex",
               flexDirection: "column",
@@ -218,7 +231,7 @@ export function DocumentDrawer({ doc, members, onClose }: Props) {
             ) : isPdf && signedUrl ? (
               <iframe
                 src={signedUrl}
-                style={{ width: "100%", flex: 1, border: "none", minHeight: 400 }}
+                style={{ width: "100%", height: "100%", border: "none" }}
                 title={doc.title}
               />
             ) : isImage && signedUrl ? (
@@ -276,16 +289,18 @@ export function DocumentDrawer({ doc, members, onClose }: Props) {
           </div>
 
           {/* Comments */}
-          <div
-            style={{
-              borderLeft: "1px solid var(--border)",
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
-            <DocumentCommentsPanel documentId={doc.id} members={members} />
-          </div>
+          {showComments && (
+            <div
+              style={{
+                borderLeft: "1px solid var(--border)",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+              }}
+            >
+              <DocumentCommentsPanel documentId={doc.id} members={members} />
+            </div>
+          )}
         </div>
       </div>
     </>
