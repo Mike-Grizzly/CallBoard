@@ -11,11 +11,12 @@ import {
   getProductionMembers,
   getProductionMembership,
 } from "@/features/members/queries";
-import { getReportsByProduction } from "@/features/reports/queries";
-import { getDocumentsByProduction } from "@/features/documents/queries";
+import { getReportsByProduction, getDeletedReportsByProduction } from "@/features/reports/queries";
+import { getDocumentsByProduction, getDeletedDocumentsByProduction } from "@/features/documents/queries";
 import { getAnnouncementsByProduction } from "@/features/announcements/queries";
 import { getUnreadNotificationCount } from "@/features/notifications/actions";
 import { NotificationBell } from "./notification-bell";
+import { TrashDrawer } from "./trash-drawer";
 import { ProductionTabsNav, type ProductionTab } from "./production-tabs";
 
 const STATUS_COPY: Record<
@@ -83,14 +84,18 @@ export default async function ProductionLayout({
   const canViewBlocking = can(user.role, "blocking:view");
   const canViewNotes = can(user.role, "notes:view");
 
-  const [members, reports, documents, announcements, unreadCount] =
+  const [members, reports, documents, announcements, unreadCount, deletedDocs, deletedReports] =
     await Promise.all([
       getProductionMembers(production.id),
       getReportsByProduction(production.id),
       getDocumentsByProduction(production.id),
       getAnnouncementsByProduction(production.id, org.id),
       getUnreadNotificationCount(),
+      getDeletedDocumentsByProduction(production.id),
+      getDeletedReportsByProduction(production.id),
     ]);
+
+  const initialTrashCount = deletedDocs.length + deletedReports.length;
 
   const director = members.find((m) => m.role === "director");
   const directorName = director
@@ -221,6 +226,7 @@ export default async function ProductionLayout({
             >
               <Search className="ico" aria-hidden />
             </button>
+            <TrashDrawer productionId={production.id} initialTrashCount={initialTrashCount} />
             <NotificationBell initialUnread={unreadCount} />
             {canManage && (
               <Link

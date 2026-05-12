@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { rehearsalReports, profiles } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc, isNull, isNotNull } from "drizzle-orm";
 
 export async function getReportsByProduction(productionId: string) {
   return db
@@ -19,7 +19,12 @@ export async function getReportsByProduction(productionId: string) {
     })
     .from(rehearsalReports)
     .innerJoin(profiles, eq(rehearsalReports.createdBy, profiles.id))
-    .where(eq(rehearsalReports.productionId, productionId))
+    .where(
+      and(
+        eq(rehearsalReports.productionId, productionId),
+        isNull(rehearsalReports.deletedAt),
+      ),
+    )
     .orderBy(desc(rehearsalReports.reportDate));
 }
 
@@ -74,7 +79,7 @@ export async function getReportById(reportId: string) {
     })
     .from(rehearsalReports)
     .innerJoin(profiles, eq(rehearsalReports.createdBy, profiles.id))
-    .where(eq(rehearsalReports.id, reportId))
+    .where(and(eq(rehearsalReports.id, reportId), isNull(rehearsalReports.deletedAt)))
     .limit(1);
 
   return results[0] ?? null;
@@ -83,6 +88,25 @@ export async function getReportById(reportId: string) {
 export type ReportDetail = NonNullable<
   Awaited<ReturnType<typeof getReportById>>
 >;
+
+export async function getDeletedReportsByProduction(productionId: string) {
+  return db
+    .select({
+      id: rehearsalReports.id,
+      reportNumber: rehearsalReports.reportNumber,
+      reportDate: rehearsalReports.reportDate,
+      status: rehearsalReports.status,
+      deletedAt: rehearsalReports.deletedAt,
+    })
+    .from(rehearsalReports)
+    .where(
+      and(
+        eq(rehearsalReports.productionId, productionId),
+        isNotNull(rehearsalReports.deletedAt),
+      ),
+    )
+    .orderBy(desc(rehearsalReports.deletedAt));
+}
 
 export async function getLatestReportNextCall(productionId: string) {
   const results = await db
@@ -93,7 +117,12 @@ export async function getLatestReportNextCall(productionId: string) {
       nextRehearsalLocation: rehearsalReports.nextRehearsalLocation,
     })
     .from(rehearsalReports)
-    .where(eq(rehearsalReports.productionId, productionId))
+    .where(
+      and(
+        eq(rehearsalReports.productionId, productionId),
+        isNull(rehearsalReports.deletedAt),
+      ),
+    )
     .orderBy(desc(rehearsalReports.reportDate))
     .limit(1);
   return results[0] ?? null;

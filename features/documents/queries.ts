@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { documents, documentFolders, documentComments, profiles } from "@/db/schema";
-import { eq, desc, asc } from "drizzle-orm";
+import { and, eq, desc, asc, isNull, isNotNull } from "drizzle-orm";
 
 export async function getFoldersByProduction(productionId: string) {
   return db
@@ -34,7 +34,12 @@ export async function getDocumentsByProduction(productionId: string) {
     .from(documents)
     .innerJoin(profiles, eq(documents.uploadedBy, profiles.id))
     .leftJoin(documentFolders, eq(documents.folderId, documentFolders.id))
-    .where(eq(documents.productionId, productionId))
+    .where(
+      and(
+        eq(documents.productionId, productionId),
+        isNull(documents.deletedAt),
+      ),
+    )
     .orderBy(desc(documents.createdAt));
 }
 
@@ -59,7 +64,7 @@ export async function getDocumentById(documentId: string) {
     .from(documents)
     .innerJoin(profiles, eq(documents.uploadedBy, profiles.id))
     .leftJoin(documentFolders, eq(documents.folderId, documentFolders.id))
-    .where(eq(documents.id, documentId))
+    .where(and(eq(documents.id, documentId), isNull(documents.deletedAt)))
     .limit(1);
 
   return rows[0] ?? null;
@@ -93,3 +98,26 @@ export type DocumentWithUploader = Awaited<
 export type DocumentCommentRow = Awaited<
   ReturnType<typeof getDocumentComments>
 >[number];
+
+export async function getDeletedDocumentsByProduction(productionId: string) {
+  return db
+    .select({
+      id: documents.id,
+      title: documents.title,
+      fileName: documents.fileName,
+      fileSize: documents.fileSize,
+      contentType: documents.contentType,
+      storagePath: documents.storagePath,
+      folderName: documentFolders.name,
+      deletedAt: documents.deletedAt,
+    })
+    .from(documents)
+    .leftJoin(documentFolders, eq(documents.folderId, documentFolders.id))
+    .where(
+      and(
+        eq(documents.productionId, productionId),
+        isNotNull(documents.deletedAt),
+      ),
+    )
+    .orderBy(desc(documents.deletedAt));
+}

@@ -123,24 +123,60 @@ export async function deleteDocument(
   }
 
   const documentId = formData.get("document_id") as string;
+  if (!documentId) return { error: "Missing document ID." };
 
-  if (!documentId) {
-    return { error: "Missing document ID." };
+  await db
+    .update(documents)
+    .set({ deletedAt: new Date() })
+    .where(eq(documents.id, documentId));
+
+  revalidatePath("/productions");
+  return { success: true };
+}
+
+export async function restoreDocument(
+  formData: FormData,
+): Promise<UploadDocumentResult> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "documents:upload")) {
+    return { error: "You don't have permission to restore documents." };
   }
 
+  const documentId = formData.get("document_id") as string;
+  if (!documentId) return { error: "Missing document ID." };
+
+  await db
+    .update(documents)
+    .set({ deletedAt: null })
+    .where(eq(documents.id, documentId));
+
+  revalidatePath("/productions");
+  return { success: true };
+}
+
+export async function permanentlyDeleteDocument(
+  formData: FormData,
+): Promise<UploadDocumentResult> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "documents:upload")) {
+    return { error: "You don't have permission to permanently delete documents." };
+  }
+
+  const documentId = formData.get("document_id") as string;
+  if (!documentId) return { error: "Missing document ID." };
+
   const doc = await db
-    .select()
+    .select({ storagePath: documents.storagePath })
     .from(documents)
     .where(eq(documents.id, documentId))
     .limit(1);
 
-  if (doc.length === 0) {
-    return { error: "Document not found." };
-  }
+  if (doc.length === 0) return { error: "Document not found." };
 
   const supabase = await createSupabaseServerClient();
   await supabase.storage.from("attachments").remove([doc[0].storagePath]);
-
   await db.delete(documents).where(eq(documents.id, documentId));
 
   revalidatePath("/productions");

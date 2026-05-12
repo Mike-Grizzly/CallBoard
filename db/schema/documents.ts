@@ -35,6 +35,7 @@ export const documents = pgTable("documents", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
 export const documentComments = pgTable("document_comments", {
