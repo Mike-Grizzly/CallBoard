@@ -14,7 +14,7 @@ import {
 import { useRouter } from "next/navigation";
 import { createFolder } from "@/features/documents/actions";
 import { DocumentUploadForm } from "./document-upload-form";
-import { DocumentDeleteButton } from "./document-delete-button";
+import { DocumentRowMenu } from "./document-row-menu";
 import { DocumentDrawer } from "./document-drawer";
 import { FolderSelect } from "./folder-select";
 import type {
@@ -536,7 +536,12 @@ export function DocumentsClient({
                     </span>
                     {canUpload && (
                       <div onClick={(e) => e.stopPropagation()}>
-                        <DocumentDeleteButton documentId={doc.id} />
+                        <DocumentRowMenu
+                          documentId={doc.id}
+                          storagePath={doc.storagePath}
+                          fileName={doc.fileName}
+                          slug={slug}
+                        />
                       </div>
                     )}
                   </div>
