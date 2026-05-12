@@ -192,33 +192,54 @@ export function DocumentDrawer({ doc, members, onClose }: Props) {
             flexDirection: "column",
           }}
         >
-          {/* Fullscreen viewer */}
-          <div style={{ flex: 1, overflow: "hidden" }}>{viewerContent}</div>
-
-          {/* Floating exit button */}
-          <button
-            onClick={() => setFullscreen(false)}
-            title="Exit fullscreen (Esc)"
+          {/* Slim bar above the viewer — keeps button out of the PDF chrome */}
+          <div
             style={{
-              position: "absolute",
-              top: 16,
-              right: 16,
+              flexShrink: 0,
+              height: 40,
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              padding: "6px 12px",
-              background: "rgba(0,0,0,0.6)",
-              border: "1px solid rgba(255,255,255,0.15)",
-              borderRadius: 6,
-              color: "#fff",
-              fontSize: 13,
-              cursor: "pointer",
-              backdropFilter: "blur(4px)",
+              justifyContent: "space-between",
+              padding: "0 16px",
+              background: "#111",
+              borderBottom: "1px solid rgba(255,255,255,0.08)",
             }}
           >
-            <Minimize2 size={14} />
-            <span>Exit fullscreen</span>
-          </button>
+            <span
+              style={{
+                fontSize: 13,
+                color: "rgba(255,255,255,0.5)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {doc.title}
+            </span>
+            <button
+              onClick={() => setFullscreen(false)}
+              title="Exit fullscreen (Esc)"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "4px 10px",
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                borderRadius: 6,
+                color: "rgba(255,255,255,0.8)",
+                fontSize: 13,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              <Minimize2 size={14} />
+              <span>Exit fullscreen</span>
+            </button>
+          </div>
+
+          {/* Viewer fills remaining space */}
+          <div style={{ flex: 1, overflow: "hidden" }}>{viewerContent}</div>
         </div>
       )}
 
