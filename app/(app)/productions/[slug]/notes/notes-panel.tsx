@@ -548,7 +548,7 @@ function NoteEditor({
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
         {canEdit ? (
           <div className="card" style={{ overflow: "hidden" }}>
-            <EditorToolbar editor={editor} />
+            {editor && <EditorToolbar editor={editor} />}
             <EditorContent editor={editor} />
           </div>
         ) : (
@@ -712,7 +712,7 @@ function TagManager({
   onTagRemoved: (tagId: string) => void;
 }) {
   const [name, setName] = useState("");
-  const [color, setColor] = useState(TAG_COLOR_OPTIONS[0]);
+  const [color, setColor] = useState<string>(TAG_COLOR_OPTIONS[0]);
   const [error, setError] = useState("");
   const [mounted, setMounted] = useState(false);
   const [, startTransition] = useTransition();

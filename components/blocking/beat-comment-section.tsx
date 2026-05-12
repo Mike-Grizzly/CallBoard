@@ -199,7 +199,7 @@ export function BeatCommentSection({
             onClick={handleSubmit}
             disabled={!body.trim() || submitting}
             className="btn primary"
-            style={{ height: 26, padding: "0 10px", fontSize: 12 }}
+            style={{ height: 28, padding: "0 12px", fontSize: 12 }}
           >
             <Send className="h-3 w-3" />
             <span>Send</span>

@@ -792,7 +792,7 @@ export function BlockingCanvas({
       {/* ─── Left panel: Scenes & Beats ─────────────────────── */}
       <div
         className="flex flex-col border-r border-[color:var(--border)]"
-        style={{ width: 260, background: "var(--bg)", flexShrink: 0 }}
+        style={{ width: 264, background: "var(--bg)", flexShrink: 0 }}
       >
         <div className="row-between border-b border-[color:var(--border)] px-3 py-2.5">
           <div className="h-eyebrow">Scenes</div>
@@ -800,7 +800,7 @@ export function BlockingCanvas({
             <button
               onClick={() => setAddingScene(true)}
               className="btn ghost"
-              style={{ height: 24, padding: "0 8px", fontSize: 11 }}
+              style={{ height: 28, padding: "0 10px", fontSize: 12 }}
               title="Add scene"
             >
               <Plus className="h-3 w-3" /><span>Add</span>
@@ -842,14 +842,14 @@ export function BlockingCanvas({
                 <button
                   onClick={handleCreateScene}
                   className="btn primary"
-                  style={{ height: 26, padding: "0 10px", fontSize: 12 }}
+                  style={{ height: 28, padding: "0 12px", fontSize: 12 }}
                 >
                   Add
                 </button>
                 <button
                   onClick={() => setAddingScene(false)}
                   className="btn ghost"
-                  style={{ height: 26, padding: "0 10px", fontSize: 12 }}
+                  style={{ height: 28, padding: "0 12px", fontSize: 12 }}
                 >
                   Cancel
                 </button>
@@ -862,7 +862,7 @@ export function BlockingCanvas({
               No scenes yet.{canEdit && " Click Add to create one."}
             </p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {scenesWithBeats.map((scene) => (
                 <div key={scene.id}>
                   {/* Scene card */}
@@ -895,17 +895,17 @@ export function BlockingCanvas({
                         </div>
                       </div>
                       {canEdit && (
-                        <div className="hidden gap-0.5 group-hover:flex flex-shrink-0">
+                        <div className="hidden gap-1 group-hover:flex flex-shrink-0">
                           <button
                             onClick={(e) => { e.stopPropagation(); setAddingBeatForScene(scene.id); }}
-                            className="rounded p-0.5 hover:bg-[color:var(--bg-muted)]"
+                            className="rounded p-1 hover:bg-[color:var(--bg-muted)]"
                             title="Add beat"
                           >
                             <Plus className="h-3 w-3" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDeleteScene(scene.id); }}
-                            className="rounded p-0.5 hover:bg-[color:var(--bg-muted)]"
+                            className="rounded p-1 hover:bg-[color:var(--bg-muted)]"
                             title="Delete scene"
                           >
                             <Trash2 className="h-3 w-3" style={{ color: "var(--accent)" }} />
@@ -937,30 +937,30 @@ export function BlockingCanvas({
                         <button
                           onClick={() => handleCreateBeat(scene.id)}
                           className="btn primary"
-                          style={{ height: 24, padding: "0 8px", fontSize: 11 }}
+                          style={{ height: 28, padding: "0 12px", fontSize: 12 }}
                         >
                           Add
                         </button>
                         <button
                           onClick={() => setAddingBeatForScene(null)}
                           className="btn ghost"
-                          style={{ height: 24, padding: "0 8px", fontSize: 11 }}
+                          style={{ height: 28, padding: "0 12px", fontSize: 12 }}
                         >
-                          ✕
+                          Cancel
                         </button>
                       </div>
                     </div>
                   )}
 
                   {/* Beat list */}
-                  <div style={{ marginLeft: 12, marginTop: 2, display: "flex", flexDirection: "column", gap: 1 }}>
+                  <div style={{ marginLeft: 12, marginTop: 3, display: "flex", flexDirection: "column", gap: 2 }}>
                     {scene.beats.map((beat) => (
                       <div
                         key={beat.id}
                         className="group flex cursor-pointer items-center justify-between"
                         onClick={() => { setCurrentSceneId(scene.id); setCurrentBeatId(beat.id); }}
                         style={{
-                          padding: "4px 10px",
+                          padding: "6px 10px",
                           borderRadius: 5,
                           fontSize: 12,
                           background: currentBeatId === beat.id ? "var(--accent-soft)" : "transparent",
@@ -975,9 +975,9 @@ export function BlockingCanvas({
                         {canEdit && currentBeatId !== beat.id && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDeleteBeat(beat.id); }}
-                            className="hidden group-hover:block"
+                            className="hidden group-hover:flex rounded p-1 hover:bg-[color:var(--bg-muted)]"
                           >
-                            <Trash2 className="h-2.5 w-2.5" style={{ color: "var(--accent)" }} />
+                            <Trash2 className="h-3 w-3" style={{ color: "var(--accent)" }} />
                           </button>
                         )}
                       </div>
@@ -1241,14 +1241,14 @@ export function BlockingCanvas({
       {/* ─── Right panel: Off-stage Cast & Set Pieces ────────── */}
       <div
         className="flex flex-col border-l border-[color:var(--border)]"
-        style={{ width: 220, background: "var(--bg)", flexShrink: 0 }}
+        style={{ width: 248, background: "var(--bg)", flexShrink: 0 }}
       >
         {/* Off-stage cast */}
         <div className="row-between border-b border-[color:var(--border)] px-3 py-2.5">
           <div className="h-eyebrow">Off stage · {offStageCount}</div>
           <span className="muted" style={{ fontSize: 10.5 }}>click to place</span>
         </div>
-        <div className="scroll overflow-y-auto p-2" style={{ maxHeight: 220 }}>
+        <div className="scroll overflow-y-auto p-2" style={{ maxHeight: 200 }}>
           {castMembers.length === 0 ? (
             <p className="muted px-1 py-2" style={{ fontSize: 12 }}>No cast assigned.</p>
           ) : (
@@ -1334,7 +1334,7 @@ export function BlockingCanvas({
           <div className="h-eyebrow">Set Pieces</div>
           <span className="muted" style={{ fontSize: 10.5 }}>click to place</span>
         </div>
-        <div className="scroll overflow-y-auto p-2" style={{ maxHeight: 180 }}>
+        <div className="scroll overflow-y-auto p-2" style={{ maxHeight: 160 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {SET_PIECES.map((piece) => {
               const key = `set_piece:${piece.key}`;
@@ -1349,7 +1349,7 @@ export function BlockingCanvas({
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    padding: "5px 8px",
+                    padding: "6px 8px",
                     borderRadius: 6,
                     cursor: isOnCanvas || !currentBeatId ? "default" : "pointer",
                     border: "1px dashed " + (isOnCanvas ? "var(--border)" : "var(--border-strong)"),
