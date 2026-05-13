@@ -1058,14 +1058,30 @@ export function BlockingCanvas({
     >
     <div
       className="anim-in"
-      style={{ display: "grid", gridTemplateColumns: "248px 1fr 264px", gap: 16, maxWidth: 1400, margin: "0 auto" }}
+      style={{
+        margin: "-24px calc(-1 * var(--pad-x))",
+        height: "calc(100vh - 133px)",
+        display: "grid",
+        gridTemplateColumns: "220px 1fr 240px",
+        overflow: "hidden",
+      }}
     >
 
       {/* ─── Left panel: Scenes & Off-stage Cast ────────────── */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          overflow: "hidden",
+          borderRight: "1px solid var(--border)",
+          padding: "14px 12px",
+          gap: 12,
+        }}
+      >
 
         {/* Scenes section */}
-        <div>
+        <div style={{ flex: "0 0 auto", minHeight: 0, display: "flex", flexDirection: "column" }}>
           <div className="h-eyebrow" style={{ marginBottom: 8 }}>Scenes</div>
 
           {addingScene && (
@@ -1123,7 +1139,7 @@ export function BlockingCanvas({
           ) : (
             <div
               className="scroll"
-              style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 380, overflowY: "auto" }}
+              style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 260, overflowY: "auto" }}
             >
               {scenesWithBeats.map((scene) => (
                 <div key={scene.id}>
@@ -1275,14 +1291,14 @@ export function BlockingCanvas({
         </div>
 
         {/* Off-stage cast section */}
-        <div>
-          <div className="row-between" style={{ marginBottom: 8 }}>
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          <div className="row-between" style={{ marginBottom: 8, flexShrink: 0 }}>
             <div className="h-eyebrow">Off stage · {offStageCount}</div>
             <span className="muted" style={{ fontSize: 10.5 }}>click to place</span>
           </div>
           <div
             className="scroll"
-            style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 320, overflowY: "auto" }}
+            style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, overflowY: "auto", minHeight: 0 }}
           >
             {castMembers.length === 0 ? (
               <p className="muted" style={{ fontSize: 12 }}>No cast assigned.</p>
@@ -1317,7 +1333,17 @@ export function BlockingCanvas({
       </div>
 
       {/* ─── Center: Canvas ─────────────────────────────────── */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          overflow: "hidden",
+          padding: "14px 16px",
+          gap: 10,
+          minWidth: 0,
+        }}
+      >
 
         {/* Toolbar above canvas */}
         <div className="row-between">
@@ -1398,10 +1424,11 @@ export function BlockingCanvas({
           <div
             className="card"
             style={{
+              flex: 1,
+              minHeight: 0,
               padding: 0,
               position: "relative",
               overflow: "hidden",
-              aspectRatio: "4 / 3",
               background: pdfUrl ? "rgb(23,23,23)" : undefined,
             }}
           >
@@ -1563,14 +1590,22 @@ export function BlockingCanvas({
 
       {/* ─── Right panel: Set Pieces & Beat Comments ─────────── */}
       <div
+        style={{
+          height: "100%",
+          padding: "14px 12px 14px 0",
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+        }}
+      >
+      <div
         className="card"
         style={{
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          position: "sticky",
-          top: 16,
-          maxHeight: "calc(100vh - 80px)",
+          flex: 1,
+          minHeight: 0,
         }}
       >
         {/* Set Pieces — collapsible */}
@@ -1661,6 +1696,7 @@ export function BlockingCanvas({
             canModerate={canEdit}
           />
         )}
+      </div>
       </div>
     </div>
 
