@@ -378,9 +378,19 @@ export async function deleteCustomSetPiece(
 
 // ─── Beat Arrows ────────────────────────────────────────────────────
 
-export async function fetchBeatArrows(beatId: string): Promise<BeatArrow[]> {
+export async function fetchBeatArrows(beatId: string) {
   await requireCurrentUser();
-  return db.select().from(beatArrows).where(eq(beatArrows.beatId, beatId));
+  return db
+    .select({
+      id: beatArrows.id,
+      fromX: beatArrows.fromX,
+      fromY: beatArrows.fromY,
+      toX: beatArrows.toX,
+      toY: beatArrows.toY,
+      color: beatArrows.color,
+    })
+    .from(beatArrows)
+    .where(eq(beatArrows.beatId, beatId));
 }
 
 export async function createBeatArrow(
@@ -390,7 +400,7 @@ export async function createBeatArrow(
   toX: number,
   toY: number,
   color: string,
-): Promise<{ arrow?: BeatArrow; error?: string }> {
+): Promise<{ arrow?: { id: string; fromX: number; fromY: number; toX: number; toY: number; color: string }; error?: string }> {
   const user = await requireCurrentUser();
   if (!can(user.role, "blocking:edit")) {
     return { error: "You don't have permission to add arrows." };
@@ -398,7 +408,14 @@ export async function createBeatArrow(
   const [arrow] = await db
     .insert(beatArrows)
     .values({ beatId, fromX, fromY, toX, toY, color })
-    .returning();
+    .returning({
+      id: beatArrows.id,
+      fromX: beatArrows.fromX,
+      fromY: beatArrows.fromY,
+      toX: beatArrows.toX,
+      toY: beatArrows.toY,
+      color: beatArrows.color,
+    });
   return { arrow };
 }
 

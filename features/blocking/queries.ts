@@ -61,7 +61,14 @@ export type CustomSetPieceRow = Awaited<ReturnType<typeof getCustomSetPieces>>[n
 
 export async function getArrowsForBeat(beatId: string) {
   return db
-    .select()
+    .select({
+      id: beatArrows.id,
+      fromX: beatArrows.fromX,
+      fromY: beatArrows.fromY,
+      toX: beatArrows.toX,
+      toY: beatArrows.toY,
+      color: beatArrows.color,
+    })
     .from(beatArrows)
     .where(eq(beatArrows.beatId, beatId))
     .orderBy(asc(beatArrows.createdAt));

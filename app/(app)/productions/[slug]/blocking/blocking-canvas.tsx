@@ -808,7 +808,7 @@ export function BlockingCanvas({
       setCustomArrows(arrowRows);
       setHistory([]);
       setSelectedActorIds(new Set());
-    });
+    }).catch(() => {});
   }, [currentBeatId]);
 
   useEffect(() => {
@@ -825,7 +825,7 @@ export function BlockingCanvas({
     }
     fetchBeatPositions(nextId).then((rows) => {
       setNextBeatPositions(positionRowsToMap(rows));
-    });
+    }).catch(() => {});
   }, [showMovementArrows, currentBeatId, scenesWithBeats]);
 
   const groundPlanPage = stageConfig?.groundPlanPage ?? 1;
