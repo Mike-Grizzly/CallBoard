@@ -13,6 +13,7 @@ import {
   useDraggable,
   type DragEndEvent,
   type DragStartEvent,
+  type Modifier,
   PointerSensor,
   useSensor,
   useSensors,
@@ -158,6 +159,21 @@ function ActorToken({
   );
 }
 
+// Centers the DragOverlay ghost on the cursor rather than the drag origin
+const snapCenterToCursor: Modifier = ({ activatorEvent, draggingNodeRect, transform }) => {
+  if (draggingNodeRect && activatorEvent) {
+    const { clientX, clientY } = activatorEvent as PointerEvent;
+    const offsetX = clientX - draggingNodeRect.left;
+    const offsetY = clientY - draggingNodeRect.top;
+    return {
+      ...transform,
+      x: transform.x + offsetX - draggingNodeRect.width / 2,
+      y: transform.y + offsetY - draggingNodeRect.height / 2,
+    };
+  }
+  return transform;
+};
+
 // ─── Set Piece Token ────────────────────────────────────────────────
 
 function SetPieceToken({
@@ -169,7 +185,7 @@ function SetPieceToken({
   rotation,
   canEdit,
   onRemove,
-  onRotate,
+  onRotateTo,
 }: {
   id: string;
   label: string;
@@ -179,10 +195,11 @@ function SetPieceToken({
   rotation: number;
   canEdit: boolean;
   onRemove: () => void;
-  onRotate: (delta: number) => void;
+  onRotateTo: (angle: number, save: boolean) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id, disabled: !canEdit });
+  const svgWrapRef = useRef<HTMLDivElement>(null);
 
   const style: React.CSSProperties = {
     position: "absolute",
@@ -195,6 +212,30 @@ function SetPieceToken({
     touchAction: "none",
   };
 
+  function handleRotateGrab(e: React.PointerEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    const el = svgWrapRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    function calcAngle(clientX: number, clientY: number) {
+      const deg = Math.round(Math.atan2(clientY - cy, clientX - cx) * (180 / Math.PI)) + 90;
+      return ((deg % 360) + 360) % 360;
+    }
+
+    function onMove(ev: PointerEvent) { onRotateTo(calcAngle(ev.clientX, ev.clientY), false); }
+    function onUp(ev: PointerEvent) {
+      onRotateTo(calcAngle(ev.clientX, ev.clientY), true);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -203,43 +244,16 @@ function SetPieceToken({
       {...(canEdit ? attributes : {})}
       className="group -translate-x-1/2 -translate-y-1/2"
     >
-      <div className="relative">
+      <div className="relative" ref={svgWrapRef}>
         {canEdit && (
-          <>
-            <button
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove();
-              }}
-              className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white group-hover:flex"
-              style={{ fontSize: 10 }}
-            >
-              ×
-            </button>
-            <button
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRotate(-15);
-              }}
-              className="absolute -left-5 top-1/2 -translate-y-1/2 hidden h-5 w-5 items-center justify-center rounded-full bg-neutral-700 text-white group-hover:flex"
-              title="Rotate -15°"
-            >
-              <RotateCcw className="h-2.5 w-2.5" />
-            </button>
-            <button
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRotate(15);
-              }}
-              className="absolute -right-5 top-1/2 -translate-y-1/2 hidden h-5 w-5 items-center justify-center rounded-full bg-neutral-700 text-white group-hover:flex"
-              title="Rotate +15°"
-            >
-              <RotateCw className="h-2.5 w-2.5" />
-            </button>
-          </>
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white group-hover:flex"
+            style={{ fontSize: 10 }}
+          >
+            ×
+          </button>
         )}
         <div style={{ transform: `rotate(${rotation}deg)` }}>
           <svg
@@ -258,6 +272,29 @@ function SetPieceToken({
             />
           </svg>
         </div>
+        {canEdit && (
+          <div
+            onPointerDown={handleRotateGrab}
+            className="absolute hidden group-hover:flex"
+            style={{
+              bottom: -7,
+              right: -7,
+              width: 15,
+              height: 15,
+              borderRadius: "50%",
+              background: "var(--bg-elev)",
+              border: "2px solid var(--border-strong)",
+              cursor: "crosshair",
+              zIndex: 30,
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "var(--shadow-1)",
+            }}
+            title="Drag to rotate"
+          >
+            <RotateCw size={7} strokeWidth={2.5} style={{ color: "var(--ink-2)", pointerEvents: "none" }} />
+          </div>
+        )}
         <div
           style={{
             marginTop: 2,
@@ -772,25 +809,24 @@ export function BlockingCanvas({
     });
   }
 
-  function handleRotateSetPiece(entityId: string, delta: number) {
+  function handleRotateSetPiece(entityId: string, newRotation: number, save: boolean) {
     if (!canEdit || !currentBeatId) return;
     const key = `set_piece:${entityId}`;
     const current = positions[key];
     if (!current) return;
-    const newRotation = (current.rotation + delta + 360) % 360;
-    pushHistory(positions);
-    const updated = { ...positions, [key]: { ...current, rotation: newRotation } };
-    setPositions(updated);
-    startTransition(async () => {
-      await saveBlockingPosition({
-        beatId: currentBeatId,
-        entityType: "set_piece",
-        entityId,
-        xPercent: current.xPercent,
-        yPercent: current.yPercent,
-        rotation: newRotation,
+    setPositions((prev) => ({ ...prev, [key]: { ...prev[key], rotation: newRotation } }));
+    if (save) {
+      startTransition(async () => {
+        await saveBlockingPosition({
+          beatId: currentBeatId,
+          entityType: "set_piece",
+          entityId,
+          xPercent: current.xPercent,
+          yPercent: current.yPercent,
+          rotation: newRotation,
+        });
       });
-    });
+    }
   }
 
   function handleExportPng() {
@@ -1455,7 +1491,7 @@ export function BlockingCanvas({
                       rotation={pos.rotation}
                       canEdit={canEdit}
                       onRemove={() => removeFromCanvas("set_piece", piece.key)}
-                      onRotate={(delta) => handleRotateSetPiece(piece.key, delta)}
+                      onRotateTo={(angle, save) => handleRotateSetPiece(piece.key, angle, save)}
                     />
                   );
                 })}
@@ -1621,8 +1657,8 @@ export function BlockingCanvas({
       </div>
     </div>
 
-    {/* Drag ghost — follows cursor for off-stage drags */}
-    <DragOverlay dropAnimation={null}>
+    {/* Drag ghost — centered on cursor, minimal avatar/icon only */}
+    <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
       {(() => {
         if (!activeId) return null;
 
@@ -1634,36 +1670,21 @@ export function BlockingCanvas({
           const ini =
             ((member.firstName?.[0] ?? "") + (member.lastName?.[0] ?? "")).toUpperCase() ||
             member.email[0]?.toUpperCase() || "?";
-          const displayName =
-            member.characterName ??
-            (member.firstName || member.lastName
-              ? `${member.firstName ?? ""} ${member.lastName ?? ""}`.trim()
-              : member.email);
           return (
             <div
+              className="avatar"
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "6px 10px",
-                borderRadius: 8,
-                background: "var(--bg-elev)",
-                border: "1px solid var(--border-strong)",
-                boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
+                width: 38,
+                height: 38,
+                fontSize: 13,
+                background: color,
+                outline: "2px solid var(--accent)",
+                outlineOffset: 2,
                 pointerEvents: "none",
-                minWidth: 120,
-                opacity: 0.96,
+                opacity: 0.9,
               }}
             >
-              <div
-                className="avatar"
-                style={{ width: 28, height: 28, fontSize: 11, background: color, flexShrink: 0 }}
-              >
-                {ini}
-              </div>
-              <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink)", whiteSpace: "nowrap" }}>
-                {displayName}
-              </span>
+              {ini}
             </div>
           );
         }
@@ -1675,19 +1696,21 @@ export function BlockingCanvas({
           return (
             <div
               style={{
+                width: 56,
+                height: 42,
                 display: "flex",
                 alignItems: "center",
-                gap: 8,
-                padding: "6px 10px",
+                justifyContent: "center",
                 borderRadius: 8,
                 background: "var(--bg-elev)",
-                border: "1px solid var(--border-strong)",
-                boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
+                outline: "2px solid var(--accent)",
+                outlineOffset: 2,
+                boxShadow: "0 4px 14px rgba(0,0,0,0.18)",
                 pointerEvents: "none",
-                opacity: 0.96,
+                opacity: 0.9,
               }}
             >
-              <svg viewBox="0 0 80 60" width={28} height={21} style={{ flexShrink: 0 }}>
+              <svg viewBox="0 0 80 60" width={36} height={27}>
                 <path
                   d={piece.svgPath}
                   fill="none"
@@ -1697,9 +1720,6 @@ export function BlockingCanvas({
                   strokeLinejoin="round"
                 />
               </svg>
-              <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-2)", whiteSpace: "nowrap" }}>
-                {piece.label}
-              </span>
             </div>
           );
         }
