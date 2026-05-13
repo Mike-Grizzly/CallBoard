@@ -222,6 +222,36 @@ Record of durable project decisions. Add new entries at the bottom with date and
 
 ---
 
+## 2026-05-13 — PDF ground plan rendered via offscreen canvas + module-level ImageBitmap cache
+
+**Decision:** The blocking canvas renders the ground plan PDF to an offscreen `<canvas>`, converts it to an `ImageBitmap`, and stores it in a module-level `Map` keyed by the stable file path (not the signed URL token). Subsequent renders draw from the cached bitmap.
+
+**Reason:** `router.refresh()` (called after beat creation and other mutations) causes Next.js to regenerate the Supabase signed URL, producing a new URL string. The PDF `useEffect` was keyed to `pdfUrl`, so every refresh triggered a re-render: `canvas.width = ...` cleared the canvas, causing a visible flash. Keying the cache by the URL's pathname (stable) rather than the full token (volatile) prevents unnecessary re-renders.
+
+**Impact:** PDF renders once per page+session and is reused on subsequent beats. Cache lives for the lifetime of the module (page session). No flash between beats or after refresh calls.
+
+---
+
+## 2026-05-13 — Custom set pieces stored in Supabase Storage under `set-pieces/` prefix
+
+**Decision:** User-uploaded custom set piece images (SVG/PNG/JPG) are stored in the existing `attachments` bucket under the path `set-pieces/{productionId}/{timestamp}-{safeName}`. A new `custom_set_pieces` table tracks metadata (name, storagePath, fileType, uploadedBy). Signed URLs are generated server-side at page load (1-hour expiry).
+
+**Reason:** Reuses the existing storage bucket and RLS policies without requiring a new bucket. The `set-pieces/` prefix namespace is distinct from `reports/` and `documents/` prefixes already in use.
+
+**Impact:** `custom_set_pieces` table added to Drizzle schema. New server actions: `uploadCustomSetPiece`, `deleteCustomSetPiece`, `getCustomSetPieceUrls`. File size limit 5 MB. Signed URLs expire after 1 hour — long blocking sessions may see broken images for custom pieces (see open questions).
+
+---
+
+## 2026-05-13 — Free-angle set piece rotation via corner drag handle
+
+**Decision:** Set piece rotation is implemented as a corner drag handle using `pointer capture` on a `<div>`, tracking angle delta relative to the token center on `pointermove`. The starting angle is captured on `pointerdown` and the rotation delta is applied on each move event, so clicking the handle without moving does not snap the piece.
+
+**Reason:** The prior ±15° button approach required repeated clicks for large rotations and was unintuitive. A drag handle is the standard pattern for rotation in design tools. Delta-based tracking (vs. absolute angle) ensures no snap-on-click.
+
+**Impact:** Rotation handle appears on set piece hover. Built-in SVG pieces and custom uploaded pieces both support free-angle rotation. Rotation stored as degrees in `blocking_positions.rotation`.
+
+---
+
 ## 2026-05-11 — RLS enabled on all public tables; policies intentionally omitted
 
 **Decision:** Turn on Row Level Security for the 9 remaining unsecured tables (`organizations`, `productions`, `announcements`, `production_scenes`, `scene_beats`, `stage_configurations`, `blocking_positions`, `note_tags`, `production_notes`) without writing any policies. Migration `enable_rls_on_public_tables` applied via Supabase MCP.
