@@ -7,6 +7,14 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
+
+// Module-level bitmap cache — survives router.refresh() without remount.
+// Keyed by stable file path (not signed URL) so re-generated tokens are instant.
+const pdfBitmapCache = new Map<string, ImageBitmap>();
+function pdfCacheKey(url: string, page: number) {
+  try { return `${new URL(url).pathname}:${page}`; }
+  catch { return `${url}:${page}`; }
+}
 import {
   DndContext,
   DragOverlay,
@@ -278,14 +286,16 @@ function SetPieceToken({
         )}
         <div style={{ transform: `rotate(${rotation}deg)` }}>
           {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={label}
-              width={64}
-              height={48}
+            <div
               className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm"
-              style={{ objectFit: "contain", display: "block" }}
-            />
+              style={{ width: 64, height: 48, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}
+            >
+              <img
+                src={imageUrl}
+                alt={label}
+                style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
+              />
+            </div>
           ) : (
             <svg
               viewBox="0 0 80 60"
@@ -475,13 +485,13 @@ function OffstageSetPieceTile({
         }
       >
         {piece.imageUrl ? (
-          <img
-            src={piece.imageUrl}
-            alt={piece.label}
-            width={28}
-            height={21}
-            style={{ objectFit: "contain", flexShrink: 0 }}
-          />
+          <div style={{ width: 28, height: 21, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
+            <img
+              src={piece.imageUrl}
+              alt={piece.label}
+              style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
+            />
+          </div>
         ) : (
           <svg viewBox="0 0 80 60" width={28} height={21} style={{ flexShrink: 0 }}>
             <path
@@ -530,7 +540,6 @@ function NumberGridOverlay({
     calibrationX2,
     calibrationY2,
     prosceniumWidthFt,
-    stageDepthFt,
   } = stageConfig;
 
   if (
@@ -545,31 +554,24 @@ function NumberGridOverlay({
   const centerX = (calibrationX1 + calibrationX2) / 2;
   const centerY = (calibrationY1 + calibrationY2) / 2;
   const lineSpanX = Math.abs(calibrationX2 - calibrationX1);
-  const footPercent = lineSpanX / prosceniumWidthFt;
-  const halfWidthFt = Math.ceil(prosceniumWidthFt / 2);
-  const depthLines = Math.floor(stageDepthFt / 2);
+  const step = (lineSpanX / prosceniumWidthFt) * 2; // 2ft spacing matches SL/SR
 
-  const ticks: { x: number; ft: number; isMajor: boolean }[] = [];
-  for (let ft = -halfWidthFt; ft <= halfWidthFt; ft += 2) {
-    const x = centerX + ft * footPercent;
-    if (x >= 0 && x <= 100) {
-      ticks.push({ x, ft, isMajor: ft % 10 === 0 });
-    }
+  // Vertical lines — full canvas height (SL/SR)
+  const vLines: number[] = [];
+  if (showSLSR) {
+    for (let x = centerX; x >= 0; x -= step) vLines.push(x);
+    for (let x = centerX + step; x <= 100; x += step) vLines.push(x);
   }
 
-  const depthTicks: { y: number; ft: number }[] = [];
-  for (let i = 1; i <= depthLines; i++) {
-    const y = centerY - i * 2 * footPercent;
-    if (y >= 0 && y <= 100) {
-      depthTicks.push({ y, ft: i * 2 });
-    }
+  // Horizontal lines — full canvas width, same 2ft step (US/DS), both directions
+  const hLines: number[] = [];
+  if (showUSDS) {
+    for (let y = centerY - step; y >= 0; y -= step) hLines.push(y);
+    for (let y = centerY + step; y <= 100; y += step) hLines.push(y);
   }
 
-  const minorTickH = 1.5;
-  const majorTickH = 2.8;
-  const labelY = centerY + 4.2;
-  const gridLine = "rgba(80,80,80,0.22)";
-  const centerLine = "rgba(80,80,80,0.45)";
+  const gridLine = "rgba(80,80,80,0.15)";
+  const centerLine = "rgba(80,80,80,0.4)";
 
   return (
     <svg
@@ -578,48 +580,17 @@ function NumberGridOverlay({
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
     >
-      {showSLSR && ticks.map(({ x }) => (
-        <line key={`slsr-${x}`} x1={x} y1={0} x2={x} y2={100}
-          stroke={gridLine} strokeWidth="0.18" />
+      {vLines.map((x) => (
+        <line key={`v-${x}`} x1={x} y1={0} x2={x} y2={100}
+          stroke={gridLine} strokeWidth="0.15" />
       ))}
-
-      {showUSDS && depthTicks.map(({ y, ft }) => (
-        <g key={`usds-${y}`}>
-          <line x1={calibrationX1!} y1={y} x2={calibrationX2!} y2={y}
-            stroke={gridLine} strokeWidth="0.18" />
-          <text
-            x={calibrationX1! - 1.5} y={y + 0.7}
-            textAnchor="end" fontSize="1.6" fill="rgba(80,80,80,0.55)"
-            stroke="white" strokeWidth="2" paintOrder="stroke"
-            style={{ pointerEvents: "none" }}>
-            {ft}&apos;
-          </text>
-        </g>
+      {hLines.map((y) => (
+        <line key={`h-${y}`} x1={0} y1={y} x2={100} y2={y}
+          stroke={gridLine} strokeWidth="0.15" />
       ))}
-
+      {/* Proscenium center line — slightly more prominent reference */}
       <line x1={calibrationX1!} y1={centerY} x2={calibrationX2!} y2={centerY}
-        stroke={centerLine} strokeWidth="0.25" />
-
-      {ticks.map(({ x, ft, isMajor }) => {
-        const tickH = isMajor ? majorTickH : minorTickH;
-        const showLabel = ft % 5 === 0;
-        const label = ft === 0 ? "0" : `${Math.abs(ft)}'`;
-        return (
-          <g key={`tick-${x}`}>
-            <line x1={x} y1={centerY} x2={x} y2={centerY - tickH}
-              stroke={centerLine} strokeWidth="0.2" />
-            {showLabel && (
-              <text x={x} y={labelY} textAnchor="middle" fontSize="1.6"
-                fill="rgba(80,80,80,0.6)"
-                stroke="white" strokeWidth="2" paintOrder="stroke"
-                fontWeight={isMajor ? "bold" : "normal"}
-                style={{ pointerEvents: "none" }}>
-                {label}
-              </text>
-            )}
-          </g>
-        );
-      })}
+        stroke={centerLine} strokeWidth="0.22" />
     </svg>
   );
 }
@@ -727,7 +698,22 @@ export function BlockingCanvas({
   useEffect(() => {
     if (!pdfUrl || !pdfCanvasRef.current) return;
     let cancelled = false;
+    const cacheKey = pdfCacheKey(pdfUrl, currentPdfPage);
+
     async function render() {
+      const mainCanvas = pdfCanvasRef.current!;
+
+      // If we already rendered this file+page, repaint instantly from cache —
+      // this is what prevents the flash when router.refresh() regenerates the signed URL.
+      const cached = pdfBitmapCache.get(cacheKey);
+      if (cached) {
+        mainCanvas.width = cached.width;
+        mainCanvas.height = cached.height;
+        mainCanvas.getContext("2d")?.drawImage(cached, 0, 0);
+        if (!cancelled) setPdfLoaded(true);
+        return;
+      }
+
       const pdfjsLib = await import("pdfjs-dist");
       pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
         "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -738,10 +724,26 @@ export function BlockingCanvas({
       setNumPdfPages(pdf.numPages);
       const page = await pdf.getPage(currentPdfPage);
       const viewport = page.getViewport({ scale: 1.5 });
-      const canvas = pdfCanvasRef.current!;
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      await page.render({ canvas, viewport }).promise;
+
+      // Render to an offscreen canvas so the visible canvas stays intact
+      // until the new frame is fully ready — no blank flash during render.
+      const offscreen = document.createElement("canvas");
+      offscreen.width = viewport.width;
+      offscreen.height = viewport.height;
+      await page.render({ canvas: offscreen, viewport }).promise;
+      if (cancelled) return;
+
+      // Single synchronous copy: main canvas is never blank.
+      mainCanvas.width = offscreen.width;
+      mainCanvas.height = offscreen.height;
+      mainCanvas.getContext("2d")?.drawImage(offscreen, 0, 0);
+
+      // Cache the bitmap for instant repaints after router.refresh().
+      try {
+        const bitmap = await createImageBitmap(offscreen);
+        if (!cancelled) pdfBitmapCache.set(cacheKey, bitmap);
+      } catch { /* createImageBitmap unsupported — non-fatal */ }
+
       if (!cancelled) setPdfLoaded(true);
     }
     render().catch(() => setPdfLoaded(false));
