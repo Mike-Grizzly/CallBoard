@@ -28,7 +28,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, X, Maximize2, Minimize2 } from "lucide-react";
+import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, X, Maximize2, Minimize2, Route } from "lucide-react";
 import { BeatCommentSection } from "@/components/blocking/beat-comment-section";
 import type { ProductionMember } from "@/features/members/queries";
 import {
@@ -709,6 +709,8 @@ export function BlockingCanvas({
   const [customPieces, setCustomPieces] = useState<CustomSetPieceClient[]>(initialCustomSetPieces);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showMovementArrows, setShowMovementArrows] = useState(false);
+  const [nextBeatPositions, setNextBeatPositions] = useState<PositionMap | null>(null);
 
   // Multi-select state
   const [selectedActorIds, setSelectedActorIds] = useState<Set<string>>(new Set());
@@ -755,6 +757,23 @@ export function BlockingCanvas({
       setSelectedActorIds(new Set());
     });
   }, [currentBeatId]);
+
+  useEffect(() => {
+    if (!showMovementArrows || !currentBeatId) {
+      setNextBeatPositions(null);
+      return;
+    }
+    const allBeats = scenesWithBeats.flatMap((s) => s.beats);
+    const idx = allBeats.findIndex((b) => b.id === currentBeatId);
+    const nextId = idx !== -1 && idx < allBeats.length - 1 ? allBeats[idx + 1].id : null;
+    if (!nextId) {
+      setNextBeatPositions(null);
+      return;
+    }
+    fetchBeatPositions(nextId).then((rows) => {
+      setNextBeatPositions(positionRowsToMap(rows));
+    });
+  }, [showMovementArrows, currentBeatId, scenesWithBeats]);
 
   const groundPlanPage = stageConfig?.groundPlanPage ?? 1;
   const [currentPdfPage, setCurrentPdfPage] = useState(groundPlanPage);
@@ -1646,6 +1665,14 @@ export function BlockingCanvas({
                 </button>
               </>
             )}
+            <button
+              onClick={() => setShowMovementArrows((v) => !v)}
+              className="btn ghost"
+              style={{ height: 28, padding: "0 10px", fontSize: 12, background: showMovementArrows ? "var(--bg-sunken)" : undefined }}
+              title="Show movement arrows to the next beat"
+            >
+              <Route className="h-3.5 w-3.5" /><span>Movement</span>
+            </button>
             {canEdit && history.length > 0 && (
               <button
                 onClick={handleUndo}
@@ -1773,6 +1800,70 @@ export function BlockingCanvas({
                     borderRadius: 2,
                   }}
                 />
+              )}
+
+              {/* Movement arrows — curved arcs from current to next beat positions */}
+              {showMovementArrows && nextBeatPositions && currentBeatId && (
+                <svg
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    pointerEvents: "none",
+                    zIndex: 15,
+                    overflow: "visible",
+                  }}
+                >
+                  <defs>
+                    {castMembers.map((member) => {
+                      const color = actorColors[member.userId];
+                      return (
+                        <marker
+                          key={member.userId}
+                          id={`arrow-${member.userId}`}
+                          markerWidth="5"
+                          markerHeight="5"
+                          refX="4"
+                          refY="2.5"
+                          orient="auto"
+                          markerUnits="userSpaceOnUse"
+                        >
+                          <path d="M0,0 L0,5 L5,2.5 z" fill={color} opacity="0.85" />
+                        </marker>
+                      );
+                    })}
+                  </defs>
+                  {castMembers.map((member) => {
+                    const key = `actor:${member.userId}`;
+                    const from = positions[key];
+                    const to = nextBeatPositions[key];
+                    if (!from || !to) return null;
+                    const dx = to.xPercent - from.xPercent;
+                    const dy = to.yPercent - from.yPercent;
+                    if (Math.hypot(dx, dy) < 2) return null;
+                    const color = actorColors[member.userId];
+                    const mx = (from.xPercent + to.xPercent) / 2;
+                    const my = (from.yPercent + to.yPercent) / 2;
+                    const len = Math.hypot(dx, dy);
+                    const perpScale = Math.min(8, len * 0.35) / len;
+                    const cx = mx + (-dy * perpScale);
+                    const cy = my + (dx * perpScale);
+                    return (
+                      <path
+                        key={member.userId}
+                        d={`M ${from.xPercent} ${from.yPercent} Q ${cx} ${cy} ${to.xPercent} ${to.yPercent}`}
+                        stroke={color}
+                        strokeWidth="0.5"
+                        fill="none"
+                        opacity="0.75"
+                        markerEnd={`url(#arrow-${member.userId})`}
+                      />
+                    );
+                  })}
+                </svg>
               )}
 
               {/* Actor tokens */}
