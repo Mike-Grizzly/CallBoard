@@ -21,6 +21,7 @@ import {
   useDraggable,
   type DragEndEvent,
   type DragStartEvent,
+  type DragMoveEvent,
   type Modifier,
   PointerSensor,
   useSensor,
@@ -90,7 +91,10 @@ function ActorToken({
   xPercent,
   yPercent,
   canEdit,
+  isSelected,
+  groupDragDelta,
   onRemove,
+  onSelect,
 }: {
   id: string;
   initials: string;
@@ -99,17 +103,27 @@ function ActorToken({
   xPercent: number;
   yPercent: number;
   canEdit: boolean;
+  isSelected: boolean;
+  groupDragDelta: { x: number; y: number } | null;
   onRemove: () => void;
+  onSelect: (e: React.MouseEvent) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id, disabled: !canEdit });
+
+  // Apply group movement delta for non-active selected tokens
+  const effectiveTransform = isDragging
+    ? transform
+    : groupDragDelta
+      ? { x: groupDragDelta.x, y: groupDragDelta.y, scaleX: 1, scaleY: 1 }
+      : transform;
 
   const style: React.CSSProperties = {
     position: "absolute",
     left: `${xPercent}%`,
     top: `${yPercent}%`,
-    transform: CSS.Translate.toString(transform),
-    zIndex: isDragging ? 50 : 20,
+    transform: CSS.Translate.toString(effectiveTransform),
+    zIndex: isDragging || groupDragDelta ? 50 : 20,
     cursor: canEdit ? (isDragging ? "grabbing" : "grab") : "default",
     userSelect: "none",
     touchAction: "none",
@@ -122,6 +136,8 @@ function ActorToken({
       {...(canEdit ? listeners : {})}
       {...(canEdit ? attributes : {})}
       className="group -translate-x-1/2 -translate-y-1/2"
+      data-actor-token="true"
+      onClick={canEdit ? onSelect : undefined}
     >
       <div className="relative flex flex-col items-center">
         {canEdit && (
@@ -144,10 +160,14 @@ function ActorToken({
             fontWeight: 600,
             background: color,
             color: "white",
-            boxShadow: isDragging
-              ? "0 0 0 3px var(--accent), 0 4px 12px rgba(0,0,0,.18)"
-              : "0 2px 6px rgba(0,0,0,.18)",
+            boxShadow: isSelected
+              ? `0 0 0 2px white, 0 0 0 4px ${color}, 0 2px 8px rgba(0,0,0,.25)`
+              : isDragging
+                ? "0 0 0 3px var(--accent), 0 4px 12px rgba(0,0,0,.18)"
+                : "0 2px 6px rgba(0,0,0,.18)",
             border: "2px solid white",
+            outline: isSelected ? "none" : undefined,
+            transition: "box-shadow 0.1s ease",
           }}
         >
           {initials}
@@ -160,13 +180,15 @@ function ActorToken({
               fontSize: 10.5,
               fontWeight: 500,
               color: "var(--ink)",
-              background: "rgba(255,255,255,.85)",
+              background: isSelected ? `${color}22` : "rgba(255,255,255,.85)",
               backdropFilter: "blur(4px)",
               padding: "1px 6px",
               borderRadius: 3,
               maxWidth: 80,
               overflow: "hidden",
               textOverflow: "ellipsis",
+              border: isSelected ? `1px solid ${color}66` : "1px solid transparent",
+              transition: "background 0.1s ease",
             }}
           >
             {label}
@@ -271,6 +293,7 @@ function SetPieceToken({
       {...(canEdit ? listeners : {})}
       {...(canEdit ? attributes : {})}
       className="group -translate-x-1/2 -translate-y-1/2"
+      data-set-piece-token="true"
     >
       <div className="relative" ref={svgWrapRef}>
         {canEdit && (
@@ -687,14 +710,23 @@ export function BlockingCanvas({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // Multi-select state
+  const [selectedActorIds, setSelectedActorIds] = useState<Set<string>>(new Set());
+  const [activeDragDelta, setActiveDragDelta] = useState<{ x: number; y: number } | null>(null);
+  // Lasso selection state (percentages relative to canvas)
+  const [lassoStart, setLassoStart] = useState<{ x: number; y: number } | null>(null);
+  const [lassoEnd, setLassoEnd] = useState<{ x: number; y: number } | null>(null);
+
   useEffect(() => {
-    if (!fullscreen) return;
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setFullscreen(false);
+      if (e.key === "Escape") {
+        setFullscreen(false);
+        setSelectedActorIds(new Set());
+      }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [fullscreen]);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -714,11 +746,13 @@ export function BlockingCanvas({
     if (!currentBeatId) {
       setPositions({});
       setHistory([]);
+      setSelectedActorIds(new Set());
       return;
     }
     fetchBeatPositions(currentBeatId).then((rows) => {
       setPositions(positionRowsToMap(rows));
       setHistory([]);
+      setSelectedActorIds(new Set());
     });
   }, [currentBeatId]);
 
@@ -794,14 +828,25 @@ export function BlockingCanvas({
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as string);
+    setActiveDragDelta(null);
   }
 
   function handleDragCancel() {
     setActiveId(null);
+    setActiveDragDelta(null);
+  }
+
+  function handleDragMove(event: DragMoveEvent) {
+    const id = event.active.id as string;
+    // Track delta so other selected actors can follow in real time
+    if (selectedActorIds.has(id)) {
+      setActiveDragDelta(event.delta);
+    }
   }
 
   function handleDragEnd(event: DragEndEvent) {
     setActiveId(null);
+    setActiveDragDelta(null);
     const { active, delta, activatorEvent } = event;
     const id = active.id as string;
     const activator = activatorEvent as PointerEvent;
@@ -875,36 +920,60 @@ export function BlockingCanvas({
     const current = positions[id];
     if (!current) return;
 
-    const newX = Math.max(
-      2,
-      Math.min(98, current.xPercent + (delta.x / rect.width) * 100),
-    );
-    const newY = Math.max(
-      2,
-      Math.min(98, current.yPercent + (delta.y / rect.height) * 100),
-    );
+    const dxPercent = (delta.x / rect.width) * 100;
+    const dyPercent = (delta.y / rect.height) * 100;
+
+    // Group move: if dragged actor is in the selection, move all selected actors
+    const isGroupMove = id.startsWith("actor:") && selectedActorIds.has(id) && selectedActorIds.size > 1;
 
     pushHistory(positions);
-    const updated = {
-      ...positions,
-      [id]: { ...current, xPercent: newX, yPercent: newY },
-    };
-    setPositions(updated);
 
-    const [entityType, entityId] = id.split(":") as [
-      "actor" | "set_piece",
-      string,
-    ];
-    startTransition(async () => {
-      await saveBlockingPosition({
-        beatId: currentBeatId,
-        entityType,
-        entityId,
-        xPercent: newX,
-        yPercent: newY,
-        rotation: current.rotation,
+    if (isGroupMove) {
+      const updated = { ...positions };
+      for (const selId of selectedActorIds) {
+        const selPos = positions[selId];
+        if (!selPos) continue;
+        updated[selId] = {
+          ...selPos,
+          xPercent: Math.max(2, Math.min(98, selPos.xPercent + dxPercent)),
+          yPercent: Math.max(2, Math.min(98, selPos.yPercent + dyPercent)),
+        };
+      }
+      setPositions(updated);
+      startTransition(async () => {
+        await Promise.all(
+          Array.from(selectedActorIds).map((selId) => {
+            const newPos = updated[selId];
+            if (!newPos) return Promise.resolve();
+            const [entityType, entityId] = selId.split(":") as ["actor" | "set_piece", string];
+            return saveBlockingPosition({
+              beatId: currentBeatId!,
+              entityType,
+              entityId,
+              xPercent: newPos.xPercent,
+              yPercent: newPos.yPercent,
+              rotation: newPos.rotation,
+            });
+          }),
+        );
       });
-    });
+    } else {
+      const newX = Math.max(2, Math.min(98, current.xPercent + dxPercent));
+      const newY = Math.max(2, Math.min(98, current.yPercent + dyPercent));
+      const updated = { ...positions, [id]: { ...current, xPercent: newX, yPercent: newY } };
+      setPositions(updated);
+      const [entityType, entityId] = id.split(":") as ["actor" | "set_piece", string];
+      startTransition(async () => {
+        await saveBlockingPosition({
+          beatId: currentBeatId,
+          entityType,
+          entityId,
+          xPercent: newX,
+          yPercent: newY,
+          rotation: current.rotation,
+        });
+      });
+    }
   }
 
   function handleRotateSetPiece(entityId: string, newRotation: number, save: boolean) {
@@ -925,6 +994,56 @@ export function BlockingCanvas({
         });
       });
     }
+  }
+
+  function handleCanvasPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    // Ignore if clicking on an actor/set-piece token
+    if ((e.target as Element).closest("[data-actor-token]") ||
+        (e.target as Element).closest("[data-set-piece-token]")) return;
+    const container = canvasContainerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setLassoStart({ x, y });
+    setLassoEnd({ x, y });
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function handleCanvasPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!lassoStart) return;
+    const container = canvasContainerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setLassoEnd({ x, y });
+  }
+
+  function handleCanvasPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!lassoStart || !lassoEnd) return;
+    const minX = Math.min(lassoStart.x, lassoEnd.x);
+    const maxX = Math.max(lassoStart.x, lassoEnd.x);
+    const minY = Math.min(lassoStart.y, lassoEnd.y);
+    const maxY = Math.max(lassoStart.y, lassoEnd.y);
+    const isDrag = maxX - minX > 1.5 || maxY - minY > 1.5;
+    if (isDrag) {
+      // Select all actors whose center falls inside the lasso rectangle
+      const inLasso = new Set<string>();
+      for (const [key, pos] of Object.entries(positions)) {
+        if (!key.startsWith("actor:")) continue;
+        if (pos.xPercent >= minX && pos.xPercent <= maxX &&
+            pos.yPercent >= minY && pos.yPercent <= maxY) {
+          inLasso.add(key);
+        }
+      }
+      setSelectedActorIds(inLasso);
+    } else {
+      // Plain click on empty canvas — deselect all
+      if (!e.shiftKey) setSelectedActorIds(new Set());
+    }
+    setLassoStart(null);
+    setLassoEnd(null);
   }
 
   function handleExportPng() {
@@ -1181,6 +1300,7 @@ export function BlockingCanvas({
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
@@ -1501,6 +1621,11 @@ export function BlockingCanvas({
             </div>
           </div>
           <div className="row" style={{ gap: 6 }}>
+            {selectedActorIds.size > 1 && (
+              <div style={{ fontSize: 11.5, color: "var(--accent)", fontWeight: 600, padding: "0 8px", height: 28, display: "flex", alignItems: "center", background: "var(--bg-sunken)", borderRadius: 6, border: "1px solid var(--accent-muted, color-mix(in oklch, var(--accent), transparent 60%))" }}>
+                {selectedActorIds.size} actors selected
+              </div>
+            )}
             {stageConfig?.calibrationX1 != null && (
               <>
                 <button
@@ -1583,7 +1708,13 @@ export function BlockingCanvas({
               background: pdfUrl ? "rgb(23,23,23)" : undefined,
             }}
           >
-            <div ref={canvasContainerRef} className="absolute inset-0">
+            <div
+              ref={canvasContainerRef}
+              className="absolute inset-0"
+              onPointerDown={handleCanvasPointerDown}
+              onPointerMove={handleCanvasPointerMove}
+              onPointerUp={handleCanvasPointerUp}
+            >
               {pdfUrl ? (
                 <canvas
                   ref={pdfCanvasRef}
@@ -1626,6 +1757,24 @@ export function BlockingCanvas({
                 />
               )}
 
+              {/* Lasso selection rectangle */}
+              {lassoStart && lassoEnd && (Math.abs(lassoEnd.x - lassoStart.x) > 0.5 || Math.abs(lassoEnd.y - lassoStart.y) > 0.5) && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: `${Math.min(lassoStart.x, lassoEnd.x)}%`,
+                    top: `${Math.min(lassoStart.y, lassoEnd.y)}%`,
+                    width: `${Math.abs(lassoEnd.x - lassoStart.x)}%`,
+                    height: `${Math.abs(lassoEnd.y - lassoStart.y)}%`,
+                    border: "1.5px dashed var(--accent)",
+                    background: "oklch(0.6 0.18 270 / 0.07)",
+                    pointerEvents: "none",
+                    zIndex: 25,
+                    borderRadius: 2,
+                  }}
+                />
+              )}
+
               {/* Actor tokens */}
               {currentBeatId &&
                 castMembers.map((member) => {
@@ -1644,6 +1793,8 @@ export function BlockingCanvas({
                     (member.firstName || member.lastName
                       ? `${member.firstName} ${member.lastName}`.trim()
                       : member.email);
+                  const isSelected = selectedActorIds.has(key);
+                  const isGroupFollower = isSelected && activeId !== null && activeId !== key && selectedActorIds.has(activeId);
                   return (
                     <ActorToken
                       key={key}
@@ -1654,7 +1805,22 @@ export function BlockingCanvas({
                       xPercent={pos.xPercent}
                       yPercent={pos.yPercent}
                       canEdit={canEdit}
+                      isSelected={isSelected}
+                      groupDragDelta={isGroupFollower ? activeDragDelta : null}
                       onRemove={() => removeFromCanvas("actor", member.userId)}
+                      onSelect={(e) => {
+                        if (!canEdit) return;
+                        e.stopPropagation();
+                        setSelectedActorIds((prev) => {
+                          if (e.shiftKey) {
+                            const next = new Set(prev);
+                            if (next.has(key)) next.delete(key);
+                            else next.add(key);
+                            return next;
+                          }
+                          return new Set([key]);
+                        });
+                      }}
                     />
                   );
                 })}
