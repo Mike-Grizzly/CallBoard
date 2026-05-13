@@ -93,6 +93,7 @@ function ActorToken({
   xPercent,
   yPercent,
   canEdit,
+  isInteractive,
   isSelected,
   groupDragDelta,
   onRemove,
@@ -229,6 +230,7 @@ function SetPieceToken({
   yPercent,
   rotation,
   canEdit,
+  isInteractive,
   onRemove,
   onRotateTo,
 }: {
