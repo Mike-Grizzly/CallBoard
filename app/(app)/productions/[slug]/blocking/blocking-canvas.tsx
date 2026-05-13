@@ -19,7 +19,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, MessageSquare } from "lucide-react";
+import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, MessageSquare, X } from "lucide-react";
 import { BeatCommentSection } from "@/components/blocking/beat-comment-section";
 import type { ProductionMember } from "@/features/members/queries";
 import {
@@ -107,14 +107,12 @@ function ActorToken({
         {canEdit && (
           <button
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
             className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white group-hover:flex"
-            style={{ fontSize: 10 }}
+            style={{ zIndex: 40 }}
+            title="Remove from stage"
           >
-            ×
+            <X size={9} strokeWidth={3} />
           </button>
         )}
         <div
@@ -221,14 +219,22 @@ function SetPieceToken({
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
 
-    function calcAngle(clientX: number, clientY: number) {
-      const deg = Math.round(Math.atan2(clientY - cy, clientX - cx) * (180 / Math.PI)) + 90;
-      return ((deg % 360) + 360) % 360;
+    function rawAngle(clientX: number, clientY: number) {
+      return Math.atan2(clientY - cy, clientX - cx) * (180 / Math.PI);
     }
 
-    function onMove(ev: PointerEvent) { onRotateTo(calcAngle(ev.clientX, ev.clientY), false); }
+    const startRawAngle = rawAngle(e.clientX, e.clientY);
+    const startRotation = rotation;
+
+    function onMove(ev: PointerEvent) {
+      const delta = rawAngle(ev.clientX, ev.clientY) - startRawAngle;
+      const next = Math.round(startRotation + delta);
+      onRotateTo(((next % 360) + 360) % 360, false);
+    }
     function onUp(ev: PointerEvent) {
-      onRotateTo(calcAngle(ev.clientX, ev.clientY), true);
+      const delta = rawAngle(ev.clientX, ev.clientY) - startRawAngle;
+      const next = Math.round(startRotation + delta);
+      onRotateTo(((next % 360) + 360) % 360, true);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     }
@@ -250,9 +256,10 @@ function SetPieceToken({
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); onRemove(); }}
             className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white group-hover:flex"
-            style={{ fontSize: 10 }}
+            style={{ zIndex: 40 }}
+            title="Remove from stage"
           >
-            ×
+            <X size={9} strokeWidth={3} />
           </button>
         )}
         <div style={{ transform: `rotate(${rotation}deg)` }}>
