@@ -632,6 +632,31 @@ select {
   border-bottom: 0 !important;
 }
 
+/* Notes list row — animated strikethrough + fade */
+.note-row-title {
+  position: relative;
+  overflow: hidden;
+  transition: color 0.3s ease;
+  color: var(--ink);
+}
+.note-row-title.done {
+  color: var(--ink-3);
+}
+.note-row-strike {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 1.5px;
+  width: 0;
+  background: var(--ink-3);
+  pointer-events: none;
+  transition: width 0.35s ease;
+  transform: translateY(-50%);
+}
+.note-row-strike.done {
+  width: 100%;
+}
+
 .dept-note-card .dept-note-edit-hint {
   opacity: 0;
   transition: opacity 0.12s;
@@ -1071,6 +1096,8 @@ textarea.field {
 .notif-ico[data-c="amber"]  { background: var(--c-amber-soft); color: color-mix(in oklch, var(--c-amber) 50%, var(--ink)); }
 .notif-ico[data-c="sage"]   { background: var(--c-sage-soft);  color: color-mix(in oklch, var(--c-sage)  60%, var(--ink)); }
 .notif-ico[data-c="accent"] { background: var(--accent-soft);  color: var(--accent-ink); }
+.notif-ico[data-c="plum"]   { background: var(--c-plum-soft);  color: color-mix(in oklch, var(--c-plum)  55%, var(--ink)); }
+.grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .gap-lg {
   gap: 20px;
 }

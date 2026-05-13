@@ -7,21 +7,36 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
+
+// Module-level bitmap cache — survives router.refresh() without remount.
+// Keyed by stable file path (not signed URL) so re-generated tokens are instant.
+const pdfBitmapCache = new Map<string, ImageBitmap>();
+function pdfCacheKey(url: string, page: number) {
+  try { return `${new URL(url).pathname}:${page}`; }
+  catch { return `${url}:${page}`; }
+}
 import {
   DndContext,
+  DragOverlay,
   useDraggable,
   type DragEndEvent,
+  type DragStartEvent,
+  type Modifier,
   PointerSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Settings, Plus, Trash2, ChevronRight, RotateCcw, Aperture, Download, RotateCw, ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, X, Maximize2, Minimize2 } from "lucide-react";
+import { BeatCommentSection } from "@/components/blocking/beat-comment-section";
+import type { ProductionMember } from "@/features/members/queries";
 import {
   saveBlockingPosition,
   removeBlockingPosition,
   fetchBeatPositions,
+  uploadCustomSetPiece,
+  deleteCustomSetPiece,
+  type CustomSetPieceClient,
 } from "@/features/blocking/actions";
 import {
   createScene,
@@ -43,16 +58,26 @@ type Position = {
 
 type PositionMap = Record<string, Position>;
 
+// Unified set piece type — built-ins have svgPath, custom uploads have imageUrl
+type CanvasPiece = {
+  key: string;
+  label: string;
+  svgPath?: string;
+  imageUrl?: string;
+};
+
 type Props = {
   production: { id: string; title: string; slug: string };
   stageConfig: StageConfiguration | null;
   scenesWithBeats: SceneWithBeats[];
   castMembers: CastMember[];
+  productionMembers: ProductionMember[];
   pdfUrl: string | null;
   canEdit: boolean;
   currentUserId: string;
   initialBeatId: string | null;
   initialPositions: Pick<BlockingPosition, "entityType" | "entityId" | "xPercent" | "yPercent" | "rotation">[];
+  initialCustomSetPieces: CustomSetPieceClient[];
 };
 
 // ─── Actor Token ────────────────────────────────────────────────────
@@ -102,25 +127,49 @@ function ActorToken({
         {canEdit && (
           <button
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
             className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white group-hover:flex"
-            style={{ fontSize: 10 }}
+            style={{ zIndex: 40 }}
+            title="Remove from stage"
           >
-            ×
+            <X size={9} strokeWidth={3} />
           </button>
         )}
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white text-sm font-bold text-white shadow-md"
-          style={{ backgroundColor: color }}
+          className="avatar"
+          style={{
+            width: 38,
+            height: 38,
+            fontSize: 13,
+            fontWeight: 600,
+            background: color,
+            color: "white",
+            boxShadow: isDragging
+              ? "0 0 0 3px var(--accent), 0 4px 12px rgba(0,0,0,.18)"
+              : "0 2px 6px rgba(0,0,0,.18)",
+            border: "2px solid white",
+          }}
         >
           {initials}
         </div>
         {label && (
-          <div className="mt-0.5 max-w-[80px] rounded bg-black/60 px-1 text-center text-[10px] leading-tight text-white">
-            <div className="truncate">{label}</div>
+          <div
+            style={{
+              marginTop: 2,
+              whiteSpace: "nowrap",
+              fontSize: 10.5,
+              fontWeight: 500,
+              color: "var(--ink)",
+              background: "rgba(255,255,255,.85)",
+              backdropFilter: "blur(4px)",
+              padding: "1px 6px",
+              borderRadius: 3,
+              maxWidth: 80,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {label}
           </div>
         )}
       </div>
@@ -128,31 +177,49 @@ function ActorToken({
   );
 }
 
+// Centers the DragOverlay ghost on the cursor rather than the drag origin
+const snapCenterToCursor: Modifier = ({ activatorEvent, draggingNodeRect, transform }) => {
+  if (draggingNodeRect && activatorEvent) {
+    const { clientX, clientY } = activatorEvent as PointerEvent;
+    const offsetX = clientX - draggingNodeRect.left;
+    const offsetY = clientY - draggingNodeRect.top;
+    return {
+      ...transform,
+      x: transform.x + offsetX - draggingNodeRect.width / 2,
+      y: transform.y + offsetY - draggingNodeRect.height / 2,
+    };
+  }
+  return transform;
+};
+
 // ─── Set Piece Token ────────────────────────────────────────────────
 
 function SetPieceToken({
   id,
   label,
   svgPath,
+  imageUrl,
   xPercent,
   yPercent,
   rotation,
   canEdit,
   onRemove,
-  onRotate,
+  onRotateTo,
 }: {
   id: string;
   label: string;
-  svgPath: string;
+  svgPath?: string;
+  imageUrl?: string;
   xPercent: number;
   yPercent: number;
   rotation: number;
   canEdit: boolean;
   onRemove: () => void;
-  onRotate: (delta: number) => void;
+  onRotateTo: (angle: number, save: boolean) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id, disabled: !canEdit });
+  const svgWrapRef = useRef<HTMLDivElement>(null);
 
   const style: React.CSSProperties = {
     position: "absolute",
@@ -165,6 +232,38 @@ function SetPieceToken({
     touchAction: "none",
   };
 
+  function handleRotateGrab(e: React.PointerEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    const el = svgWrapRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    function rawAngle(clientX: number, clientY: number) {
+      return Math.atan2(clientY - cy, clientX - cx) * (180 / Math.PI);
+    }
+
+    const startRawAngle = rawAngle(e.clientX, e.clientY);
+    const startRotation = rotation;
+
+    function onMove(ev: PointerEvent) {
+      const delta = rawAngle(ev.clientX, ev.clientY) - startRawAngle;
+      const next = Math.round(startRotation + delta);
+      onRotateTo(((next % 360) + 360) % 360, false);
+    }
+    function onUp(ev: PointerEvent) {
+      const delta = rawAngle(ev.clientX, ev.clientY) - startRawAngle;
+      const next = Math.round(startRotation + delta);
+      onRotateTo(((next % 360) + 360) % 360, true);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -173,65 +272,253 @@ function SetPieceToken({
       {...(canEdit ? attributes : {})}
       className="group -translate-x-1/2 -translate-y-1/2"
     >
-      <div className="relative">
+      <div className="relative" ref={svgWrapRef}>
         {canEdit && (
-          <>
-            <button
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove();
-              }}
-              className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white group-hover:flex"
-              style={{ fontSize: 10 }}
-            >
-              ×
-            </button>
-            <button
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRotate(-15);
-              }}
-              className="absolute -left-5 top-1/2 -translate-y-1/2 hidden h-5 w-5 items-center justify-center rounded-full bg-neutral-700 text-white group-hover:flex"
-              title="Rotate -15°"
-            >
-              <RotateCcw className="h-2.5 w-2.5" />
-            </button>
-            <button
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRotate(15);
-              }}
-              className="absolute -right-5 top-1/2 -translate-y-1/2 hidden h-5 w-5 items-center justify-center rounded-full bg-neutral-700 text-white group-hover:flex"
-              title="Rotate +15°"
-            >
-              <RotateCw className="h-2.5 w-2.5" />
-            </button>
-          </>
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white group-hover:flex"
+            style={{ zIndex: 40 }}
+            title="Remove from stage"
+          >
+            <X size={9} strokeWidth={3} />
+          </button>
         )}
         <div style={{ transform: `rotate(${rotation}deg)` }}>
-          <svg
-            viewBox="0 0 80 60"
-            width={64}
-            height={48}
-            className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm"
+          {imageUrl ? (
+            <div
+              className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm"
+              style={{ width: 64, height: 48, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}
+            >
+              <img
+                src={imageUrl}
+                alt={label}
+                style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
+              />
+            </div>
+          ) : (
+            <svg
+              viewBox="0 0 80 60"
+              width={64}
+              height={48}
+              className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm"
+            >
+              <path
+                d={svgPath}
+                fill="none"
+                stroke="#374151"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+        </div>
+        {canEdit && (
+          <div
+            onPointerDown={handleRotateGrab}
+            className="absolute hidden group-hover:flex"
+            style={{
+              bottom: -7,
+              right: -7,
+              width: 15,
+              height: 15,
+              borderRadius: "50%",
+              background: "var(--bg-elev)",
+              border: "2px solid var(--border-strong)",
+              cursor: "crosshair",
+              zIndex: 30,
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "var(--shadow-1)",
+            }}
+            title="Drag to rotate"
           >
+            <RotateCw size={7} strokeWidth={2.5} style={{ color: "var(--ink-2)", pointerEvents: "none" }} />
+          </div>
+        )}
+        <div
+          style={{
+            marginTop: 2,
+            textAlign: "center",
+            fontSize: 9,
+            background: "rgba(255,255,255,.85)",
+            backdropFilter: "blur(4px)",
+            color: "var(--ink-2)",
+            padding: "1px 4px",
+            borderRadius: 3,
+          }}
+        >
+          {label}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Off-stage Actor Tile (draggable) ──────────────────────────────
+
+function OffstageActorTile({
+  member,
+  color,
+  ini,
+  isOnCanvas,
+  isDisabled,
+  onClickPlace,
+}: {
+  member: CastMember;
+  color: string;
+  ini: string;
+  isOnCanvas: boolean;
+  isDisabled: boolean;
+  onClickPlace: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `offstage:${member.userId}`,
+    disabled: isDisabled || isOnCanvas,
+  });
+
+  const actorName =
+    member.firstName || member.lastName
+      ? `${member.firstName} ${member.lastName}`.trim()
+      : member.email;
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={isDisabled || isOnCanvas ? undefined : onClickPlace}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "6px 8px",
+        borderRadius: 6,
+        cursor: isOnCanvas || isDisabled ? "default" : isDragging ? "grabbing" : "grab",
+        border: "1px dashed " + (isOnCanvas ? "var(--border)" : "var(--border-strong)"),
+        background: isOnCanvas ? "transparent" : "var(--bg-muted)",
+        opacity: isDisabled ? 0.4 : isOnCanvas ? 0.4 : isDragging ? 0.3 : 1,
+        touchAction: "none",
+        userSelect: "none",
+      }}
+      title={
+        isOnCanvas
+          ? "Already on stage"
+          : isDisabled
+            ? "Select a beat first"
+            : "Drag onto stage or click to place at center"
+      }
+    >
+      <div
+        className="avatar"
+        style={{ width: 24, height: 24, fontSize: 10, background: color, flexShrink: 0 }}
+      >
+        {ini}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {member.characterName ? (
+          <>
+            <div className="truncate" style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink)" }}>
+              {member.characterName}
+            </div>
+            <div className="muted truncate" style={{ fontSize: 10.5 }}>{actorName}</div>
+          </>
+        ) : (
+          <div className="truncate" style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink)" }}>
+            {actorName}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Off-stage Set Piece Tile (draggable) ───────────────────────────
+
+function OffstageSetPieceTile({
+  piece,
+  isOnCanvas,
+  isDisabled,
+  onClickPlace,
+  onDelete,
+  canDelete,
+}: {
+  piece: CanvasPiece;
+  isOnCanvas: boolean;
+  isDisabled: boolean;
+  onClickPlace: () => void;
+  onDelete?: () => void;
+  canDelete?: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `offstage-piece:${piece.key}`,
+    disabled: isDisabled || isOnCanvas,
+  });
+
+  return (
+    <div className="group" style={{ position: "relative" }}>
+      <div
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        onClick={isDisabled || isOnCanvas ? undefined : onClickPlace}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "6px 10px",
+          borderRadius: 6,
+          cursor: isOnCanvas || isDisabled ? "default" : isDragging ? "grabbing" : "grab",
+          border: "1px dashed " + (isOnCanvas ? "var(--border)" : "var(--border-strong)"),
+          background: isOnCanvas ? "transparent" : "var(--bg-muted)",
+          opacity: isDisabled ? 0.4 : isOnCanvas ? 0.4 : isDragging ? 0.3 : 1,
+          touchAction: "none",
+          userSelect: "none",
+        }}
+        title={
+          isOnCanvas
+            ? "Already on stage"
+            : isDisabled
+              ? "Select a beat first"
+              : "Drag onto stage or click to place at center"
+        }
+      >
+        {piece.imageUrl ? (
+          <div style={{ width: 28, height: 21, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
+            <img
+              src={piece.imageUrl}
+              alt={piece.label}
+              style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
+            />
+          </div>
+        ) : (
+          <svg viewBox="0 0 80 60" width={28} height={21} style={{ flexShrink: 0 }}>
             <path
-              d={svgPath}
+              d={piece.svgPath}
               fill="none"
-              stroke="#374151"
-              strokeWidth="2"
+              stroke="currentColor"
+              strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           </svg>
-        </div>
-        <div className="mt-0.5 text-center text-[9px] text-white/90 bg-black/50 rounded px-1">
-          {label}
-        </div>
+        )}
+        <span className="truncate" style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-2)" }}>
+          {piece.label}
+        </span>
       </div>
+      {canDelete && onDelete && (
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="absolute right-1 top-1/2 -translate-y-1/2 hidden h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white group-hover:flex"
+          style={{ zIndex: 10 }}
+          title="Delete custom piece"
+        >
+          <X size={9} strokeWidth={3} />
+        </button>
+      )}
     </div>
   );
 }
@@ -253,7 +540,6 @@ function NumberGridOverlay({
     calibrationX2,
     calibrationY2,
     prosceniumWidthFt,
-    stageDepthFt,
   } = stageConfig;
 
   if (
@@ -269,32 +555,28 @@ function NumberGridOverlay({
   const centerY = (calibrationY1 + calibrationY2) / 2;
   const lineSpanX = Math.abs(calibrationX2 - calibrationX1);
   const footPercent = lineSpanX / prosceniumWidthFt;
+  const step = footPercent * 2; // 2ft spacing
   const halfWidthFt = Math.ceil(prosceniumWidthFt / 2);
-  const depthLines = Math.floor(stageDepthFt / 2);
 
-  // Tick positions along proscenium (every 2')
+  // SL/SR: vertical lines + tick marks + labels on the proscenium line
   const ticks: { x: number; ft: number; isMajor: boolean }[] = [];
   for (let ft = -halfWidthFt; ft <= halfWidthFt; ft += 2) {
     const x = centerX + ft * footPercent;
-    if (x >= 0 && x <= 100) {
-      ticks.push({ x, ft, isMajor: ft % 10 === 0 });
-    }
+    if (x >= 0 && x <= 100) ticks.push({ x, ft, isMajor: ft % 10 === 0 });
   }
 
-  // US/DS horizontal positions (every 2', upstage from proscenium)
-  const depthTicks: { y: number; ft: number }[] = [];
-  for (let i = 1; i <= depthLines; i++) {
-    const y = centerY - i * 2 * footPercent;
-    if (y >= 0 && y <= 100) {
-      depthTicks.push({ y, ft: i * 2 });
-    }
+  // US/DS: horizontal lines, full canvas width, both directions — no labels
+  const hLines: number[] = [];
+  if (showUSDS) {
+    for (let y = centerY - step; y >= 0; y -= step) hLines.push(y);
+    for (let y = centerY + step; y <= 100; y += step) hLines.push(y);
   }
 
   const minorTickH = 1.5;
   const majorTickH = 2.8;
   const labelY = centerY + 4.2;
-  const gridColor = "rgba(30,64,175,0.45)";
-  const gridShadow = "rgba(255,255,255,0.55)";
+  const gridLine = "rgba(80,80,80,0.15)";
+  const centerLine = "rgba(80,80,80,0.4)";
 
   return (
     <svg
@@ -303,36 +585,23 @@ function NumberGridOverlay({
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
     >
-      {/* ── SL/SR full grid lines (toggle) ─────────────────── */}
+      {/* SL/SR vertical grid lines */}
       {showSLSR && ticks.map(({ x }) => (
-        <g key={`slsr-${x}`}>
-          <line x1={x} y1={0} x2={x} y2={100} stroke={gridShadow} strokeWidth="0.4" strokeDasharray="3 3" />
-          <line x1={x} y1={0} x2={x} y2={100} stroke={gridColor} strokeWidth="0.25" strokeDasharray="3 3" />
-        </g>
+        <line key={`v-${x}`} x1={x} y1={0} x2={x} y2={100}
+          stroke={gridLine} strokeWidth="0.15" />
       ))}
 
-      {/* ── US/DS full grid lines (toggle) ─────────────────── */}
-      {showUSDS && depthTicks.map(({ y, ft }) => (
-        <g key={`usds-${y}`}>
-          <line x1={calibrationX1!} y1={y} x2={calibrationX2!} y2={y} stroke={gridShadow} strokeWidth="0.4" strokeDasharray="3 3" />
-          <line x1={calibrationX1!} y1={y} x2={calibrationX2!} y2={y} stroke={gridColor} strokeWidth="0.25" strokeDasharray="3 3" />
-          <text
-            x={calibrationX1! - 2.5} y={y + 0.8}
-            textAnchor="end" fontSize="1.8" fill="rgba(30,64,175,0.9)"
-            stroke="white" strokeWidth="2.5" paintOrder="stroke"
-            style={{ pointerEvents: "none" }}>
-            {ft}'
-          </text>
-        </g>
+      {/* US/DS horizontal grid lines — no labels */}
+      {hLines.map((y) => (
+        <line key={`h-${y}`} x1={0} y1={y} x2={100} y2={y}
+          stroke={gridLine} strokeWidth="0.15" />
       ))}
 
-      {/* ── Ruler baseline (always on) ──────────────────────── */}
+      {/* Proscenium center line */}
       <line x1={calibrationX1!} y1={centerY} x2={calibrationX2!} y2={centerY}
-        stroke="rgba(255,255,255,0.7)" strokeWidth="0.6" />
-      <line x1={calibrationX1!} y1={centerY} x2={calibrationX2!} y2={centerY}
-        stroke="rgba(30,64,175,0.8)" strokeWidth="0.35" />
+        stroke={centerLine} strokeWidth="0.22" />
 
-      {/* ── Tick marks + labels every 5' (always on) ────────── */}
+      {/* SL/SR tick marks and foot labels on the proscenium line */}
       {ticks.map(({ x, ft, isMajor }) => {
         const tickH = isMajor ? majorTickH : minorTickH;
         const showLabel = ft % 5 === 0;
@@ -340,13 +609,11 @@ function NumberGridOverlay({
         return (
           <g key={`tick-${x}`}>
             <line x1={x} y1={centerY} x2={x} y2={centerY - tickH}
-              stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
-            <line x1={x} y1={centerY} x2={x} y2={centerY - tickH}
-              stroke="rgba(30,64,175,0.85)" strokeWidth="0.3" />
+              stroke={centerLine} strokeWidth="0.2" />
             {showLabel && (
-              <text x={x} y={labelY} textAnchor="middle" fontSize="1.8"
-                fill="rgba(30,64,175,0.9)"
-                stroke="white" strokeWidth="2.5" paintOrder="stroke"
+              <text x={x} y={labelY} textAnchor="middle" fontSize="1.6"
+                fill="rgba(80,80,80,0.6)"
+                stroke="white" strokeWidth="2" paintOrder="stroke"
                 fontWeight={isMajor ? "bold" : "normal"}
                 style={{ pointerEvents: "none" }}>
                 {label}
@@ -380,17 +647,20 @@ export function BlockingCanvas({
   stageConfig,
   scenesWithBeats,
   castMembers,
+  productionMembers,
   pdfUrl,
   canEdit,
   currentUserId,
   initialBeatId,
   initialPositions,
+  initialCustomSetPieces,
 }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
 
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [currentBeatId, setCurrentBeatId] = useState<string | null>(initialBeatId);
   const [currentSceneId, setCurrentSceneId] = useState<string | null>(
@@ -409,13 +679,27 @@ export function BlockingCanvas({
   const [newSceneNum, setNewSceneNum] = useState("1");
   const [addingBeatForScene, setAddingBeatForScene] = useState<string | null>(null);
   const [newBeatLabel, setNewBeatLabel] = useState("");
+  const [setPiecesOpen, setSetPiecesOpen] = useState(true);
+  const [commentsOpen, setCommentsOpen] = useState(true);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [customPieces, setCustomPieces] = useState<CustomSetPieceClient[]>(initialCustomSetPieces);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setFullscreen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [fullscreen]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
-  // Load positions when beat changes.
-  // skipNextBeatLoad is set when capturing — positions are already copied in DB and current state is correct.
   const isFirstBeat = useRef(true);
   const skipNextBeatLoad = useRef(false);
   useEffect(() => {
@@ -442,11 +726,25 @@ export function BlockingCanvas({
   const [currentPdfPage, setCurrentPdfPage] = useState(groundPlanPage);
   const [numPdfPages, setNumPdfPages] = useState(1);
 
-  // Render PDF background
   useEffect(() => {
     if (!pdfUrl || !pdfCanvasRef.current) return;
     let cancelled = false;
+    const cacheKey = pdfCacheKey(pdfUrl, currentPdfPage);
+
     async function render() {
+      const mainCanvas = pdfCanvasRef.current!;
+
+      // If we already rendered this file+page, repaint instantly from cache —
+      // this is what prevents the flash when router.refresh() regenerates the signed URL.
+      const cached = pdfBitmapCache.get(cacheKey);
+      if (cached) {
+        mainCanvas.width = cached.width;
+        mainCanvas.height = cached.height;
+        mainCanvas.getContext("2d")?.drawImage(cached, 0, 0);
+        if (!cancelled) setPdfLoaded(true);
+        return;
+      }
+
       const pdfjsLib = await import("pdfjs-dist");
       pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
         "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -457,10 +755,26 @@ export function BlockingCanvas({
       setNumPdfPages(pdf.numPages);
       const page = await pdf.getPage(currentPdfPage);
       const viewport = page.getViewport({ scale: 1.5 });
-      const canvas = pdfCanvasRef.current!;
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      await page.render({ canvas, viewport }).promise;
+
+      // Render to an offscreen canvas so the visible canvas stays intact
+      // until the new frame is fully ready — no blank flash during render.
+      const offscreen = document.createElement("canvas");
+      offscreen.width = viewport.width;
+      offscreen.height = viewport.height;
+      await page.render({ canvas: offscreen, viewport }).promise;
+      if (cancelled) return;
+
+      // Single synchronous copy: main canvas is never blank.
+      mainCanvas.width = offscreen.width;
+      mainCanvas.height = offscreen.height;
+      mainCanvas.getContext("2d")?.drawImage(offscreen, 0, 0);
+
+      // Cache the bitmap for instant repaints after router.refresh().
+      try {
+        const bitmap = await createImageBitmap(offscreen);
+        if (!cancelled) pdfBitmapCache.set(cacheKey, bitmap);
+      } catch { /* createImageBitmap unsupported — non-fatal */ }
+
       if (!cancelled) setPdfLoaded(true);
     }
     render().catch(() => setPdfLoaded(false));
@@ -478,14 +792,86 @@ export function BlockingCanvas({
     setPositions(prev);
   }
 
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as string);
+  }
+
+  function handleDragCancel() {
+    setActiveId(null);
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    setActiveId(null);
+    const { active, delta, activatorEvent } = event;
+    const id = active.id as string;
+    const activator = activatorEvent as PointerEvent;
+
+    // Off-stage actor dragged onto canvas
+    if (id.startsWith("offstage:")) {
+      if (!canEdit || !currentBeatId) return;
+      const entityId = id.replace("offstage:", "");
+      const container = canvasContainerRef.current;
+      if (!container) return;
+      const containerRect = container.getBoundingClientRect();
+      const cursorX = activator.clientX + delta.x;
+      const cursorY = activator.clientY + delta.y;
+      const xPercent = ((cursorX - containerRect.left) / containerRect.width) * 100;
+      const yPercent = ((cursorY - containerRect.top) / containerRect.height) * 100;
+      if (xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100) return;
+      const clampedX = Math.max(4, Math.min(96, xPercent));
+      const clampedY = Math.max(4, Math.min(96, yPercent));
+      pushHistory(positions);
+      const key = `actor:${entityId}`;
+      setPositions((prev) => ({ ...prev, [key]: { xPercent: clampedX, yPercent: clampedY, rotation: 0 } }));
+      startTransition(async () => {
+        await saveBlockingPosition({
+          beatId: currentBeatId,
+          entityType: "actor",
+          entityId,
+          xPercent: clampedX,
+          yPercent: clampedY,
+          rotation: 0,
+        });
+      });
+      return;
+    }
+
+    // Off-stage set piece dragged onto canvas
+    if (id.startsWith("offstage-piece:")) {
+      if (!canEdit || !currentBeatId) return;
+      const entityId = id.replace("offstage-piece:", "");
+      const container = canvasContainerRef.current;
+      if (!container) return;
+      const containerRect = container.getBoundingClientRect();
+      const cursorX = activator.clientX + delta.x;
+      const cursorY = activator.clientY + delta.y;
+      const xPercent = ((cursorX - containerRect.left) / containerRect.width) * 100;
+      const yPercent = ((cursorY - containerRect.top) / containerRect.height) * 100;
+      if (xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100) return;
+      const clampedX = Math.max(4, Math.min(96, xPercent));
+      const clampedY = Math.max(4, Math.min(96, yPercent));
+      pushHistory(positions);
+      const key = `set_piece:${entityId}`;
+      setPositions((prev) => ({ ...prev, [key]: { xPercent: clampedX, yPercent: clampedY, rotation: 0 } }));
+      startTransition(async () => {
+        await saveBlockingPosition({
+          beatId: currentBeatId,
+          entityType: "set_piece",
+          entityId,
+          xPercent: clampedX,
+          yPercent: clampedY,
+          rotation: 0,
+        });
+      });
+      return;
+    }
+
+    // Existing actor/set-piece repositioning
     if (!canEdit || !currentBeatId) return;
-    const { active, delta } = event;
     if (!delta.x && !delta.y) return;
     const container = canvasContainerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
-    const id = active.id as string;
     const current = positions[id];
     if (!current) return;
 
@@ -505,7 +891,6 @@ export function BlockingCanvas({
     };
     setPositions(updated);
 
-    // Autosave
     const [entityType, entityId] = id.split(":") as [
       "actor" | "set_piece",
       string,
@@ -522,25 +907,24 @@ export function BlockingCanvas({
     });
   }
 
-  function handleRotateSetPiece(entityId: string, delta: number) {
+  function handleRotateSetPiece(entityId: string, newRotation: number, save: boolean) {
     if (!canEdit || !currentBeatId) return;
     const key = `set_piece:${entityId}`;
     const current = positions[key];
     if (!current) return;
-    const newRotation = (current.rotation + delta + 360) % 360;
-    pushHistory(positions);
-    const updated = { ...positions, [key]: { ...current, rotation: newRotation } };
-    setPositions(updated);
-    startTransition(async () => {
-      await saveBlockingPosition({
-        beatId: currentBeatId,
-        entityType: "set_piece",
-        entityId,
-        xPercent: current.xPercent,
-        yPercent: current.yPercent,
-        rotation: newRotation,
+    setPositions((prev) => ({ ...prev, [key]: { ...prev[key], rotation: newRotation } }));
+    if (save) {
+      startTransition(async () => {
+        await saveBlockingPosition({
+          beatId: currentBeatId,
+          entityType: "set_piece",
+          entityId,
+          xPercent: current.xPercent,
+          yPercent: current.yPercent,
+          rotation: newRotation,
+        });
       });
-    });
+    }
   }
 
   function handleExportPng() {
@@ -561,11 +945,10 @@ export function BlockingCanvas({
     if (pdfCanvas) {
       ctx.drawImage(pdfCanvas, 0, 0);
     } else {
-      ctx.fillStyle = "#171717";
+      ctx.fillStyle = "#f5f0e8";
       ctx.fillRect(0, 0, w, h);
     }
 
-    // Draw actor tokens
     for (const member of castMembers) {
       const key = `actor:${member.userId}`;
       const pos = positions[key];
@@ -596,15 +979,14 @@ export function BlockingCanvas({
         const fs = r * 0.75;
         ctx.font = `${fs}px sans-serif`;
         const tw = ctx.measureText(lbl).width;
-        ctx.fillStyle = "rgba(0,0,0,0.65)";
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
         ctx.fillRect(x - tw / 2 - 4, y + r + 2, tw + 8, fs + 4);
-        ctx.fillStyle = "white";
+        ctx.fillStyle = "#333";
         ctx.textBaseline = "top";
         ctx.fillText(lbl, x, y + r + 4);
       }
     }
 
-    // Draw set piece tokens
     for (const piece of SET_PIECES) {
       const key = `set_piece:${piece.key}`;
       const pos = positions[key];
@@ -645,7 +1027,7 @@ export function BlockingCanvas({
   function placeOnCanvas(entityType: "actor" | "set_piece", entityId: string) {
     if (!canEdit || !currentBeatId) return;
     const key = `${entityType}:${entityId}`;
-    if (positions[key]) return; // already placed
+    if (positions[key]) return;
     pushHistory(positions);
     const pos = { xPercent: 50, yPercent: 50, rotation: 0 };
     setPositions((prev) => ({ ...prev, [key]: pos }));
@@ -682,10 +1064,7 @@ export function BlockingCanvas({
     fd.set("title", newSceneTitle);
     fd.set("act_number", newSceneAct);
     fd.set("scene_number", newSceneNum);
-    fd.set(
-      "order_index",
-      String(scenesWithBeats.length),
-    );
+    fd.set("order_index", String(scenesWithBeats.length));
     await createScene(undefined, fd);
     setAddingScene(false);
     setNewSceneTitle("");
@@ -729,8 +1108,6 @@ export function BlockingCanvas({
     const nextIndex = scene.beats.length;
     const nextLabel = `Beat ${nextIndex + 1}`;
 
-    // If no current beat (first beat of this scene), inherit positions from the
-    // last beat of the previous scene so actors carry forward across scene breaks.
     let sourceBeatId = currentBeatId;
     if (!sourceBeatId) {
       const sceneIndex = scenesWithBeats.findIndex((s) => s.id === sceneId);
@@ -742,7 +1119,6 @@ export function BlockingCanvas({
 
     const result = await captureNextBeat(sceneId, nextLabel, nextIndex, sourceBeatId);
     if (result.beatId) {
-      // Keep current positions in state — the new beat already has them copied in DB
       setHistory([]);
       skipNextBeatLoad.current = true;
       setCurrentBeatId(result.beatId);
@@ -755,66 +1131,141 @@ export function BlockingCanvas({
     actorColors[m.userId] = ACTOR_COLORS[i % ACTOR_COLORS.length];
   });
 
+  const allPieces: CanvasPiece[] = [
+    ...SET_PIECES.map((p) => ({ key: p.key, label: p.label, svgPath: p.svgPath })),
+    ...customPieces.map((p) => ({ key: p.id, label: p.name, imageUrl: p.imageUrl })),
+  ];
+
+  async function handleUploadPiece(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError(null);
+    const fd = new FormData();
+    fd.append("productionId", production.id);
+    fd.append("file", file);
+    const result = await uploadCustomSetPiece(fd);
+    if (result.error) {
+      setUploadError(result.error);
+    } else if (result.piece) {
+      setCustomPieces((prev) => [...prev, result.piece!]);
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handleDeleteCustomPiece(pieceId: string) {
+    const result = await deleteCustomSetPiece(pieceId);
+    if (!result.error) {
+      setCustomPieces((prev) => prev.filter((p) => p.id !== pieceId));
+      // Also remove from canvas positions if placed
+      const key = `set_piece:${pieceId}`;
+      setPositions((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  }
+
   const currentScene = scenesWithBeats.find((s) =>
     s.beats.some((b) => b.id === currentBeatId),
   );
-  const currentBeat = currentScene?.beats.find(
-    (b) => b.id === currentBeatId,
-  );
+  const currentBeat = currentScene?.beats.find((b) => b.id === currentBeatId);
+
+  const offStageCount = castMembers.filter(
+    (m) => !positions[`actor:${m.userId}`],
+  ).length;
 
   return (
-    <div className="-m-6 md:-m-8 flex h-[calc(100vh-64px)] overflow-hidden">
-      {/* ─── Left panel: Scenes & Beats ─────────────────────── */}
-      <div className="flex w-56 flex-col border-r border-[color:var(--border)] bg-[color:var(--background)]">
-        <div className="flex items-center justify-between border-b border-[color:var(--border)] px-3 py-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-            Scenes
-          </span>
-          {canEdit && (
-            <button
-              onClick={() => setAddingScene(true)}
-              className="rounded p-0.5 hover:bg-[color:var(--muted)]"
-              title="Add scene"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+    <div
+      className="anim-in"
+      style={
+        fullscreen
+          ? {
+              position: "fixed",
+              inset: 0,
+              zIndex: 9999,
+              height: "100vh",
+              display: "grid",
+              gridTemplateColumns: "240px 1fr 260px",
+              overflow: "hidden",
+              background: "var(--bg)",
+            }
+          : {
+              margin: "-24px calc(-1 * var(--pad-x))",
+              height: "calc(100vh - 133px)",
+              display: "grid",
+              gridTemplateColumns: "220px 1fr 240px",
+              overflow: "hidden",
+            }
+      }
+    >
 
-        <div className="flex-1 overflow-y-auto p-2 text-sm">
+      {/* ─── Left panel: Scenes & Off-stage Cast ────────────── */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          overflow: "hidden",
+          borderRight: "1px solid var(--border)",
+          padding: "14px 12px",
+          gap: 12,
+        }}
+      >
+
+        {/* Scenes section */}
+        <div style={{ flex: "0 0 auto", minHeight: 0, display: "flex", flexDirection: "column" }}>
+          <div className="h-eyebrow" style={{ marginBottom: 8 }}>Scenes</div>
+
           {addingScene && (
-            <div className="mb-2 space-y-1 rounded border border-[color:var(--border)] p-2">
+            <div
+              className="mb-3 rounded border border-[color:var(--border)] p-2.5"
+              style={{ background: "var(--bg-elev)", display: "flex", flexDirection: "column", gap: 6 }}
+            >
               <input
                 autoFocus
                 placeholder="Scene title"
                 value={newSceneTitle}
                 onChange={(e) => setNewSceneTitle(e.target.value)}
-                className="w-full rounded border border-[color:var(--border)] px-2 py-0.5 text-xs"
+                className="field"
+                style={{ fontSize: 12, height: 32 }}
               />
-              <div className="flex gap-1">
+              <div style={{ display: "flex", gap: 6 }}>
                 <input
                   placeholder="Act"
                   value={newSceneAct}
                   onChange={(e) => setNewSceneAct(e.target.value)}
-                  className="w-12 rounded border border-[color:var(--border)] px-2 py-0.5 text-xs"
+                  className="field"
+                  style={{ width: 56, fontSize: 12, height: 32 }}
                 />
                 <input
                   placeholder="Scene"
                   value={newSceneNum}
                   onChange={(e) => setNewSceneNum(e.target.value)}
-                  className="w-12 rounded border border-[color:var(--border)] px-2 py-0.5 text-xs"
+                  className="field"
+                  style={{ width: 56, fontSize: 12, height: 32 }}
                 />
               </div>
-              <div className="flex gap-1">
+              <div style={{ display: "flex", gap: 6 }}>
                 <button
                   onClick={handleCreateScene}
-                  className="rounded bg-[color:var(--primary)] px-2 py-0.5 text-xs text-[color:var(--primary-foreground)]"
+                  className="btn primary"
+                  style={{ height: 28, padding: "0 12px", fontSize: 12 }}
                 >
                   Add
                 </button>
                 <button
                   onClick={() => setAddingScene(false)}
-                  className="rounded px-2 py-0.5 text-xs hover:bg-[color:var(--muted)]"
+                  className="btn ghost"
+                  style={{ height: 28, padding: "0 12px", fontSize: 12 }}
                 >
                   Cancel
                 </button>
@@ -823,254 +1274,180 @@ export function BlockingCanvas({
           )}
 
           {scenesWithBeats.length === 0 ? (
-            <p className="px-1 text-xs text-[color:var(--muted-foreground)]">
-              No scenes yet.{" "}
-              {canEdit && "Click + to add one."}
+            <p className="muted" style={{ fontSize: 12, padding: "4px 0 8px" }}>
+              No scenes yet.
             </p>
           ) : (
-            scenesWithBeats.map((scene) => (
-              <div key={scene.id} className="mb-2">
-                <div
-                  className={`group flex cursor-pointer items-center justify-between rounded px-1 py-0.5 hover:bg-[color:var(--muted)] ${currentSceneId === scene.id && !currentBeatId ? "bg-[color:var(--muted)]" : ""}`}
-                  onClick={() => { setCurrentSceneId(scene.id); setCurrentBeatId(null); }}
-                >
-                  <span className="text-xs font-semibold text-[color:var(--muted-foreground)]">
-                    Act {scene.actNumber} Sc {scene.sceneNumber} — {scene.title}
-                  </span>
-                  {canEdit && (
-                    <div className="hidden gap-0.5 group-hover:flex">
-                      <button
-                        onClick={() => setAddingBeatForScene(scene.id)}
-                        title="Add beat"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteScene(scene.id)}
-                        title="Delete scene"
-                      >
-                        <Trash2 className="h-3 w-3 text-red-400" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {addingBeatForScene === scene.id && (
-                  <div className="ml-3 mt-1 space-y-1 rounded border border-[color:var(--border)] p-1.5">
-                    <input
-                      autoFocus
-                      placeholder="Beat label"
-                      value={newBeatLabel}
-                      onChange={(e) => setNewBeatLabel(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleCreateBeat(scene.id);
-                        if (e.key === "Escape") setAddingBeatForScene(null);
-                      }}
-                      className="w-full rounded border border-[color:var(--border)] px-1.5 py-0.5 text-xs"
-                    />
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handleCreateBeat(scene.id)}
-                        className="rounded bg-[color:var(--primary)] px-1.5 py-0.5 text-xs text-[color:var(--primary-foreground)]"
-                      >
-                        Add
-                      </button>
-                      <button
-                        onClick={() => setAddingBeatForScene(null)}
-                        className="rounded px-1.5 py-0.5 text-xs hover:bg-[color:var(--muted)]"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="ml-3 mt-0.5 space-y-0.5">
-                  {scene.beats.map((beat) => (
-                    <div
-                      key={beat.id}
-                      className={`group flex cursor-pointer items-center justify-between rounded px-1.5 py-0.5 text-xs ${
-                        currentBeatId === beat.id
-                          ? "bg-[color:var(--primary)] text-[color:var(--primary-foreground)]"
-                          : "hover:bg-[color:var(--muted)]"
-                      }`}
-                      onClick={() => { setCurrentSceneId(scene.id); setCurrentBeatId(beat.id); }}
-                    >
-                      <div className="flex items-center gap-1">
-                        <ChevronRight className="h-2.5 w-2.5 opacity-50" />
-                        {beat.label}
-                      </div>
-                      {canEdit && currentBeatId !== beat.id && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteBeat(beat.id);
+            <div
+              className="scroll"
+              style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 260, overflowY: "auto" }}
+            >
+              {scenesWithBeats.map((scene) => (
+                <div key={scene.id}>
+                  {/* Scene card */}
+                  <div
+                    className="group"
+                    onClick={() => { setCurrentSceneId(scene.id); setCurrentBeatId(null); }}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      background: currentSceneId === scene.id ? "var(--bg-elev)" : "transparent",
+                      boxShadow: currentSceneId === scene.id ? "var(--shadow-1)" : "none",
+                      border: "1px solid " + (currentSceneId === scene.id ? "var(--border-strong)" : "transparent"),
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4 }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          className="truncate"
+                          style={{
+                            fontSize: 13,
+                            fontWeight: currentSceneId === scene.id ? 500 : 400,
+                            color: currentSceneId === scene.id ? "var(--ink)" : "var(--ink-2)",
                           }}
-                          className="hidden group-hover:block"
                         >
-                          <Trash2 className="h-2.5 w-2.5 text-red-400" />
-                        </button>
+                          {scene.title}
+                        </div>
+                        <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
+                          Act {scene.actNumber} · Sc {scene.sceneNumber}
+                        </div>
+                      </div>
+                      {canEdit && (
+                        <div className="hidden gap-1 group-hover:flex" style={{ flexShrink: 0 }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setAddingBeatForScene(scene.id); }}
+                            className="rounded p-1 hover:bg-[color:var(--bg-muted)]"
+                            title="Add beat"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteScene(scene.id); }}
+                            className="rounded p-1 hover:bg-[color:var(--bg-muted)]"
+                            title="Delete scene"
+                          >
+                            <Trash2 className="h-3 w-3" style={{ color: "var(--accent)" }} />
+                          </button>
+                        </div>
                       )}
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Add beat inline form */}
+                  {addingBeatForScene === scene.id && (
+                    <div
+                      style={{
+                        marginLeft: 12,
+                        marginTop: 6,
+                        padding: "8px 10px",
+                        borderRadius: 6,
+                        border: "1px solid var(--border)",
+                        background: "var(--bg-elev)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
+                      <input
+                        autoFocus
+                        placeholder="Beat label"
+                        value={newBeatLabel}
+                        onChange={(e) => setNewBeatLabel(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleCreateBeat(scene.id);
+                          if (e.key === "Escape") setAddingBeatForScene(null);
+                        }}
+                        className="field"
+                        style={{ fontSize: 12, height: 30 }}
+                      />
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          onClick={() => handleCreateBeat(scene.id)}
+                          className="btn primary"
+                          style={{ height: 28, padding: "0 12px", fontSize: 12 }}
+                        >
+                          Add
+                        </button>
+                        <button
+                          onClick={() => setAddingBeatForScene(null)}
+                          className="btn ghost"
+                          style={{ height: 28, padding: "0 12px", fontSize: 12 }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Beat list */}
+                  <div style={{ marginLeft: 12, marginTop: 2, display: "flex", flexDirection: "column", gap: 1 }}>
+                    {scene.beats.map((beat) => (
+                      <div
+                        key={beat.id}
+                        className="group"
+                        onClick={() => { setCurrentSceneId(scene.id); setCurrentBeatId(beat.id); }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "5px 10px",
+                          borderRadius: 5,
+                          fontSize: 12,
+                          cursor: "pointer",
+                          background: currentBeatId === beat.id ? "var(--accent-soft)" : "transparent",
+                          color: currentBeatId === beat.id ? "var(--accent-ink)" : "var(--ink-3)",
+                          fontWeight: currentBeatId === beat.id ? 500 : 400,
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <ChevronRight className="h-2.5 w-2.5 opacity-50" />
+                          {beat.label}
+                        </div>
+                        {canEdit && currentBeatId !== beat.id && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteBeat(beat.id); }}
+                            className="hidden group-hover:flex rounded p-1 hover:bg-[color:var(--bg-muted)]"
+                          >
+                            <Trash2 className="h-3 w-3" style={{ color: "var(--accent)" }} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </div>
+          )}
+
+          {canEdit && !addingScene && (
+            <button
+              onClick={() => setAddingScene(true)}
+              className="btn ghost"
+              style={{ marginTop: 6, height: 28, padding: "0 10px", fontSize: 12, justifyContent: "flex-start", width: "100%" }}
+            >
+              <Plus className="h-3 w-3" /><span>Add scene</span>
+            </button>
           )}
         </div>
-      </div>
 
-      {/* ─── Center: Canvas ─────────────────────────────────── */}
-      <div className="relative flex flex-1 flex-col overflow-hidden bg-neutral-900">
-        {/* Toolbar */}
-        <div className="flex items-center justify-between border-b border-neutral-700 bg-neutral-800 px-3 py-1.5">
-          <div className="text-sm text-white">
-            {currentScene && currentBeat ? (
-              <span>
-                Act {currentScene.actNumber} Sc {currentScene.sceneNumber} —{" "}
-                {currentScene.title}{" "}
-                <span className="text-neutral-400">/ {currentBeat.label}</span>
-              </span>
-            ) : (
-              <span className="text-neutral-400">
-                {scenesWithBeats.length === 0
-                  ? "Add a scene to begin"
-                  : "Select a beat to start blocking"}
-              </span>
-            )}
+        {/* Off-stage cast section */}
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          <div className="row-between" style={{ marginBottom: 8, flexShrink: 0 }}>
+            <div className="h-eyebrow">Off stage · {offStageCount}</div>
+            <span className="muted" style={{ fontSize: 10.5 }}>click to place</span>
           </div>
-          <div className="flex items-center gap-2">
-            {/* Grid toggles — only shown when calibration exists */}
-            {stageConfig?.calibrationX1 != null && (
-              <div className="flex items-center gap-1 border-r border-neutral-700 pr-2">
-                <button
-                  onClick={() => setShowSLSR((v) => !v)}
-                  className={`rounded px-2 py-1 text-xs transition-colors ${
-                    showSLSR
-                      ? "bg-blue-700 text-white"
-                      : "text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
-                  }`}
-                  title="Toggle stage left/right grid lines"
-                >
-                  SL/SR
-                </button>
-                <button
-                  onClick={() => setShowUSDS((v) => !v)}
-                  className={`rounded px-2 py-1 text-xs transition-colors ${
-                    showUSDS
-                      ? "bg-blue-700 text-white"
-                      : "text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
-                  }`}
-                  title="Toggle upstage/downstage grid lines"
-                >
-                  US/DS
-                </button>
-              </div>
-            )}
-            {canEdit && history.length > 0 && (
-              <button
-                onClick={handleUndo}
-                className="flex items-center gap-1 rounded px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-700"
-                title="Undo last move"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                Undo
-              </button>
-            )}
-            {canEdit && currentSceneId && (
-              <button
-                onClick={handleCaptureBeat}
-                className="flex items-center gap-1.5 rounded bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-500"
-                title="Save current positions as a beat and advance to the next one"
-              >
-                <Aperture className="h-3.5 w-3.5" />
-                Capture Beat
-              </button>
-            )}
-            <button
-              onClick={handleExportPng}
-              className="flex items-center gap-1 rounded px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-700"
-              title="Export current beat as PNG"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Export
-            </button>
-            {canEdit && (
-              <button
-                onClick={() =>
-                  router.push(`/productions/${production.slug}/blocking/setup`)
-                }
-                className="flex items-center gap-1 rounded px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-700"
-              >
-                <Settings className="h-3.5 w-3.5" />
-                Stage Setup
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Multi-page controls */}
-        {pdfUrl && numPdfPages > 1 && (
-          <div className="flex items-center justify-center gap-2 border-b border-neutral-700 bg-neutral-800 py-1 text-xs text-neutral-300">
-            <button
-              onClick={() => setCurrentPdfPage((p) => Math.max(1, p - 1))}
-              disabled={currentPdfPage <= 1}
-              className="rounded p-0.5 hover:bg-neutral-700 disabled:opacity-40"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-            </button>
-            <span>
-              Page {currentPdfPage} of {numPdfPages}
-            </span>
-            <button
-              onClick={() =>
-                setCurrentPdfPage((p) => Math.min(numPdfPages, p + 1))
-              }
-              disabled={currentPdfPage >= numPdfPages}
-              className="rounded p-0.5 hover:bg-neutral-700 disabled:opacity-40"
-            >
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
-
-        {/* Canvas area */}
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div
-            ref={canvasContainerRef}
-            className="relative flex-1 overflow-hidden"
+            className="scroll"
+            style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, overflowY: "auto", minHeight: 0 }}
           >
-            {pdfUrl ? (
-              <canvas
-                ref={pdfCanvasRef}
-                className="absolute inset-0 h-full w-full"
-                style={{ zIndex: 1 }}
-              />
+            {castMembers.length === 0 ? (
+              <p className="muted" style={{ fontSize: 12 }}>No cast assigned.</p>
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div
-                  className="h-full w-full"
-                  style={{
-                    backgroundImage:
-                      "repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.05) 39px, rgba(255,255,255,0.05) 40px), repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.05) 39px, rgba(255,255,255,0.05) 40px)",
-                  }}
-                />
-              </div>
-            )}
-
-            {stageConfig && (
-              <NumberGridOverlay
-                stageConfig={stageConfig}
-                showSLSR={showSLSR}
-                showUSDS={showUSDS}
-              />
-            )}
-
-            {currentBeatId &&
               castMembers.map((member) => {
                 const key = `actor:${member.userId}`;
-                const pos = positions[key];
-                if (!pos) return null;
+                const isOnCanvas = !!positions[key];
+                const color = actorColors[member.userId];
                 const ini =
                   (
                     (member.firstName?.[0] ?? "") +
@@ -1078,143 +1455,509 @@ export function BlockingCanvas({
                   ).toUpperCase() ||
                   member.email[0]?.toUpperCase() ||
                   "?";
-                const lbl =
-                  member.characterName ??
-                  (member.firstName || member.lastName
-                    ? `${member.firstName} ${member.lastName}`.trim()
-                    : member.email);
-                return (
-                  <ActorToken
-                    key={key}
-                    id={key}
-                    initials={ini}
-                    label={lbl}
-                    color={actorColors[member.userId]}
-                    xPercent={pos.xPercent}
-                    yPercent={pos.yPercent}
-                    canEdit={canEdit}
-                    onRemove={() => removeFromCanvas("actor", member.userId)}
-                  />
-                );
-              })}
 
-            {currentBeatId &&
-              SET_PIECES.map((piece) => {
-                const key = `set_piece:${piece.key}`;
-                const pos = positions[key];
-                if (!pos) return null;
                 return (
-                  <SetPieceToken
-                    key={key}
-                    id={key}
-                    label={piece.label}
-                    svgPath={piece.svgPath}
-                    xPercent={pos.xPercent}
-                    yPercent={pos.yPercent}
-                    rotation={pos.rotation}
-                    canEdit={canEdit}
-                    onRemove={() => removeFromCanvas("set_piece", piece.key)}
-                    onRotate={(delta) => handleRotateSetPiece(piece.key, delta)}
+                  <OffstageActorTile
+                    key={member.userId}
+                    member={member}
+                    color={color}
+                    ini={ini}
+                    isOnCanvas={isOnCanvas}
+                    isDisabled={!canEdit || !currentBeatId}
+                    onClickPlace={() => placeOnCanvas("actor", member.userId)}
                   />
                 );
-              })}
+              })
+            )}
           </div>
-        </DndContext>
+        </div>
       </div>
 
-      {/* ─── Right panel: Cast & Set Pieces ─────────────────── */}
-      <div className="flex w-48 flex-col border-l border-[color:var(--border)] bg-[color:var(--background)]">
-        {/* Cast */}
-        <div className="border-b border-[color:var(--border)] px-3 py-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-            Cast
+      {/* ─── Center: Canvas ─────────────────────────────────── */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          overflow: "hidden",
+          padding: "14px 16px",
+          gap: 10,
+          minWidth: 0,
+        }}
+      >
+
+        {/* Toolbar above canvas */}
+        <div className="row-between">
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--ink)" }}>
+              Stage Blocking
+            </div>
+            <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>
+              {currentScene && currentBeat
+                ? `${currentScene.title} · ${currentBeat.label} — drag actors to set positions`
+                : scenesWithBeats.length === 0
+                  ? "Add a scene to begin"
+                  : "Select a beat to start blocking"}
+            </div>
+          </div>
+          <div className="row" style={{ gap: 6 }}>
+            {stageConfig?.calibrationX1 != null && (
+              <>
+                <button
+                  onClick={() => setShowSLSR((v) => !v)}
+                  className="btn ghost"
+                  style={{ height: 28, padding: "0 10px", fontSize: 12, background: showSLSR ? "var(--bg-sunken)" : undefined }}
+                  title="Toggle stage left/right grid lines"
+                >
+                  <span>SL/SR</span>
+                </button>
+                <button
+                  onClick={() => setShowUSDS((v) => !v)}
+                  className="btn ghost"
+                  style={{ height: 28, padding: "0 10px", fontSize: 12, background: showUSDS ? "var(--bg-sunken)" : undefined }}
+                  title="Toggle upstage/downstage grid lines"
+                >
+                  <span>US/DS</span>
+                </button>
+              </>
+            )}
+            {canEdit && history.length > 0 && (
+              <button
+                onClick={handleUndo}
+                className="btn ghost"
+                style={{ height: 28, padding: "0 10px", fontSize: 12 }}
+                title="Undo last move"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /><span>Undo</span>
+              </button>
+            )}
+            {canEdit && currentSceneId && (
+              <button
+                onClick={handleCaptureBeat}
+                className="btn primary"
+                style={{ height: 28, padding: "0 12px", fontSize: 12 }}
+                title="Save current positions as a beat and advance to the next one"
+              >
+                <Aperture className="h-3.5 w-3.5" /><span>Capture Beat</span>
+              </button>
+            )}
+            <button
+              onClick={handleExportPng}
+              className="btn ghost"
+              style={{ height: 28, padding: "0 10px", fontSize: 12 }}
+              title="Export current beat as PNG"
+            >
+              <Download className="h-3.5 w-3.5" /><span>Export</span>
+            </button>
+            {canEdit && (
+              <button
+                onClick={() => router.push(`/productions/${production.slug}/blocking/setup`)}
+                className="btn ghost"
+                style={{ height: 28, padding: "0 10px", fontSize: 12 }}
+              >
+                <Settings className="h-3.5 w-3.5" /><span>Stage Setup</span>
+              </button>
+            )}
+            <button
+              onClick={() => setFullscreen((v) => !v)}
+              className="btn ghost"
+              style={{ height: 28, padding: "0 10px", fontSize: 12 }}
+              title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+            >
+              {fullscreen
+                ? <Minimize2 className="h-3.5 w-3.5" />
+                : <Maximize2 className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Canvas card */}
+          <div
+            className="card"
+            style={{
+              flex: 1,
+              minHeight: 0,
+              padding: 0,
+              position: "relative",
+              overflow: "hidden",
+              background: pdfUrl ? "rgb(23,23,23)" : undefined,
+            }}
+          >
+            <div ref={canvasContainerRef} className="absolute inset-0">
+              {pdfUrl ? (
+                <canvas
+                  ref={pdfCanvasRef}
+                  className="absolute inset-0 h-full w-full"
+                  style={{ zIndex: 1 }}
+                />
+              ) : (
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: "linear-gradient(180deg, oklch(0.96 0.015 60) 0%, oklch(0.94 0.02 60) 100%)",
+                  }}
+                >
+                  <svg
+                    viewBox="0 0 800 500"
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+                  >
+                    <defs>
+                      <pattern id="stage-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="oklch(0.85 0.01 60)" strokeWidth="1" />
+                      </pattern>
+                    </defs>
+                    <rect width="800" height="500" fill="url(#stage-grid)" />
+                    <rect x="20" y="20" width="760" height="440" fill="none" stroke="oklch(0.55 0.16 25)" strokeWidth="2" strokeDasharray="4 6" rx="4" />
+                    <line x1="400" y1="20" x2="400" y2="460" stroke="oklch(0.78 0.01 60)" strokeWidth="1" strokeDasharray="2 4" />
+                    <path d="M 60 460 Q 400 510 740 460" fill="oklch(0.92 0.018 60)" stroke="oklch(0.7 0.01 60)" strokeWidth="1" />
+                  </svg>
+                  <div style={{ position: "absolute", top: 6, left: 8, fontSize: 10, letterSpacing: ".1em", color: "var(--ink-4)", textTransform: "uppercase" }}>Upstage</div>
+                  <div style={{ position: "absolute", bottom: 6, left: 8, fontSize: 10, letterSpacing: ".1em", color: "var(--ink-4)", textTransform: "uppercase" }}>Downstage / Audience</div>
+                  <div style={{ position: "absolute", top: "50%", left: 6, fontSize: 10, letterSpacing: ".1em", color: "var(--ink-4)", textTransform: "uppercase", writingMode: "vertical-rl", transform: "rotate(180deg)" }}>Stage Right</div>
+                  <div style={{ position: "absolute", top: "50%", right: 6, fontSize: 10, letterSpacing: ".1em", color: "var(--ink-4)", textTransform: "uppercase", writingMode: "vertical-rl" }}>Stage Left</div>
+                </div>
+              )}
+
+              {stageConfig && (
+                <NumberGridOverlay
+                  stageConfig={stageConfig}
+                  showSLSR={showSLSR}
+                  showUSDS={showUSDS}
+                />
+              )}
+
+              {/* Actor tokens */}
+              {currentBeatId &&
+                castMembers.map((member) => {
+                  const key = `actor:${member.userId}`;
+                  const pos = positions[key];
+                  if (!pos) return null;
+                  const ini =
+                    (
+                      (member.firstName?.[0] ?? "") +
+                      (member.lastName?.[0] ?? "")
+                    ).toUpperCase() ||
+                    member.email[0]?.toUpperCase() ||
+                    "?";
+                  const lbl =
+                    member.characterName ??
+                    (member.firstName || member.lastName
+                      ? `${member.firstName} ${member.lastName}`.trim()
+                      : member.email);
+                  return (
+                    <ActorToken
+                      key={key}
+                      id={key}
+                      initials={ini}
+                      label={lbl}
+                      color={actorColors[member.userId]}
+                      xPercent={pos.xPercent}
+                      yPercent={pos.yPercent}
+                      canEdit={canEdit}
+                      onRemove={() => removeFromCanvas("actor", member.userId)}
+                    />
+                  );
+                })}
+
+              {/* Set piece tokens (built-in + custom) */}
+              {currentBeatId &&
+                allPieces.map((piece) => {
+                  const key = `set_piece:${piece.key}`;
+                  const pos = positions[key];
+                  if (!pos) return null;
+                  return (
+                    <SetPieceToken
+                      key={key}
+                      id={key}
+                      label={piece.label}
+                      svgPath={piece.svgPath}
+                      imageUrl={piece.imageUrl}
+                      xPercent={pos.xPercent}
+                      yPercent={pos.yPercent}
+                      rotation={pos.rotation}
+                      canEdit={canEdit}
+                      onRemove={() => removeFromCanvas("set_piece", piece.key)}
+                      onRotateTo={(angle, save) => handleRotateSetPiece(piece.key, angle, save)}
+                    />
+                  );
+                })}
+
+              {!currentBeatId && (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "grid",
+                    placeItems: "center",
+                    color: "var(--ink-4)",
+                    fontSize: 13,
+                    pointerEvents: "none",
+                  }}
+                >
+                  {scenesWithBeats.length === 0
+                    ? "Add a scene and beat to begin"
+                    : "Select a beat to start blocking"}
+                </div>
+              )}
+            </div>
+          </div>
+        {/* PDF multi-page controls */}
+        {pdfUrl && numPdfPages > 1 && (
+          <div className="row justify-center" style={{ gap: 8, fontSize: 12, color: "var(--ink-2)" }}>
+            <button
+              onClick={() => setCurrentPdfPage((p) => Math.max(1, p - 1))}
+              disabled={currentPdfPage <= 1}
+              className="btn ghost"
+              style={{ height: 28, padding: "0 8px" }}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <span>Page {currentPdfPage} of {numPdfPages}</span>
+            <button
+              onClick={() => setCurrentPdfPage((p) => Math.min(numPdfPages, p + 1))}
+              disabled={currentPdfPage >= numPdfPages}
+              className="btn ghost"
+              style={{ height: 28, padding: "0 8px" }}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Legend */}
+        <div className="row" style={{ gap: 14, fontSize: 11.5, color: "var(--ink-3)", padding: "0 4px" }}>
+          <span className="row" style={{ gap: 6 }}>
+            <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--c-clay)", display: "inline-block" }} />
+            Actor
+          </span>
+          <span className="row" style={{ gap: 6 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: "rgba(255,255,255,0.9)", border: "1px solid #374151", display: "inline-block" }} />
+            Set piece
+          </span>
+          <span style={{ marginLeft: "auto", fontSize: 11 }}>
+            Click a tile to place · drag to reposition
           </span>
         </div>
-        <div className="max-h-52 overflow-y-auto p-2">
-          {castMembers.length === 0 ? (
-            <p className="text-xs text-[color:var(--muted-foreground)]">
-              No cast assigned.
-            </p>
-          ) : (
-            castMembers.map((member) => {
-              const key = `actor:${member.userId}`;
-              const isOnCanvas = !!positions[key];
-              const actorName =
-                member.firstName || member.lastName
-                  ? `${member.firstName} ${member.lastName}`.trim()
-                  : member.email;
-              const color = actorColors[member.userId];
-              const ini =
-                (
-                  (member.firstName?.[0] ?? "") +
-                  (member.lastName?.[0] ?? "")
-                ).toUpperCase() ||
-                member.email[0]?.toUpperCase() ||
-                "?";
+      </div>
 
-              return (
-                <button
-                  key={member.userId}
-                  disabled={!canEdit || !currentBeatId || isOnCanvas}
-                  onClick={() => placeOnCanvas("actor", member.userId)}
-                  className="mb-1 flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs transition-colors hover:bg-[color:var(--muted)] disabled:cursor-not-allowed disabled:opacity-40"
-                  title={
-                    isOnCanvas
-                      ? "Already on stage"
-                      : !currentBeatId
-                        ? "Select a beat first"
-                        : "Click to place on stage"
-                  }
-                >
-                  <div
-                    className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                    style={{ backgroundColor: color }}
-                  >
-                    {ini}
+      {/* ─── Right panel: Set Pieces & Beat Comments ─────────── */}
+      <div
+        style={{
+          height: "100%",
+          padding: "14px 12px 14px 0",
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+        }}
+      >
+      <div
+        className="card"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
+        {/* Set Pieces — collapsible */}
+        <div style={{ borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => setSetPiecesOpen((v) => !v)}
+            className="row-between"
+            style={{
+              width: "100%",
+              padding: "13px 16px",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+            <div>
+              <div className="h-card">Set Pieces</div>
+              <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>click to place on stage</div>
+            </div>
+            <ChevronDown
+              size={14}
+              style={{
+                color: "var(--ink-3)",
+                flexShrink: 0,
+                transform: setPiecesOpen ? "rotate(0deg)" : "rotate(-90deg)",
+                transition: "transform 0.15s",
+              }}
+            />
+          </button>
+          {setPiecesOpen && (
+            <div className="scroll overflow-y-auto" style={{ padding: "0 12px 10px", maxHeight: 260 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {SET_PIECES.map((piece) => {
+                  const key = `set_piece:${piece.key}`;
+                  const isOnCanvas = !!positions[key];
+                  return (
+                    <OffstageSetPieceTile
+                      key={piece.key}
+                      piece={piece}
+                      isOnCanvas={isOnCanvas}
+                      isDisabled={!canEdit || !currentBeatId}
+                      onClickPlace={() => placeOnCanvas("set_piece", piece.key)}
+                    />
+                  );
+                })}
+
+                {/* Custom uploaded pieces */}
+                {customPieces.length > 0 && (
+                  <div style={{ borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 6 }}>
+                    <div className="h-eyebrow" style={{ marginBottom: 6, paddingLeft: 2 }}>Custom</div>
+                    {customPieces.map((piece) => {
+                      const key = `set_piece:${piece.id}`;
+                      const isOnCanvas = !!positions[key];
+                      return (
+                        <OffstageSetPieceTile
+                          key={piece.id}
+                          piece={{ key: piece.id, label: piece.name, imageUrl: piece.imageUrl }}
+                          isOnCanvas={isOnCanvas}
+                          isDisabled={!canEdit || !currentBeatId}
+                          onClickPlace={() => placeOnCanvas("set_piece", piece.id)}
+                          canDelete={canEdit}
+                          onDelete={() => handleDeleteCustomPiece(piece.id)}
+                        />
+                      );
+                    })}
                   </div>
-                  <div className="min-w-0">
-                    {member.characterName ? (
-                      <>
-                        <div className="truncate font-medium">{member.characterName}</div>
-                        <div className="truncate text-[10px] text-[color:var(--muted-foreground)]">
-                          {actorName}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="truncate font-medium">{actorName}</div>
+                )}
+
+                {/* Upload button */}
+                {canEdit && (
+                  <div style={{ marginTop: customPieces.length > 0 ? 4 : 6 }}>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".svg,.png,.jpg,.jpeg,image/svg+xml,image/png,image/jpeg"
+                      style={{ display: "none" }}
+                      onChange={handleUploadPiece}
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="btn ghost"
+                      style={{ width: "100%", height: 28, fontSize: 12, justifyContent: "flex-start" }}
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>{uploading ? "Uploading…" : "Upload custom piece"}</span>
+                    </button>
+                    {uploadError && (
+                      <div style={{ fontSize: 11, color: "var(--accent)", marginTop: 4, padding: "0 2px" }}>
+                        {uploadError}
+                      </div>
                     )}
                   </div>
-                </button>
-              );
-            })
+                )}
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Set Pieces */}
-        <div className="border-b border-t border-[color:var(--border)] px-3 py-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-            Set Pieces
-          </span>
+        {/* Beat Comments — collapsible */}
+        <div style={{ flexShrink: 0, borderBottom: "1px solid var(--border)" }}>
+          <button
+            type="button"
+            onClick={() => setCommentsOpen((v) => !v)}
+            className="row-between"
+            style={{
+              width: "100%",
+              padding: "13px 16px",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+            <div>
+              <div className="h-card">Beat Comments</div>
+              <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>comments for this beat</div>
+            </div>
+            <ChevronDown
+              size={14}
+              style={{
+                color: "var(--ink-3)",
+                flexShrink: 0,
+                transform: commentsOpen ? "rotate(0deg)" : "rotate(-90deg)",
+                transition: "transform 0.15s",
+              }}
+            />
+          </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-2">
-          {SET_PIECES.map((piece) => {
-            const key = `set_piece:${piece.key}`;
-            const isOnCanvas = !!positions[key];
-            return (
-              <button
-                key={piece.key}
-                disabled={!canEdit || !currentBeatId || isOnCanvas}
-                onClick={() => placeOnCanvas("set_piece", piece.key)}
-                className="mb-1 flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs transition-colors hover:bg-[color:var(--muted)] disabled:cursor-not-allowed disabled:opacity-40"
-                title={
-                  isOnCanvas
-                    ? "Already on stage"
-                    : !currentBeatId
-                      ? "Select a beat first"
-                      : "Click to place on stage"
-                }
-              >
-                <svg viewBox="0 0 80 60" width={28} height={21} className="flex-shrink-0">
+        {commentsOpen && (
+          <BeatCommentSection
+            beatId={currentBeatId}
+            currentUserId={currentUserId}
+            productionMembers={productionMembers}
+            canModerate={canEdit}
+          />
+        )}
+      </div>
+      </div>
+    </div>
+
+    {/* Drag ghost — centered on cursor, minimal avatar/icon only */}
+    <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
+      {(() => {
+        if (!activeId) return null;
+
+        if (activeId.startsWith("offstage:")) {
+          const userId = activeId.replace("offstage:", "");
+          const member = castMembers.find((m) => m.userId === userId);
+          if (!member) return null;
+          const color = actorColors[member.userId];
+          const ini =
+            ((member.firstName?.[0] ?? "") + (member.lastName?.[0] ?? "")).toUpperCase() ||
+            member.email[0]?.toUpperCase() || "?";
+          return (
+            <div
+              className="avatar"
+              style={{
+                width: 38,
+                height: 38,
+                fontSize: 13,
+                background: color,
+                outline: "2px solid var(--accent)",
+                outlineOffset: 2,
+                pointerEvents: "none",
+                opacity: 0.9,
+              }}
+            >
+              {ini}
+            </div>
+          );
+        }
+
+        if (activeId.startsWith("offstage-piece:")) {
+          const key = activeId.replace("offstage-piece:", "");
+          const piece = allPieces.find((p) => p.key === key);
+          if (!piece) return null;
+          return (
+            <div
+              style={{
+                width: 56,
+                height: 42,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 8,
+                background: "var(--bg-elev)",
+                outline: "2px solid var(--accent)",
+                outlineOffset: 2,
+                boxShadow: "0 4px 14px rgba(0,0,0,0.18)",
+                pointerEvents: "none",
+                opacity: 0.9,
+              }}
+            >
+              {piece.imageUrl ? (
+                <img src={piece.imageUrl} alt={piece.label} style={{ maxWidth: 40, maxHeight: 32, objectFit: "contain" }} />
+              ) : (
+                <svg viewBox="0 0 80 60" width={36} height={27}>
                   <path
                     d={piece.svgPath}
                     fill="none"
@@ -1224,12 +1967,14 @@ export function BlockingCanvas({
                     strokeLinejoin="round"
                   />
                 </svg>
-                <span className="truncate">{piece.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
+              )}
+            </div>
+          );
+        }
+
+        return null;
+      })()}
+    </DragOverlay>
+    </DndContext>
   );
 }

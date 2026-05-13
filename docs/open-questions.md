@@ -4,11 +4,12 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
-## Blocking tool questions (Phase 3 candidates)
+## Blocking tool questions (future candidates)
 
-- **Set piece rotation UX:** Current ±15° buttons work but the desired UX is a corner drag handle that can rotate to any angle freely. Requires tracking pointer angle relative to the token center during drag (separate from the @dnd-kit drag-move path).
 - **Full beat breakdown export:** Directors want to print the entire blocking script — all scenes, all beats, each with a canvas snapshot. Approach: loop through every beat, render positions onto an offscreen canvas, assemble into a multi-page PDF (e.g. via `jspdf`) or a print-friendly HTML page. Should include scene/beat label and actor legend per page.
 - The number line ruler uses `preserveAspectRatio="none"` on the SVG, which distorts tick mark heights on non-square viewports — is this acceptable or should it be addressed?
+- **Custom set piece signed URLs:** URLs expire after 1 hour. Long blocking sessions will see broken images for custom pieces after expiry. Should the canvas auto-refresh URLs (e.g. on focus regain)?
+- **Custom set piece deletion UX:** Deleting a custom set piece from the library removes it from future beats, but existing `blocking_positions` rows still reference its ID. Tokens for deleted pieces will appear as missing images on canvas. Should deletion be blocked if the piece is in use, or should positions be cleaned up on delete?
 
 ## Product questions
 

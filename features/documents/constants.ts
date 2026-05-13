@@ -8,3 +8,14 @@ export const DOCUMENT_TYPES = [
 ] as const;
 
 export type DocumentType = (typeof DOCUMENT_TYPES)[number]["value"];
+
+export const DEFAULT_FOLDERS = [
+  "Director",
+  "Stage Management",
+  "Music",
+  "Choreography",
+  "Costumes",
+  "Props",
+  "Lighting",
+  "Sound",
+] as const;

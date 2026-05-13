@@ -36,17 +36,15 @@ export default async function NotesPage({
   const canManageTags = can(user.role, "notes:manage_tags");
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <NotesPanel
-        notes={notes}
-        tags={tags}
-        productionId={production.id}
-        productionSlug={slug}
-        currentUserId={user.id}
-        canCreate={canCreate}
-        canManageTags={canManageTags}
-        organizationId={org.id}
-      />
-    </div>
+    <NotesPanel
+      notes={notes}
+      tags={tags}
+      productionId={production.id}
+      productionSlug={slug}
+      currentUserId={user.id}
+      canCreate={canCreate}
+      canManageTags={canManageTags}
+      organizationId={org.id}
+    />
   );
 }
