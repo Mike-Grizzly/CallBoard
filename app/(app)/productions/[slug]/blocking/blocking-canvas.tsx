@@ -19,13 +19,16 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, MessageSquare, X, Maximize2, Minimize2 } from "lucide-react";
+import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, X, Maximize2, Minimize2 } from "lucide-react";
 import { BeatCommentSection } from "@/components/blocking/beat-comment-section";
 import type { ProductionMember } from "@/features/members/queries";
 import {
   saveBlockingPosition,
   removeBlockingPosition,
   fetchBeatPositions,
+  uploadCustomSetPiece,
+  deleteCustomSetPiece,
+  type CustomSetPieceClient,
 } from "@/features/blocking/actions";
 import {
   createScene,
@@ -47,6 +50,14 @@ type Position = {
 
 type PositionMap = Record<string, Position>;
 
+// Unified set piece type — built-ins have svgPath, custom uploads have imageUrl
+type CanvasPiece = {
+  key: string;
+  label: string;
+  svgPath?: string;
+  imageUrl?: string;
+};
+
 type Props = {
   production: { id: string; title: string; slug: string };
   stageConfig: StageConfiguration | null;
@@ -58,6 +69,7 @@ type Props = {
   currentUserId: string;
   initialBeatId: string | null;
   initialPositions: Pick<BlockingPosition, "entityType" | "entityId" | "xPercent" | "yPercent" | "rotation">[];
+  initialCustomSetPieces: CustomSetPieceClient[];
 };
 
 // ─── Actor Token ────────────────────────────────────────────────────
@@ -178,6 +190,7 @@ function SetPieceToken({
   id,
   label,
   svgPath,
+  imageUrl,
   xPercent,
   yPercent,
   rotation,
@@ -187,7 +200,8 @@ function SetPieceToken({
 }: {
   id: string;
   label: string;
-  svgPath: string;
+  svgPath?: string;
+  imageUrl?: string;
   xPercent: number;
   yPercent: number;
   rotation: number;
@@ -263,21 +277,32 @@ function SetPieceToken({
           </button>
         )}
         <div style={{ transform: `rotate(${rotation}deg)` }}>
-          <svg
-            viewBox="0 0 80 60"
-            width={64}
-            height={48}
-            className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm"
-          >
-            <path
-              d={svgPath}
-              fill="none"
-              stroke="#374151"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={label}
+              width={64}
+              height={48}
+              className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm"
+              style={{ objectFit: "contain", display: "block" }}
             />
-          </svg>
+          ) : (
+            <svg
+              viewBox="0 0 80 60"
+              width={64}
+              height={48}
+              className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm"
+            >
+              <path
+                d={svgPath}
+                fill="none"
+                stroke="#374151"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
         </div>
         {canEdit && (
           <div
@@ -406,11 +431,15 @@ function OffstageSetPieceTile({
   isOnCanvas,
   isDisabled,
   onClickPlace,
+  onDelete,
+  canDelete,
 }: {
-  piece: { key: string; label: string; svgPath: string };
+  piece: CanvasPiece;
   isOnCanvas: boolean;
   isDisabled: boolean;
   onClickPlace: () => void;
+  onDelete?: () => void;
+  canDelete?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `offstage-piece:${piece.key}`,
@@ -418,45 +447,68 @@ function OffstageSetPieceTile({
   });
 
   return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      onClick={isDisabled || isOnCanvas ? undefined : onClickPlace}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "6px 10px",
-        borderRadius: 6,
-        cursor: isOnCanvas || isDisabled ? "default" : isDragging ? "grabbing" : "grab",
-        border: "1px dashed " + (isOnCanvas ? "var(--border)" : "var(--border-strong)"),
-        background: isOnCanvas ? "transparent" : "var(--bg-muted)",
-        opacity: isDisabled ? 0.4 : isOnCanvas ? 0.4 : isDragging ? 0.3 : 1,
-        touchAction: "none",
-        userSelect: "none",
-      }}
-      title={
-        isOnCanvas
-          ? "Already on stage"
-          : isDisabled
-            ? "Select a beat first"
-            : "Drag onto stage or click to place at center"
-      }
-    >
-      <svg viewBox="0 0 80 60" width={28} height={21} style={{ flexShrink: 0 }}>
-        <path
-          d={piece.svgPath}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <span className="truncate" style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-2)" }}>
-        {piece.label}
-      </span>
+    <div className="group" style={{ position: "relative" }}>
+      <div
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        onClick={isDisabled || isOnCanvas ? undefined : onClickPlace}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "6px 10px",
+          borderRadius: 6,
+          cursor: isOnCanvas || isDisabled ? "default" : isDragging ? "grabbing" : "grab",
+          border: "1px dashed " + (isOnCanvas ? "var(--border)" : "var(--border-strong)"),
+          background: isOnCanvas ? "transparent" : "var(--bg-muted)",
+          opacity: isDisabled ? 0.4 : isOnCanvas ? 0.4 : isDragging ? 0.3 : 1,
+          touchAction: "none",
+          userSelect: "none",
+        }}
+        title={
+          isOnCanvas
+            ? "Already on stage"
+            : isDisabled
+              ? "Select a beat first"
+              : "Drag onto stage or click to place at center"
+        }
+      >
+        {piece.imageUrl ? (
+          <img
+            src={piece.imageUrl}
+            alt={piece.label}
+            width={28}
+            height={21}
+            style={{ objectFit: "contain", flexShrink: 0 }}
+          />
+        ) : (
+          <svg viewBox="0 0 80 60" width={28} height={21} style={{ flexShrink: 0 }}>
+            <path
+              d={piece.svgPath}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+        <span className="truncate" style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-2)" }}>
+          {piece.label}
+        </span>
+      </div>
+      {canDelete && onDelete && (
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="absolute right-1 top-1/2 -translate-y-1/2 hidden h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white group-hover:flex"
+          style={{ zIndex: 10 }}
+          title="Delete custom piece"
+        >
+          <X size={9} strokeWidth={3} />
+        </button>
+      )}
     </div>
   );
 }
@@ -516,8 +568,8 @@ function NumberGridOverlay({
   const minorTickH = 1.5;
   const majorTickH = 2.8;
   const labelY = centerY + 4.2;
-  const gridColor = "rgba(30,64,175,0.45)";
-  const gridShadow = "rgba(255,255,255,0.55)";
+  const gridLine = "rgba(80,80,80,0.22)";
+  const centerLine = "rgba(80,80,80,0.45)";
 
   return (
     <svg
@@ -527,20 +579,18 @@ function NumberGridOverlay({
       preserveAspectRatio="none"
     >
       {showSLSR && ticks.map(({ x }) => (
-        <g key={`slsr-${x}`}>
-          <line x1={x} y1={0} x2={x} y2={100} stroke={gridShadow} strokeWidth="0.4" strokeDasharray="3 3" />
-          <line x1={x} y1={0} x2={x} y2={100} stroke={gridColor} strokeWidth="0.25" strokeDasharray="3 3" />
-        </g>
+        <line key={`slsr-${x}`} x1={x} y1={0} x2={x} y2={100}
+          stroke={gridLine} strokeWidth="0.18" />
       ))}
 
       {showUSDS && depthTicks.map(({ y, ft }) => (
         <g key={`usds-${y}`}>
-          <line x1={calibrationX1!} y1={y} x2={calibrationX2!} y2={y} stroke={gridShadow} strokeWidth="0.4" strokeDasharray="3 3" />
-          <line x1={calibrationX1!} y1={y} x2={calibrationX2!} y2={y} stroke={gridColor} strokeWidth="0.25" strokeDasharray="3 3" />
+          <line x1={calibrationX1!} y1={y} x2={calibrationX2!} y2={y}
+            stroke={gridLine} strokeWidth="0.18" />
           <text
-            x={calibrationX1! - 2.5} y={y + 0.8}
-            textAnchor="end" fontSize="1.8" fill="rgba(30,64,175,0.9)"
-            stroke="white" strokeWidth="2.5" paintOrder="stroke"
+            x={calibrationX1! - 1.5} y={y + 0.7}
+            textAnchor="end" fontSize="1.6" fill="rgba(80,80,80,0.55)"
+            stroke="white" strokeWidth="2" paintOrder="stroke"
             style={{ pointerEvents: "none" }}>
             {ft}&apos;
           </text>
@@ -548,9 +598,7 @@ function NumberGridOverlay({
       ))}
 
       <line x1={calibrationX1!} y1={centerY} x2={calibrationX2!} y2={centerY}
-        stroke="rgba(255,255,255,0.7)" strokeWidth="0.6" />
-      <line x1={calibrationX1!} y1={centerY} x2={calibrationX2!} y2={centerY}
-        stroke="rgba(30,64,175,0.8)" strokeWidth="0.35" />
+        stroke={centerLine} strokeWidth="0.25" />
 
       {ticks.map(({ x, ft, isMajor }) => {
         const tickH = isMajor ? majorTickH : minorTickH;
@@ -559,13 +607,11 @@ function NumberGridOverlay({
         return (
           <g key={`tick-${x}`}>
             <line x1={x} y1={centerY} x2={x} y2={centerY - tickH}
-              stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
-            <line x1={x} y1={centerY} x2={x} y2={centerY - tickH}
-              stroke="rgba(30,64,175,0.85)" strokeWidth="0.3" />
+              stroke={centerLine} strokeWidth="0.2" />
             {showLabel && (
-              <text x={x} y={labelY} textAnchor="middle" fontSize="1.8"
-                fill="rgba(30,64,175,0.9)"
-                stroke="white" strokeWidth="2.5" paintOrder="stroke"
+              <text x={x} y={labelY} textAnchor="middle" fontSize="1.6"
+                fill="rgba(80,80,80,0.6)"
+                stroke="white" strokeWidth="2" paintOrder="stroke"
                 fontWeight={isMajor ? "bold" : "normal"}
                 style={{ pointerEvents: "none" }}>
                 {label}
@@ -605,12 +651,14 @@ export function BlockingCanvas({
   currentUserId,
   initialBeatId,
   initialPositions,
+  initialCustomSetPieces,
 }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
 
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [currentBeatId, setCurrentBeatId] = useState<string | null>(initialBeatId);
   const [currentSceneId, setCurrentSceneId] = useState<string | null>(
@@ -633,6 +681,9 @@ export function BlockingCanvas({
   const [commentsOpen, setCommentsOpen] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [customPieces, setCustomPieces] = useState<CustomSetPieceClient[]>(initialCustomSetPieces);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!fullscreen) return;
@@ -1046,6 +1097,43 @@ export function BlockingCanvas({
   castMembers.forEach((m, i) => {
     actorColors[m.userId] = ACTOR_COLORS[i % ACTOR_COLORS.length];
   });
+
+  const allPieces: CanvasPiece[] = [
+    ...SET_PIECES.map((p) => ({ key: p.key, label: p.label, svgPath: p.svgPath })),
+    ...customPieces.map((p) => ({ key: p.id, label: p.name, imageUrl: p.imageUrl })),
+  ];
+
+  async function handleUploadPiece(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError(null);
+    const fd = new FormData();
+    fd.append("productionId", production.id);
+    fd.append("file", file);
+    const result = await uploadCustomSetPiece(fd);
+    if (result.error) {
+      setUploadError(result.error);
+    } else if (result.piece) {
+      setCustomPieces((prev) => [...prev, result.piece!]);
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handleDeleteCustomPiece(pieceId: string) {
+    const result = await deleteCustomSetPiece(pieceId);
+    if (!result.error) {
+      setCustomPieces((prev) => prev.filter((p) => p.id !== pieceId));
+      // Also remove from canvas positions if placed
+      const key = `set_piece:${pieceId}`;
+      setPositions((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  }
 
   const currentScene = scenesWithBeats.find((s) =>
     s.beats.some((b) => b.id === currentBeatId),
@@ -1538,9 +1626,9 @@ export function BlockingCanvas({
                   );
                 })}
 
-              {/* Set piece tokens */}
+              {/* Set piece tokens (built-in + custom) */}
               {currentBeatId &&
-                SET_PIECES.map((piece) => {
+                allPieces.map((piece) => {
                   const key = `set_piece:${piece.key}`;
                   const pos = positions[key];
                   if (!pos) return null;
@@ -1550,6 +1638,7 @@ export function BlockingCanvas({
                       id={key}
                       label={piece.label}
                       svgPath={piece.svgPath}
+                      imageUrl={piece.imageUrl}
                       xPercent={pos.xPercent}
                       yPercent={pos.yPercent}
                       rotation={pos.rotation}
@@ -1668,7 +1757,7 @@ export function BlockingCanvas({
             />
           </button>
           {setPiecesOpen && (
-            <div className="scroll overflow-y-auto" style={{ padding: "0 12px 10px", maxHeight: 220 }}>
+            <div className="scroll overflow-y-auto" style={{ padding: "0 12px 10px", maxHeight: 260 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {SET_PIECES.map((piece) => {
                   const key = `set_piece:${piece.key}`;
@@ -1683,6 +1772,55 @@ export function BlockingCanvas({
                     />
                   );
                 })}
+
+                {/* Custom uploaded pieces */}
+                {customPieces.length > 0 && (
+                  <div style={{ borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 6 }}>
+                    <div className="h-eyebrow" style={{ marginBottom: 6, paddingLeft: 2 }}>Custom</div>
+                    {customPieces.map((piece) => {
+                      const key = `set_piece:${piece.id}`;
+                      const isOnCanvas = !!positions[key];
+                      return (
+                        <OffstageSetPieceTile
+                          key={piece.id}
+                          piece={{ key: piece.id, label: piece.name, imageUrl: piece.imageUrl }}
+                          isOnCanvas={isOnCanvas}
+                          isDisabled={!canEdit || !currentBeatId}
+                          onClickPlace={() => placeOnCanvas("set_piece", piece.id)}
+                          canDelete={canEdit}
+                          onDelete={() => handleDeleteCustomPiece(piece.id)}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Upload button */}
+                {canEdit && (
+                  <div style={{ marginTop: customPieces.length > 0 ? 4 : 6 }}>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".svg,.png,.jpg,.jpeg,image/svg+xml,image/png,image/jpeg"
+                      style={{ display: "none" }}
+                      onChange={handleUploadPiece}
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="btn ghost"
+                      style={{ width: "100%", height: 28, fontSize: 12, justifyContent: "flex-start" }}
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>{uploading ? "Uploading…" : "Upload custom piece"}</span>
+                    </button>
+                    {uploadError && (
+                      <div style={{ fontSize: 11, color: "var(--accent)", marginTop: 4, padding: "0 2px" }}>
+                        {uploadError}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1696,16 +1834,16 @@ export function BlockingCanvas({
             className="row-between"
             style={{
               width: "100%",
-              padding: "12px 16px",
+              padding: "13px 16px",
               background: "none",
               border: "none",
               cursor: "pointer",
               textAlign: "left",
             }}
           >
-            <div className="h-eyebrow" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <MessageSquare className="h-3 w-3" style={{ color: "var(--ink-3)" }} />
-              Beat Comments
+            <div>
+              <div className="h-card">Beat Comments</div>
+              <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>comments for this beat</div>
             </div>
             <ChevronDown
               size={14}
@@ -1764,7 +1902,7 @@ export function BlockingCanvas({
 
         if (activeId.startsWith("offstage-piece:")) {
           const key = activeId.replace("offstage-piece:", "");
-          const piece = SET_PIECES.find((p) => p.key === key);
+          const piece = allPieces.find((p) => p.key === key);
           if (!piece) return null;
           return (
             <div
@@ -1783,16 +1921,20 @@ export function BlockingCanvas({
                 opacity: 0.9,
               }}
             >
-              <svg viewBox="0 0 80 60" width={36} height={27}>
-                <path
-                  d={piece.svgPath}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              {piece.imageUrl ? (
+                <img src={piece.imageUrl} alt={piece.label} style={{ maxWidth: 40, maxHeight: 32, objectFit: "contain" }} />
+              ) : (
+                <svg viewBox="0 0 80 60" width={36} height={27}>
+                  <path
+                    d={piece.svgPath}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
             </div>
           );
         }

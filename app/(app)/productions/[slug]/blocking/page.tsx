@@ -4,10 +4,11 @@ import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership, getProductionMembers } from "@/features/members/queries";
-import { getStageConfiguration, getCastMembers, getBlockingPositionsForBeat } from "@/features/blocking/queries";
+import { getStageConfiguration, getCastMembers, getBlockingPositionsForBeat, getCustomSetPieces } from "@/features/blocking/queries";
 import { getScenesWithBeats } from "@/features/scenes/queries";
 import { getDocumentById } from "@/features/documents/queries";
 import { getDocumentUrl } from "@/features/documents/actions";
+import { getCustomSetPieceUrls } from "@/features/blocking/actions";
 import { BlockingCanvas } from "./blocking-canvas";
 
 export default async function BlockingPage({
@@ -32,12 +33,14 @@ export default async function BlockingPage({
     redirect(`/productions/${slug}`);
   }
 
-  const [stageConfig, scenesWithBeats, castMembers, productionMembers] = await Promise.all([
-    getStageConfiguration(production.id),
-    getScenesWithBeats(production.id),
-    getCastMembers(production.id),
-    getProductionMembers(production.id),
-  ]);
+  const [stageConfig, scenesWithBeats, castMembers, productionMembers, customPieceRows] =
+    await Promise.all([
+      getStageConfiguration(production.id),
+      getScenesWithBeats(production.id),
+      getCastMembers(production.id),
+      getProductionMembers(production.id),
+      getCustomSetPieces(production.id),
+    ]);
 
   // If no stage config, redirect to setup (only for editors)
   if (!stageConfig && can(user.role, "blocking:edit")) {
@@ -51,6 +54,15 @@ export default async function BlockingPage({
       pdfUrl = await getDocumentUrl(doc.storagePath);
     }
   }
+
+  const signedUrls = await getCustomSetPieceUrls(customPieceRows.map((p) => p.storagePath));
+  const initialCustomSetPieces = customPieceRows.map((p) => ({
+    id: p.id,
+    name: p.name,
+    storagePath: p.storagePath,
+    fileType: p.fileType,
+    imageUrl: signedUrls[p.storagePath] ?? "",
+  }));
 
   const firstBeatId = scenesWithBeats[0]?.beats[0]?.id ?? null;
   const initialPositions = firstBeatId
@@ -69,6 +81,7 @@ export default async function BlockingPage({
       currentUserId={user.id}
       initialBeatId={firstBeatId}
       initialPositions={initialPositions}
+      initialCustomSetPieces={initialCustomSetPieces}
     />
   );
 }

@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { stageConfigurations, blockingPositions, beatComments, profiles } from "@/db/schema";
+import { stageConfigurations, blockingPositions, beatComments, profiles, customSetPieces } from "@/db/schema";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { eq, and, asc } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -266,6 +267,110 @@ export async function deleteBeatComment(
   }
 
   await db.delete(beatComments).where(eq(beatComments.id, commentId));
+  revalidatePath("/productions");
+  return {};
+}
+
+// ─── Custom Set Pieces ───────────────────────────────────────────────
+
+export type CustomSetPieceClient = {
+  id: string;
+  name: string;
+  storagePath: string;
+  fileType: string;
+  imageUrl: string;
+};
+
+export async function getCustomSetPieceUrls(
+  storagePaths: string[],
+): Promise<Record<string, string>> {
+  if (storagePaths.length === 0) return {};
+  const supabase = await createSupabaseServerClient();
+  const entries = await Promise.all(
+    storagePaths.map(async (path) => {
+      const { data } = await supabase.storage
+        .from("attachments")
+        .createSignedUrl(path, 3600);
+      return [path, data?.signedUrl ?? ""] as const;
+    }),
+  );
+  return Object.fromEntries(entries);
+}
+
+export async function uploadCustomSetPiece(
+  formData: FormData,
+): Promise<{ error?: string; piece?: CustomSetPieceClient }> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "blocking:edit")) {
+    return { error: "You don't have permission to upload set pieces." };
+  }
+
+  const productionId = formData.get("productionId") as string;
+  const file = formData.get("file") as File;
+  const nameRaw = (formData.get("name") as string | null)?.trim();
+
+  if (!productionId) return { error: "Production ID is required." };
+  if (!file || file.size === 0) return { error: "No file selected." };
+
+  const allowed = ["image/svg+xml", "image/png", "image/jpeg"];
+  if (!allowed.includes(file.type)) {
+    return { error: "Only SVG, PNG, and JPG files are supported." };
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return { error: "File must be under 5 MB." };
+  }
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const storagePath = `set-pieces/${productionId}/${Date.now()}-${safeName}`;
+  const fileType = file.name.split(".").pop()?.toLowerCase() ?? "png";
+  const name = nameRaw || file.name.replace(/\.[^.]+$/, "");
+
+  const supabase = await createSupabaseServerClient();
+  const { error: uploadError } = await supabase.storage
+    .from("attachments")
+    .upload(storagePath, file);
+  if (uploadError) return { error: uploadError.message };
+
+  const [row] = await db
+    .insert(customSetPieces)
+    .values({ productionId, name, storagePath, fileType, uploadedBy: user.id })
+    .returning();
+
+  const { data: urlData } = await supabase.storage
+    .from("attachments")
+    .createSignedUrl(storagePath, 3600);
+
+  revalidatePath("/productions");
+  return {
+    piece: {
+      id: row.id,
+      name: row.name,
+      storagePath: row.storagePath,
+      fileType: row.fileType,
+      imageUrl: urlData?.signedUrl ?? "",
+    },
+  };
+}
+
+export async function deleteCustomSetPiece(
+  pieceId: string,
+): Promise<{ error?: string }> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "blocking:edit")) {
+    return { error: "You don't have permission to delete set pieces." };
+  }
+
+  const [piece] = await db
+    .select()
+    .from(customSetPieces)
+    .where(eq(customSetPieces.id, pieceId))
+    .limit(1);
+  if (!piece) return { error: "Set piece not found." };
+
+  const supabase = await createSupabaseServerClient();
+  await supabase.storage.from("attachments").remove([piece.storagePath]);
+  await db.delete(customSetPieces).where(eq(customSetPieces.id, pieceId));
+
   revalidatePath("/productions");
   return {};
 }
