@@ -28,8 +28,9 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, X, Maximize2, Minimize2, Route } from "lucide-react";
+import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, X, Maximize2, Minimize2, Route, Layers } from "lucide-react";
 import { BeatCommentSection } from "@/components/blocking/beat-comment-section";
+import { BeatNotesSection } from "@/components/blocking/beat-notes-section";
 import type { ProductionMember } from "@/features/members/queries";
 import {
   saveBlockingPosition,
@@ -45,6 +46,7 @@ import {
   deleteScene,
   deleteBeat,
   captureNextBeat,
+  saveBeatNotes,
 } from "@/features/scenes/actions";
 import { SET_PIECES, ACTOR_COLORS } from "@/features/blocking/constants";
 import type { StageConfiguration, BlockingPosition } from "@/db/schema";
@@ -103,13 +105,14 @@ function ActorToken({
   xPercent: number;
   yPercent: number;
   canEdit: boolean;
+  isInteractive: boolean;
   isSelected: boolean;
   groupDragDelta: { x: number; y: number } | null;
   onRemove: () => void;
   onSelect: (e: React.MouseEvent) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id, disabled: !canEdit });
+    useDraggable({ id, disabled: !canEdit || !isInteractive });
 
   // Apply group movement delta for non-active selected tokens
   const effectiveTransform = isDragging
@@ -123,21 +126,22 @@ function ActorToken({
     left: `${xPercent}%`,
     top: `${yPercent}%`,
     transform: CSS.Translate.toString(effectiveTransform),
-    zIndex: isDragging || groupDragDelta ? 50 : 20,
-    cursor: canEdit ? (isDragging ? "grabbing" : "grab") : "default",
+    zIndex: isDragging || groupDragDelta ? 50 : 18,
+    cursor: canEdit && isInteractive ? (isDragging ? "grabbing" : "grab") : "default",
     userSelect: "none",
     touchAction: "none",
+    pointerEvents: isInteractive ? undefined : "none",
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...(canEdit ? listeners : {})}
-      {...(canEdit ? attributes : {})}
+      {...(canEdit && isInteractive ? listeners : {})}
+      {...(canEdit && isInteractive ? attributes : {})}
       className="group -translate-x-1/2 -translate-y-1/2"
       data-actor-token="true"
-      onClick={canEdit ? onSelect : undefined}
+      onClick={canEdit && isInteractive ? onSelect : undefined}
     >
       <div className="relative flex flex-col items-center">
         {canEdit && (
@@ -236,11 +240,12 @@ function SetPieceToken({
   yPercent: number;
   rotation: number;
   canEdit: boolean;
+  isInteractive: boolean;
   onRemove: () => void;
   onRotateTo: (angle: number, save: boolean) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id, disabled: !canEdit });
+    useDraggable({ id, disabled: !canEdit || !isInteractive });
   const svgWrapRef = useRef<HTMLDivElement>(null);
 
   const style: React.CSSProperties = {
@@ -248,10 +253,11 @@ function SetPieceToken({
     left: `${xPercent}%`,
     top: `${yPercent}%`,
     transform: CSS.Translate.toString(transform),
-    zIndex: isDragging ? 50 : 20,
-    cursor: canEdit ? (isDragging ? "grabbing" : "grab") : "default",
+    zIndex: isDragging ? 50 : 8,
+    cursor: canEdit && isInteractive ? (isDragging ? "grabbing" : "grab") : "default",
     userSelect: "none",
     touchAction: "none",
+    pointerEvents: isInteractive ? undefined : "none",
   };
 
   function handleRotateGrab(e: React.PointerEvent) {
@@ -711,6 +717,17 @@ export function BlockingCanvas({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [showMovementArrows, setShowMovementArrows] = useState(false);
   const [nextBeatPositions, setNextBeatPositions] = useState<PositionMap | null>(null);
+  const [activeLayer, setActiveLayer] = useState<"actors" | "set_pieces">("actors");
+  const [notesOpen, setNotesOpen] = useState(true);
+  const [beatNotesMap, setBeatNotesMap] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    for (const scene of scenesWithBeats) {
+      for (const beat of scene.beats) {
+        map[beat.id] = beat.notes ?? "";
+      }
+    }
+    return map;
+  });
 
   // Multi-select state
   const [selectedActorIds, setSelectedActorIds] = useState<Set<string>>(new Set());
@@ -1264,6 +1281,11 @@ export function BlockingCanvas({
     }
   }
 
+  async function handleSaveBeatNotes(beatId: string, html: string) {
+    setBeatNotesMap((prev) => ({ ...prev, [beatId]: html }));
+    await saveBeatNotes(beatId, html);
+  }
+
   const actorColors: Record<string, string> = {};
   castMembers.forEach((m, i) => {
     actorColors[m.userId] = ACTOR_COLORS[i % ACTOR_COLORS.length];
@@ -1602,7 +1624,7 @@ export function BlockingCanvas({
                     color={color}
                     ini={ini}
                     isOnCanvas={isOnCanvas}
-                    isDisabled={!canEdit || !currentBeatId}
+                    isDisabled={!canEdit || !currentBeatId || activeLayer !== "actors"}
                     onClickPlace={() => placeOnCanvas("actor", member.userId)}
                   />
                 );
@@ -1665,6 +1687,30 @@ export function BlockingCanvas({
                 </button>
               </>
             )}
+            <div
+              style={{ display: "flex", alignItems: "center", gap: 4 }}
+              title="Active layer — only tokens on this layer can be moved"
+            >
+              <Layers className="h-3.5 w-3.5" style={{ color: "var(--ink-3)", flexShrink: 0 }} />
+              <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 6, overflow: "hidden" }}>
+                <button
+                  onClick={() => setActiveLayer("set_pieces")}
+                  className="btn ghost"
+                  style={{ height: 28, padding: "0 10px", fontSize: 12, borderRadius: 0, borderRight: "1px solid var(--border)", background: activeLayer === "set_pieces" ? "var(--bg-sunken)" : undefined }}
+                  title="Set pieces layer — move furniture and props"
+                >
+                  Set Pieces
+                </button>
+                <button
+                  onClick={() => setActiveLayer("actors")}
+                  className="btn ghost"
+                  style={{ height: 28, padding: "0 10px", fontSize: 12, borderRadius: 0, background: activeLayer === "actors" ? "var(--bg-sunken)" : undefined }}
+                  title="Actors layer — move cast"
+                >
+                  Actors
+                </button>
+              </div>
+            </div>
             <button
               onClick={() => setShowMovementArrows((v) => !v)}
               className="btn ghost"
@@ -1896,6 +1942,7 @@ export function BlockingCanvas({
                       xPercent={pos.xPercent}
                       yPercent={pos.yPercent}
                       canEdit={canEdit}
+                      isInteractive={activeLayer === "actors"}
                       isSelected={isSelected}
                       groupDragDelta={isGroupFollower ? activeDragDelta : null}
                       onRemove={() => removeFromCanvas("actor", member.userId)}
@@ -1933,6 +1980,7 @@ export function BlockingCanvas({
                       yPercent={pos.yPercent}
                       rotation={pos.rotation}
                       canEdit={canEdit}
+                      isInteractive={activeLayer === "set_pieces"}
                       onRemove={() => removeFromCanvas("set_piece", piece.key)}
                       onRotateTo={(angle, save) => handleRotateSetPiece(piece.key, angle, save)}
                     />
@@ -2057,7 +2105,7 @@ export function BlockingCanvas({
                       key={piece.key}
                       piece={piece}
                       isOnCanvas={isOnCanvas}
-                      isDisabled={!canEdit || !currentBeatId}
+                      isDisabled={!canEdit || !currentBeatId || activeLayer !== "set_pieces"}
                       onClickPlace={() => placeOnCanvas("set_piece", piece.key)}
                     />
                   );
@@ -2075,7 +2123,7 @@ export function BlockingCanvas({
                           key={piece.id}
                           piece={{ key: piece.id, label: piece.name, imageUrl: piece.imageUrl }}
                           isOnCanvas={isOnCanvas}
-                          isDisabled={!canEdit || !currentBeatId}
+                          isDisabled={!canEdit || !currentBeatId || activeLayer !== "set_pieces"}
                           onClickPlace={() => placeOnCanvas("set_piece", piece.id)}
                           canDelete={canEdit}
                           onDelete={() => handleDeleteCustomPiece(piece.id)}
@@ -2113,6 +2161,53 @@ export function BlockingCanvas({
                 )}
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Beat Notes — collapsible */}
+        <div style={{ borderBottom: "1px solid var(--border)", flexShrink: 0, display: "flex", flexDirection: "column", minHeight: notesOpen ? 120 : 0, maxHeight: notesOpen ? 280 : undefined }}>
+          <button
+            type="button"
+            onClick={() => setNotesOpen((v) => !v)}
+            className="row-between"
+            style={{
+              width: "100%",
+              padding: "13px 16px",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              textAlign: "left",
+              flexShrink: 0,
+            }}
+          >
+            <div>
+              <div className="h-card">Beat Notes</div>
+              <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>notes for this beat</div>
+            </div>
+            <ChevronDown
+              size={14}
+              style={{
+                color: "var(--ink-3)",
+                flexShrink: 0,
+                transform: notesOpen ? "rotate(0deg)" : "rotate(-90deg)",
+                transition: "transform 0.15s",
+              }}
+            />
+          </button>
+          {notesOpen && (
+            currentBeatId ? (
+              <BeatNotesSection
+                key={currentBeatId}
+                beatId={currentBeatId}
+                initialContent={beatNotesMap[currentBeatId] ?? ""}
+                canEdit={canEdit}
+                onSave={handleSaveBeatNotes}
+              />
+            ) : (
+              <p className="muted" style={{ fontSize: 12, padding: "0 16px 12px" }}>
+                Select a beat to see notes.
+              </p>
+            )
           )}
         </div>
 
