@@ -5,6 +5,7 @@ import {
   productionMemberships,
   profiles,
   customSetPieces,
+  beatArrows,
 } from "@/db/schema";
 import { eq, and, asc } from "drizzle-orm";
 
@@ -57,3 +58,11 @@ export async function getCustomSetPieces(productionId: string) {
 }
 
 export type CustomSetPieceRow = Awaited<ReturnType<typeof getCustomSetPieces>>[number];
+
+export async function getArrowsForBeat(beatId: string) {
+  return db
+    .select()
+    .from(beatArrows)
+    .where(eq(beatArrows.beatId, beatId))
+    .orderBy(asc(beatArrows.createdAt));
+}

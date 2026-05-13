@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { stageConfigurations, blockingPositions, beatComments, profiles, customSetPieces } from "@/db/schema";
+import { stageConfigurations, blockingPositions, beatComments, profiles, customSetPieces, beatArrows } from "@/db/schema";
+import type { BeatArrow } from "@/db/schema";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { eq, and, asc } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
@@ -372,5 +373,42 @@ export async function deleteCustomSetPiece(
   await db.delete(customSetPieces).where(eq(customSetPieces.id, pieceId));
 
   revalidatePath("/productions");
+  return {};
+}
+
+// ─── Beat Arrows ────────────────────────────────────────────────────
+
+export async function fetchBeatArrows(beatId: string): Promise<BeatArrow[]> {
+  await requireCurrentUser();
+  return db.select().from(beatArrows).where(eq(beatArrows.beatId, beatId));
+}
+
+export async function createBeatArrow(
+  beatId: string,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  color: string,
+): Promise<{ arrow?: BeatArrow; error?: string }> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "blocking:edit")) {
+    return { error: "You don't have permission to add arrows." };
+  }
+  const [arrow] = await db
+    .insert(beatArrows)
+    .values({ beatId, fromX, fromY, toX, toY, color })
+    .returning();
+  return { arrow };
+}
+
+export async function deleteBeatArrow(
+  arrowId: string,
+): Promise<{ error?: string }> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "blocking:edit")) {
+    return { error: "You don't have permission to delete arrows." };
+  }
+  await db.delete(beatArrows).where(eq(beatArrows.id, arrowId));
   return {};
 }

@@ -28,7 +28,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, X, Maximize2, Minimize2, Route, Layers } from "lucide-react";
+import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, X, Maximize2, Minimize2, Route, Layers, Pencil } from "lucide-react";
 import { BeatCommentSection } from "@/components/blocking/beat-comment-section";
 import { BeatNotesSection } from "@/components/blocking/beat-notes-section";
 import type { ProductionMember } from "@/features/members/queries";
@@ -38,8 +38,12 @@ import {
   fetchBeatPositions,
   uploadCustomSetPiece,
   deleteCustomSetPiece,
+  createBeatArrow,
+  deleteBeatArrow,
+  fetchBeatArrows,
   type CustomSetPieceClient,
 } from "@/features/blocking/actions";
+import type { BeatArrow } from "@/db/schema";
 import {
   createScene,
   createBeat,
@@ -61,6 +65,8 @@ type Position = {
 
 type PositionMap = Record<string, Position>;
 
+type CustomArrow = Pick<BeatArrow, "id" | "fromX" | "fromY" | "toX" | "toY" | "color">;
+
 // Unified set piece type — built-ins have svgPath, custom uploads have imageUrl
 type CanvasPiece = {
   key: string;
@@ -80,6 +86,7 @@ type Props = {
   currentUserId: string;
   initialBeatId: string | null;
   initialPositions: Pick<BlockingPosition, "entityType" | "entityId" | "xPercent" | "yPercent" | "rotation">[];
+  initialArrows: CustomArrow[];
   initialCustomSetPieces: CustomSetPieceClient[];
 };
 
@@ -684,6 +691,7 @@ export function BlockingCanvas({
   currentUserId,
   initialBeatId,
   initialPositions,
+  initialArrows,
   initialCustomSetPieces,
 }: Props) {
   const router = useRouter();
@@ -719,6 +727,11 @@ export function BlockingCanvas({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [showMovementArrows, setShowMovementArrows] = useState(false);
   const [nextBeatPositions, setNextBeatPositions] = useState<PositionMap | null>(null);
+  const [customArrows, setCustomArrows] = useState<CustomArrow[]>(initialArrows);
+  const [drawMode, setDrawMode] = useState(false);
+  const [arrowStart, setArrowStart] = useState<{ x: number; y: number } | null>(null);
+  const [arrowPreviewEnd, setArrowPreviewEnd] = useState<{ x: number; y: number } | null>(null);
+  const [hoveredArrowId, setHoveredArrowId] = useState<string | null>(null);
   const [activeLayer, setActiveLayer] = useState<"actors" | "set_pieces">("actors");
   const [notesOpen, setNotesOpen] = useState(true);
   const [beatNotesMap, setBeatNotesMap] = useState<Record<string, string>>(() => {
@@ -749,6 +762,22 @@ export function BlockingCanvas({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (!drawMode) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        if (arrowStart) {
+          setArrowStart(null);
+          setArrowPreviewEnd(null);
+        } else {
+          setDrawMode(false);
+        }
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [drawMode, arrowStart]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
@@ -766,12 +795,17 @@ export function BlockingCanvas({
     }
     if (!currentBeatId) {
       setPositions({});
+      setCustomArrows([]);
       setHistory([]);
       setSelectedActorIds(new Set());
       return;
     }
-    fetchBeatPositions(currentBeatId).then((rows) => {
-      setPositions(positionRowsToMap(rows));
+    Promise.all([
+      fetchBeatPositions(currentBeatId),
+      fetchBeatArrows(currentBeatId),
+    ]).then(([posRows, arrowRows]) => {
+      setPositions(positionRowsToMap(posRows));
+      setCustomArrows(arrowRows);
       setHistory([]);
       setSelectedActorIds(new Set());
     });
@@ -1034,21 +1068,67 @@ export function BlockingCanvas({
     }
   }
 
+  function canvasCoords(e: React.PointerEvent<HTMLDivElement>) {
+    const container = canvasContainerRef.current!;
+    const rect = container.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * 100,
+      y: ((e.clientY - rect.top) / rect.height) * 100,
+    };
+  }
+
+  function snapToActorIfNear(x: number, y: number) {
+    for (const member of castMembers) {
+      const pos = positions[`actor:${member.userId}`];
+      if (!pos) continue;
+      if (Math.hypot(x - pos.xPercent, y - pos.yPercent) < 3) {
+        return { x: pos.xPercent, y: pos.yPercent, color: actorColors[member.userId] };
+      }
+    }
+    return { x, y, color: "#374151" };
+  }
+
   function handleCanvasPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (!canvasContainerRef.current) return;
+    const { x, y } = canvasCoords(e);
+
+    if (drawMode) {
+      if (!arrowStart) {
+        const snapped = snapToActorIfNear(x, y);
+        setArrowStart({ x: snapped.x, y: snapped.y });
+        setArrowPreviewEnd({ x: snapped.x, y: snapped.y });
+      } else {
+        const snapped = snapToActorIfNear(x, y);
+        const dx = snapped.x - arrowStart.x;
+        const dy = snapped.y - arrowStart.y;
+        if (Math.hypot(dx, dy) > 2 && currentBeatId) {
+          const startSnap = snapToActorIfNear(arrowStart.x, arrowStart.y);
+          createBeatArrow(currentBeatId, arrowStart.x, arrowStart.y, snapped.x, snapped.y, startSnap.color)
+            .then((res) => {
+              if (res.arrow) setCustomArrows((prev) => [...prev, res.arrow!]);
+            });
+        }
+        setArrowStart(null);
+        setArrowPreviewEnd(null);
+      }
+      return;
+    }
+
     // Ignore if clicking on an actor/set-piece token
     if ((e.target as Element).closest("[data-actor-token]") ||
         (e.target as Element).closest("[data-set-piece-token]")) return;
-    const container = canvasContainerRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
     setLassoStart({ x, y });
     setLassoEnd({ x, y });
     e.currentTarget.setPointerCapture(e.pointerId);
   }
 
   function handleCanvasPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (drawMode) {
+      if (arrowStart && canvasContainerRef.current) {
+        setArrowPreviewEnd(canvasCoords(e));
+      }
+      return;
+    }
     if (!lassoStart) return;
     const container = canvasContainerRef.current;
     if (!container) return;
@@ -1059,6 +1139,7 @@ export function BlockingCanvas({
   }
 
   function handleCanvasPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (drawMode) return;
     if (!lassoStart || !lassoEnd) return;
     const minX = Math.min(lassoStart.x, lassoEnd.x);
     const maxX = Math.max(lassoStart.x, lassoEnd.x);
@@ -1281,6 +1362,12 @@ export function BlockingCanvas({
       setCurrentBeatId(result.beatId);
       router.refresh();
     }
+  }
+
+  function handleDeleteArrow(arrowId: string) {
+    setCustomArrows((prev) => prev.filter((a) => a.id !== arrowId));
+    setHoveredArrowId(null);
+    deleteBeatArrow(arrowId);
   }
 
   async function handleSaveBeatNotes(beatId: string, html: string) {
@@ -1721,6 +1808,27 @@ export function BlockingCanvas({
             >
               <Route className="h-3.5 w-3.5" /><span>Movement</span>
             </button>
+            {canEdit && currentBeatId && (
+              <button
+                onClick={() => {
+                  setDrawMode((v) => {
+                    if (v) { setArrowStart(null); setArrowPreviewEnd(null); }
+                    return !v;
+                  });
+                }}
+                className="btn ghost"
+                style={{
+                  height: 28, padding: "0 10px", fontSize: 12,
+                  background: drawMode ? "var(--accent-soft)" : undefined,
+                  color: drawMode ? "var(--accent-ink)" : undefined,
+                }}
+                title={drawMode
+                  ? (arrowStart ? "Click to finish arrow · Esc to cancel" : "Click to start an arrow · Esc to exit")
+                  : "Draw custom blocking arrows"}
+              >
+                <Pencil className="h-3.5 w-3.5" /><span>{drawMode ? (arrowStart ? "Finish…" : "Drawing") : "Draw Arrow"}</span>
+              </button>
+            )}
             {canEdit && history.length > 0 && (
               <button
                 onClick={handleUndo}
@@ -1786,6 +1894,7 @@ export function BlockingCanvas({
             <div
               ref={canvasContainerRef}
               className="absolute inset-0"
+              style={drawMode ? { cursor: "crosshair" } : undefined}
               onPointerDown={handleCanvasPointerDown}
               onPointerMove={handleCanvasPointerMove}
               onPointerUp={handleCanvasPointerUp}
@@ -1850,69 +1959,177 @@ export function BlockingCanvas({
                 />
               )}
 
-              {/* Movement arrows — curved arcs from current to next beat positions */}
-              {showMovementArrows && nextBeatPositions && currentBeatId && (
-                <svg
-                  viewBox="0 0 100 100"
-                  preserveAspectRatio="none"
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%",
-                    pointerEvents: "none",
-                    zIndex: 15,
-                    overflow: "visible",
-                  }}
-                >
-                  <defs>
-                    {castMembers.map((member) => {
-                      const color = actorColors[member.userId];
-                      return (
+              {/* Auto movement arrows — straight lines, circle edge → circle edge */}
+              {(() => {
+                const RADIUS = 2.2;
+                const showAuto = showMovementArrows && nextBeatPositions && currentBeatId;
+                const showCustom = currentBeatId && (customArrows.length > 0 || (drawMode && arrowStart));
+                if (!showAuto && !showCustom) return null;
+                return (
+                  <svg
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      pointerEvents: "none",
+                      zIndex: 15,
+                      overflow: "visible",
+                    }}
+                  >
+                    <defs>
+                      {/* Per-actor markers for auto-arrows */}
+                      {showAuto && castMembers.map((member) => {
+                        const color = actorColors[member.userId];
+                        return (
+                          <marker
+                            key={`auto-${member.userId}`}
+                            id={`auto-arrow-${member.userId}`}
+                            markerWidth="3.5"
+                            markerHeight="3.5"
+                            refX="3"
+                            refY="1.75"
+                            orient="auto"
+                            markerUnits="userSpaceOnUse"
+                          >
+                            <path d="M0,0 L0,3.5 L3.5,1.75 z" fill={color} opacity="0.85" />
+                          </marker>
+                        );
+                      })}
+                      {/* Shared marker for custom arrows — per unique color */}
+                      {[...new Set(customArrows.map((a) => a.color))].map((color) => (
                         <marker
-                          key={member.userId}
-                          id={`arrow-${member.userId}`}
-                          markerWidth="5"
-                          markerHeight="5"
-                          refX="4"
-                          refY="2.5"
+                          key={`custom-${color}`}
+                          id={`custom-arrow-${color.replace("#", "")}`}
+                          markerWidth="4"
+                          markerHeight="4"
+                          refX="3.5"
+                          refY="2"
                           orient="auto"
                           markerUnits="userSpaceOnUse"
                         >
-                          <path d="M0,0 L0,5 L5,2.5 z" fill={color} opacity="0.85" />
+                          <path d="M0,0 L0,4 L4,2 z" fill={color} />
                         </marker>
+                      ))}
+                      {/* Preview marker */}
+                      {drawMode && arrowStart && (
+                        <marker id="preview-arrow" markerWidth="4" markerHeight="4" refX="3.5" refY="2" orient="auto" markerUnits="userSpaceOnUse">
+                          <path d="M0,0 L0,4 L4,2 z" fill="#374151" opacity="0.5" />
+                        </marker>
+                      )}
+                    </defs>
+
+                    {/* Auto arrows */}
+                    {showAuto && castMembers.map((member) => {
+                      const key = `actor:${member.userId}`;
+                      const from = positions[key];
+                      const to = nextBeatPositions![key];
+                      if (!from || !to) return null;
+                      const dx = to.xPercent - from.xPercent;
+                      const dy = to.yPercent - from.yPercent;
+                      const len = Math.hypot(dx, dy);
+                      if (len < 3) return null;
+                      const color = actorColors[member.userId];
+                      const nx = dx / len;
+                      const ny = dy / len;
+                      const startX = from.xPercent + nx * RADIUS;
+                      const startY = from.yPercent + ny * RADIUS;
+                      const endX = to.xPercent - nx * (RADIUS + 0.8);
+                      const endY = to.yPercent - ny * (RADIUS + 0.8);
+                      return (
+                        <path
+                          key={member.userId}
+                          d={`M ${startX} ${startY} L ${endX} ${endY}`}
+                          stroke={color}
+                          strokeWidth="0.35"
+                          fill="none"
+                          opacity="0.75"
+                          markerEnd={`url(#auto-arrow-${member.userId})`}
+                        />
                       );
                     })}
-                  </defs>
-                  {castMembers.map((member) => {
-                    const key = `actor:${member.userId}`;
-                    const from = positions[key];
-                    const to = nextBeatPositions[key];
-                    if (!from || !to) return null;
-                    const dx = to.xPercent - from.xPercent;
-                    const dy = to.yPercent - from.yPercent;
-                    if (Math.hypot(dx, dy) < 2) return null;
-                    const color = actorColors[member.userId];
-                    const mx = (from.xPercent + to.xPercent) / 2;
-                    const my = (from.yPercent + to.yPercent) / 2;
-                    const len = Math.hypot(dx, dy);
-                    const perpScale = Math.min(8, len * 0.35) / len;
-                    const cx = mx + (-dy * perpScale);
-                    const cy = my + (dx * perpScale);
-                    return (
-                      <path
-                        key={member.userId}
-                        d={`M ${from.xPercent} ${from.yPercent} Q ${cx} ${cy} ${to.xPercent} ${to.yPercent}`}
-                        stroke={color}
-                        strokeWidth="0.5"
-                        fill="none"
-                        opacity="0.75"
-                        markerEnd={`url(#arrow-${member.userId})`}
-                      />
-                    );
-                  })}
-                </svg>
-              )}
+
+                    {/* Custom arrows */}
+                    {customArrows.map((arrow) => {
+                      const dx = arrow.toX - arrow.fromX;
+                      const dy = arrow.toY - arrow.fromY;
+                      const len = Math.hypot(dx, dy);
+                      if (len < 1) return null;
+                      const nx = dx / len;
+                      const ny = dy / len;
+                      const startX = arrow.fromX + nx * RADIUS;
+                      const startY = arrow.fromY + ny * RADIUS;
+                      const endX = arrow.toX - nx * (RADIUS + 0.8);
+                      const endY = arrow.toY - ny * (RADIUS + 0.8);
+                      const midX = (startX + endX) / 2;
+                      const midY = (startY + endY) / 2;
+                      const isHovered = hoveredArrowId === arrow.id;
+                      return (
+                        <g key={arrow.id}>
+                          {/* Wide invisible hit area */}
+                          <path
+                            d={`M ${startX} ${startY} L ${endX} ${endY}`}
+                            stroke="transparent"
+                            strokeWidth="2.5"
+                            fill="none"
+                            style={{ cursor: canEdit ? "pointer" : "default", pointerEvents: "auto" }}
+                            onMouseEnter={() => setHoveredArrowId(arrow.id)}
+                            onMouseLeave={() => setHoveredArrowId(null)}
+                          />
+                          {/* Visible arrow */}
+                          <path
+                            d={`M ${startX} ${startY} L ${endX} ${endY}`}
+                            stroke={arrow.color}
+                            strokeWidth="0.45"
+                            fill="none"
+                            opacity={isHovered ? 1 : 0.88}
+                            markerEnd={`url(#custom-arrow-${arrow.color.replace("#", "")})`}
+                          />
+                          {/* Delete button at midpoint (editor only, on hover) */}
+                          {canEdit && isHovered && (
+                            <g
+                              transform={`translate(${midX},${midY})`}
+                              style={{ cursor: "pointer", pointerEvents: "auto" }}
+                              onClick={() => handleDeleteArrow(arrow.id)}
+                              onMouseEnter={() => setHoveredArrowId(arrow.id)}
+                              onMouseLeave={() => setHoveredArrowId(null)}
+                            >
+                              <circle r="1.6" fill="#ef4444" />
+                              <line x1="-0.8" y1="-0.8" x2="0.8" y2="0.8" stroke="white" strokeWidth="0.5" />
+                              <line x1="0.8" y1="-0.8" x2="-0.8" y2="0.8" stroke="white" strokeWidth="0.5" />
+                            </g>
+                          )}
+                        </g>
+                      );
+                    })}
+
+                    {/* Draw preview */}
+                    {drawMode && arrowStart && arrowPreviewEnd && (() => {
+                      const dx = arrowPreviewEnd.x - arrowStart.x;
+                      const dy = arrowPreviewEnd.y - arrowStart.y;
+                      const len = Math.hypot(dx, dy);
+                      return (
+                        <>
+                          <circle cx={arrowStart.x} cy={arrowStart.y} r="1.2" fill="#374151" opacity="0.5" />
+                          {len > 1 && (
+                            <path
+                              d={`M ${arrowStart.x} ${arrowStart.y} L ${arrowPreviewEnd.x} ${arrowPreviewEnd.y}`}
+                              stroke="#374151"
+                              strokeWidth="0.4"
+                              fill="none"
+                              opacity="0.45"
+                              strokeDasharray="1.5 1"
+                              markerEnd="url(#preview-arrow)"
+                            />
+                          )}
+                        </>
+                      );
+                    })()}
+                  </svg>
+                );
+              })()}
 
               {/* Actor tokens */}
               {currentBeatId &&
@@ -1944,7 +2161,7 @@ export function BlockingCanvas({
                       xPercent={pos.xPercent}
                       yPercent={pos.yPercent}
                       canEdit={canEdit}
-                      isInteractive={activeLayer === "actors"}
+                      isInteractive={!drawMode && activeLayer === "actors"}
                       isSelected={isSelected}
                       groupDragDelta={isGroupFollower ? activeDragDelta : null}
                       onRemove={() => removeFromCanvas("actor", member.userId)}
@@ -1982,7 +2199,7 @@ export function BlockingCanvas({
                       yPercent={pos.yPercent}
                       rotation={pos.rotation}
                       canEdit={canEdit}
-                      isInteractive={activeLayer === "set_pieces"}
+                      isInteractive={!drawMode && activeLayer === "set_pieces"}
                       onRemove={() => removeFromCanvas("set_piece", piece.key)}
                       onRotateTo={(angle, save) => handleRotateSetPiece(piece.key, angle, save)}
                     />

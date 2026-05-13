@@ -17,3 +17,4 @@ export * from "./calls";
 export * from "./beat-comments";
 export * from "./notifications";
 export * from "./custom-set-pieces";
+export * from "./beat-arrows";

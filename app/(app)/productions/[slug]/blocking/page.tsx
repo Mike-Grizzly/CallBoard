@@ -4,7 +4,7 @@ import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership, getProductionMembers } from "@/features/members/queries";
-import { getStageConfiguration, getCastMembers, getBlockingPositionsForBeat, getCustomSetPieces } from "@/features/blocking/queries";
+import { getStageConfiguration, getCastMembers, getBlockingPositionsForBeat, getCustomSetPieces, getArrowsForBeat } from "@/features/blocking/queries";
 import { getScenesWithBeats } from "@/features/scenes/queries";
 import { getDocumentById } from "@/features/documents/queries";
 import { getDocumentUrl } from "@/features/documents/actions";
@@ -65,9 +65,12 @@ export default async function BlockingPage({
   }));
 
   const firstBeatId = scenesWithBeats[0]?.beats[0]?.id ?? null;
-  const initialPositions = firstBeatId
-    ? await getBlockingPositionsForBeat(firstBeatId)
-    : [];
+  const [initialPositions, initialArrows] = firstBeatId
+    ? await Promise.all([
+        getBlockingPositionsForBeat(firstBeatId),
+        getArrowsForBeat(firstBeatId),
+      ])
+    : [[], []];
 
   return (
     <BlockingCanvas
@@ -81,6 +84,7 @@ export default async function BlockingPage({
       currentUserId={user.id}
       initialBeatId={firstBeatId}
       initialPositions={initialPositions}
+      initialArrows={initialArrows}
       initialCustomSetPieces={initialCustomSetPieces}
     />
   );
