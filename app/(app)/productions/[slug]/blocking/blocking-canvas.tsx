@@ -19,7 +19,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, MessageSquare, X } from "lucide-react";
+import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, MessageSquare, X, Maximize2, Minimize2 } from "lucide-react";
 import { BeatCommentSection } from "@/components/blocking/beat-comment-section";
 import type { ProductionMember } from "@/features/members/queries";
 import {
@@ -632,6 +632,16 @@ export function BlockingCanvas({
   const [setPiecesOpen, setSetPiecesOpen] = useState(true);
   const [commentsOpen, setCommentsOpen] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setFullscreen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [fullscreen]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -708,8 +718,9 @@ export function BlockingCanvas({
 
   function handleDragEnd(event: DragEndEvent) {
     setActiveId(null);
-    const { active, delta } = event;
+    const { active, delta, activatorEvent } = event;
     const id = active.id as string;
+    const activator = activatorEvent as PointerEvent;
 
     // Off-stage actor dragged onto canvas
     if (id.startsWith("offstage:")) {
@@ -717,13 +728,11 @@ export function BlockingCanvas({
       const entityId = id.replace("offstage:", "");
       const container = canvasContainerRef.current;
       if (!container) return;
-      const translated = active.rect.current.translated;
-      if (!translated) return;
       const containerRect = container.getBoundingClientRect();
-      const centerX = translated.left + translated.width / 2;
-      const centerY = translated.top + translated.height / 2;
-      const xPercent = ((centerX - containerRect.left) / containerRect.width) * 100;
-      const yPercent = ((centerY - containerRect.top) / containerRect.height) * 100;
+      const cursorX = activator.clientX + delta.x;
+      const cursorY = activator.clientY + delta.y;
+      const xPercent = ((cursorX - containerRect.left) / containerRect.width) * 100;
+      const yPercent = ((cursorY - containerRect.top) / containerRect.height) * 100;
       if (xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100) return;
       const clampedX = Math.max(4, Math.min(96, xPercent));
       const clampedY = Math.max(4, Math.min(96, yPercent));
@@ -749,13 +758,11 @@ export function BlockingCanvas({
       const entityId = id.replace("offstage-piece:", "");
       const container = canvasContainerRef.current;
       if (!container) return;
-      const translated = active.rect.current.translated;
-      if (!translated) return;
       const containerRect = container.getBoundingClientRect();
-      const centerX = translated.left + translated.width / 2;
-      const centerY = translated.top + translated.height / 2;
-      const xPercent = ((centerX - containerRect.left) / containerRect.width) * 100;
-      const yPercent = ((centerY - containerRect.top) / containerRect.height) * 100;
+      const cursorX = activator.clientX + delta.x;
+      const cursorY = activator.clientY + delta.y;
+      const xPercent = ((cursorX - containerRect.left) / containerRect.width) * 100;
+      const yPercent = ((cursorY - containerRect.top) / containerRect.height) * 100;
       if (xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100) return;
       const clampedX = Math.max(4, Math.min(96, xPercent));
       const clampedY = Math.max(4, Math.min(96, yPercent));
@@ -1058,13 +1065,26 @@ export function BlockingCanvas({
     >
     <div
       className="anim-in"
-      style={{
-        margin: "-24px calc(-1 * var(--pad-x))",
-        height: "calc(100vh - 133px)",
-        display: "grid",
-        gridTemplateColumns: "220px 1fr 240px",
-        overflow: "hidden",
-      }}
+      style={
+        fullscreen
+          ? {
+              position: "fixed",
+              inset: 0,
+              zIndex: 9999,
+              height: "100vh",
+              display: "grid",
+              gridTemplateColumns: "240px 1fr 260px",
+              overflow: "hidden",
+              background: "var(--bg)",
+            }
+          : {
+              margin: "-24px calc(-1 * var(--pad-x))",
+              height: "calc(100vh - 133px)",
+              display: "grid",
+              gridTemplateColumns: "220px 1fr 240px",
+              overflow: "hidden",
+            }
+      }
     >
 
       {/* ─── Left panel: Scenes & Off-stage Cast ────────────── */}
@@ -1417,6 +1437,16 @@ export function BlockingCanvas({
                 <Settings className="h-3.5 w-3.5" /><span>Stage Setup</span>
               </button>
             )}
+            <button
+              onClick={() => setFullscreen((v) => !v)}
+              className="btn ghost"
+              style={{ height: 28, padding: "0 10px", fontSize: 12 }}
+              title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+            >
+              {fullscreen
+                ? <Minimize2 className="h-3.5 w-3.5" />
+                : <Maximize2 className="h-3.5 w-3.5" />}
+            </button>
           </div>
         </div>
 
