@@ -18,3 +18,5 @@ export * from "./beat-comments";
 export * from "./notifications";
 export * from "./custom-set-pieces";
 export * from "./beat-arrows";
+export * from "./mentions";
+export * from "./user-pins";

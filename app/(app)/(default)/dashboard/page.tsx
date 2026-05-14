@@ -6,10 +6,14 @@ import { getUserProductions } from "@/features/productions/queries";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getAnnouncementsForUser } from "@/features/announcements/queries";
 import { getNextCallsForProductions } from "@/features/calls/queries";
+import { getMentionsForUser } from "@/features/mentions/queries";
+import { getPinsForUser } from "@/features/pins/queries";
 import {
   DashboardAnnouncements,
   type SerializedAnnouncement,
 } from "./dashboard-announcements";
+import { MentionsSection, type SerializedMention } from "./mentions-section";
+import { PinnedSection } from "./pinned-section";
 
 // Deterministic color per production — same palette as the left rail
 const PROD_COLORS = [
@@ -102,9 +106,11 @@ export default async function DashboardPage() {
   const myProductions = await getUserProductions(user.id);
   const prodIds = myProductions.map((p) => p.id);
 
-  const [announcements, nextCallMap] = await Promise.all([
+  const [announcements, nextCallMap, mentionRows, pins] = await Promise.all([
     getAnnouncementsForUser(user.id, org.id, canManage),
     getNextCallsForProductions(prodIds),
+    getMentionsForUser(user.id),
+    getPinsForUser(user.id),
   ]);
 
   const now = new Date();
@@ -132,8 +138,9 @@ export default async function DashboardPage() {
   const earliestCall = allNextCalls[0] ?? null;
 
   const pinnedCount = announcements.filter((a) => a.pinned).length;
+  const unreadMentionCount = mentionRows.filter((m) => !m.readAt).length;
 
-  // Serialize for client component (Date → string)
+  // Serialize announcements for client component (Date → string)
   const serializedAnnouncements: SerializedAnnouncement[] = announcements
     .slice(0, 10)
     .map((a) => ({
@@ -153,6 +160,46 @@ export default async function DashboardPage() {
         | "dusk"
         | "sage",
     }));
+
+  // Serialize mentions for client component
+  const serializedMentions: SerializedMention[] = mentionRows.map((m) => {
+    const fromName =
+      [m.fromFirstName, m.fromLastName].filter(Boolean).join(" ") ||
+      m.fromEmail;
+    const parts = fromName.trim().split(" ");
+    const initials =
+      parts.length >= 2
+        ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+        : fromName.slice(0, 2).toUpperCase();
+
+    let href = "";
+    if (m.productionSlug) {
+      if (m.contextType === "report")
+        href = `/productions/${m.productionSlug}/reports/${m.contextId}`;
+      else if (m.contextType === "note")
+        href = `/productions/${m.productionSlug}/notes`;
+      else if (m.contextType === "announcement")
+        href = `/productions/${m.productionSlug}/announcements`;
+      else
+        href = `/productions/${m.productionSlug}`;
+    }
+
+    return {
+      id: m.id,
+      contextType: m.contextType,
+      contextId: m.contextId,
+      contextTitle: m.contextTitle,
+      snippet: m.snippet,
+      isUnread: !m.readAt,
+      fromName,
+      fromInitials: initials,
+      fromColor: "",
+      productionTitle: m.productionTitle,
+      productionSlug: m.productionSlug,
+      relativeTime: formatRelativeTime(m.createdAt),
+      href,
+    };
+  });
 
   return (
     <div className="page-narrow home">
@@ -184,6 +231,16 @@ export default async function DashboardPage() {
                 {myProductions.length !== 1 ? "s" : ""}
               </b>{" "}
               on your plate
+              {unreadMentionCount > 0 && (
+                <>
+                  {" "}
+                  ·{" "}
+                  <b>
+                    {unreadMentionCount} unread mention
+                    {unreadMentionCount !== 1 ? "s" : ""}
+                  </b>
+                </>
+              )}
               {pinnedCount > 0 && (
                 <>
                   {" "}
@@ -218,8 +275,8 @@ export default async function DashboardPage() {
         <section className="home-section">
           <header className="home-section-head">
             <div>
-              <div className="h-eyebrow">Right now</div>
-              <h2 className="h-section">Across your productions</h2>
+              <div className="h-eyebrow">Schedule</div>
+              <h2 className="h-section">Upcoming rehearsals &amp; calls</h2>
             </div>
           </header>
           <div className="right-now-grid">
@@ -366,6 +423,14 @@ export default async function DashboardPage() {
           </div>
         )}
       </section>
+
+      {/* ── @Mentions ────────────────────────────────────────────────── */}
+      {serializedMentions.length > 0 && (
+        <MentionsSection items={serializedMentions} />
+      )}
+
+      {/* ── Pinned ───────────────────────────────────────────────────── */}
+      <PinnedSection pins={pins} />
     </div>
   );
 }
