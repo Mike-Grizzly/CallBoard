@@ -222,6 +222,26 @@ Record of durable project decisions. Add new entries at the bottom with date and
 
 ---
 
+## 2026-05-14 — Beat arrows exclude timestamp columns from server action serialization
+
+**Decision:** `fetchBeatArrows`, `createBeatArrow`, and `getArrowsForBeat` explicitly select only the five scalar fields needed by the UI (`id`, `fromX`, `fromY`, `toX`, `toY`, `color`), omitting `createdAt` and `beatId`.
+
+**Reason:** Next.js 16 server actions serialize return values through the React server action boundary. Drizzle `Date` objects (from `timestamp` columns) fail this serialization, producing a `TypeError: Failed to fetch` unhandled rejection in the browser. Selecting only plain-number/string fields avoids the issue entirely.
+
+**Impact:** Any future query/action that returns rows from `beat_arrows` (or any table with a `timestamp` column) must do the same — select fields explicitly and exclude timestamp columns, or convert them to ISO strings before returning.
+
+---
+
+## 2026-05-14 — Blocking canvas layer toggle and draw mode disable dragging
+
+**Decision:** The canvas has two exclusive "layers" (Actors / Set Pieces) controlled by a segmented button. Only the active layer's tokens are pointer-interactive; the other layer gets `pointerEvents: none`. Draw mode additionally disables all tokens so canvas pointer events are unambiguous.
+
+**Reason:** With 20+ actors and set pieces on a dense stage, accidental selection of the wrong token type is a significant usability problem. Isolating draggable elements by layer matches the mental model of theatre designers who think in discrete staging layers.
+
+**Impact:** `isInteractive` prop threaded through both `ActorToken` and `SetPieceToken`. Off-stage tile drags also respect `activeLayer`. When draw mode is active, all token dragging is suspended.
+
+---
+
 ## 2026-05-13 — PDF ground plan rendered via offscreen canvas + module-level ImageBitmap cache
 
 **Decision:** The blocking canvas renders the ground plan PDF to an offscreen `<canvas>`, converts it to an `ImageBitmap`, and stores it in a module-level `Map` keyed by the stable file path (not the signed URL token). Subsequent renders draw from the cached bitmap.

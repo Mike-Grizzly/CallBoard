@@ -1,8 +1,8 @@
 # Current Status
 
-**Last updated:** 2026-05-13
+**Last updated:** 2026-05-14
 
-**Current milestone:** Steps 1-12 complete. Notes tab UI ported to warm theatre design system. Call schedule calendar shipped. UI port Phase 1 (design tokens / shell) done, Phase 2 (per-tab visual port) in progress — Overview and Notes tabs fully ported, Rehearsal Reports at full demo parity. RLS enabled on all public tables.
+**Current milestone:** Steps 1-12 complete + Blocking tool extended with movement arrows, draw-your-own arrows, layer toggle, and per-beat rich-text notes. Notes tab UI ported to warm theatre design system. Call schedule calendar shipped. RLS enabled on all public tables.
 
 ## Feature status
 
@@ -94,11 +94,11 @@
 - **Email Report** button — sends HTML email via Resend with recipient picker (entire production or individual members)
 - Schema applied via Supabase MCP `apply_migration`; `resend` package added
 
-### Step 10: Blocking Tool (Phase 1 + Phase 2 + Phase 3 UI) — IMPLEMENTED
+### Step 10: Blocking Tool (Phase 1 + Phase 2 + Phase 3 UI + Phase 4 arrows/layers/notes) — IMPLEMENTED
 
 - **New role:** `choreographer` (7th role, has `blocking:edit` + standard director-level caps)
 - **New capabilities:** `blocking:view` (all roles), `blocking:edit` (admin, producer, director, choreographer, stage_manager)
-- **New DB tables:** `production_scenes`, `scene_beats`, `stage_configurations`, `blocking_positions`, `custom_set_pieces`
+- **New DB tables:** `production_scenes`, `scene_beats`, `stage_configurations`, `blocking_positions`, `custom_set_pieces`, `beat_arrows`; `scene_beats.notes` (text column)
 - **Schema changes:** `production_memberships.character_name` (nullable); `stage_configurations.ground_plan_page` (int, default 1)
 - **New feature modules:** `features/scenes/` (queries, actions, validation), `features/blocking/` (queries, actions, constants)
 - **Set piece library:** 15 built-in SVG shapes (chair, armchair, couch, loveseat, beds, tables, desk, stairs, door, window, grand piano, podium, platform) + user-uploaded custom pieces
@@ -119,6 +119,10 @@
 - **Accurate drag placement:** Off-stage tokens land at cursor position using `activatorEvent.clientX + delta.x` (not tile rect)
 - **Custom set piece uploads:** Users with `blocking:edit` can upload SVG, PNG, or JPG (max 5 MB) to use as set pieces. Stored in Supabase Storage `attachments` bucket under `set-pieces/{productionId}/`. DB table `custom_set_pieces` tracks metadata. Signed URLs (1hr) generated server-side; custom pieces render centered in their canvas tokens
 - **PDF flash fix:** Ground plan PDF is rendered once to an offscreen canvas and cached as an `ImageBitmap` in module-level memory, keyed by stable file path. Subsequent beat switches and `router.refresh()` calls reuse the bitmap — no canvas clear/redraw flicker
+- **Movement arrows (auto):** Togglable overlay showing straight-line arrows from current beat to next beat positions for each actor; edge-to-edge (not center-to-center); colored per actor; hidden for stationary actors
+- **Draw-your-own arrows:** "Draw Arrow" mode (pencil tool) — click to set start, click to finish; snaps color to nearest actor token; arrows stored in `beat_arrows` DB table; delete via hover button; persists across beat navigation
+- **Layer toggle:** Toolbar segmented control switches between "Actors" and "Set Pieces" layers; non-active layer tokens get `pointerEvents: none` so they cannot be accidentally moved
+- **Per-beat notes:** Collapsible TipTap rich-text notes section in right panel (between Set Pieces and Beat Comments); 1-second debounce autosave to `scene_beats.notes`; resets on beat navigation via `key={beatId}`
 - **Permissions:** SM/Director/Choreographer/Admin/Producer can edit; Cast/Crew view only
 - **Known future work:** Full beat-breakdown export (multi-page PDF or print view with scene/beat snapshots)
 
