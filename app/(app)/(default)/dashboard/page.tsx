@@ -1,46 +1,36 @@
 import Link from "next/link";
-import {
-  Calendar,
-  Theater,
-  Users,
-  FileText,
-  FolderOpen,
-  Megaphone,
-  Pin,
-} from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ChevronRight, Plus } from "lucide-react";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getProductionsByOrganization } from "@/features/productions/queries";
 import { getUserProductions } from "@/features/productions/queries";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
-import { getOrganizationMembers } from "@/features/members/queries";
 import { getAnnouncementsForUser } from "@/features/announcements/queries";
+import { getNextCallsForProductions } from "@/features/calls/queries";
+import {
+  DashboardAnnouncements,
+  type SerializedAnnouncement,
+} from "./dashboard-announcements";
 
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+// Deterministic color per production — same palette as the left rail
+const PROD_COLORS = [
+  "var(--c-clay)",
+  "var(--c-sage)",
+  "var(--c-dusk)",
+  "var(--c-amber)",
+  "var(--c-plum)",
+  "var(--c-sand)",
+];
+function prodColor(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return PROD_COLORS[h % PROD_COLORS.length];
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    draft: "bg-gray-100 text-gray-700",
-    active: "bg-green-100 text-green-700",
-    archived: "bg-amber-100 text-amber-700",
-  };
-
-  return (
-    <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] ?? colors.draft}`}
-    >
-      {status}
-    </span>
-  );
+function getGreeting(hour: number): string {
+  if (hour < 5) return "Working late";
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
 }
 
 function roleLabel(role: string): string {
@@ -51,8 +41,57 @@ function roleLabel(role: string): string {
     stage_manager: "Stage Manager",
     cast: "Cast",
     crew: "Crew",
+    choreographer: "Choreographer",
   };
   return labels[role] ?? role;
+}
+
+function formatOpeningDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatCallDate(
+  callDate: string,
+  today: string,
+  tomorrow: string,
+): string {
+  if (callDate === today) return "Today";
+  if (callDate === tomorrow) return "Tomorrow";
+  return new Date(callDate + "T00:00:00").toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatCallTime(time: string | null | undefined): string {
+  if (!time) return "";
+  const [hh, mm] = time.split(":");
+  const h = parseInt(hh, 10);
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${mm} ${ampm}`;
+}
+
+function formatRelativeTime(date: Date): string {
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60_000);
+  const hours = Math.floor(diff / 3_600_000);
+  const days = Math.floor(diff / 86_400_000);
+  if (mins < 2) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days} days ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function stripHtml(html: string | null): string {
+  if (!html) return "";
+  return html.replace(/<[^>]+>/g, "").trim();
 }
 
 export default async function DashboardPage() {
@@ -60,193 +99,273 @@ export default async function DashboardPage() {
   const org = await getOrCreateDefaultOrganization();
   const canManage = can(user.role, "productions:manage");
 
-  const [myProductions, allProductions, orgMembers, allAnnouncements] = await Promise.all([
-    getUserProductions(user.id),
-    canManage ? getProductionsByOrganization(org.id) : Promise.resolve([]),
-    canManage ? getOrganizationMembers(org.id) : Promise.resolve([]),
+  const myProductions = await getUserProductions(user.id);
+  const prodIds = myProductions.map((p) => p.id);
+
+  const [announcements, nextCallMap] = await Promise.all([
     getAnnouncementsForUser(user.id, org.id, canManage),
+    getNextCallsForProductions(prodIds),
   ]);
 
-  const recentAnnouncements = allAnnouncements.slice(0, 5);
+  const now = new Date();
+  const hour = now.getHours();
+  const today = now.toISOString().split("T")[0];
+  const tomorrowDate = new Date(now);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrow = tomorrowDate.toISOString().split("T")[0];
 
-  const greeting = user.firstName
-    ? `Welcome back, ${user.firstName}`
-    : "Welcome back";
+  const greeting = getGreeting(hour);
+  const firstName = user.firstName || "";
+  const todayLabel = now.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
+  // Earliest upcoming call across all productions
+  const allNextCalls = Object.values(nextCallMap).filter(Boolean);
+  allNextCalls.sort((a, b) => {
+    const aKey = `${a!.callDate}${a!.callTime ?? ""}`;
+    const bKey = `${b!.callDate}${b!.callTime ?? ""}`;
+    return aKey.localeCompare(bKey);
+  });
+  const earliestCall = allNextCalls[0] ?? null;
+
+  const pinnedCount = announcements.filter((a) => a.pinned).length;
+
+  // Serialize for client component (Date → string)
+  const serializedAnnouncements: SerializedAnnouncement[] = announcements
+    .slice(0, 10)
+    .map((a) => ({
+      id: a.id,
+      title: a.title,
+      body: stripHtml(a.body),
+      pinned: a.pinned,
+      productionId: a.productionId,
+      productionTitle: a.productionTitle,
+      authorName:
+        [a.authorFirstName, a.authorLastName].filter(Boolean).join(" ") ||
+        a.authorEmail,
+      relativeTime: formatRelativeTime(a.createdAt),
+      isOrgWide: !a.productionId,
+      railColor: (a.pinned ? "amber" : !a.productionId ? "dusk" : "sage") as
+        | "amber"
+        | "dusk"
+        | "sage",
+    }));
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{greeting}</h1>
-        <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
-          Here&apos;s an overview of your productions and activity.
+    <div className="page-narrow home">
+      {/* ── Hero ─────────────────────────────────────────────────────── */}
+      <section className="home-hero">
+        <div className="home-hero-meta">
+          <span className="home-hero-eyebrow">
+            Workspace · {roleLabel(user.role)}
+          </span>
+          <span className="home-hero-sep">·</span>
+          <span>{todayLabel}</span>
+        </div>
+        <h1 className="home-hero-title">
+          {greeting}
+          {firstName ? (
+            <>
+              , <em>{firstName}</em>
+            </>
+          ) : null}
+          .
+        </h1>
+        <p className="home-hero-sub">
+          {myProductions.length === 0 ? (
+            "No productions yet — create one to get started."
+          ) : (
+            <>
+              <b>
+                {myProductions.length} production
+                {myProductions.length !== 1 ? "s" : ""}
+              </b>{" "}
+              on your plate
+              {pinnedCount > 0 && (
+                <>
+                  {" "}
+                  ·{" "}
+                  <b>
+                    {pinnedCount} pinned announcement
+                    {pinnedCount !== 1 ? "s" : ""}
+                  </b>
+                </>
+              )}
+              {earliestCall ? (
+                <>
+                  {" "}
+                  · next call{" "}
+                  <b>
+                    {formatCallDate(earliestCall.callDate, today, tomorrow)}
+                    {earliestCall.callTime
+                      ? ` at ${formatCallTime(earliestCall.callTime)}`
+                      : ""}
+                  </b>
+                </>
+              ) : (
+                <> · no upcoming calls</>
+              )}
+            </>
+          )}
         </p>
-      </div>
+      </section>
 
-      {recentAnnouncements.length > 0 && (
-        <div className="mb-8">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Megaphone className="h-4 w-4 text-[color:var(--muted-foreground)]" aria-hidden />
-              <h2 className="text-sm font-semibold">Announcements</h2>
+      {/* ── Right Now ────────────────────────────────────────────────── */}
+      {myProductions.length > 0 && (
+        <section className="home-section">
+          <header className="home-section-head">
+            <div>
+              <div className="h-eyebrow">Right now</div>
+              <h2 className="h-section">Across your productions</h2>
             </div>
-            <Link
-              href="/announcements"
-              className="text-xs text-[color:var(--muted-foreground)] underline underline-offset-4 hover:text-[color:var(--foreground)]"
-            >
-              View all
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {recentAnnouncements.map((item) => {
-              const isOrgWide = item.productionId === null;
+          </header>
+          <div className="right-now-grid">
+            {myProductions.map((p) => {
+              const call = nextCallMap[p.id];
+              const color = prodColor(p.id);
+
+              let urgency: "hot" | "warm" | "cold" = "cold";
+              let when = "No upcoming calls";
+              let what =
+                p.status === "archived" ? "Archived" : "Nothing scheduled";
+              let where = "—";
+
+              if (call) {
+                urgency = call.callDate === today ? "hot" : "warm";
+                const dateLabel = formatCallDate(call.callDate, today, tomorrow);
+                const timeLabel = call.callTime
+                  ? formatCallTime(call.callTime)
+                  : "";
+                when = timeLabel ? `${dateLabel} · ${timeLabel}` : dateLabel;
+                what = call.focus ?? "Rehearsal";
+                where = call.location ?? "—";
+              }
+
               return (
-                <div
-                  key={item.id}
-                  className={`rounded-lg border px-4 py-3 ${
-                    item.pinned
-                      ? "border-amber-300 bg-amber-50 text-amber-900"
-                      : "border-[color:var(--border)] bg-[color:var(--muted)]"
-                  }`}
+                <Link
+                  key={p.id}
+                  href={`/productions/${p.slug}`}
+                  className="rn-card"
+                  data-u={urgency}
                 >
-                  <div className="flex flex-wrap items-center gap-2">
-                    {item.pinned && (
-                      <Pin className="h-3 w-3 shrink-0 text-amber-600" aria-hidden />
-                    )}
-                    <span className="text-sm font-medium">{item.title}</span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        item.pinned
-                          ? "bg-amber-200 text-amber-800"
-                          : "bg-[color:var(--muted)]"
-                      }`}
-                    >
-                      {isOrgWide ? "Org-wide" : (item.productionTitle ?? "Production")}
-                    </span>
+                  <div className="rn-spine" style={{ background: color }} />
+                  <div className="rn-prod">
+                    <span className="rn-prod-name">{p.title}</span>
+                    <span className="rn-role">{roleLabel(p.role)}</span>
                   </div>
-                  {item.body && (
-                    <p className="mt-1 line-clamp-1 text-xs opacity-75">
-                      {item.body.replace(/<[^>]+>/g, "")}
-                    </p>
-                  )}
-                </div>
+                  <div className="rn-when">{when}</div>
+                  <div className="rn-what">{what}</div>
+                  <div className="rn-foot">
+                    <span>{where}</span>
+                    {call?.castCalled && (
+                      <>
+                        <span className="rn-pip" />
+                        <span className="mono">{call.castCalled}</span>
+                      </>
+                    )}
+                  </div>
+                </Link>
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
-      {canManage && (
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <Theater className="h-8 w-8 text-[color:var(--muted-foreground)]" aria-hidden />
-              <div>
-                <p className="text-2xl font-bold">{allProductions.length}</p>
-                <p className="text-xs text-[color:var(--muted-foreground)]">
-                  Productions
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <Users className="h-8 w-8 text-[color:var(--muted-foreground)]" aria-hidden />
-              <div>
-                <p className="text-2xl font-bold">{orgMembers.length}</p>
-                <p className="text-xs text-[color:var(--muted-foreground)]">
-                  Team Members
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <Theater className="h-8 w-8 text-[color:var(--muted-foreground)]" aria-hidden />
-              <div>
-                <p className="text-2xl font-bold">
-                  {allProductions.filter((p) => p.status === "active").length}
-                </p>
-                <p className="text-xs text-[color:var(--muted-foreground)]">
-                  Active Shows
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      {/* ── Announcements ────────────────────────────────────────────── */}
+      {serializedAnnouncements.length > 0 && (
+        <DashboardAnnouncements items={serializedAnnouncements} />
       )}
 
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">My Productions</h2>
-        <Link href="/productions">
-          <Button variant="outline" size="sm">
-            View all
-          </Button>
-        </Link>
-      </div>
-
-      {myProductions.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Theater className="mb-3 h-10 w-10 text-[color:var(--muted-foreground)]" />
-            <p className="text-sm font-medium">No productions yet</p>
-            <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
-              {canManage
-                ? "Create a production and assign yourself to get started."
-                : "You haven't been assigned to any productions yet."}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {myProductions.map((production) => (
+      {/* ── Productions browser ──────────────────────────────────────── */}
+      <section className="home-section">
+        <header className="home-section-head">
+          <div>
+            <div className="h-eyebrow">Productions</div>
+            <h2 className="h-section">Your shows</h2>
+          </div>
+          {canManage && (
             <Link
-              key={production.id}
-              href={`/productions/${production.slug}`}
+              href="/productions/new"
+              className="btn"
+              style={{ height: 28, padding: "0 10px", fontSize: 12 }}
             >
-              <Card className="transition-colors hover:bg-[color:var(--muted)]">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-3">
-                        <h3 className="truncate text-sm font-semibold">
-                          {production.title}
-                        </h3>
-                        <StatusBadge status={production.status} />
-                        <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-                          {roleLabel(production.role)}
-                        </span>
-                      </div>
-                      <div className="mt-1 flex items-center gap-1 text-xs text-[color:var(--muted-foreground)]">
-                        <Calendar className="h-3 w-3" aria-hidden />
-                        <span>
-                          {formatDate(production.openingDate)}
-                          {production.closingDate &&
-                            ` — ${formatDate(production.closingDate)}`}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex gap-4 border-t border-[color:var(--border)] pt-3">
-                    <div className="flex items-center gap-1.5 text-xs text-[color:var(--muted-foreground)]">
-                      <FileText className="h-3 w-3" aria-hidden />
-                      <span>Reports</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-[color:var(--muted-foreground)]">
-                      <FolderOpen className="h-3 w-3" aria-hidden />
-                      <span>Documents</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-[color:var(--muted-foreground)]">
-                      <Megaphone className="h-3 w-3" aria-hidden />
-                      <span>Announcements</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <Plus size={12} aria-hidden /> New production
             </Link>
-          ))}
-        </div>
-      )}
+          )}
+        </header>
+
+        {myProductions.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-3)" }}>
+            {canManage
+              ? "No productions yet. Create one to get started."
+              : "You haven't been assigned to any productions yet."}
+          </p>
+        ) : (
+          <div className="prod-cards">
+            {myProductions.map((p) => {
+              const color = prodColor(p.id);
+              const call = nextCallMap[p.id];
+              const nextLabel = call
+                ? formatCallDate(call.callDate, today, tomorrow)
+                : "—";
+              const hasNext = !!call;
+
+              return (
+                <Link
+                  key={p.id}
+                  href={`/productions/${p.slug}`}
+                  className="prod-card"
+                  data-status={p.status}
+                >
+                  <div className="prod-card-head">
+                    <span className="prod-card-status">
+                      <span
+                        className="prod-card-dot"
+                        style={{ background: color }}
+                      />
+                      {p.status}
+                    </span>
+                  </div>
+                  <h3 className="prod-card-title">{p.title}</h3>
+                  <div className="prod-card-foot">
+                    <div>
+                      <div className="prod-card-foot-label">My role</div>
+                      <div className="prod-card-foot-val">
+                        {roleLabel(p.role)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="prod-card-foot-label">Opens</div>
+                      <div className="prod-card-foot-val">
+                        {formatOpeningDate(p.openingDate)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="prod-card-foot-label">Next call</div>
+                      <div
+                        className={
+                          hasNext
+                            ? "prod-card-foot-val prod-card-next"
+                            : "prod-card-foot-val"
+                        }
+                      >
+                        {nextLabel}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="prod-card-cta">
+                    Open hub{" "}
+                    <ChevronRight size={14} strokeWidth={2} aria-hidden />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
