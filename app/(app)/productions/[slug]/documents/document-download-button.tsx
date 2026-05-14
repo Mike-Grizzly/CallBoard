@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { Eye, Download } from "lucide-react";
-import { getDocumentUrl } from "@/features/documents/actions";
+import { getDocumentUrl, getDocumentDownloadUrl } from "@/features/documents/actions";
 
 export function DocumentViewButton({
   storagePath,
@@ -24,12 +24,14 @@ export function DocumentViewButton({
 
   function handleDownload() {
     startTransition(async () => {
-      const url = await getDocumentUrl(storagePath);
+      const url = await getDocumentDownloadUrl(storagePath, fileName);
       if (url) {
         const a = document.createElement("a");
         a.href = url;
         a.download = fileName;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
       }
     });
   }

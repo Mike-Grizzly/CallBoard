@@ -1,9 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { rehearsalReports, productions } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, isNotNull, desc } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
@@ -201,4 +202,81 @@ export async function updateReport(
     .where(eq(rehearsalReports.id, reportId));
 
   redirect(`/productions/${production[0].slug}/reports/${reportId}`);
+}
+
+export type DeleteReportResult = { error?: string; success?: boolean };
+
+export async function deleteReport(
+  formData: FormData,
+): Promise<DeleteReportResult> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "reports:create")) {
+    return { error: "You don't have permission to delete reports." };
+  }
+
+  const reportId = formData.get("report_id") as string;
+  if (!reportId) return { error: "Missing report ID." };
+
+  await db
+    .update(rehearsalReports)
+    .set({ deletedAt: new Date() })
+    .where(eq(rehearsalReports.id, reportId));
+
+  revalidatePath("/productions");
+  return { success: true };
+}
+
+export async function restoreReport(
+  formData: FormData,
+): Promise<DeleteReportResult> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "reports:create")) {
+    return { error: "You don't have permission to restore reports." };
+  }
+
+  const reportId = formData.get("report_id") as string;
+  if (!reportId) return { error: "Missing report ID." };
+
+  await db
+    .update(rehearsalReports)
+    .set({ deletedAt: null })
+    .where(eq(rehearsalReports.id, reportId));
+
+  revalidatePath("/productions");
+  return { success: true };
+}
+
+export async function permanentlyDeleteReport(
+  formData: FormData,
+): Promise<DeleteReportResult> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "reports:create")) {
+    return { error: "You don't have permission to permanently delete reports." };
+  }
+
+  const reportId = formData.get("report_id") as string;
+  if (!reportId) return { error: "Missing report ID." };
+
+  await db.delete(rehearsalReports).where(eq(rehearsalReports.id, reportId));
+
+  revalidatePath("/productions");
+  return { success: true };
+}
+
+export async function fetchDeletedReportsByProduction(productionId: string) {
+  await requireCurrentUser();
+  return db
+    .select({
+      id: rehearsalReports.id,
+      reportNumber: rehearsalReports.reportNumber,
+      reportDate: rehearsalReports.reportDate,
+      status: rehearsalReports.status,
+      deletedAt: rehearsalReports.deletedAt,
+    })
+    .from(rehearsalReports)
+    .where(and(eq(rehearsalReports.productionId, productionId), isNotNull(rehearsalReports.deletedAt)))
+    .orderBy(desc(rehearsalReports.deletedAt));
 }

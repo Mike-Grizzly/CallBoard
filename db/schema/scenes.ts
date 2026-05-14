@@ -27,6 +27,7 @@ export const sceneBeats = pgTable("scene_beats", {
     .notNull()
     .references(() => productionScenes.id, { onDelete: "cascade" }),
   label: text("label").notNull(),
+  notes: text("notes"),
   orderIndex: integer("order_index").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
