@@ -73,5 +73,5 @@ export async function getPinsForUser(userId: string): Promise<PinRow[]> {
     ORDER BY "pinnedAt" DESC
   `);
 
-  return result.rows as PinRow[];
+  return (Array.isArray(result) ? result : (result as { rows?: unknown[] }).rows ?? []) as PinRow[];
 }

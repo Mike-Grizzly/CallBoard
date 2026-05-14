@@ -28,7 +28,7 @@ function formatPinnedDate(date: Date): string {
 }
 
 export function PinnedSection({ pins }: { pins: PinRow[] }) {
-  if (pins.length === 0) return null;
+  if (!pins?.length) return null;
 
   return (
     <section className="home-section">
