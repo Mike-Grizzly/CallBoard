@@ -18,13 +18,14 @@ function pinHref(pin: PinRow): string {
   return `${base}/notes`;
 }
 
-function formatPinnedDate(date: Date): string {
-  const diff = Date.now() - date.getTime();
+function formatPinnedDate(date: Date | string): string {
+  const d = date instanceof Date ? date : new Date(date as string);
+  const diff = Date.now() - d.getTime();
   const days = Math.floor(diff / 86_400_000);
   if (days === 0) return "today";
   if (days === 1) return "yesterday";
   if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export function PinnedSection({ pins }: { pins: PinRow[] }) {
