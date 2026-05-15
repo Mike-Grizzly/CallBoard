@@ -47,22 +47,23 @@ function highlightMention(text: string) {
 
 export function MentionsSection({ items }: { items: SerializedMention[] }) {
   const [tab, setTab] = useState<"unread" | "all">("unread");
-  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [fadedIds, setFadedIds] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
   const router = useRouter();
 
   const unreadCount = items.filter(
-    (m) => m.isUnread && !readIds.has(m.id),
+    (m) => m.isUnread && !fadedIds.has(m.id),
   ).length;
 
+  // Keep faded cards visible in the unread tab until navigation completes.
   const filtered = tab === "unread"
-    ? items.filter((m) => m.isUnread && !readIds.has(m.id))
+    ? items.filter((m) => m.isUnread)
     : items;
 
   function handleClick(m: SerializedMention) {
-    if (m.isUnread && !readIds.has(m.id)) {
-      setReadIds((prev) => new Set([...prev, m.id]));
-      startTransition(() => markMentionRead(m.id));
+    if (m.isUnread && !fadedIds.has(m.id)) {
+      setFadedIds((prev) => new Set([...prev, m.id]));
+      startTransition(async () => { await markMentionRead(m.id); });
     }
     if (m.href) router.push(m.href);
   }
@@ -101,7 +102,7 @@ export function MentionsSection({ items }: { items: SerializedMention[] }) {
           </div>
         ) : (
           filtered.map((m) => {
-            const isUnread = m.isUnread && !readIds.has(m.id);
+            const isUnread = m.isUnread && !fadedIds.has(m.id);
             return (
               <button
                 key={m.id}
