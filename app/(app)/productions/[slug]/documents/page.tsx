@@ -11,6 +11,7 @@ import {
   getDocumentsByProduction,
   getFoldersByProduction,
 } from "@/features/documents/queries";
+import { getPinnedItemIds } from "@/features/pins/queries";
 import { DocumentsClient } from "./documents-client";
 
 export default async function DocumentsPage({
@@ -40,10 +41,11 @@ export default async function DocumentsPage({
     }
   }
 
-  const [documents, folders, members] = await Promise.all([
+  const [documents, folders, members, pinnedDocIds] = await Promise.all([
     getDocumentsByProduction(production.id),
     getFoldersByProduction(production.id),
     getProductionMembers(production.id),
+    getPinnedItemIds(user.id, "document"),
   ]);
 
   const canUpload = can(user.role, "documents:upload");
@@ -58,6 +60,7 @@ export default async function DocumentsPage({
       slug={slug}
       canUpload={canUpload}
       initialDocId={initialDocId}
+      pinnedDocIds={pinnedDocIds}
     />
   );
 }

@@ -59,6 +59,7 @@ interface Props {
   slug: string;
   canUpload: boolean;
   initialDocId?: string;
+  pinnedDocIds: string[];
 }
 
 const ALL_FILES = "All files";
@@ -73,6 +74,7 @@ export function DocumentsClient({
   slug,
   canUpload,
   initialDocId,
+  pinnedDocIds,
 }: Props) {
   const router = useRouter();
   const [activeFolder, setActiveFolder] = useState(ALL_FILES);
@@ -620,6 +622,7 @@ export function DocumentsClient({
           doc={openDoc}
           members={members}
           folders={folders}
+          initialPinned={pinnedDocIds.includes(openDoc.id)}
           onClose={() => setOpenDoc(null)}
         />
       )}
