@@ -222,6 +222,96 @@ Record of durable project decisions. Add new entries at the bottom with date and
 
 ---
 
+## 2026-05-14 — Beat arrows exclude timestamp columns from server action serialization
+
+**Decision:** `fetchBeatArrows`, `createBeatArrow`, and `getArrowsForBeat` explicitly select only the five scalar fields needed by the UI (`id`, `fromX`, `fromY`, `toX`, `toY`, `color`), omitting `createdAt` and `beatId`.
+
+**Reason:** Next.js 16 server actions serialize return values through the React server action boundary. Drizzle `Date` objects (from `timestamp` columns) fail this serialization, producing a `TypeError: Failed to fetch` unhandled rejection in the browser. Selecting only plain-number/string fields avoids the issue entirely.
+
+**Impact:** Any future query/action that returns rows from `beat_arrows` (or any table with a `timestamp` column) must do the same — select fields explicitly and exclude timestamp columns, or convert them to ISO strings before returning.
+
+---
+
+## 2026-05-14 — Blocking canvas layer toggle and draw mode disable dragging
+
+**Decision:** The canvas has two exclusive "layers" (Actors / Set Pieces) controlled by a segmented button. Only the active layer's tokens are pointer-interactive; the other layer gets `pointerEvents: none`. Draw mode additionally disables all tokens so canvas pointer events are unambiguous.
+
+**Reason:** With 20+ actors and set pieces on a dense stage, accidental selection of the wrong token type is a significant usability problem. Isolating draggable elements by layer matches the mental model of theatre designers who think in discrete staging layers.
+
+**Impact:** `isInteractive` prop threaded through both `ActorToken` and `SetPieceToken`. Off-stage tile drags also respect `activeLayer`. When draw mode is active, all token dragging is suspended.
+
+---
+
+## 2026-05-13 — PDF ground plan rendered via offscreen canvas + module-level ImageBitmap cache
+
+**Decision:** The blocking canvas renders the ground plan PDF to an offscreen `<canvas>`, converts it to an `ImageBitmap`, and stores it in a module-level `Map` keyed by the stable file path (not the signed URL token). Subsequent renders draw from the cached bitmap.
+
+**Reason:** `router.refresh()` (called after beat creation and other mutations) causes Next.js to regenerate the Supabase signed URL, producing a new URL string. The PDF `useEffect` was keyed to `pdfUrl`, so every refresh triggered a re-render: `canvas.width = ...` cleared the canvas, causing a visible flash. Keying the cache by the URL's pathname (stable) rather than the full token (volatile) prevents unnecessary re-renders.
+
+**Impact:** PDF renders once per page+session and is reused on subsequent beats. Cache lives for the lifetime of the module (page session). No flash between beats or after refresh calls.
+
+---
+
+## 2026-05-13 — Custom set pieces stored in Supabase Storage under `set-pieces/` prefix
+
+**Decision:** User-uploaded custom set piece images (SVG/PNG/JPG) are stored in the existing `attachments` bucket under the path `set-pieces/{productionId}/{timestamp}-{safeName}`. A new `custom_set_pieces` table tracks metadata (name, storagePath, fileType, uploadedBy). Signed URLs are generated server-side at page load (1-hour expiry).
+
+**Reason:** Reuses the existing storage bucket and RLS policies without requiring a new bucket. The `set-pieces/` prefix namespace is distinct from `reports/` and `documents/` prefixes already in use.
+
+**Impact:** `custom_set_pieces` table added to Drizzle schema. New server actions: `uploadCustomSetPiece`, `deleteCustomSetPiece`, `getCustomSetPieceUrls`. File size limit 5 MB. Signed URLs expire after 1 hour — long blocking sessions may see broken images for custom pieces (see open questions).
+
+---
+
+## 2026-05-13 — Free-angle set piece rotation via corner drag handle
+
+**Decision:** Set piece rotation is implemented as a corner drag handle using `pointer capture` on a `<div>`, tracking angle delta relative to the token center on `pointermove`. The starting angle is captured on `pointerdown` and the rotation delta is applied on each move event, so clicking the handle without moving does not snap the piece.
+
+**Reason:** The prior ±15° button approach required repeated clicks for large rotations and was unintuitive. A drag handle is the standard pattern for rotation in design tools. Delta-based tracking (vs. absolute angle) ensures no snap-on-click.
+
+**Impact:** Rotation handle appears on set piece hover. Built-in SVG pieces and custom uploaded pieces both support free-angle rotation. Rotation stored as degrees in `blocking_positions.rotation`.
+
+---
+
+## 2026-05-15 — Daily log feature removed
+
+**Decision:** The daily log (personal per-user rich-text notes per production, with "Import from daily log" on the new report form) was removed entirely.
+
+**Reason:** The daily log was redundant with the report's general notes field. Users would draft content twice; the import button was a workaround for a UX problem rather than a real feature.
+
+**Impact:** `db/schema/production-logs.ts`, `features/logs/queries.ts`, `features/logs/actions.ts`, the log page, and the log editor were deleted. `db/schema/index.ts` no longer exports production-logs. The `ReportForm` no longer has a `logContent` prop or "Import" button. Existing `production_logs` rows in the database are orphaned (the table still exists in Supabase); it can be dropped in a future cleanup migration.
+
+---
+
+## 2026-05-15 — @Mentions: TipTap extension pinned to exact version 3.22.5
+
+**Decision:** `@tiptap/extension-mention` and `@tiptap/suggestion` are pinned to exact version `3.22.5` (no caret) in `package.json`.
+
+**Reason:** All existing TipTap packages in the project are at `3.22.5`. The npm registry had `3.23.4` as the latest `@tiptap/extension-mention`, which requires `@tiptap/core@3.23.4` as a peer. Using `^3.22.5` still resolved to `3.23.4` (the latest matching semver range). Only an exact pin prevents the mismatch.
+
+**Impact:** When upgrading TipTap, all packages must be bumped together. Do not use a caret for `@tiptap/extension-mention` or `@tiptap/suggestion`.
+
+---
+
+## 2026-05-15 — @Mentions write path: idempotent delete-then-insert
+
+**Decision:** `writeMentions(html, ctx)` always deletes all existing mention rows for `(contextType, contextId)` before inserting new ones, rather than diffing.
+
+**Reason:** Notes autosave every 600ms on content change. A diff-based approach would require comparing old vs. new mention sets on every save and handling edge cases (deleted mentions, re-added mentions). Delete-then-insert is simpler, always correct, and mention rows are lightweight (no FK cascade consequences).
+
+**Impact:** Every report save, note autosave, or announcement create re-writes all mention rows for that context. The `mentions` table does not accrue stale rows. Any downstream feature reading mentions (e.g., notification history) will always see the current state of the document.
+
+---
+
+## 2026-05-15 — Mention card UX: fade highlight, keep card visible (fadedIds pattern)
+
+**Decision:** Clicking a mention card fades the blue unread background immediately (optimistic) but keeps the card present in the Unread tab until the user navigates away. A separate `unfadedIds` set allows individual cards to be restored to unread state.
+
+**Reason:** Earlier iteration used a `readIds` set that both removed the highlight AND filtered the card out of the unread list on click, causing the card to disappear before the user had navigated to the mentioned context. User feedback: "it just deletes itself from the unread view before you go to see the @mention itself."
+
+**Impact:** Two independent state sets: `fadedIds` (blue highlight removed) and `unfadedIds` (card force-shown as unread). `effectiveUnread(m)` = `(m.isUnread || unfadedIds.has(m.id)) && !fadedIds.has(m.id)`. Cards disappear from the Unread tab only on the next server-side data refresh (page navigation or revalidation).
+
+---
+
 ## 2026-05-11 — RLS enabled on all public tables; policies intentionally omitted
 
 **Decision:** Turn on Row Level Security for the 9 remaining unsecured tables (`organizations`, `productions`, `announcements`, `production_scenes`, `scene_beats`, `stage_configurations`, `blocking_positions`, `note_tags`, `production_notes`) without writing any policies. Migration `enable_rls_on_public_tables` applied via Supabase MCP.

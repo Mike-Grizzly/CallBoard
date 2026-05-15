@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, Search, Bell } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import type { ReactNode } from "react";
 import { requireCurrentUser } from "@/lib/auth";
@@ -11,9 +11,12 @@ import {
   getProductionMembers,
   getProductionMembership,
 } from "@/features/members/queries";
-import { getReportsByProduction } from "@/features/reports/queries";
-import { getDocumentsByProduction } from "@/features/documents/queries";
+import { getReportsByProduction, getDeletedReportsByProduction } from "@/features/reports/queries";
+import { getDocumentsByProduction, getDeletedDocumentsByProduction } from "@/features/documents/queries";
 import { getAnnouncementsByProduction } from "@/features/announcements/queries";
+import { getUnreadNotificationCount } from "@/features/notifications/actions";
+import { NotificationBell } from "./notification-bell";
+import { TrashDrawer } from "./trash-drawer";
 import { ProductionTabsNav, type ProductionTab } from "./production-tabs";
 
 const STATUS_COPY: Record<
@@ -81,12 +84,18 @@ export default async function ProductionLayout({
   const canViewBlocking = can(user.role, "blocking:view");
   const canViewNotes = can(user.role, "notes:view");
 
-  const [members, reports, documents, announcements] = await Promise.all([
-    getProductionMembers(production.id),
-    getReportsByProduction(production.id),
-    getDocumentsByProduction(production.id),
-    getAnnouncementsByProduction(production.id, org.id),
-  ]);
+  const [members, reports, documents, announcements, unreadCount, deletedDocs, deletedReports] =
+    await Promise.all([
+      getProductionMembers(production.id),
+      getReportsByProduction(production.id),
+      getDocumentsByProduction(production.id),
+      getAnnouncementsByProduction(production.id, org.id),
+      getUnreadNotificationCount(),
+      getDeletedDocumentsByProduction(production.id),
+      getDeletedReportsByProduction(production.id),
+    ]);
+
+  const initialTrashCount = deletedDocs.length + deletedReports.length;
 
   const director = members.find((m) => m.role === "director");
   const directorName = director
@@ -107,16 +116,19 @@ export default async function ProductionLayout({
       icon: "FileText",
       count: reports.length,
     },
+  ];
+  if (canViewNotes) {
+    tabs.push({
+      label: "My Notes",
+      href: `/productions/${slug}/notes`,
+      icon: "PenLine",
+    });
+  }
+  tabs.push(
     {
-      label: "Calls",
+      label: "Rehearsal Schedule",
       href: `/productions/${slug}/calls`,
       icon: "Phone",
-    },
-    {
-      label: "Announcements",
-      href: `/productions/${slug}/announcements`,
-      icon: "Megaphone",
-      count: announcements.length,
     },
     {
       label: "Documents",
@@ -124,26 +136,19 @@ export default async function ProductionLayout({
       icon: "FolderOpen",
       count: documents.length,
     },
-  ];
-  if (canCreateReports) {
-    tabs.push({
-      label: "Daily Log",
-      href: `/productions/${slug}/log`,
-      icon: "PenLine",
-    });
-  }
+    {
+      label: "Announcements",
+      href: `/productions/${slug}/announcements`,
+      icon: "Megaphone",
+      count: announcements.length,
+    },
+  );
+
   if (canViewBlocking) {
     tabs.push({
       label: "Blocking",
       href: `/productions/${slug}/blocking`,
       icon: "Layout",
-    });
-  }
-  if (canViewNotes) {
-    tabs.push({
-      label: "Notes",
-      href: `/productions/${slug}/notes`,
-      icon: "PenLine",
     });
   }
 
@@ -215,14 +220,8 @@ export default async function ProductionLayout({
             >
               <Search className="ico" aria-hidden />
             </button>
-            <button
-              type="button"
-              className="btn ghost btn-icon"
-              title="Notifications"
-              aria-label="Notifications"
-            >
-              <Bell className="ico" aria-hidden />
-            </button>
+            <TrashDrawer productionId={production.id} initialTrashCount={initialTrashCount} />
+            <NotificationBell initialUnread={unreadCount} />
             {canManage && (
               <Link
                 href={`/productions/${slug}/members`}

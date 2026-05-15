@@ -4,8 +4,10 @@ import {
   blockingPositions,
   productionMemberships,
   profiles,
+  customSetPieces,
+  beatArrows,
 } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 
 export async function getStageConfiguration(productionId: string) {
   const rows = await db
@@ -46,3 +48,28 @@ export async function getCastMembers(productionId: string) {
 }
 
 export type CastMember = Awaited<ReturnType<typeof getCastMembers>>[number];
+
+export async function getCustomSetPieces(productionId: string) {
+  return db
+    .select()
+    .from(customSetPieces)
+    .where(eq(customSetPieces.productionId, productionId))
+    .orderBy(asc(customSetPieces.createdAt));
+}
+
+export type CustomSetPieceRow = Awaited<ReturnType<typeof getCustomSetPieces>>[number];
+
+export async function getArrowsForBeat(beatId: string) {
+  return db
+    .select({
+      id: beatArrows.id,
+      fromX: beatArrows.fromX,
+      fromY: beatArrows.fromY,
+      toX: beatArrows.toX,
+      toY: beatArrows.toY,
+      color: beatArrows.color,
+    })
+    .from(beatArrows)
+    .where(eq(beatArrows.beatId, beatId))
+    .orderBy(asc(beatArrows.createdAt));
+}

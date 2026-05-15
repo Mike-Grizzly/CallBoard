@@ -29,7 +29,7 @@ export async function getProductionBySlug(
 }
 
 export async function getUserProductions(userId: string) {
-  return db
+  const rows = await db
     .select({
       id: productions.id,
       title: productions.title,
@@ -46,6 +46,14 @@ export async function getUserProductions(userId: string) {
     )
     .where(eq(productionMemberships.userId, userId))
     .orderBy(desc(productions.createdAt));
+
+  // Deduplicate by production id — keep the first (highest-privilege) membership
+  const seen = new Set<string>();
+  return rows.filter((r) => {
+    if (seen.has(r.id)) return false;
+    seen.add(r.id);
+    return true;
+  });
 }
 
 export type UserProduction = Awaited<

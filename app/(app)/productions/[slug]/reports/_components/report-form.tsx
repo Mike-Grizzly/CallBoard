@@ -10,6 +10,7 @@ import {
 import { DEPARTMENTS } from "@/features/reports/constants";
 import type { ReportDetail } from "@/features/reports/queries";
 import { RichTextEditor, RichTextDisplay } from "@/components/ui/rich-text-editor";
+import type { MentionMember } from "@/components/ui/mention-textarea";
 import { Icon } from "@/components/ui/icon";
 import { DeptNoteModal } from "./dept-note-modal";
 import {
@@ -49,15 +50,15 @@ export function ReportForm({
   productionId,
   productionTitle,
   slug,
-  logContent,
   initial,
+  members,
 }: {
   mode: Mode;
   productionId: string;
   productionTitle: string;
   slug: string;
-  logContent: string | null;
   initial?: ReportDetail;
+  members?: MentionMember[];
 }) {
   const action = mode === "edit" ? updateReport : createReport;
   const [state, formAction, pending] = useActionState<
@@ -103,10 +104,6 @@ export function ReportForm({
   const [activeTab, setActiveTab] = useState<
     "notes" | "sched" | "lines" | "injuries" | "general" | "next"
   >("notes");
-
-  function importFromLog() {
-    if (logContent) setGeneralNotes(logContent);
-  }
 
   function handleSubmit(formData: FormData) {
     formData.set("general_notes", generalNotes);
@@ -437,27 +434,12 @@ export function ReportForm({
             <InjuriesEditor injuries={injuries} onChange={setInjuries} />
           </div>
           <div style={{ display: activeTab === "general" ? "block" : "none" }}>
-            {logContent && !isEdit && (
-              <div className="row-between" style={{ marginBottom: 10 }}>
-                <span className="muted" style={{ fontSize: 12 }}>
-                  Overall summary of the day's rehearsal
-                </span>
-                <button
-                  type="button"
-                  onClick={importFromLog}
-                  className="btn ghost"
-                  style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-                >
-                  <Icon name="Download" size={12} aria-hidden />
-                  <span>Import from daily log</span>
-                </button>
-              </div>
-            )}
             <RichTextEditor
               content={generalNotes}
               onChange={setGeneralNotes}
               placeholder="Overall summary of the day's rehearsal…"
               minHeight="220px"
+              members={members}
             />
             {state?.errors?.general_notes && (
               <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 6 }}>
@@ -518,6 +500,7 @@ export function ReportForm({
           icon={editingDeptDef.icon}
           accentColor={editingDeptDef.c}
           value={deptNotes[editingDeptDef.key]}
+          members={members}
           onSave={(html) => {
             setDeptNotes((prev) => ({ ...prev, [editingDeptDef.key]: html }));
             setEditingDept(null);

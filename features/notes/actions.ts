@@ -1,11 +1,13 @@
 "use server";
 
 import { db } from "@/db";
-import { productionNotes, noteTags } from "@/db/schema";
+import { productionNotes, noteTags, productions } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { writeMentions } from "@/features/mentions/write";
+import { getOrCreateDefaultOrganization } from "@/lib/organization";
 
 type ActionResult = { error?: string; success?: boolean; id?: string };
 
@@ -18,6 +20,8 @@ export async function createNote(
     return { error: "You don't have permission to create notes." };
   }
 
+  const today = new Date().toISOString().split("T")[0];
+
   const rows = await db
     .insert(productionNotes)
     .values({
@@ -26,6 +30,7 @@ export async function createNote(
       title: "",
       content: "",
       visibility: "private",
+      dueDate: today,
     })
     .returning({ id: productionNotes.id });
 
@@ -72,6 +77,25 @@ export async function updateNote(
     .update(productionNotes)
     .set({ ...fields, updatedAt: new Date() })
     .where(eq(productionNotes.id, noteId));
+
+  if (fields.content) {
+    const org = await getOrCreateDefaultOrganization();
+    const noteRow = await db
+      .select({ productionId: productionNotes.productionId, title: productionNotes.title })
+      .from(productionNotes)
+      .where(eq(productionNotes.id, noteId))
+      .limit(1);
+    if (noteRow.length > 0) {
+      await writeMentions(fields.content, {
+        organizationId: org.id,
+        productionId: noteRow[0].productionId,
+        mentionedById: user.id,
+        contextType: "note",
+        contextId: noteId,
+        contextTitle: fields.title ?? noteRow[0].title,
+      });
+    }
+  }
 
   revalidatePath(`/productions/${productionSlug}/notes`);
   return { success: true };

@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
+import { writeMentions } from "@/features/mentions/write";
 
 export type AnnouncementResult = {
   error?: string;
@@ -32,13 +33,27 @@ export async function createAnnouncement(
 
   const org = await getOrCreateDefaultOrganization();
 
-  await db.insert(announcements).values({
-    organizationId: org.id,
-    productionId,
-    createdBy: user.id,
-    title,
-    body,
-  });
+  const [row] = await db
+    .insert(announcements)
+    .values({
+      organizationId: org.id,
+      productionId,
+      createdBy: user.id,
+      title,
+      body,
+    })
+    .returning({ id: announcements.id });
+
+  if (body) {
+    await writeMentions(body, {
+      organizationId: org.id,
+      productionId,
+      mentionedById: user.id,
+      contextType: "announcement",
+      contextId: row.id,
+      contextTitle: title,
+    });
+  }
 
   revalidatePath("/announcements");
   revalidatePath("/productions", "layout");

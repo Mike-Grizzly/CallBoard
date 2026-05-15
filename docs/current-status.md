@@ -1,8 +1,8 @@
 # Current Status
 
-**Last updated:** 2026-05-11
+**Last updated:** 2026-05-15
 
-**Current milestone:** Steps 1-12 complete. Call schedule calendar shipped. UI port Phase 1 (design tokens / shell) done, Phase 2 (per-tab visual port) in progress. Overview tab ported. Rehearsal Reports tab now at full demo parity — schema expanded with status, attendance, breaks, scenes, schedule changes, line notes, injuries; new editor matches the demo exactly; edit flow exists; email dialog uses the demo's modal chrome. The per-production tab is now labelled "Rehearsal Reports" and sits second after Overview. RLS enabled on all public tables. See `docs/feature-specs/11-rehearsal-report-demo-parity.md` for the full scope.
+**Current milestone:** Steps 1-13 complete. Latest: @mention autocomplete in all rich-text editors (reports, dept notes, announcements, my notes), mention write path to DB, clickable mention cards on dashboard (mark-as-read on click, fade-not-remove UX, mark-all-read, mark-as-unread), unpin from dashboard pinned section, tab renamed to "Rehearsal Schedule", daily log removed.
 
 ## Feature status
 
@@ -48,14 +48,13 @@
 - Non-assigned users without `productions:manage` are redirected from production detail
 - Personalized dashboard with stats (admin) and assigned productions list
 
-### Step 5: Reports — IMPLEMENTED (overhauled 2026-05-06)
+### Step 5: Reports — IMPLEMENTED (overhauled 2026-05-06; daily log removed 2026-05-15)
 - Structured rehearsal report: header (date, scheduled call, actual start, end), TipTap general notes, 12 fixed department text fields, next-rehearsal block
 - Per-production auto-incremented `report_number` (MAX+1 in server action)
 - **Email Report** button: recipient picker (entire production or individual checkboxes), sends HTML email via Resend (`resend` package, `RESEND_API_KEY` + `RESEND_FROM_EMAIL` env vars)
 - Reports list shows `#N — {date}`; legacy `scheduleNotes` still renders if populated
-- Daily log feature: personal rich text notes per user per production
-- "Import from daily log" button when creating a new report (fills general notes)
 - Report file attachments via Supabase Storage (10MB limit), signed URL downloads (1-hour expiry)
+- **Removed:** Daily log feature and "Import from daily log" button (redundant with report general notes)
 - **Known issue:** TipTap bullet points not working due to Tailwind prose CSS reset
 
 ### Step 6: Documents — IMPLEMENTED
@@ -94,18 +93,18 @@
 - **Email Report** button — sends HTML email via Resend with recipient picker (entire production or individual members)
 - Schema applied via Supabase MCP `apply_migration`; `resend` package added
 
-### Step 10: Blocking Tool (Phase 1 + Phase 2) — IMPLEMENTED
+### Step 10: Blocking Tool (Phase 1 + Phase 2 + Phase 3 UI + Phase 4 arrows/layers/notes) — IMPLEMENTED
 
 - **New role:** `choreographer` (7th role, has `blocking:edit` + standard director-level caps)
 - **New capabilities:** `blocking:view` (all roles), `blocking:edit` (admin, producer, director, choreographer, stage_manager)
-- **New DB tables:** `production_scenes`, `scene_beats`, `stage_configurations`, `blocking_positions`
+- **New DB tables:** `production_scenes`, `scene_beats`, `stage_configurations`, `blocking_positions`, `custom_set_pieces`, `beat_arrows`; `scene_beats.notes` (text column)
 - **Schema changes:** `production_memberships.character_name` (nullable); `stage_configurations.ground_plan_page` (int, default 1)
 - **New feature modules:** `features/scenes/` (queries, actions, validation), `features/blocking/` (queries, actions, constants)
-- **Set piece library:** 15 SVG shapes (chair, armchair, couch, loveseat, beds, tables, desk, stairs, door, window, grand piano, podium, platform)
+- **Set piece library:** 15 built-in SVG shapes (chair, armchair, couch, loveseat, beds, tables, desk, stairs, door, window, grand piano, podium, platform) + user-uploaded custom pieces
 - **Routes:** `/productions/[slug]/blocking` (canvas), `/productions/[slug]/blocking/setup` (wizard)
 - **Blocking canvas:** PDF background (rendered via pdfjs-dist v5), number line ruler overlay with toggleable SL/SR and US/DS grids, drag-and-drop actor tokens + set pieces (@dnd-kit/core), autosave per beat, in-session undo (50 states)
 - **Actor tokens:** Initials from firstName[0]+lastName[0]; only character name shown under circle; auto color-coded
-- **Set piece rotation:** ±15° buttons appear on hover; rotation stored and restored per beat
+- **Set piece rotation:** Free-angle corner drag handle (pointer capture, delta-based angle tracking); rotation stored and restored per beat
 - **Cross-scene beat copy:** First beat of a new scene automatically inherits positions from the last beat of the previous scene
 - **Multi-page ground plans:** Page selector in setup wizard; prev/next page controls on canvas; `ground_plan_page` stored in stage config
 - **Export PNG:** "Export" button composites PDF canvas + tokens into a downloadable PNG via browser Canvas API
@@ -113,22 +112,33 @@
 - **Character name assignment:** Inline editable character name on cast member rows in the production members page
 - **Scene/Beat manager:** Left panel — Act/Scene/Beat hierarchy, add/delete; "Capture Beat" auto-labels and advances
 - **Stage setup wizard:** 2-step — select ground plan PDF + enter proscenium width/depth, then 2-point click calibration
-- **Number line ruler:** Proscenium baseline with ticks every 2', labels every 5'; toggleable SL/SR and US/DS grid lines
+- **Number line ruler:** Proscenium baseline with ticks every 2', labels every 5' on the SL/SR axis; US/DS horizontal grid lines show spacing only (no depth labels); toggleable independently
+- **Thin semi-transparent grid:** SL/SR and US/DS grid lines rendered at `rgba(80,80,80,0.15)`, z-layered above floorplan, below all tokens; square grid when both axes enabled (US/DS spacing matches SL/SR 2ft spacing)
+- **Immersive canvas layout:** Canvas fills full available viewport via negative margin bleed (no wasted whitespace); fullscreen mode via `position:fixed; inset:0; z-index:9999`; Escape key exits fullscreen
+- **Accurate drag placement:** Off-stage tokens land at cursor position using `activatorEvent.clientX + delta.x` (not tile rect)
+- **Custom set piece uploads:** Users with `blocking:edit` can upload SVG, PNG, or JPG (max 5 MB) to use as set pieces. Stored in Supabase Storage `attachments` bucket under `set-pieces/{productionId}/`. DB table `custom_set_pieces` tracks metadata. Signed URLs (1hr) generated server-side; custom pieces render centered in their canvas tokens
+- **PDF flash fix:** Ground plan PDF is rendered once to an offscreen canvas and cached as an `ImageBitmap` in module-level memory, keyed by stable file path. Subsequent beat switches and `router.refresh()` calls reuse the bitmap — no canvas clear/redraw flicker
+- **Movement arrows (auto):** Togglable overlay showing straight-line arrows from current beat to next beat positions for each actor; edge-to-edge (not center-to-center); colored per actor; hidden for stationary actors
+- **Draw-your-own arrows:** "Draw Arrow" mode (pencil tool) — click to set start, click to finish; snaps color to nearest actor token; arrows stored in `beat_arrows` DB table; delete via hover button; persists across beat navigation
+- **Layer toggle:** Toolbar segmented control switches between "Actors" and "Set Pieces" layers; non-active layer tokens get `pointerEvents: none` so they cannot be accidentally moved
+- **Per-beat notes:** Collapsible TipTap rich-text notes section in right panel (between Set Pieces and Beat Comments); 1-second debounce autosave to `scene_beats.notes`; resets on beat navigation via `key={beatId}`
 - **Permissions:** SM/Director/Choreographer/Admin/Producer can edit; Cast/Crew view only
-- **Known future work (Phase 3):** Set piece rotation via drag handle (free angle); full beat-breakdown export (multi-page PDF or print view)
+- **Known future work:** Full beat-breakdown export (multi-page PDF or print view with scene/beat snapshots)
 
-### Step 11: Notes — IMPLEMENTED
+### Step 11: Notes ("My Notes") — IMPLEMENTED + UI PORTED
 
-- Two-panel Notion-like interface per production (`/productions/[slug]/notes`)
-- Notes list with filter tabs (All, To-do, Pinned, Notes, Done)
-- Pinned notes grouped at top of list
-- Unified note type with optional to-do checkbox and completion toggle
-- Pin toggle, visibility toggle (private/shared), due date field
-- Org-level tag library with colored tags; seeded with 7 defaults on first access
-- Admin/producer/director/stage_manager can add/remove tags via tag manager modal
+- Tab labelled **"My Notes"**, 3rd position in production tab strip (after Rehearsal Reports)
+- Two-column grid layout (360px list + 1fr editor) matching the warm theatre design system
+- Notes are **always private** — visibility toggle removed from UI; stored as "private" in DB
+- Filter tabs: All, To-do, Pinned, Notes (Done filter removed; completed to-dos sort to bottom of To-do view)
+- To-do rows have a **clickable circle** in the list — checks off without opening the note
+- **Animated strikethrough:** line draws across title over 350ms + colour fade; item holds list position during animation before sinking (~420ms)
+- **Auto-date:** new notes pre-fill due date with today
+- Pinned notes grouped at top; tag picker dropdown in editor header
+- Org-level tag library seeded with 6 defaults: Follow-up, Blocking, Props, Costumes, Technical, Safety
+- Tag manager modal uses **React portal** (escapes CSS transform stacking context), **backdrop blur**, click-outside-to-close
 - TipTap rich text editor with auto-save (600ms debounce)
-- Notes added as card on production overview and tab in production nav
-- **Known limitation:** Visibility toggle is display-only — no query-level enforcement; all team members see all notes (deferred)
+- **Known limitation:** Privacy not enforced at query level — all production members can technically read all notes in DB
 
 ### Step 12: Call Schedule Calendar — IMPLEMENTED
 
@@ -145,6 +155,31 @@
 - Delete button extracted to a client component (`DeleteCallButton`) — fixes pre-existing server-component error (`onClick` on server-rendered form)
 - `features/calls/` has `queries.ts`, `actions.ts` (no new libs introduced)
 - **Not verified:** Real-time live-status flipping without page reload (status is computed server-side at render time)
+
+### Step 13: @Mentions + Dashboard Improvements — IMPLEMENTED (2026-05-15)
+
+**@Mention autocomplete (write path)**
+- `@tiptap/extension-mention` + `@tiptap/suggestion` added (pinned to exact `3.22.5` to match existing TipTap packages)
+- `components/ui/mention-suggestion.ts` — shared TipTap suggestion config: filters members by name, renders a floating `ReactRenderer` popup, keyboard navigable
+- Mention nodes render as inline chips (`<span class="mention-inline">`) in all rich-text editors
+- Editors with mention support: report general notes, all 12 department note modals, announcement body, My Notes editor
+- `features/mentions/write.ts` — idempotent `writeMentions(html, ctx)`: deletes all existing mentions for `contextType+contextId`, then re-inserts by extracting `data-id` from mention HTML. Called after every report create/update, announcement create, and note autosave
+- `db/schema/mentions.ts` table: `organizationId`, `productionId`, `mentionedUserId`, `mentionedById`, `contextType` (report/announcement/note), `contextId`, `contextTitle`, `snippet` (first 200 chars stripped of HTML), `readAt`
+
+**Dashboard mention cards**
+- Mention cards are clickable: clicking navigates to the source context (`/productions/[slug]/reports/[id]`, etc.) and marks the mention as read
+- Fade-not-remove UX: clicking a card fades the blue unread highlight immediately (optimistic) but the card stays visible in the Unread tab until navigation completes — prevents jarring disappearance
+- Mark-as-unread: read cards show a circle button on hover to restore unread state (optimistic via `unfadedIds` set)
+- Mark all as read: ghost button in the mentions section header, only shown when there are unread items
+- Cards use `<div role="button">` rather than `<button>` to allow nested interactive elements (mark-as-unread button)
+
+**Dashboard pinning**
+- Pin cards on the dashboard now show an unpin button on hover (absolutely positioned, `opacity:0` by default, revealed on hover)
+- Unpin is optimistic: card removed from local state immediately, server action fires in background
+- `PinnedSection` converted from server to client component to hold local pin state
+
+**Navigation rename**
+- "Calls" tab renamed to "Rehearsal Schedule" in the production tab strip
 
 ## Scaffolded only (not implemented)
 

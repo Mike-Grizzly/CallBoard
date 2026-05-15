@@ -142,6 +142,19 @@ export async function deleteBeat(
   return {};
 }
 
+export async function saveBeatNotes(
+  beatId: string,
+  notes: string,
+): Promise<{ error?: string }> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "blocking:edit")) {
+    return { error: "You don't have permission to edit beat notes." };
+  }
+  await db.update(sceneBeats).set({ notes }).where(eq(sceneBeats.id, beatId));
+  revalidatePath(`/productions`);
+  return {};
+}
+
 export type CaptureNextBeatResult = { beatId?: string; error?: string };
 
 export async function captureNextBeat(

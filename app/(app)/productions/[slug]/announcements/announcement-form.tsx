@@ -4,13 +4,15 @@ import { useState, useTransition, useRef } from "react";
 import { Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import type { MentionMember } from "@/components/ui/mention-textarea";
 import { createAnnouncement } from "@/features/announcements/actions";
 
 interface AnnouncementFormProps {
   productionId: string;
+  members?: MentionMember[];
 }
 
-export function AnnouncementForm({ productionId }: AnnouncementFormProps) {
+export function AnnouncementForm({ productionId, members }: AnnouncementFormProps) {
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -67,6 +69,7 @@ export function AnnouncementForm({ productionId }: AnnouncementFormProps) {
             content={body}
             onChange={setBody}
             placeholder="Add more details..."
+            members={members}
           />
         </div>
       </div>

@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { Download, FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
@@ -9,13 +8,18 @@ import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
 import { getDocumentById } from "@/features/documents/queries";
 import { getDocumentUrl } from "@/features/documents/actions";
-import { DOCUMENT_TYPES } from "@/features/documents/constants";
+import { getIsPinned } from "@/features/pins/queries";
+import { PinButton } from "@/features/pins/pin-button";
 import { DocumentViewer } from "./document-viewer";
 
-function getTypeLabel(value: string): string {
-  const found = DOCUMENT_TYPES.find((t) => t.value === value);
-  return found?.label ?? value;
-}
+const TYPE_META: Record<string, { color: string; label: string }> = {
+  script:    { color: "clay",  label: "Script" },
+  schedule:  { color: "sage",  label: "Schedule" },
+  design:    { color: "plum",  label: "Design / Tech" },
+  music:     { color: "amber", label: "Music / Score" },
+  reference: { color: "dusk",  label: "Reference" },
+  general:   { color: "",      label: "General" },
+};
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -50,49 +54,91 @@ export default async function DocumentDetailPage({
     notFound();
   }
 
-  const signedUrl = await getDocumentUrl(doc.storagePath);
+  const [signedUrl, isPinned] = await Promise.all([
+    getDocumentUrl(doc.storagePath),
+    getIsPinned(user.id, "document", documentId),
+  ]);
 
   const uploaderName =
     doc.uploadedByFirstName || doc.uploadedByLastName
-      ? `${doc.uploadedByFirstName} ${doc.uploadedByLastName}`.trim()
+      ? `${doc.uploadedByFirstName ?? ""} ${doc.uploadedByLastName ?? ""}`.trim()
       : doc.uploadedByEmail;
 
+  const meta = TYPE_META.general;
+
   return (
-    <div className="mx-auto max-w-6xl">
-      <div className="mb-4">
+    <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+      {/* Breadcrumb */}
+      <div style={{ marginBottom: 20 }}>
         <Link
           href={`/productions/${slug}/documents`}
-          className="text-sm text-[color:var(--muted-foreground)] underline underline-offset-4 hover:text-[color:var(--foreground)]"
+          style={{
+            fontSize: 13,
+            color: "var(--ink-3)",
+            textDecoration: "none",
+          }}
+          className="hover:underline"
         >
-          &larr; Back to documents
+          ← Documents
         </Link>
       </div>
 
-      <div className="mb-4 flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-tight">
-              {doc.title}
-            </h1>
-            <span className="rounded-full bg-[color:var(--muted)] px-2 py-0.5 text-xs">
-              {getTypeLabel(doc.documentType)}
-            </span>
+      {/* File header */}
+      <div className="row-between" style={{ marginBottom: 20, gap: 16 }}>
+        <div className="row" style={{ gap: 14, minWidth: 0 }}>
+          <div
+            className="notif-ico"
+            data-c={meta.color || undefined}
+            style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }}
+          >
+            <span style={{ fontSize: 20, lineHeight: 1 }}>📁</span>
           </div>
-          <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
-            {doc.fileName} &middot; {formatFileSize(doc.fileSize)} &middot;
-            Uploaded by {uploaderName}
-          </p>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <h1
+                style={{
+                  fontSize: 18,
+                  fontWeight: 600,
+                  letterSpacing: "-0.01em",
+                  margin: 0,
+                }}
+              >
+                {doc.title}
+              </h1>
+              <span className="pill" data-c={meta.color || undefined}>
+                {meta.label}
+              </span>
+            </div>
+            <div style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 4 }}>
+              {doc.fileName} · {formatFileSize(doc.fileSize)} · uploaded by{" "}
+              {uploaderName}
+            </div>
+          </div>
         </div>
-        <a href={signedUrl} download={doc.fileName}>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4" aria-hidden />
-            Download
-          </Button>
-        </a>
+        <div className="row" style={{ gap: 8, flexShrink: 0 }}>
+          <PinButton itemType="document" itemId={documentId} initialPinned={isPinned} />
+          <a href={signedUrl} download={doc.fileName}>
+            <button className="btn" style={{ gap: 6 }}>
+              <Download size={14} />
+              <span>Download</span>
+            </button>
+          </a>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="min-h-[600px] overflow-hidden rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]">
+      {/* Viewer + comments sidebar */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 280px",
+          gap: 16,
+          alignItems: "start",
+        }}
+      >
+        <div
+          className="card"
+          style={{ overflow: "hidden", minHeight: 600 }}
+        >
           <DocumentViewer
             url={signedUrl}
             contentType={doc.contentType}
@@ -100,9 +146,11 @@ export default async function DocumentDetailPage({
           />
         </div>
 
-        <div className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-4">
-          <h2 className="text-sm font-semibold">Comments</h2>
-          <p className="mt-2 text-sm text-[color:var(--muted-foreground)]">
+        <div className="card card-pad">
+          <div className="h-eyebrow" style={{ marginBottom: 12 }}>
+            Comments
+          </div>
+          <p style={{ fontSize: 13, color: "var(--ink-3)", lineHeight: 1.5 }}>
             Annotations and comments coming soon.
           </p>
         </div>
