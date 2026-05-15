@@ -6,9 +6,11 @@ import { and, eq } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
+// shouldPin: true = ensure pinned, false = ensure unpinned, undefined = toggle
 export async function pinItem(
   itemType: string,
   itemId: string,
+  shouldPin?: boolean,
 ): Promise<{ error?: string; pinned: boolean }> {
   const user = await requireCurrentUser();
 
@@ -24,13 +26,15 @@ export async function pinItem(
     )
     .limit(1);
 
-  if (existing.length > 0) {
-    await db.delete(userPins).where(eq(userPins.id, existing[0].id));
-    revalidatePath("/dashboard");
-    return { pinned: false };
-  } else {
+  const isCurrentlyPinned = existing.length > 0;
+  const wantPinned = shouldPin ?? !isCurrentlyPinned;
+
+  if (wantPinned && !isCurrentlyPinned) {
     await db.insert(userPins).values({ userId: user.id, itemType, itemId });
-    revalidatePath("/dashboard");
-    return { pinned: true };
+  } else if (!wantPinned && isCurrentlyPinned) {
+    await db.delete(userPins).where(eq(userPins.id, existing[0].id));
   }
+
+  revalidatePath("/dashboard");
+  return { pinned: wantPinned };
 }
