@@ -1,8 +1,8 @@
 # Current Status
 
-**Last updated:** 2026-05-14
+**Last updated:** 2026-05-15
 
-**Current milestone:** Steps 1-12 complete + Blocking tool extended with movement arrows, draw-your-own arrows, layer toggle, and per-beat rich-text notes. Notes tab UI ported to warm theatre design system. Call schedule calendar shipped. RLS enabled on all public tables.
+**Current milestone:** Steps 1-13 complete. Latest: @mention autocomplete in all rich-text editors (reports, dept notes, announcements, my notes), mention write path to DB, clickable mention cards on dashboard (mark-as-read on click, fade-not-remove UX, mark-all-read, mark-as-unread), unpin from dashboard pinned section, tab renamed to "Rehearsal Schedule", daily log removed.
 
 ## Feature status
 
@@ -48,14 +48,13 @@
 - Non-assigned users without `productions:manage` are redirected from production detail
 - Personalized dashboard with stats (admin) and assigned productions list
 
-### Step 5: Reports — IMPLEMENTED (overhauled 2026-05-06)
+### Step 5: Reports — IMPLEMENTED (overhauled 2026-05-06; daily log removed 2026-05-15)
 - Structured rehearsal report: header (date, scheduled call, actual start, end), TipTap general notes, 12 fixed department text fields, next-rehearsal block
 - Per-production auto-incremented `report_number` (MAX+1 in server action)
 - **Email Report** button: recipient picker (entire production or individual checkboxes), sends HTML email via Resend (`resend` package, `RESEND_API_KEY` + `RESEND_FROM_EMAIL` env vars)
 - Reports list shows `#N — {date}`; legacy `scheduleNotes` still renders if populated
-- Daily log feature: personal rich text notes per user per production
-- "Import from daily log" button when creating a new report (fills general notes)
 - Report file attachments via Supabase Storage (10MB limit), signed URL downloads (1-hour expiry)
+- **Removed:** Daily log feature and "Import from daily log" button (redundant with report general notes)
 - **Known issue:** TipTap bullet points not working due to Tailwind prose CSS reset
 
 ### Step 6: Documents — IMPLEMENTED
@@ -156,6 +155,31 @@
 - Delete button extracted to a client component (`DeleteCallButton`) — fixes pre-existing server-component error (`onClick` on server-rendered form)
 - `features/calls/` has `queries.ts`, `actions.ts` (no new libs introduced)
 - **Not verified:** Real-time live-status flipping without page reload (status is computed server-side at render time)
+
+### Step 13: @Mentions + Dashboard Improvements — IMPLEMENTED (2026-05-15)
+
+**@Mention autocomplete (write path)**
+- `@tiptap/extension-mention` + `@tiptap/suggestion` added (pinned to exact `3.22.5` to match existing TipTap packages)
+- `components/ui/mention-suggestion.ts` — shared TipTap suggestion config: filters members by name, renders a floating `ReactRenderer` popup, keyboard navigable
+- Mention nodes render as inline chips (`<span class="mention-inline">`) in all rich-text editors
+- Editors with mention support: report general notes, all 12 department note modals, announcement body, My Notes editor
+- `features/mentions/write.ts` — idempotent `writeMentions(html, ctx)`: deletes all existing mentions for `contextType+contextId`, then re-inserts by extracting `data-id` from mention HTML. Called after every report create/update, announcement create, and note autosave
+- `db/schema/mentions.ts` table: `organizationId`, `productionId`, `mentionedUserId`, `mentionedById`, `contextType` (report/announcement/note), `contextId`, `contextTitle`, `snippet` (first 200 chars stripped of HTML), `readAt`
+
+**Dashboard mention cards**
+- Mention cards are clickable: clicking navigates to the source context (`/productions/[slug]/reports/[id]`, etc.) and marks the mention as read
+- Fade-not-remove UX: clicking a card fades the blue unread highlight immediately (optimistic) but the card stays visible in the Unread tab until navigation completes — prevents jarring disappearance
+- Mark-as-unread: read cards show a circle button on hover to restore unread state (optimistic via `unfadedIds` set)
+- Mark all as read: ghost button in the mentions section header, only shown when there are unread items
+- Cards use `<div role="button">` rather than `<button>` to allow nested interactive elements (mark-as-unread button)
+
+**Dashboard pinning**
+- Pin cards on the dashboard now show an unpin button on hover (absolutely positioned, `opacity:0` by default, revealed on hover)
+- Unpin is optimistic: card removed from local state immediately, server action fires in background
+- `PinnedSection` converted from server to client component to hold local pin state
+
+**Navigation rename**
+- "Calls" tab renamed to "Rehearsal Schedule" in the production tab strip
 
 ## Scaffolded only (not implemented)
 

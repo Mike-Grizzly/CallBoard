@@ -11,9 +11,16 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 - **Custom set piece signed URLs:** URLs expire after 1 hour. Long blocking sessions will see broken images for custom pieces after expiry. Should the canvas auto-refresh URLs (e.g. on focus regain)?
 - **Custom set piece deletion UX:** Deleting a custom set piece from the library removes it from future beats, but existing `blocking_positions` rows still reference its ID. Tokens for deleted pieces will appear as missing images on canvas. Should deletion be blocked if the piece is in use, or should positions be cleaned up on delete?
 
+## Mentions questions
+
+- **Mention notifications:** Currently mentions appear only on the dashboard. Should users receive email or push notifications when @mentioned?
+- **Mention in deleted context:** If a report or announcement is deleted, mention rows for it remain in the DB. Should deletions cascade-delete mention rows?
+- **Cross-production mention visibility:** The dashboard shows all mentions across all productions. Should users be able to filter by production?
+- **`production_logs` table orphan:** The DB table was not dropped when the daily log feature was removed. It can be dropped in a future cleanup migration when convenient.
+
 ## Product questions
 
-- Steps 8–11 are complete. What is the next feature step?
+- Steps 1–13 are complete. What is the next feature step?
 - Should rehearsal report departments be configurable per production, or remain fixed?
 - Should attendance tracking be added to rehearsal reports?
 - Should productions have additional statuses beyond draft/active/archived?
