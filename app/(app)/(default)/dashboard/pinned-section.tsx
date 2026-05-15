@@ -1,6 +1,10 @@
+"use client";
+
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { FileText, File, Pencil, CheckSquare } from "lucide-react";
+import { FileText, File, Pencil, CheckSquare, Pin } from "lucide-react";
 import type { PinRow } from "@/features/pins/queries";
+import { pinItem } from "@/features/pins/actions";
 
 function PinIcon({ itemType, subtype }: { itemType: string; subtype: string }) {
   if (itemType === "report") return <FileText size={16} aria-hidden />;
@@ -13,8 +17,7 @@ function PinIcon({ itemType, subtype }: { itemType: string; subtype: string }) {
 function pinHref(pin: PinRow): string {
   const base = `/productions/${pin.productionSlug}`;
   if (pin.itemType === "report") return `${base}/reports/${pin.itemId}`;
-  if (pin.itemType === "document")
-    return `${base}/documents/${pin.itemId}`;
+  if (pin.itemType === "document") return `${base}/documents/${pin.itemId}`;
   return `${base}/notes`;
 }
 
@@ -28,8 +31,18 @@ function formatPinnedDate(date: Date | string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export function PinnedSection({ pins }: { pins: PinRow[] }) {
-  if (!pins?.length) return null;
+export function PinnedSection({ pins: initialPins }: { pins: PinRow[] }) {
+  const [pins, setPins] = useState(initialPins);
+  const [, startTransition] = useTransition();
+
+  function handleUnpin(e: React.MouseEvent, pin: PinRow) {
+    e.preventDefault();
+    e.stopPropagation();
+    setPins((prev) => prev.filter((p) => p.pinId !== pin.pinId));
+    startTransition(async () => { await pinItem(pin.itemType, pin.itemId, false); });
+  }
+
+  if (!pins.length) return null;
 
   return (
     <section className="home-section">
@@ -56,6 +69,15 @@ export function PinnedSection({ pins }: { pins: PinRow[] }) {
               <div className="pin-meta truncate">{pin.productionTitle}</div>
             </div>
             <div className="pin-when">{formatPinnedDate(pin.pinnedAt)}</div>
+            <button
+              type="button"
+              onClick={(e) => handleUnpin(e, pin)}
+              title="Unpin"
+              className="pin-unpin-btn"
+              aria-label="Unpin"
+            >
+              <Pin size={12} />
+            </button>
           </Link>
         ))}
       </div>

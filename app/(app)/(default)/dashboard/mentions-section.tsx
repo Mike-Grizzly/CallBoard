@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
+import { markMentionRead } from "@/features/mentions/actions";
 
 export type SerializedMention = {
   id: string;
@@ -46,9 +47,25 @@ function highlightMention(text: string) {
 
 export function MentionsSection({ items }: { items: SerializedMention[] }) {
   const [tab, setTab] = useState<"unread" | "all">("unread");
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [, startTransition] = useTransition();
+  const router = useRouter();
 
-  const unreadCount = items.filter((m) => m.isUnread).length;
-  const filtered = tab === "unread" ? items.filter((m) => m.isUnread) : items;
+  const unreadCount = items.filter(
+    (m) => m.isUnread && !readIds.has(m.id),
+  ).length;
+
+  const filtered = tab === "unread"
+    ? items.filter((m) => m.isUnread && !readIds.has(m.id))
+    : items;
+
+  function handleClick(m: SerializedMention) {
+    if (m.isUnread && !readIds.has(m.id)) {
+      setReadIds((prev) => new Set([...prev, m.id]));
+      startTransition(() => markMentionRead(m.id));
+    }
+    if (m.href) router.push(m.href);
+  }
 
   return (
     <section className="home-section">
@@ -83,62 +100,57 @@ export function MentionsSection({ items }: { items: SerializedMention[] }) {
             <div>You&apos;re all caught up — no unread mentions.</div>
           </div>
         ) : (
-          filtered.map((m) => (
-            <article
-              key={m.id}
-              className="mention"
-              data-unread={m.isUnread ? "1" : "0"}
-            >
-              <div
-                className="avatar mention-avatar"
-                style={{ background: colorForName(m.fromName) }}
-                aria-hidden
+          filtered.map((m) => {
+            const isUnread = m.isUnread && !readIds.has(m.id);
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => handleClick(m)}
+                className="mention"
+                data-unread={isUnread ? "1" : "0"}
+                style={{ width: "100%", textAlign: "left", cursor: m.href ? "pointer" : "default" }}
               >
-                {m.fromInitials}
-              </div>
-              <div className="mention-body">
-                <div className="mention-head">
-                  <span className="mention-from">{m.fromName}</span>
-                  {m.contextTitle && (
-                    <span className="muted"> in {m.contextTitle}</span>
-                  )}
+                <div
+                  className="avatar mention-avatar"
+                  style={{ background: colorForName(m.fromName) }}
+                  aria-hidden
+                >
+                  {m.fromInitials}
                 </div>
-                {m.snippet && (
-                  <p className="mention-snippet">
-                    {highlightMention(m.snippet)}
-                  </p>
-                )}
-                <div className="mention-foot">
-                  {m.productionTitle && (
-                    <span className="mention-chip">
-                      <span
-                        className="rn-pip"
-                        style={{ background: "var(--ink-3)" }}
-                      />
-                      {m.productionTitle}
-                    </span>
+                <div className="mention-body">
+                  <div className="mention-head">
+                    <span className="mention-from">{m.fromName}</span>
+                    {m.contextTitle && (
+                      <span className="muted"> in {m.contextTitle}</span>
+                    )}
+                  </div>
+                  {m.snippet && (
+                    <p className="mention-snippet">
+                      {highlightMention(m.snippet)}
+                    </p>
                   )}
-                  <span className="mention-chip">{m.contextType}</span>
+                  <div className="mention-foot">
+                    {m.productionTitle && (
+                      <span className="mention-chip">
+                        <span
+                          className="rn-pip"
+                          style={{ background: "var(--ink-3)" }}
+                        />
+                        {m.productionTitle}
+                      </span>
+                    )}
+                    <span className="mention-chip">{m.contextType}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="mention-side">
-                <span className="muted mono" style={{ fontSize: 11 }}>
-                  {m.relativeTime}
-                </span>
-                {m.href ? (
-                  <Link
-                    href={m.href}
-                    className="btn ghost"
-                    style={{ height: 26, padding: "0 8px", fontSize: 11.5 }}
-                  >
-                    Open
-                  </Link>
-                ) : (
-                  <span />
-                )}
-              </div>
-            </article>
-          ))
+                <div className="mention-side">
+                  <span className="muted mono" style={{ fontSize: 11 }}>
+                    {m.relativeTime}
+                  </span>
+                </div>
+              </button>
+            );
+          })
         )}
       </div>
     </section>
