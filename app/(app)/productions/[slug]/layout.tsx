@@ -143,13 +143,7 @@ export default async function ProductionLayout({
       count: announcements.length,
     },
   );
-  if (canCreateReports) {
-    tabs.push({
-      label: "Daily Log",
-      href: `/productions/${slug}/log`,
-      icon: "PenLine",
-    });
-  }
+
   if (canViewBlocking) {
     tabs.push({
       label: "Blocking",

@@ -50,7 +50,6 @@ export function ReportForm({
   productionId,
   productionTitle,
   slug,
-  logContent,
   initial,
   members,
 }: {
@@ -58,7 +57,6 @@ export function ReportForm({
   productionId: string;
   productionTitle: string;
   slug: string;
-  logContent: string | null;
   initial?: ReportDetail;
   members?: MentionMember[];
 }) {
@@ -106,10 +104,6 @@ export function ReportForm({
   const [activeTab, setActiveTab] = useState<
     "notes" | "sched" | "lines" | "injuries" | "general" | "next"
   >("notes");
-
-  function importFromLog() {
-    if (logContent) setGeneralNotes(logContent);
-  }
 
   function handleSubmit(formData: FormData) {
     formData.set("general_notes", generalNotes);
@@ -440,22 +434,6 @@ export function ReportForm({
             <InjuriesEditor injuries={injuries} onChange={setInjuries} />
           </div>
           <div style={{ display: activeTab === "general" ? "block" : "none" }}>
-            {logContent && !isEdit && (
-              <div className="row-between" style={{ marginBottom: 10 }}>
-                <span className="muted" style={{ fontSize: 12 }}>
-                  Overall summary of the day's rehearsal
-                </span>
-                <button
-                  type="button"
-                  onClick={importFromLog}
-                  className="btn ghost"
-                  style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-                >
-                  <Icon name="Download" size={12} aria-hidden />
-                  <span>Import from daily log</span>
-                </button>
-              </div>
-            )}
             <RichTextEditor
               content={generalNotes}
               onChange={setGeneralNotes}

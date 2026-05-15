@@ -49,7 +49,6 @@ export default async function EditReportPage({
       productionId={production.id}
       productionTitle={production.title}
       slug={slug}
-      logContent={null}
       initial={report}
       members={mentionMembers}
     />

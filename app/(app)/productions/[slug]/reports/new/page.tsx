@@ -4,7 +4,6 @@ import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembers } from "@/features/members/queries";
-import { getProductionLog } from "@/features/logs/queries";
 import { ReportForm } from "../_components/report-form";
 
 export default async function NewReportPage({
@@ -26,10 +25,7 @@ export default async function NewReportPage({
     notFound();
   }
 
-  const [log, members] = await Promise.all([
-    getProductionLog(production.id, user.id),
-    getProductionMembers(production.id),
-  ]);
+  const members = await getProductionMembers(production.id);
 
   const mentionMembers = members.map((m) => ({
     id: m.userId,
@@ -45,7 +41,6 @@ export default async function NewReportPage({
       productionId={production.id}
       productionTitle={production.title}
       slug={slug}
-      logContent={log?.content ?? null}
       members={mentionMembers}
     />
   );
