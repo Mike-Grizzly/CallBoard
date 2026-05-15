@@ -2,8 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
-import { markMentionRead } from "@/features/mentions/actions";
+import { Check, Circle } from "lucide-react";
+import {
+  markMentionRead,
+  markMentionUnread,
+  markAllMentionsRead,
+} from "@/features/mentions/actions";
 
 export type SerializedMention = {
   id: string;
@@ -47,25 +51,44 @@ function highlightMention(text: string) {
 
 export function MentionsSection({ items }: { items: SerializedMention[] }) {
   const [tab, setTab] = useState<"unread" | "all">("unread");
+  // fadedIds: marked read optimistically (loses highlight, stays visible until nav)
   const [fadedIds, setFadedIds] = useState<Set<string>>(new Set());
+  // unfadedIds: marked unread optimistically (restores highlight)
+  const [unfadedIds, setUnfadedIds] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
   const router = useRouter();
 
-  const unreadCount = items.filter(
-    (m) => m.isUnread && !fadedIds.has(m.id),
-  ).length;
+  function effectiveUnread(m: SerializedMention): boolean {
+    return (m.isUnread || unfadedIds.has(m.id)) && !fadedIds.has(m.id);
+  }
 
-  // Keep faded cards visible in the unread tab until navigation completes.
-  const filtered = tab === "unread"
-    ? items.filter((m) => m.isUnread)
-    : items;
+  const unreadCount = items.filter(effectiveUnread).length;
 
-  function handleClick(m: SerializedMention) {
-    if (m.isUnread && !fadedIds.has(m.id)) {
+  const filtered =
+    tab === "unread"
+      ? items.filter((m) => m.isUnread || unfadedIds.has(m.id)) // keep faded visible until nav
+      : items;
+
+  function handleCardClick(m: SerializedMention) {
+    if (effectiveUnread(m)) {
       setFadedIds((prev) => new Set([...prev, m.id]));
+      setUnfadedIds((prev) => { const s = new Set(prev); s.delete(m.id); return s; });
       startTransition(async () => { await markMentionRead(m.id); });
     }
     if (m.href) router.push(m.href);
+  }
+
+  function handleMarkUnread(e: React.MouseEvent, m: SerializedMention) {
+    e.stopPropagation();
+    setUnfadedIds((prev) => new Set([...prev, m.id]));
+    setFadedIds((prev) => { const s = new Set(prev); s.delete(m.id); return s; });
+    startTransition(async () => { await markMentionUnread(m.id); });
+  }
+
+  function handleMarkAllRead() {
+    const toFade = new Set(items.filter(effectiveUnread).map((m) => m.id));
+    setFadedIds((prev) => new Set([...prev, ...toFade]));
+    startTransition(async () => { await markAllMentionsRead(); });
   }
 
   return (
@@ -75,22 +98,34 @@ export function MentionsSection({ items }: { items: SerializedMention[] }) {
           <div className="h-eyebrow">@Mentions</div>
           <h2 className="h-section">Things waiting on you</h2>
         </div>
-        <div className="seg">
-          <button
-            data-on={String(tab === "unread")}
-            onClick={() => setTab("unread")}
-          >
-            Unread
-            {unreadCount > 0 && (
-              <span className="seg-count">{unreadCount}</span>
-            )}
-          </button>
-          <button
-            data-on={String(tab === "all")}
-            onClick={() => setTab("all")}
-          >
-            All
-          </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {unreadCount > 0 && (
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={handleMarkAllRead}
+              style={{ fontSize: 12, height: 28, padding: "0 10px" }}
+            >
+              Mark all read
+            </button>
+          )}
+          <div className="seg">
+            <button
+              data-on={String(tab === "unread")}
+              onClick={() => setTab("unread")}
+            >
+              Unread
+              {unreadCount > 0 && (
+                <span className="seg-count">{unreadCount}</span>
+              )}
+            </button>
+            <button
+              data-on={String(tab === "all")}
+              onClick={() => setTab("all")}
+            >
+              All
+            </button>
+          </div>
         </div>
       </header>
 
@@ -102,15 +137,19 @@ export function MentionsSection({ items }: { items: SerializedMention[] }) {
           </div>
         ) : (
           filtered.map((m) => {
-            const isUnread = m.isUnread && !fadedIds.has(m.id);
+            const isUnread = effectiveUnread(m);
             return (
-              <button
+              <div
                 key={m.id}
-                type="button"
-                onClick={() => handleClick(m)}
+                role="button"
+                tabIndex={0}
+                onClick={() => handleCardClick(m)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") handleCardClick(m);
+                }}
                 className="mention"
                 data-unread={isUnread ? "1" : "0"}
-                style={{ width: "100%", textAlign: "left", cursor: m.href ? "pointer" : "default" }}
+                style={{ cursor: m.href ? "pointer" : "default" }}
               >
                 <div
                   className="avatar mention-avatar"
@@ -148,8 +187,18 @@ export function MentionsSection({ items }: { items: SerializedMention[] }) {
                   <span className="muted mono" style={{ fontSize: 11 }}>
                     {m.relativeTime}
                   </span>
+                  {!isUnread && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleMarkUnread(e, m)}
+                      title="Mark as unread"
+                      className="mention-unread-btn"
+                    >
+                      <Circle size={11} />
+                    </button>
+                  )}
                 </div>
-              </button>
+              </div>
             );
           })
         )}

@@ -1654,6 +1654,34 @@ textarea.field {
 button.mention:hover {
   background: var(--bg-muted);
 }
+div.mention:hover {
+  background: var(--bg-muted);
+}
+.mention[data-unread="1"]:hover {
+  background: color-mix(in oklch, var(--accent-soft) 50%, var(--bg-muted));
+}
+.mention-unread-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--ink-4);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+  margin-top: 2px;
+}
+.mention:hover .mention-unread-btn {
+  opacity: 1;
+}
+.mention-unread-btn:hover {
+  background: var(--bg-sunken);
+  color: var(--accent);
+}
 .mention:first-child { border-top: 0; }
 .mention[data-unread="1"] {
   background: color-mix(in oklch, var(--accent-soft) 35%, var(--bg-elev));
