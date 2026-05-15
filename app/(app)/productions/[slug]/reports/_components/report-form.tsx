@@ -522,6 +522,7 @@ export function ReportForm({
           icon={editingDeptDef.icon}
           accentColor={editingDeptDef.c}
           value={deptNotes[editingDeptDef.key]}
+          members={members}
           onSave={(html) => {
             setDeptNotes((prev) => ({ ...prev, [editingDeptDef.key]: html }));
             setEditingDept(null);

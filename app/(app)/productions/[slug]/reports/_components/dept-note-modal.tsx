@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Icon } from "@/components/ui/icon";
 import type { IconName } from "@/components/ui/icon";
+import type { MentionMember } from "@/components/ui/mention-textarea";
 
 export function DeptNoteModal({
   open,
@@ -11,6 +12,7 @@ export function DeptNoteModal({
   icon,
   accentColor,
   value,
+  members,
   onSave,
   onClose,
 }: {
@@ -19,6 +21,7 @@ export function DeptNoteModal({
   icon: IconName;
   accentColor: string;
   value: string;
+  members?: MentionMember[];
   onSave: (html: string) => void;
   onClose: () => void;
 }) {
@@ -103,6 +106,7 @@ export function DeptNoteModal({
             onChange={setDraft}
             placeholder={`Write notes for ${title.toLowerCase()}…`}
             minHeight="260px"
+            members={members}
           />
         </div>
 
