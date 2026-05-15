@@ -3,6 +3,7 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
+import { getProductionMembers } from "@/features/members/queries";
 import { getProductionLog } from "@/features/logs/queries";
 import { ReportForm } from "../_components/report-form";
 
@@ -25,7 +26,18 @@ export default async function NewReportPage({
     notFound();
   }
 
-  const log = await getProductionLog(production.id, user.id);
+  const [log, members] = await Promise.all([
+    getProductionLog(production.id, user.id),
+    getProductionMembers(production.id),
+  ]);
+
+  const mentionMembers = members.map((m) => ({
+    id: m.userId,
+    firstName: m.firstName,
+    lastName: m.lastName,
+    email: m.email,
+    role: m.role,
+  }));
 
   return (
     <ReportForm
@@ -34,6 +46,7 @@ export default async function NewReportPage({
       productionTitle={production.title}
       slug={slug}
       logContent={log?.content ?? null}
+      members={mentionMembers}
     />
   );
 }

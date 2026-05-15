@@ -113,7 +113,7 @@ export function BeatNotesSection({
         minHeight: 0,
       }}
     >
-      {canEdit && <MinimalToolbar editor={editor} />}
+      {canEdit && editor && <MinimalToolbar editor={editor} />}
       <div
         className="scroll"
         style={{ flex: 1, overflowY: "auto", minHeight: 0 }}

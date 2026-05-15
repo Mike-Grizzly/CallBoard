@@ -3,7 +3,7 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
-import { getProductionMembership } from "@/features/members/queries";
+import { getProductionMembership, getProductionMembers } from "@/features/members/queries";
 import { getNotesByProduction, getNoteTagsByOrg } from "@/features/notes/queries";
 import { NotesPanel } from "./notes-panel";
 
@@ -27,18 +27,28 @@ export default async function NotesPage({
 
   if (!can(user.role, "notes:view")) redirect(`/productions/${slug}`);
 
-  const [notes, tags] = await Promise.all([
+  const [notes, tags, members] = await Promise.all([
     getNotesByProduction(production.id),
     getNoteTagsByOrg(org.id, user.id),
+    getProductionMembers(production.id),
   ]);
 
   const canCreate = can(user.role, "notes:create");
   const canManageTags = can(user.role, "notes:manage_tags");
 
+  const mentionMembers = members.map((m) => ({
+    id: m.userId,
+    firstName: m.firstName,
+    lastName: m.lastName,
+    email: m.email,
+    role: m.role,
+  }));
+
   return (
     <NotesPanel
       notes={notes}
       tags={tags}
+      members={mentionMembers}
       productionId={production.id}
       productionSlug={slug}
       currentUserId={user.id}

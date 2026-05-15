@@ -8,6 +8,9 @@ import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
 import Placeholder from "@tiptap/extension-placeholder";
+import Mention from "@tiptap/extension-mention";
+import type { MentionMember } from "./mention-textarea";
+import { buildMentionSuggestion } from "./mention-suggestion";
 import {
   Bold,
   Italic,
@@ -190,11 +193,13 @@ export function RichTextEditor({
   onChange,
   placeholder,
   minHeight = "200px",
+  members,
 }: {
   content: string;
   onChange: (html: string) => void;
   placeholder?: string;
   minHeight?: string;
+  members?: MentionMember[];
 }) {
   const editor = useEditor({
     immediatelyRender: false,
@@ -206,6 +211,14 @@ export function RichTextEditor({
       Highlight,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Placeholder.configure({ placeholder: placeholder ?? "" }),
+      ...(members && members.length > 0
+        ? [
+            Mention.configure({
+              HTMLAttributes: { class: "mention-inline" },
+              suggestion: buildMentionSuggestion(members),
+            }),
+          ]
+        : []),
     ],
     content,
     onUpdate: ({ editor: e }) => {

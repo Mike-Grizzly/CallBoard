@@ -11,6 +11,8 @@ import {
   validateReportForm,
   type ReportFormErrors,
 } from "./validation";
+import { getOrCreateDefaultOrganization } from "@/lib/organization";
+import { writeMentions } from "@/features/mentions/write";
 
 export type ReportActionResult = {
   errors?: ReportFormErrors;
@@ -99,6 +101,18 @@ export async function createReport(
       distributedAt: data!.status === "distributed" ? new Date() : null,
     })
     .returning({ id: rehearsalReports.id });
+
+  if (data!.generalNotes) {
+    const org = await getOrCreateDefaultOrganization();
+    await writeMentions(data!.generalNotes, {
+      organizationId: org.id,
+      productionId,
+      mentionedById: user.id,
+      contextType: "report",
+      contextId: inserted[0].id,
+      contextTitle: `Report ${data!.reportDate}`,
+    });
+  }
 
   redirect(`/productions/${production[0].slug}/reports/${inserted[0].id}`);
 }
@@ -200,6 +214,18 @@ export async function updateReport(
       updatedAt: new Date(),
     })
     .where(eq(rehearsalReports.id, reportId));
+
+  if (data!.generalNotes) {
+    const org = await getOrCreateDefaultOrganization();
+    await writeMentions(data!.generalNotes, {
+      organizationId: org.id,
+      productionId,
+      mentionedById: user.id,
+      contextType: "report",
+      contextId: reportId,
+      contextTitle: `Report ${data!.reportDate}`,
+    });
+  }
 
   redirect(`/productions/${production[0].slug}/reports/${reportId}`);
 }

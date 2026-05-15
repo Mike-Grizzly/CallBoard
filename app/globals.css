@@ -1701,6 +1701,16 @@ textarea.field {
   border-radius: 999px;
   text-transform: capitalize;
 }
+.mention-inline {
+  display: inline;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-weight: 500;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
 .mention-side {
   display: flex;
   flex-direction: column;

@@ -10,6 +10,7 @@ import {
 import { DEPARTMENTS } from "@/features/reports/constants";
 import type { ReportDetail } from "@/features/reports/queries";
 import { RichTextEditor, RichTextDisplay } from "@/components/ui/rich-text-editor";
+import type { MentionMember } from "@/components/ui/mention-textarea";
 import { Icon } from "@/components/ui/icon";
 import { DeptNoteModal } from "./dept-note-modal";
 import {
@@ -51,6 +52,7 @@ export function ReportForm({
   slug,
   logContent,
   initial,
+  members,
 }: {
   mode: Mode;
   productionId: string;
@@ -58,6 +60,7 @@ export function ReportForm({
   slug: string;
   logContent: string | null;
   initial?: ReportDetail;
+  members?: MentionMember[];
 }) {
   const action = mode === "edit" ? updateReport : createReport;
   const [state, formAction, pending] = useActionState<
@@ -458,6 +461,7 @@ export function ReportForm({
               onChange={setGeneralNotes}
               placeholder="Overall summary of the day's rehearsal…"
               minHeight="220px"
+              members={members}
             />
             {state?.errors?.general_notes && (
               <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 6 }}>

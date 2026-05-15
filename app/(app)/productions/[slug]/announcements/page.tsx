@@ -7,7 +7,7 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
-import { getProductionMembership } from "@/features/members/queries";
+import { getProductionMembership, getProductionMembers } from "@/features/members/queries";
 import { getAnnouncementsByProduction } from "@/features/announcements/queries";
 import { AnnouncementForm } from "./announcement-form";
 import { AnnouncementDeleteButton } from "./announcement-delete-button";
@@ -43,8 +43,18 @@ export default async function ProductionAnnouncementsPage({
     }
   }
 
-  const items = await getAnnouncementsByProduction(production.id, org.id);
+  const [items, members] = await Promise.all([
+    getAnnouncementsByProduction(production.id, org.id),
+    getProductionMembers(production.id),
+  ]);
   const canCreate = can(user.role, "announcements:create");
+  const mentionMembers = members.map((m) => ({
+    id: m.userId,
+    firstName: m.firstName,
+    lastName: m.lastName,
+    email: m.email,
+    role: m.role,
+  }));
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -63,7 +73,7 @@ export default async function ProductionAnnouncementsPage({
         </p>
       </div>
 
-      {canCreate && <AnnouncementForm productionId={production.id} />}
+      {canCreate && <AnnouncementForm productionId={production.id} members={mentionMembers} />}
 
       {items.length === 0 ? (
         <Card>

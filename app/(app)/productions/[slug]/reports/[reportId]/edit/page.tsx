@@ -3,6 +3,7 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
+import { getProductionMembers } from "@/features/members/queries";
 import { getReportById } from "@/features/reports/queries";
 import { ReportForm } from "../../_components/report-form";
 
@@ -25,11 +26,22 @@ export default async function EditReportPage({
     notFound();
   }
 
-  const report = await getReportById(reportId);
+  const [report, members] = await Promise.all([
+    getReportById(reportId),
+    getProductionMembers(production.id),
+  ]);
 
   if (!report || report.productionId !== production.id) {
     notFound();
   }
+
+  const mentionMembers = members.map((m) => ({
+    id: m.userId,
+    firstName: m.firstName,
+    lastName: m.lastName,
+    email: m.email,
+    role: m.role,
+  }));
 
   return (
     <ReportForm
@@ -39,6 +51,7 @@ export default async function EditReportPage({
       slug={slug}
       logContent={null}
       initial={report}
+      members={mentionMembers}
     />
   );
 }

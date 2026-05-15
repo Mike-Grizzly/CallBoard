@@ -30,6 +30,9 @@ import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
+import Mention from "@tiptap/extension-mention";
+import type { MentionMember } from "@/components/ui/mention-textarea";
+import { buildMentionSuggestion } from "@/components/ui/mention-suggestion";
 import type { NoteWithAuthor, NoteTagRow } from "@/features/notes/queries";
 import type { NoteFilter } from "@/features/notes/constants";
 import { TAG_COLOR_OPTIONS } from "@/features/notes/constants";
@@ -169,6 +172,7 @@ function EditorToolbar({
 function NoteEditor({
   note,
   tags,
+  members,
   currentUserId,
   canManageTags,
   productionSlug,
@@ -177,6 +181,7 @@ function NoteEditor({
 }: {
   note: NoteWithAuthor;
   tags: NoteTagRow[];
+  members?: MentionMember[];
   currentUserId: string;
   canManageTags: boolean;
   productionSlug: string;
@@ -221,6 +226,14 @@ function NoteEditor({
       Color,
       Highlight,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
+      ...(members && members.length > 0
+        ? [
+            Mention.configure({
+              HTMLAttributes: { class: "mention-inline" },
+              suggestion: buildMentionSuggestion(members),
+            }),
+          ]
+        : []),
     ],
     content: note.content,
     onUpdate: ({ editor: e }) => {
@@ -881,6 +894,7 @@ const VISIBLE_FILTERS = ["all", "todo", "pinned", "notes"] as const;
 export function NotesPanel({
   notes: initialNotes,
   tags: initialTags,
+  members,
   productionId,
   productionSlug,
   currentUserId,
@@ -890,6 +904,7 @@ export function NotesPanel({
 }: {
   notes: NoteWithAuthor[];
   tags: NoteTagRow[];
+  members?: MentionMember[];
   productionId: string;
   productionSlug: string;
   currentUserId: string;
@@ -1136,6 +1151,7 @@ export function NotesPanel({
             key={selectedNote.id}
             note={selectedNote}
             tags={tags}
+            members={members}
             currentUserId={currentUserId}
             canManageTags={canManageTags}
             productionSlug={productionSlug}
