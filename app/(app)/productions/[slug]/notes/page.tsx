@@ -5,6 +5,7 @@ import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
 import { getNotesByProduction, getNoteTagsByOrg } from "@/features/notes/queries";
+import { getPinnedItemIds } from "@/features/pins/queries";
 import { NotesPanel } from "./notes-panel";
 
 export default async function NotesPage({
@@ -27,9 +28,10 @@ export default async function NotesPage({
 
   if (!can(user.role, "notes:view")) redirect(`/productions/${slug}`);
 
-  const [notes, tags] = await Promise.all([
+  const [notes, tags, pinnedNoteIds] = await Promise.all([
     getNotesByProduction(production.id),
     getNoteTagsByOrg(org.id, user.id),
+    getPinnedItemIds(user.id, "note"),
   ]);
 
   const canCreate = can(user.role, "notes:create");
@@ -45,6 +47,7 @@ export default async function NotesPage({
       canCreate={canCreate}
       canManageTags={canManageTags}
       organizationId={org.id}
+      pinnedNoteIds={pinnedNoteIds}
     />
   );
 }

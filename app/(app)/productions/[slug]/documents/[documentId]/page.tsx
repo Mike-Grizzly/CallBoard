@@ -8,6 +8,8 @@ import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
 import { getDocumentById } from "@/features/documents/queries";
 import { getDocumentUrl } from "@/features/documents/actions";
+import { getIsPinned } from "@/features/pins/queries";
+import { PinButton } from "@/features/pins/pin-button";
 import { DocumentViewer } from "./document-viewer";
 
 const TYPE_META: Record<string, { color: string; label: string }> = {
@@ -52,7 +54,10 @@ export default async function DocumentDetailPage({
     notFound();
   }
 
-  const signedUrl = await getDocumentUrl(doc.storagePath);
+  const [signedUrl, isPinned] = await Promise.all([
+    getDocumentUrl(doc.storagePath),
+    getIsPinned(user.id, "document", documentId),
+  ]);
 
   const uploaderName =
     doc.uploadedByFirstName || doc.uploadedByLastName
@@ -110,12 +115,15 @@ export default async function DocumentDetailPage({
             </div>
           </div>
         </div>
-        <a href={signedUrl} download={doc.fileName} style={{ flexShrink: 0 }}>
-          <button className="btn" style={{ gap: 6 }}>
-            <Download size={14} />
-            <span>Download</span>
-          </button>
-        </a>
+        <div className="row" style={{ gap: 8, flexShrink: 0 }}>
+          <PinButton itemType="document" itemId={documentId} initialPinned={isPinned} />
+          <a href={signedUrl} download={doc.fileName}>
+            <button className="btn" style={{ gap: 6 }}>
+              <Download size={14} />
+              <span>Download</span>
+            </button>
+          </a>
+        </div>
       </div>
 
       {/* Viewer + comments sidebar */}

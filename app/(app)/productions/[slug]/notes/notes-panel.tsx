@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useTransition, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   Pin,
+  Bookmark,
   Trash2,
   Plus,
   Circle,
@@ -40,6 +41,7 @@ import {
   createNoteTag,
   deleteNoteTag,
 } from "@/features/notes/actions";
+import { pinItem } from "@/features/pins/actions";
 
 // ── Toolbar ──────────────────────────────────────────────────────────────────
 
@@ -171,16 +173,20 @@ function NoteEditor({
   currentUserId,
   canManageTags,
   productionSlug,
+  isDashboardPinned,
   onClose,
   onNoteUpdated,
+  onDashboardPinToggle,
 }: {
   note: NoteWithAuthor;
   tags: NoteTagRow[];
   currentUserId: string;
   canManageTags: boolean;
   productionSlug: string;
+  isDashboardPinned: boolean;
   onClose: () => void;
   onNoteUpdated: (updated: Partial<NoteWithAuthor> & { id: string }) => void;
+  onDashboardPinToggle: () => void;
 }) {
   const [title, setTitle] = useState(note.title);
   const [isPinned, setIsPinned] = useState(note.isPinned);
@@ -477,13 +483,22 @@ function NoteEditor({
             <button
               type="button"
               onClick={handlePinToggle}
-              title={isPinned ? "Unpin" : "Pin"}
+              title={isPinned ? "Unpin from notes" : "Pin in notes"}
               className="btn ghost btn-icon"
               style={{ color: isPinned ? "var(--c-amber)" : undefined }}
             >
               <Pin style={{ width: 14, height: 14 }} />
             </button>
           )}
+          <button
+            type="button"
+            onClick={onDashboardPinToggle}
+            title={isDashboardPinned ? "Unpin from dashboard" : "Pin to dashboard"}
+            className="btn ghost btn-icon"
+            style={{ color: isDashboardPinned ? "var(--c-amber)" : undefined }}
+          >
+            <Bookmark style={{ width: 14, height: 14 }} />
+          </button>
           {canEdit && (
             <button
               type="button"
@@ -883,6 +898,7 @@ export function NotesPanel({
   canCreate,
   canManageTags,
   organizationId,
+  pinnedNoteIds,
 }: {
   notes: NoteWithAuthor[];
   tags: NoteTagRow[];
@@ -892,6 +908,7 @@ export function NotesPanel({
   canCreate: boolean;
   canManageTags: boolean;
   organizationId: string;
+  pinnedNoteIds: string[];
 }) {
   const [notes, setNotes] = useState(initialNotes);
   const [tags, setTags] = useState(initialTags);
@@ -901,7 +918,29 @@ export function NotesPanel({
   const [filter, setFilter] = useState<NoteFilter>("all");
   const [showTagManager, setShowTagManager] = useState(false);
   const [pendingComplete, setPendingComplete] = useState<Set<string>>(new Set());
+  const [pinnedOnDashboard, setPinnedOnDashboard] = useState<Set<string>>(
+    () => new Set(pinnedNoteIds),
+  );
   const [, startTransition] = useTransition();
+
+  function handleDashboardPinToggle(noteId: string) {
+    const wasPinned = pinnedOnDashboard.has(noteId);
+    setPinnedOnDashboard((prev) => {
+      const s = new Set(prev);
+      if (wasPinned) s.delete(noteId);
+      else s.add(noteId);
+      return s;
+    });
+    startTransition(async () => {
+      const result = await pinItem("note", noteId);
+      setPinnedOnDashboard((prev) => {
+        const s = new Set(prev);
+        if (result.pinned) s.add(noteId);
+        else s.delete(noteId);
+        return s;
+      });
+    });
+  }
 
   const selectedNote = notes.find((n) => n.id === selectedId) ?? null;
 
@@ -1135,8 +1174,10 @@ export function NotesPanel({
             currentUserId={currentUserId}
             canManageTags={canManageTags}
             productionSlug={productionSlug}
+            isDashboardPinned={pinnedOnDashboard.has(selectedNote.id)}
             onClose={() => setSelectedId(null)}
             onNoteUpdated={handleNoteUpdated}
+            onDashboardPinToggle={() => handleDashboardPinToggle(selectedNote.id)}
           />
         ) : (
           <div

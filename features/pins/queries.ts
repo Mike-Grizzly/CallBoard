@@ -1,5 +1,6 @@
 import { db } from "@/db";
-import { sql } from "drizzle-orm";
+import { sql, and, eq } from "drizzle-orm";
+import { userPins } from "@/db/schema";
 
 export type PinRow = {
   pinId: string;
@@ -74,4 +75,36 @@ export async function getPinsForUser(userId: string): Promise<PinRow[]> {
   `);
 
   return (Array.isArray(result) ? result : (result as { rows?: unknown[] }).rows ?? []) as PinRow[];
+}
+
+export async function getIsPinned(
+  userId: string,
+  itemType: string,
+  itemId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: userPins.id })
+    .from(userPins)
+    .where(
+      and(
+        eq(userPins.userId, userId),
+        eq(userPins.itemType, itemType),
+        eq(userPins.itemId, itemId),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
+export async function getPinnedItemIds(
+  userId: string,
+  itemType: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ itemId: userPins.itemId })
+    .from(userPins)
+    .where(
+      and(eq(userPins.userId, userId), eq(userPins.itemType, itemType)),
+    );
+  return rows.map((r) => r.itemId);
 }
