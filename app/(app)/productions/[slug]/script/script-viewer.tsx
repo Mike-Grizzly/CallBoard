@@ -23,6 +23,7 @@ import {
   Plus,
   Check,
   Download,
+  LayoutList,
 } from "lucide-react";
 import { saveAnnotations, dismissStaleBanner } from "@/features/scripts/actions";
 import {
@@ -39,6 +40,7 @@ import type { DefaultScript } from "@/features/scripts/queries";
 
 // Module-level cache so re-renders don't re-decode the same page
 const pdfBitmapCache = new Map<string, ImageBitmap>();
+const pdfThumbnailCache = new Map<string, string>(); // "url::page" -> jpeg dataURL
 
 interface Props {
   script: DefaultScript;
@@ -81,6 +83,8 @@ export function ScriptViewer({
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks);
   const [pageOverrides] = useState<PageOverrides>(initialPageOverrides);
   const [hasStalePages, setHasStalePages] = useState(initialHasStalePages);
+
+  const [showThumbnails, setShowThumbnails] = useState(false);
 
   const [activeTool, setActiveTool] = useState<Tool>("pointer");
   const [activeColor, setActiveColor] = useState(DEFAULT_ANNOTATION_COLOR);
@@ -546,6 +550,13 @@ export function ScriptViewer({
         }}
       >
         <ToolButton
+          icon={<LayoutList size={16} />}
+          label="Page thumbnails"
+          active={showThumbnails}
+          onClick={() => setShowThumbnails((s) => !s)}
+        />
+        <div style={{ width: 28, height: 1, background: "var(--border)", margin: "2px 0" }} />
+        <ToolButton
           icon={<MousePointer2 size={16} />}
           label="Select"
           active={activeTool === "pointer"}
@@ -662,6 +673,16 @@ export function ScriptViewer({
           </div>
         )}
       </div>
+
+      {/* ── Thumbnail sidebar ── */}
+      {showThumbnails && (
+        <ThumbnailPanel
+          pdfUrl={pdfUrl}
+          totalPages={totalPages}
+          currentPage={currentPage}
+          onNavigate={setCurrentPage}
+        />
+      )}
 
       {/* ── Main area ── */}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1193,6 +1214,178 @@ export function ScriptViewer({
           onDelete={deleteAnnotation}
         />
       </div>
+    </div>
+  );
+}
+
+// ── ThumbnailPanel ────────────────────────────────────────────────────────
+
+function ThumbnailPanel({
+  pdfUrl,
+  totalPages,
+  currentPage,
+  onNavigate,
+}: {
+  pdfUrl: string;
+  totalPages: number;
+  currentPage: number;
+  onNavigate: (page: number) => void;
+}) {
+  const [thumbs, setThumbs] = useState<(string | null)[]>(() =>
+    Array(totalPages).fill(null),
+  );
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!pdfUrl || totalPages === 0) return;
+    let cancelled = false;
+
+    async function renderAll() {
+      const pdfjsLib = await import("pdfjs-dist");
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+        "pdfjs-dist/build/pdf.worker.min.mjs",
+        import.meta.url,
+      ).toString();
+
+      const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+      if (cancelled) return;
+
+      for (let i = 1; i <= totalPages; i++) {
+        if (cancelled) break;
+
+        const key = `${pdfUrl}::thumb::${i}`;
+        const cached = pdfThumbnailCache.get(key);
+        if (cached) {
+          setThumbs((prev) => {
+            const next = [...prev];
+            next[i - 1] = cached;
+            return next;
+          });
+          continue;
+        }
+
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 0.25 });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvas, viewport }).promise;
+        if (cancelled) break;
+
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+        pdfThumbnailCache.set(key, dataUrl);
+
+        setThumbs((prev) => {
+          const next = [...prev];
+          next[i - 1] = dataUrl;
+          return next;
+        });
+      }
+    }
+
+    setThumbs(Array(totalPages).fill(null));
+    renderAll().catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfUrl, totalPages]);
+
+  // Scroll active thumbnail into view when navigating from outside the panel
+  useEffect(() => {
+    const el = containerRef.current?.querySelector<HTMLElement>(
+      `[data-page="${currentPage}"]`,
+    );
+    el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [currentPage]);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        width: 152,
+        flexShrink: 0,
+        alignSelf: "flex-start",
+        position: "sticky",
+        top: 16,
+        maxHeight: "calc(100vh - 80px)",
+        overflowY: "auto",
+        borderRight: "1px solid var(--border)",
+        background: "var(--bg-sunken)",
+        display: "flex",
+        flexDirection: "column",
+        paddingTop: 8,
+        paddingBottom: 8,
+        gap: 0,
+        marginRight: 12,
+        borderRadius: "0 4px 4px 0",
+      }}
+    >
+      {thumbs.map((thumb, i) => {
+        const pageNum = i + 1;
+        const isActive = pageNum === currentPage;
+        return (
+          <div
+            key={pageNum}
+            data-page={pageNum}
+            onClick={() => onNavigate(pageNum)}
+            title={`Page ${pageNum}`}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 4,
+              padding: "8px 10px",
+              cursor: "pointer",
+              background: isActive ? "color-mix(in oklch, var(--accent) 12%, transparent)" : "transparent",
+              borderLeft: `2px solid ${isActive ? "var(--accent)" : "transparent"}`,
+              transition: "background .1s",
+            }}
+            onMouseEnter={(e) => {
+              if (!isActive)
+                (e.currentTarget as HTMLDivElement).style.background = "var(--bg-muted)";
+            }}
+            onMouseLeave={(e) => {
+              if (!isActive)
+                (e.currentTarget as HTMLDivElement).style.background = "transparent";
+            }}
+          >
+            {thumb ? (
+              <img
+                src={thumb}
+                alt={`Page ${pageNum}`}
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  borderRadius: 2,
+                  display: "block",
+                  boxShadow: isActive
+                    ? "0 0 0 2px var(--accent), 0 2px 6px rgba(0,0,0,.2)"
+                    : "0 1px 4px rgba(0,0,0,.22)",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  aspectRatio: "8.5 / 11",
+                  background: "var(--bg-muted)",
+                  borderRadius: 2,
+                  opacity: 0.5,
+                }}
+              />
+            )}
+            <span
+              style={{
+                fontSize: 10.5,
+                color: isActive ? "var(--accent)" : "var(--ink-4)",
+                fontWeight: isActive ? 600 : 400,
+              }}
+            >
+              {pageNum}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
