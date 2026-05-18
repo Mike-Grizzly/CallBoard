@@ -19,6 +19,9 @@ import {
   Type,
   AlignLeft,
   AlignRight,
+  Bookmark as BookmarkIcon,
+  Plus,
+  Check,
 } from "lucide-react";
 import { saveAnnotations, dismissStaleBanner } from "@/features/scripts/actions";
 import {
@@ -28,6 +31,7 @@ import {
   type Tool,
   type Annotation,
   type AnnotationRect,
+  type Bookmark,
   type PageOverrides,
 } from "@/features/scripts/constants";
 import type { DefaultScript } from "@/features/scripts/queries";
@@ -40,6 +44,7 @@ interface Props {
   productionId: string;
   pdfUrl: string;
   initialAnnotations: Annotation[];
+  initialBookmarks: Bookmark[];
   initialPageOverrides: PageOverrides;
   initialHasStalePages: boolean;
 }
@@ -53,6 +58,7 @@ export function ScriptViewer({
   productionId,
   pdfUrl,
   initialAnnotations,
+  initialBookmarks,
   initialPageOverrides,
   initialHasStalePages,
 }: Props) {
@@ -61,6 +67,9 @@ export function ScriptViewer({
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Refs hold the latest values so the debounced save always reads current state
+  const latestAnnotationsRef = useRef<Annotation[]>(initialAnnotations);
+  const latestBookmarksRef = useRef<Bookmark[]>(initialBookmarks);
 
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,6 +77,7 @@ export function ScriptViewer({
   const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
 
   const [annotations, setAnnotations] = useState<Annotation[]>(initialAnnotations);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks);
   const [pageOverrides] = useState<PageOverrides>(initialPageOverrides);
   const [hasStalePages, setHasStalePages] = useState(initialHasStalePages);
 
@@ -84,6 +94,10 @@ export function ScriptViewer({
   const [pendingCueDesc, setPendingCueDesc] = useState("");
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const [showAddBookmark, setShowAddBookmark] = useState(false);
+  const [newBookmarkTitle, setNewBookmarkTitle] = useState("");
+
   const [isSaving, setIsSaving] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -199,24 +213,22 @@ export function ScriptViewer({
 
   // ── Auto-save ──────────────────────────────────────────────────────────────
 
-  const triggerSave = useCallback(
-    (nextAnnotations: Annotation[]) => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => {
-        setIsSaving(true);
-        const formData = new FormData();
-        formData.set("script_id", script.id);
-        formData.set("production_id", productionId);
-        formData.set("annotations", JSON.stringify(nextAnnotations));
-        formData.set("page_overrides", JSON.stringify(pageOverrides));
-        startTransition(async () => {
-          await saveAnnotations(formData);
-          setIsSaving(false);
-        });
-      }, 1500);
-    },
-    [script.id, productionId, pageOverrides],
-  );
+  const triggerSave = useCallback(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      setIsSaving(true);
+      const formData = new FormData();
+      formData.set("script_id", script.id);
+      formData.set("production_id", productionId);
+      formData.set("annotations", JSON.stringify(latestAnnotationsRef.current));
+      formData.set("bookmarks", JSON.stringify(latestBookmarksRef.current));
+      formData.set("page_overrides", JSON.stringify(pageOverrides));
+      startTransition(async () => {
+        await saveAnnotations(formData);
+        setIsSaving(false);
+      });
+    }, 1500);
+  }, [script.id, productionId, pageOverrides]);
 
   // ── Coordinate helpers ─────────────────────────────────────────────────────
 
@@ -236,16 +248,42 @@ export function ScriptViewer({
   // ── Annotation CRUD ────────────────────────────────────────────────────────
 
   function addAnnotation(ann: Annotation) {
-    const next = [...annotations, ann];
+    const next = [...latestAnnotationsRef.current, ann];
+    latestAnnotationsRef.current = next;
     setAnnotations(next);
-    triggerSave(next);
+    triggerSave();
   }
 
   function deleteAnnotation(id: string) {
-    const next = annotations.filter((a) => a.id !== id);
+    const next = latestAnnotationsRef.current.filter((a) => a.id !== id);
+    latestAnnotationsRef.current = next;
     setAnnotations(next);
     setSelectedId(null);
-    triggerSave(next);
+    triggerSave();
+  }
+
+  function addBookmark() {
+    const title = newBookmarkTitle.trim();
+    if (!title) return;
+    const bookmark: Bookmark = {
+      id: crypto.randomUUID(),
+      page: currentPage,
+      title,
+      createdAt: new Date().toISOString(),
+    };
+    const next = [...latestBookmarksRef.current, bookmark];
+    latestBookmarksRef.current = next;
+    setBookmarks(next);
+    setNewBookmarkTitle("");
+    setShowAddBookmark(false);
+    triggerSave();
+  }
+
+  function deleteBookmark(id: string) {
+    const next = latestBookmarksRef.current.filter((b) => b.id !== id);
+    latestBookmarksRef.current = next;
+    setBookmarks(next);
+    triggerSave();
   }
 
   // ── Drawing handlers ───────────────────────────────────────────────────────
@@ -628,17 +666,95 @@ export function ScriptViewer({
               <ChevronRight size={16} />
             </button>
           </div>
-          <span
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              className="btn ghost"
+              onClick={() => {
+                setShowAddBookmark((s) => !s);
+                setNewBookmarkTitle("");
+              }}
+              style={{ fontSize: 12, height: 28, gap: 5 }}
+              title="Bookmark this page"
+            >
+              <BookmarkIcon size={13} />
+              <span>Bookmark</span>
+            </button>
+            <span
+              style={{
+                fontSize: 11.5,
+                color: "var(--ink-4)",
+                transition: "opacity .3s",
+                opacity: isSaving ? 1 : 0,
+              }}
+            >
+              Saving…
+            </span>
+          </div>
+        </div>
+
+        {/* Add-bookmark inline form */}
+        {showAddBookmark && (
+          <div
             style={{
-              fontSize: 11.5,
-              color: "var(--ink-4)",
-              transition: "opacity .3s",
-              opacity: isSaving ? 1 : 0,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "6px 10px",
+              background: "var(--bg-sunken)",
+              borderRadius: 6,
+              border: "1px solid var(--border)",
             }}
           >
-            Saving…
-          </span>
-        </div>
+            <BookmarkIcon size={13} style={{ color: "var(--ink-4)", flexShrink: 0 }} />
+            <input
+              autoFocus
+              value={newBookmarkTitle}
+              onChange={(e) => setNewBookmarkTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") addBookmark();
+                if (e.key === "Escape") setShowAddBookmark(false);
+              }}
+              placeholder={`Label for page ${currentPage}…`}
+              style={{
+                flex: 1,
+                fontSize: 13,
+                border: "none",
+                background: "transparent",
+                outline: "none",
+                color: "var(--ink)",
+                fontFamily: "inherit",
+              }}
+            />
+            <span style={{ fontSize: 12, color: "var(--ink-4)", flexShrink: 0 }}>
+              p.{currentPage}
+            </span>
+            <button
+              className="btn-icon"
+              onClick={addBookmark}
+              disabled={!newBookmarkTitle.trim()}
+              title="Save bookmark"
+              style={{
+                width: 24, height: 24, border: "none", background: "none",
+                cursor: "pointer", color: "var(--accent)", display: "grid",
+                placeItems: "center", flexShrink: 0,
+              }}
+            >
+              <Check size={13} />
+            </button>
+            <button
+              className="btn-icon"
+              onClick={() => setShowAddBookmark(false)}
+              title="Cancel"
+              style={{
+                width: 24, height: 24, border: "none", background: "none",
+                cursor: "pointer", color: "var(--ink-4)", display: "grid",
+                placeItems: "center", flexShrink: 0,
+              }}
+            >
+              <X size={13} />
+            </button>
+          </div>
+        )}
 
         {/* PDF + annotation layer */}
         <div
@@ -967,14 +1083,31 @@ export function ScriptViewer({
         </p>
       </div>
 
-      {/* ── Annotations panel ── */}
-      <AnnotationsPanel
-        annotations={pageAnnotations}
-        currentPage={currentPage}
-        selectedId={selectedId}
-        onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
-        onDelete={deleteAnnotation}
-      />
+      {/* ── Right panel column ── */}
+      <div
+        style={{
+          width: 248,
+          flexShrink: 0,
+          marginLeft: 16,
+          display: "flex",
+          flexDirection: "column",
+          gap: 0,
+        }}
+      >
+        <BookmarksPanel
+          bookmarks={bookmarks}
+          currentPage={currentPage}
+          onNavigate={(page) => setCurrentPage(page)}
+          onDelete={deleteBookmark}
+        />
+        <AnnotationsPanel
+          annotations={pageAnnotations}
+          currentPage={currentPage}
+          selectedId={selectedId}
+          onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
+          onDelete={deleteAnnotation}
+        />
+      </div>
     </div>
   );
 }
@@ -1044,7 +1177,7 @@ function AnnotationShape({
   }
 
   if (annotation.type === "cue") {
-    const centerY = ry + rh / 2;
+    const bottomY = ry + rh;
     const isLeft = annotation.leaderSide === "left";
     const lineStartX = isLeft ? rx : rx + rw;
     const MARGIN_OFFSET = 6;
@@ -1063,21 +1196,21 @@ function AnnotationShape({
           stroke={CUE_STROKE}
           strokeWidth={selected ? "2" : "1.5"}
         />
-        {/* Leader line */}
+        {/* Leader line from bottom edge of box to margin */}
         <line
           x1={lineStartX}
-          y1={centerY}
+          y1={bottomY}
           x2={labelX}
-          y2={centerY}
+          y2={bottomY}
           stroke={CUE_STROKE}
           strokeWidth="1"
         />
         {/* End marker */}
-        <circle cx={labelX} cy={centerY} r="3" fill={CUE_STROKE} />
+        <circle cx={labelX} cy={bottomY} r="3" fill={CUE_STROKE} />
         {/* Cue number */}
         <text
           x={isLeft ? labelX + 5 : labelX - 5}
-          y={centerY - 3}
+          y={bottomY - 3}
           textAnchor={textAnchor}
           fontSize="11"
           fill={CUE_STROKE}
@@ -1090,7 +1223,7 @@ function AnnotationShape({
         {annotation.cueDescription && (
           <text
             x={isLeft ? labelX + 5 : labelX - 5}
-            y={centerY + 13}
+            y={bottomY + 13}
             textAnchor={textAnchor}
             fontSize="10"
             fill={CUE_STROKE}
@@ -1104,6 +1237,146 @@ function AnnotationShape({
   }
 
   return null;
+}
+
+// ── BookmarksPanel ────────────────────────────────────────────────────────
+
+function BookmarksPanel({
+  bookmarks,
+  currentPage,
+  onNavigate,
+  onDelete,
+}: {
+  bookmarks: Bookmark[];
+  currentPage: number;
+  onNavigate: (page: number) => void;
+  onDelete: (id: string) => void;
+}) {
+  const sorted = [...bookmarks].sort((a, b) => a.page - b.page);
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "0 2px 8px",
+          borderBottom: "1px solid var(--border)",
+          marginBottom: 8,
+        }}
+      >
+        <BookmarkIcon size={12} style={{ color: "var(--ink-4)" }} />
+        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-4)" }}>
+          Bookmarks
+        </span>
+        {bookmarks.length > 0 && (
+          <span
+            style={{
+              fontSize: 10.5,
+              fontWeight: 600,
+              padding: "1px 6px",
+              borderRadius: 999,
+              background: "var(--bg-sunken)",
+              color: "var(--ink-3)",
+            }}
+          >
+            {bookmarks.length}
+          </span>
+        )}
+      </div>
+
+      {sorted.length === 0 ? (
+        <p style={{ fontSize: 12, color: "var(--ink-4)", padding: "4px 2px 12px" }}>
+          No bookmarks yet.
+        </p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 1, marginBottom: 8 }}>
+          {sorted.map((bm) => (
+            <div
+              key={bm.id}
+              onClick={() => onNavigate(bm.page)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                padding: "5px 8px",
+                borderRadius: 6,
+                cursor: "pointer",
+                background: bm.page === currentPage ? "var(--bg-muted)" : "transparent",
+                transition: "background .1s",
+              }}
+              onMouseEnter={(e) => {
+                if (bm.page !== currentPage)
+                  (e.currentTarget as HTMLDivElement).style.background = "var(--bg-muted)";
+              }}
+              onMouseLeave={(e) => {
+                if (bm.page !== currentPage)
+                  (e.currentTarget as HTMLDivElement).style.background = "transparent";
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: "1px 5px",
+                  borderRadius: 4,
+                  background: "var(--bg-sunken)",
+                  color: "var(--ink-3)",
+                  flexShrink: 0,
+                }}
+              >
+                p.{bm.page}
+              </span>
+              <span
+                style={{
+                  flex: 1,
+                  fontSize: 12.5,
+                  color: "var(--ink)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {bm.title}
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(bm.id);
+                }}
+                title="Remove bookmark"
+                style={{
+                  flexShrink: 0,
+                  width: 20,
+                  height: 20,
+                  display: "grid",
+                  placeItems: "center",
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  color: "var(--ink-4)",
+                  borderRadius: 3,
+                  opacity: 0.6,
+                  transition: "opacity .1s, color .1s",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.opacity = "1";
+                  (e.currentTarget as HTMLButtonElement).style.color = "var(--c-clay)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.opacity = "0.6";
+                  (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-4)";
+                }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── AnnotationsPanel ──────────────────────────────────────────────────────
@@ -1126,16 +1399,7 @@ function AnnotationsPanel({
   );
 
   return (
-    <div
-      style={{
-        width: 248,
-        flexShrink: 0,
-        marginLeft: 16,
-        display: "flex",
-        flexDirection: "column",
-        gap: 0,
-      }}
-    >
+    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
       <div
         style={{
           display: "flex",
