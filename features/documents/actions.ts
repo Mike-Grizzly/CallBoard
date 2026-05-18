@@ -73,6 +73,7 @@ export async function uploadDocument(
   const productionId = formData.get("production_id") as string;
   const title = (formData.get("title") as string)?.trim();
   const folderId = (formData.get("folder_id") as string) || null;
+  const documentType = (formData.get("document_type") as string) || "general";
   const file = formData.get("file") as File;
 
   if (!productionId || !file || file.size === 0) {
@@ -107,6 +108,7 @@ export async function uploadDocument(
     fileSize: file.size,
     contentType: file.type,
     storagePath,
+    documentType,
   });
 
   revalidatePath("/productions");
