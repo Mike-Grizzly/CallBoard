@@ -22,6 +22,7 @@ import {
   Bookmark as BookmarkIcon,
   Plus,
   Check,
+  Download,
 } from "lucide-react";
 import { saveAnnotations, dismissStaleBanner } from "@/features/scripts/actions";
 import {
@@ -99,6 +100,8 @@ export function ScriptViewer({
   const [newBookmarkTitle, setNewBookmarkTitle] = useState("");
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<{ current: number; total: number } | null>(null);
   const [, startTransition] = useTransition();
 
   // ── PDF rendering ─────────────────────────────────────────────────────────
@@ -411,6 +414,64 @@ export function ScriptViewer({
     setPendingAnnotation(null);
   }
 
+  async function downloadAnnotatedPdf() {
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const pdfjsLib = await import("pdfjs-dist");
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+        "pdfjs-dist/build/pdf.worker.min.mjs",
+        import.meta.url,
+      ).toString();
+
+      const { jsPDF } = await import("jspdf");
+
+      const pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
+      const numPages = pdfDoc.numPages;
+      let doc: InstanceType<typeof jsPDF> | null = null;
+
+      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        setDownloadProgress({ current: pageNum, total: numPages });
+
+        const page = await pdfDoc.getPage(pageNum);
+        const PRINT_SCALE = 2;
+        const viewport = page.getViewport({ scale: PRINT_SCALE });
+        const nativeViewport = page.getViewport({ scale: 1 });
+
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d")!;
+
+        await page.render({ canvas, viewport }).promise;
+
+        // Draw annotations for this page
+        const pageAnns = latestAnnotationsRef.current.filter((a) => a.page === pageNum);
+        for (const ann of pageAnns) {
+          drawAnnotationOnCanvas(ctx, ann, viewport.width, viewport.height);
+        }
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.93);
+        // Convert PDF points to mm (1 pt = 25.4/72 mm)
+        const widthMm = nativeViewport.width * (25.4 / 72);
+        const heightMm = nativeViewport.height * (25.4 / 72);
+        const orientation = widthMm > heightMm ? "landscape" : "portrait";
+
+        if (!doc) {
+          doc = new jsPDF({ orientation, unit: "mm", format: [widthMm, heightMm] });
+        } else {
+          doc.addPage([widthMm, heightMm], orientation);
+        }
+        doc.addImage(imgData, "JPEG", 0, 0, widthMm, heightMm);
+      }
+
+      doc?.save(`${script.title} - annotated.pdf`);
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress(null);
+    }
+  }
+
   function handleDismissStale() {
     const formData = new FormData();
     formData.set("script_id", script.id);
@@ -678,6 +739,20 @@ export function ScriptViewer({
             >
               <BookmarkIcon size={13} />
               <span>Bookmark</span>
+            </button>
+            <button
+              className="btn ghost"
+              onClick={downloadAnnotatedPdf}
+              disabled={isDownloading || !pdfLoaded}
+              style={{ fontSize: 12, height: 28, gap: 5 }}
+              title="Download annotated PDF"
+            >
+              <Download size={13} />
+              <span>
+                {downloadProgress
+                  ? `Preparing ${downloadProgress.current} / ${downloadProgress.total}…`
+                  : "Download PDF"}
+              </span>
             </button>
             <span
               style={{
@@ -1120,6 +1195,76 @@ export function ScriptViewer({
       </div>
     </div>
   );
+}
+
+// ── Canvas annotation renderer (used for PDF export) ─────────────────────
+
+function drawAnnotationOnCanvas(
+  ctx: CanvasRenderingContext2D,
+  ann: Annotation,
+  canvasW: number,
+  canvasH: number,
+) {
+  const rx = ann.rect.x * canvasW;
+  const ry = ann.rect.y * canvasH;
+  const rw = ann.rect.width * canvasW;
+  const rh = ann.rect.height * canvasH;
+
+  ctx.save();
+
+  if (ann.type === "highlight") {
+    ctx.globalAlpha = 0.44;
+    ctx.fillStyle = ann.color;
+    ctx.fillRect(rx, ry, rw, rh);
+  } else if (ann.type === "note") {
+    ctx.globalAlpha = 0.33;
+    ctx.fillStyle = ann.color;
+    ctx.fillRect(rx, ry, rw, rh);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = ann.color;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(rx, ry, rw, rh);
+    ctx.beginPath();
+    ctx.arc(rx + rw, ry, 5, 0, Math.PI * 2);
+    ctx.fillStyle = ann.color;
+    ctx.fill();
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  } else if (ann.type === "cue") {
+    const bottomY = ry + rh;
+    const isLeft = ann.leaderSide === "left";
+    const lineStartX = isLeft ? rx : rx + rw;
+    const MARGIN_OFFSET = 6;
+    const labelX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
+
+    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = CUE_STROKE;
+    ctx.fillRect(rx, ry, rw, rh);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = CUE_STROKE;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(rx, ry, rw, rh);
+    ctx.beginPath();
+    ctx.moveTo(lineStartX, bottomY);
+    ctx.lineTo(labelX, bottomY);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(labelX, bottomY, 3, 0, Math.PI * 2);
+    ctx.fillStyle = CUE_STROKE;
+    ctx.fill();
+    ctx.fillStyle = CUE_STROKE;
+    ctx.textAlign = isLeft ? "left" : "right";
+    ctx.font = "bold 11px system-ui, sans-serif";
+    ctx.fillText(ann.cueNumber, isLeft ? labelX + 5 : labelX - 5, bottomY - 3);
+    if (ann.cueDescription) {
+      ctx.font = "10px system-ui, sans-serif";
+      ctx.fillText(ann.cueDescription, isLeft ? labelX + 5 : labelX - 5, bottomY + 13);
+    }
+  }
+
+  ctx.restore();
 }
 
 // ── AnnotationShape ────────────────────────────────────────────────────────
