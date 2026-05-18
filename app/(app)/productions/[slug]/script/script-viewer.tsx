@@ -758,15 +758,24 @@ export function ScriptViewer({
 
         {/* PDF + annotation layer */}
         <div
+          style={{
+            background: "var(--bg-sunken)",
+            borderRadius: 8,
+            padding: "28px 32px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "flex-start",
+          }}
+        >
+        <div
           ref={containerRef}
           style={{
             position: "relative",
             display: "inline-block",
             maxWidth: "100%",
-            alignSelf: "flex-start",
-            borderRadius: 4,
+            borderRadius: 3,
             overflow: "hidden",
-            boxShadow: "0 2px 16px rgba(0,0,0,.18)",
+            boxShadow: "0 4px 32px rgba(0,0,0,.28), 0 1px 4px rgba(0,0,0,.12)",
             opacity: pdfLoaded ? 1 : 0.4,
             transition: "opacity .2s",
             userSelect: activeTool === "highlight-text" ? "auto" : "none",
@@ -1075,6 +1084,7 @@ export function ScriptViewer({
               </div>
             </div>
           )}
+        </div>
         </div>
 
         {/* Script info */}
