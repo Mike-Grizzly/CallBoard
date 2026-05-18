@@ -17,6 +17,8 @@ import {
   Trash2,
   X,
   Type,
+  AlignLeft,
+  AlignRight,
 } from "lucide-react";
 import { saveAnnotations, dismissStaleBanner } from "@/features/scripts/actions";
 import {
@@ -71,6 +73,7 @@ export function ScriptViewer({
 
   const [activeTool, setActiveTool] = useState<Tool>("pointer");
   const [activeColor, setActiveColor] = useState(DEFAULT_ANNOTATION_COLOR);
+  const [preferredLeaderSide, setPreferredLeaderSide] = useState<"left" | "right">("right");
 
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
@@ -356,7 +359,6 @@ export function ScriptViewer({
         return;
       }
       const rect = pendingAnnotation.rect;
-      const leaderSide = rect.x + rect.width / 2 < 0.5 ? "left" : "right";
       addAnnotation({
         id: crypto.randomUUID(),
         page: pendingAnnotation.page,
@@ -364,7 +366,7 @@ export function ScriptViewer({
         rect,
         cueNumber: pendingCueNumber.trim(),
         cueDescription: pendingCueDesc.trim(),
-        leaderSide,
+        leaderSide: preferredLeaderSide,
       });
     }
 
@@ -429,7 +431,7 @@ export function ScriptViewer({
   return (
     <div
       className="anim-in"
-      style={{ display: "flex", gap: 0, minHeight: 0, maxWidth: 1100, margin: "0 auto" }}
+      style={{ display: "flex", gap: 0, minHeight: 0, maxWidth: 1440, margin: "0 auto" }}
     >
       {/* ── Tool sidebar ── */}
       <div
@@ -474,6 +476,57 @@ export function ScriptViewer({
           active={activeTool === "cue"}
           onClick={() => setActiveTool("cue")}
         />
+
+        {activeTool === "cue" && (
+          <div
+            style={{
+              marginTop: 4,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <span style={{ fontSize: 9, color: "var(--ink-4)", letterSpacing: ".05em", textTransform: "uppercase" }}>
+              Margin
+            </span>
+            <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
+              <button
+                title="Leader to left margin"
+                onClick={() => setPreferredLeaderSide("left")}
+                style={{
+                  width: 26,
+                  height: 24,
+                  display: "grid",
+                  placeItems: "center",
+                  border: "none",
+                  background: preferredLeaderSide === "left" ? "var(--accent)" : "transparent",
+                  color: preferredLeaderSide === "left" ? "white" : "var(--ink-3)",
+                  cursor: "pointer",
+                }}
+              >
+                <AlignLeft size={12} />
+              </button>
+              <button
+                title="Leader to right margin"
+                onClick={() => setPreferredLeaderSide("right")}
+                style={{
+                  width: 26,
+                  height: 24,
+                  display: "grid",
+                  placeItems: "center",
+                  border: "none",
+                  borderLeft: "1px solid var(--border)",
+                  background: preferredLeaderSide === "right" ? "var(--accent)" : "transparent",
+                  color: preferredLeaderSide === "right" ? "white" : "var(--ink-3)",
+                  cursor: "pointer",
+                }}
+              >
+                <AlignRight size={12} />
+              </button>
+            </div>
+          </div>
+        )}
 
         {(activeTool === "highlight-box" ||
           activeTool === "highlight-text" ||
@@ -913,6 +966,15 @@ export function ScriptViewer({
           {script.title} · v{script.scriptVersion} · Your annotations are private
         </p>
       </div>
+
+      {/* ── Annotations panel ── */}
+      <AnnotationsPanel
+        annotations={pageAnnotations}
+        currentPage={currentPage}
+        selectedId={selectedId}
+        onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
+        onDelete={deleteAnnotation}
+      />
     </div>
   );
 }
@@ -1042,6 +1104,218 @@ function AnnotationShape({
   }
 
   return null;
+}
+
+// ── AnnotationsPanel ──────────────────────────────────────────────────────
+
+function AnnotationsPanel({
+  annotations,
+  currentPage,
+  selectedId,
+  onSelect,
+  onDelete,
+}: {
+  annotations: Annotation[];
+  currentPage: number;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const sorted = [...annotations].sort((a, b) =>
+    a.rect.y !== b.rect.y ? a.rect.y - b.rect.y : a.rect.x - b.rect.x,
+  );
+
+  return (
+    <div
+      style={{
+        width: 248,
+        flexShrink: 0,
+        marginLeft: 16,
+        display: "flex",
+        flexDirection: "column",
+        gap: 0,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "0 2px 8px",
+          borderBottom: "1px solid var(--border)",
+          marginBottom: 8,
+        }}
+      >
+        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-4)" }}>
+          Page {currentPage}
+        </span>
+        {annotations.length > 0 && (
+          <span
+            style={{
+              fontSize: 10.5,
+              fontWeight: 600,
+              padding: "1px 6px",
+              borderRadius: 999,
+              background: "var(--bg-sunken)",
+              color: "var(--ink-3)",
+            }}
+          >
+            {annotations.length}
+          </span>
+        )}
+      </div>
+
+      {sorted.length === 0 ? (
+        <p style={{ fontSize: 12, color: "var(--ink-4)", padding: "8px 2px" }}>
+          No annotations on this page.
+        </p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {sorted.map((ann) => (
+            <PanelAnnotationItem
+              key={ann.id}
+              annotation={ann}
+              selected={selectedId === ann.id}
+              onSelect={() => onSelect(ann.id)}
+              onDelete={() => onDelete(ann.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PanelAnnotationItem({
+  annotation,
+  selected,
+  onSelect,
+  onDelete,
+}: {
+  annotation: Annotation;
+  selected: boolean;
+  onSelect: () => void;
+  onDelete: () => void;
+}) {
+  const accentColor =
+    annotation.type === "cue" ? CUE_STROKE : annotation.color;
+
+  return (
+    <div
+      onClick={onSelect}
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 8,
+        padding: "7px 8px",
+        borderRadius: 6,
+        borderLeft: `3px solid ${accentColor}`,
+        background: selected ? "var(--bg-muted)" : "transparent",
+        cursor: "pointer",
+        transition: "background .1s",
+      }}
+      onMouseEnter={(e) => {
+        if (!selected)
+          (e.currentTarget as HTMLDivElement).style.background = "var(--bg-muted)";
+      }}
+      onMouseLeave={(e) => {
+        if (!selected)
+          (e.currentTarget as HTMLDivElement).style.background = "transparent";
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {annotation.type === "highlight" && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 2,
+                background: annotation.color,
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ fontSize: 12, color: "var(--ink-3)" }}>Highlight</span>
+          </div>
+        )}
+
+        {annotation.type === "note" && (
+          <>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", marginBottom: 2 }}>
+              Note
+            </div>
+            <div
+              style={{
+                fontSize: 12.5,
+                color: "var(--ink)",
+                lineHeight: 1.4,
+                overflow: "hidden",
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
+              }}
+            >
+              {annotation.text}
+            </div>
+          </>
+        )}
+
+        {annotation.type === "cue" && (
+          <>
+            <div style={{ fontSize: 12, fontWeight: 700, color: CUE_STROKE }}>
+              {annotation.cueNumber}
+            </div>
+            {annotation.cueDescription && (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--ink-2)",
+                  marginTop: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {annotation.cueDescription}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        title="Delete"
+        style={{
+          flexShrink: 0,
+          width: 20,
+          height: 20,
+          display: "grid",
+          placeItems: "center",
+          border: "none",
+          background: "none",
+          cursor: "pointer",
+          color: "var(--ink-4)",
+          borderRadius: 3,
+          opacity: 0.6,
+          transition: "opacity .1s, color .1s",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.opacity = "1";
+          (e.currentTarget as HTMLButtonElement).style.color = "var(--c-clay)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.opacity = "0.6";
+          (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-4)";
+        }}
+      >
+        <Trash2 size={12} />
+      </button>
+    </div>
+  );
 }
 
 // ── ToolButton ─────────────────────────────────────────────────────────────
