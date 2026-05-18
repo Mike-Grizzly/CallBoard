@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 import { productions } from "./productions";
 import { profiles } from "./users";
 
@@ -31,6 +31,8 @@ export const documents = pgTable("documents", {
   contentType: text("content_type").notNull(),
   storagePath: text("storage_path").notNull(),
   documentType: text("document_type").notNull().default("general"),
+  isDefaultScript: boolean("is_default_script").notNull().default(false),
+  scriptVersion: integer("script_version").notNull().default(1),
   processingStatus: text("processing_status").notNull().default("none"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

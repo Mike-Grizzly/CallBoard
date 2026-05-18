@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { MoreVertical, Download, Link2, Trash2, Check } from "lucide-react";
+import { MoreVertical, Download, Link2, Trash2, Check, Star } from "lucide-react";
 import { deleteDocument, getDocumentDownloadUrl } from "@/features/documents/actions";
+import { setDefaultScript } from "@/features/scripts/actions";
 import { useRouter } from "next/navigation";
 
 interface Props {
@@ -11,6 +12,9 @@ interface Props {
   storagePath: string;
   fileName: string;
   slug: string;
+  productionId: string;
+  documentType: string;
+  isDefaultScript: boolean;
 }
 
 interface MenuPos {
@@ -23,6 +27,9 @@ export function DocumentRowMenu({
   storagePath,
   fileName,
   slug,
+  productionId,
+  documentType,
+  isDefaultScript,
 }: Props) {
   const [pos, setPos] = useState<MenuPos | null>(null);
   const [copied, setCopied] = useState(false);
@@ -115,6 +122,18 @@ export function DocumentRowMenu({
     }
   }
 
+  function handleSetDefault(e: React.MouseEvent) {
+    e.stopPropagation();
+    setPos(null);
+    const formData = new FormData();
+    formData.set("document_id", documentId);
+    formData.set("production_id", productionId);
+    startTransition(async () => {
+      await setDefaultScript(formData);
+      router.refresh();
+    });
+  }
+
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
     setPos(null);
@@ -185,6 +204,13 @@ export function DocumentRowMenu({
               label={copied ? "Copied!" : "Copy share link"}
               onClick={handleShare}
             />
+            {documentType === "script" && !isDefaultScript && (
+              <MenuItem
+                icon={<Star size={14} />}
+                label="Set as default script"
+                onClick={handleSetDefault}
+              />
+            )}
             <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
             <MenuItem
               icon={<Trash2 size={14} />}

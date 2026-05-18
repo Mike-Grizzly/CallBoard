@@ -152,6 +152,12 @@ export default async function ProductionLayout({
     });
   }
 
+  tabs.push({
+    label: "Your Script",
+    href: `/productions/${slug}/script`,
+    icon: "BookOpen",
+  });
+
   return (
     <>
       <header className="topbar">

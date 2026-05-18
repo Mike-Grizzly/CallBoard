@@ -1,0 +1,1095 @@
+"use client";
+
+import {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  useTransition,
+} from "react";
+import {
+  MousePointer2,
+  Highlighter,
+  StickyNote,
+  Zap,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+  X,
+  Type,
+} from "lucide-react";
+import { saveAnnotations, dismissStaleBanner } from "@/features/scripts/actions";
+import {
+  ANNOTATION_COLORS,
+  DEFAULT_ANNOTATION_COLOR,
+  CUE_STROKE,
+  type Tool,
+  type Annotation,
+  type AnnotationRect,
+  type PageOverrides,
+} from "@/features/scripts/constants";
+import type { DefaultScript } from "@/features/scripts/queries";
+
+// Module-level cache so re-renders don't re-decode the same page
+const pdfBitmapCache = new Map<string, ImageBitmap>();
+
+interface Props {
+  script: DefaultScript;
+  productionId: string;
+  pdfUrl: string;
+  initialAnnotations: Annotation[];
+  initialPageOverrides: PageOverrides;
+  initialHasStalePages: boolean;
+}
+
+type PendingAnnotation =
+  | { type: "note"; rect: AnnotationRect; page: number }
+  | { type: "cue"; rect: AnnotationRect; page: number };
+
+export function ScriptViewer({
+  script,
+  productionId,
+  pdfUrl,
+  initialAnnotations,
+  initialPageOverrides,
+  initialHasStalePages,
+}: Props) {
+  const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
+  const textLayerRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [totalPages, setTotalPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
+
+  const [annotations, setAnnotations] = useState<Annotation[]>(initialAnnotations);
+  const [pageOverrides] = useState<PageOverrides>(initialPageOverrides);
+  const [hasStalePages, setHasStalePages] = useState(initialHasStalePages);
+
+  const [activeTool, setActiveTool] = useState<Tool>("pointer");
+  const [activeColor, setActiveColor] = useState(DEFAULT_ANNOTATION_COLOR);
+
+  const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
+  const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
+
+  const [pendingAnnotation, setPendingAnnotation] = useState<PendingAnnotation | null>(null);
+  const [pendingText, setPendingText] = useState("");
+  const [pendingCueNumber, setPendingCueNumber] = useState("");
+  const [pendingCueDesc, setPendingCueDesc] = useState("");
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [, startTransition] = useTransition();
+
+  // ── PDF rendering ─────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!pdfUrl) return;
+    let cancelled = false;
+    const cacheKey = `${pdfUrl}::${currentPage}`;
+
+    async function render() {
+      const mainCanvas = pdfCanvasRef.current;
+      if (!mainCanvas) return;
+
+      const cached = pdfBitmapCache.get(cacheKey);
+      if (cached) {
+        mainCanvas.width = cached.width;
+        mainCanvas.height = cached.height;
+        mainCanvas.getContext("2d")?.drawImage(cached, 0, 0);
+        if (!cancelled) {
+          setCanvasSize({ w: cached.width, h: cached.height });
+          setPdfLoaded(true);
+        }
+        return;
+      }
+
+      const pdfjsLib = await import("pdfjs-dist");
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+        "pdfjs-dist/build/pdf.worker.min.mjs",
+        import.meta.url,
+      ).toString();
+
+      const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+      if (cancelled) return;
+      if (!cancelled) setTotalPages(pdf.numPages);
+
+      const page = await pdf.getPage(currentPage);
+      if (cancelled) return;
+
+      const SCALE = 1.8;
+      const viewport = page.getViewport({ scale: SCALE });
+
+      const offscreen = document.createElement("canvas");
+      offscreen.width = viewport.width;
+      offscreen.height = viewport.height;
+      await page.render({ canvas: offscreen, viewport }).promise;
+      if (cancelled) return;
+
+      mainCanvas.width = offscreen.width;
+      mainCanvas.height = offscreen.height;
+      mainCanvas.getContext("2d")?.drawImage(offscreen, 0, 0);
+
+      if (!cancelled) {
+        setCanvasSize({ w: offscreen.width, h: offscreen.height });
+        setPdfLoaded(true);
+      }
+
+      try {
+        const bitmap = await createImageBitmap(offscreen);
+        if (!cancelled) pdfBitmapCache.set(cacheKey, bitmap);
+      } catch {
+        /* non-fatal */
+      }
+
+      // Render text layer for text-select highlighting
+      if (!cancelled && textLayerRef.current) {
+        const textLayerEl = textLayerRef.current;
+        textLayerEl.innerHTML = "";
+        try {
+          const textContent = await page.getTextContent();
+          const vt = viewport.transform; // [sx, shy, shx, sy, tx, ty]
+          for (const item of textContent.items) {
+            if (!("str" in item) || !item.str) continue;
+            const span = document.createElement("span");
+            span.textContent = item.str;
+            const tx = item.transform;
+            const screenX = vt[0] * tx[4] + vt[2] * tx[5] + vt[4];
+            const screenY = vt[1] * tx[4] + vt[3] * tx[5] + vt[5];
+            const fontSize = Math.sqrt(
+              (vt[0] * tx[0] + vt[2] * tx[1]) ** 2 +
+                (vt[1] * tx[0] + vt[3] * tx[1]) ** 2,
+            );
+            const angle = Math.atan2(
+              vt[1] * tx[0] + vt[3] * tx[1],
+              vt[0] * tx[0] + vt[2] * tx[1],
+            );
+            Object.assign(span.style, {
+              position: "absolute",
+              left: `${screenX}px`,
+              top: `${screenY - fontSize}px`,
+              fontSize: `${fontSize}px`,
+              color: "transparent",
+              whiteSpace: "pre",
+              transformOrigin: "0 0",
+              transform: angle !== 0 ? `rotate(${angle}rad)` : "",
+              cursor: "text",
+              userSelect: "text",
+            });
+            textLayerEl.appendChild(span);
+          }
+        } catch {
+          /* text layer is best-effort */
+        }
+      }
+    }
+
+    setPdfLoaded(false);
+    render().catch(() => setPdfLoaded(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfUrl, currentPage]);
+
+  // ── Auto-save ──────────────────────────────────────────────────────────────
+
+  const triggerSave = useCallback(
+    (nextAnnotations: Annotation[]) => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        setIsSaving(true);
+        const formData = new FormData();
+        formData.set("script_id", script.id);
+        formData.set("production_id", productionId);
+        formData.set("annotations", JSON.stringify(nextAnnotations));
+        formData.set("page_overrides", JSON.stringify(pageOverrides));
+        startTransition(async () => {
+          await saveAnnotations(formData);
+          setIsSaving(false);
+        });
+      }, 1500);
+    },
+    [script.id, productionId, pageOverrides],
+  );
+
+  // ── Coordinate helpers ─────────────────────────────────────────────────────
+
+  function getSVGCoords(e: React.MouseEvent): { x: number; y: number } {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgPt = pt.matrixTransform(svg.getScreenCTM()!.inverse());
+    return {
+      x: svgPt.x / canvasSize.w,
+      y: svgPt.y / canvasSize.h,
+    };
+  }
+
+  // ── Annotation CRUD ────────────────────────────────────────────────────────
+
+  function addAnnotation(ann: Annotation) {
+    const next = [...annotations, ann];
+    setAnnotations(next);
+    triggerSave(next);
+  }
+
+  function deleteAnnotation(id: string) {
+    const next = annotations.filter((a) => a.id !== id);
+    setAnnotations(next);
+    setSelectedId(null);
+    triggerSave(next);
+  }
+
+  // ── Drawing handlers ───────────────────────────────────────────────────────
+
+  function handleSVGMouseDown(e: React.MouseEvent) {
+    if (activeTool === "pointer" || activeTool === "highlight-text") return;
+    e.preventDefault();
+    setSelectedId(null);
+    const coords = getSVGCoords(e);
+    setDrawStart(coords);
+    setDrawCurrent(coords);
+  }
+
+  function handleSVGMouseMove(e: React.MouseEvent) {
+    if (!drawStart) return;
+    setDrawCurrent(getSVGCoords(e));
+  }
+
+  function handleSVGMouseUp(e: React.MouseEvent) {
+    if (!drawStart || !drawCurrent) return;
+
+    const rect: AnnotationRect = {
+      x: Math.min(drawStart.x, drawCurrent.x),
+      y: Math.min(drawStart.y, drawCurrent.y),
+      width: Math.abs(drawCurrent.x - drawStart.x),
+      height: Math.abs(drawCurrent.y - drawStart.y),
+    };
+
+    setDrawStart(null);
+    setDrawCurrent(null);
+
+    // Ignore tiny accidental drags
+    if (rect.width < 0.005 || rect.height < 0.003) return;
+
+    if (activeTool === "highlight-box") {
+      addAnnotation({
+        id: crypto.randomUUID(),
+        page: currentPage,
+        type: "highlight",
+        rect,
+        color: activeColor,
+      });
+    } else if (activeTool === "note") {
+      setPendingAnnotation({ type: "note", rect, page: currentPage });
+      setPendingText("");
+    } else if (activeTool === "cue") {
+      setPendingAnnotation({ type: "cue", rect, page: currentPage });
+      setPendingCueNumber("");
+      setPendingCueDesc("");
+    }
+  }
+
+  function handleTextLayerMouseUp() {
+    if (activeTool !== "highlight-text") return;
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || !pdfCanvasRef.current) return;
+
+    const range = selection.getRangeAt(0);
+    const rects = range.getClientRects();
+    const canvasRect = pdfCanvasRef.current.getBoundingClientRect();
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const r of rects) {
+      minX = Math.min(minX, r.left - canvasRect.left);
+      minY = Math.min(minY, r.top - canvasRect.top);
+      maxX = Math.max(maxX, r.right - canvasRect.left);
+      maxY = Math.max(maxY, r.bottom - canvasRect.top);
+    }
+
+    if (maxX <= minX || maxY <= minY) return;
+
+    const w = canvasRect.width;
+    const h = canvasRect.height;
+    addAnnotation({
+      id: crypto.randomUUID(),
+      page: currentPage,
+      type: "highlight",
+      rect: {
+        x: minX / w,
+        y: minY / h,
+        width: (maxX - minX) / w,
+        height: (maxY - minY) / h,
+      },
+      color: activeColor,
+    });
+
+    selection.removeAllRanges();
+  }
+
+  // ── Pending annotation confirmation ────────────────────────────────────────
+
+  function confirmPending() {
+    if (!pendingAnnotation) return;
+
+    if (pendingAnnotation.type === "note") {
+      if (!pendingText.trim()) {
+        setPendingAnnotation(null);
+        return;
+      }
+      addAnnotation({
+        id: crypto.randomUUID(),
+        page: pendingAnnotation.page,
+        type: "note",
+        rect: pendingAnnotation.rect,
+        text: pendingText.trim(),
+        color: activeColor,
+      });
+    } else if (pendingAnnotation.type === "cue") {
+      if (!pendingCueNumber.trim()) {
+        setPendingAnnotation(null);
+        return;
+      }
+      const rect = pendingAnnotation.rect;
+      const leaderSide = rect.x + rect.width / 2 < 0.5 ? "left" : "right";
+      addAnnotation({
+        id: crypto.randomUUID(),
+        page: pendingAnnotation.page,
+        type: "cue",
+        rect,
+        cueNumber: pendingCueNumber.trim(),
+        cueDescription: pendingCueDesc.trim(),
+        leaderSide,
+      });
+    }
+
+    setPendingAnnotation(null);
+  }
+
+  function handleDismissStale() {
+    const formData = new FormData();
+    formData.set("script_id", script.id);
+    startTransition(async () => {
+      await dismissStaleBanner(formData);
+      setHasStalePages(false);
+    });
+  }
+
+  // ── Page annotations (current page only) ──────────────────────────────────
+
+  const pageAnnotations = annotations.filter((a) => a.page === currentPage);
+
+  // ── SVG cursor style ───────────────────────────────────────────────────────
+
+  const svgCursor =
+    activeTool === "pointer"
+      ? "default"
+      : activeTool === "highlight-text"
+        ? "text"
+        : "crosshair";
+
+  const svgPointerEvents =
+    activeTool === "highlight-text" ? "none" : "all";
+
+  const textLayerPointerEvents =
+    activeTool === "highlight-text" ? "auto" : "none";
+
+  // ── Pending popover position ───────────────────────────────────────────────
+
+  function pendingPopoverStyle(): React.CSSProperties {
+    if (!pendingAnnotation) return {};
+    const { rect } = pendingAnnotation;
+    const pct = (n: number) => `${n * 100}%`;
+    const bottom = rect.y + rect.height;
+    const isNearBottom = bottom > 0.75;
+    return {
+      position: "absolute",
+      left: `${Math.min(rect.x * 100, 60)}%`,
+      ...(isNearBottom
+        ? { bottom: `${(1 - rect.y) * 100 + 2}%` }
+        : { top: `${bottom * 100 + 1}%` }),
+      zIndex: 200,
+      background: "var(--bg-elev)",
+      border: "1px solid var(--border)",
+      borderRadius: 8,
+      padding: 12,
+      minWidth: 220,
+      maxWidth: 300,
+      boxShadow: "0 8px 24px rgba(0,0,0,.18)",
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+
+  return (
+    <div
+      className="anim-in"
+      style={{ display: "flex", gap: 0, minHeight: 0, maxWidth: 1100, margin: "0 auto" }}
+    >
+      {/* ── Tool sidebar ── */}
+      <div
+        style={{
+          width: 52,
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 4,
+          paddingTop: 4,
+          paddingRight: 8,
+        }}
+      >
+        <ToolButton
+          icon={<MousePointer2 size={16} />}
+          label="Select"
+          active={activeTool === "pointer"}
+          onClick={() => setActiveTool("pointer")}
+        />
+        <ToolButton
+          icon={<Highlighter size={16} />}
+          label="Highlight (draw)"
+          active={activeTool === "highlight-box"}
+          onClick={() => setActiveTool("highlight-box")}
+        />
+        <ToolButton
+          icon={<Type size={16} />}
+          label="Highlight (text select)"
+          active={activeTool === "highlight-text"}
+          onClick={() => setActiveTool("highlight-text")}
+        />
+        <ToolButton
+          icon={<StickyNote size={16} />}
+          label="Note"
+          active={activeTool === "note"}
+          onClick={() => setActiveTool("note")}
+        />
+        <ToolButton
+          icon={<Zap size={16} />}
+          label="Cue"
+          active={activeTool === "cue"}
+          onClick={() => setActiveTool("cue")}
+        />
+
+        {(activeTool === "highlight-box" ||
+          activeTool === "highlight-text" ||
+          activeTool === "note") && (
+          <div
+            style={{
+              marginTop: 8,
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+              alignItems: "center",
+            }}
+          >
+            {ANNOTATION_COLORS.map((c) => (
+              <button
+                key={c.value}
+                title={c.label}
+                onClick={() => setActiveColor(c.value)}
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  border:
+                    activeColor === c.value
+                      ? "2px solid var(--ink)"
+                      : "2px solid transparent",
+                  background: c.value,
+                  cursor: "pointer",
+                  padding: 0,
+                  outline: "none",
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Main area ── */}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+        {/* Stale banner */}
+        {hasStalePages && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "8px 12px",
+              background: "color-mix(in oklch, var(--c-amber) 12%, transparent)",
+              border: "1px solid color-mix(in oklch, var(--c-amber) 30%, transparent)",
+              borderRadius: 6,
+              fontSize: 13,
+              color: "var(--ink-2)",
+              gap: 8,
+            }}
+          >
+            <span>
+              The default script has been updated. Some annotations may no longer match the
+              current page content.
+            </span>
+            <button
+              className="btn ghost"
+              onClick={handleDismissStale}
+              style={{ fontSize: 12, height: 26, flexShrink: 0 }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Page navigation + save status */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <button
+              className="btn ghost btn-icon"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              style={{ width: 30, height: 30 }}
+              title="Previous page"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span style={{ fontSize: 13, color: "var(--ink-3)", minWidth: 70, textAlign: "center" }}>
+              {totalPages > 0 ? `${currentPage} / ${totalPages}` : "—"}
+            </span>
+            <button
+              className="btn ghost btn-icon"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              style={{ width: 30, height: 30 }}
+              title="Next page"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+          <span
+            style={{
+              fontSize: 11.5,
+              color: "var(--ink-4)",
+              transition: "opacity .3s",
+              opacity: isSaving ? 1 : 0,
+            }}
+          >
+            Saving…
+          </span>
+        </div>
+
+        {/* PDF + annotation layer */}
+        <div
+          ref={containerRef}
+          style={{
+            position: "relative",
+            display: "inline-block",
+            maxWidth: "100%",
+            alignSelf: "flex-start",
+            borderRadius: 4,
+            overflow: "hidden",
+            boxShadow: "0 2px 16px rgba(0,0,0,.18)",
+            opacity: pdfLoaded ? 1 : 0.4,
+            transition: "opacity .2s",
+            userSelect: activeTool === "highlight-text" ? "auto" : "none",
+          }}
+        >
+          {/* PDF canvas */}
+          <canvas
+            ref={pdfCanvasRef}
+            style={{ display: "block", maxWidth: "100%" }}
+          />
+
+          {/* Text layer — transparent text for selection */}
+          <div
+            ref={textLayerRef}
+            onMouseUp={handleTextLayerMouseUp}
+            style={{
+              position: "absolute",
+              inset: 0,
+              overflow: "hidden",
+              pointerEvents: textLayerPointerEvents,
+              userSelect: activeTool === "highlight-text" ? "text" : "none",
+            }}
+          />
+
+          {/* SVG annotation overlay */}
+          {canvasSize.w > 0 && (
+            <svg
+              ref={svgRef}
+              viewBox={`0 0 ${canvasSize.w} ${canvasSize.h}`}
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                cursor: svgCursor,
+                pointerEvents: svgPointerEvents,
+              }}
+              onMouseDown={handleSVGMouseDown}
+              onMouseMove={handleSVGMouseMove}
+              onMouseUp={handleSVGMouseUp}
+              onMouseLeave={() => {
+                if (drawStart) {
+                  setDrawStart(null);
+                  setDrawCurrent(null);
+                }
+              }}
+            >
+              {/* Existing annotations for this page */}
+              {pageAnnotations.map((ann) => (
+                <AnnotationShape
+                  key={ann.id}
+                  annotation={ann}
+                  canvasW={canvasSize.w}
+                  canvasH={canvasSize.h}
+                  selected={selectedId === ann.id}
+                  onClick={() =>
+                    setSelectedId(selectedId === ann.id ? null : ann.id)
+                  }
+                />
+              ))}
+
+              {/* In-progress rectangle */}
+              {drawStart && drawCurrent && (
+                <rect
+                  x={Math.min(drawStart.x, drawCurrent.x) * canvasSize.w}
+                  y={Math.min(drawStart.y, drawCurrent.y) * canvasSize.h}
+                  width={
+                    Math.abs(drawCurrent.x - drawStart.x) * canvasSize.w
+                  }
+                  height={
+                    Math.abs(drawCurrent.y - drawStart.y) * canvasSize.h
+                  }
+                  fill={
+                    activeTool === "cue"
+                      ? "rgba(239,68,68,0.1)"
+                      : `${activeColor}55`
+                  }
+                  stroke={activeTool === "cue" ? CUE_STROKE : activeColor}
+                  strokeWidth="1.5"
+                  strokeDasharray="5,3"
+                  pointerEvents="none"
+                />
+              )}
+            </svg>
+          )}
+
+          {/* Delete button for selected annotation */}
+          {selectedId && (() => {
+            const ann = pageAnnotations.find((a) => a.id === selectedId);
+            if (!ann) return null;
+            const screenLeft = ann.rect.x * 100;
+            const screenTop = (ann.rect.y + ann.rect.height) * 100 + 1;
+            return (
+              <div
+                style={{
+                  position: "absolute",
+                  left: `${Math.min(screenLeft, 80)}%`,
+                  top: `${screenTop}%`,
+                  zIndex: 200,
+                  background: "var(--bg-elev)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 6,
+                  boxShadow: "0 4px 12px rgba(0,0,0,.15)",
+                  padding: "4px 6px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                {ann.type === "note" && (
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: "var(--ink-2)",
+                      maxWidth: 160,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {ann.text}
+                  </span>
+                )}
+                {ann.type === "cue" && (
+                  <span style={{ fontSize: 12, color: "var(--ink-2)" }}>
+                    {ann.cueNumber}
+                    {ann.cueDescription ? ` — ${ann.cueDescription}` : ""}
+                  </span>
+                )}
+                <button
+                  className="btn-icon"
+                  onClick={() => deleteAnnotation(selectedId)}
+                  title="Delete annotation"
+                  style={{
+                    width: 24,
+                    height: 24,
+                    border: "none",
+                    background: "none",
+                    cursor: "pointer",
+                    color: "var(--c-clay)",
+                    display: "grid",
+                    placeItems: "center",
+                    borderRadius: 4,
+                  }}
+                >
+                  <Trash2 size={13} />
+                </button>
+                <button
+                  className="btn-icon"
+                  onClick={() => setSelectedId(null)}
+                  title="Dismiss"
+                  style={{
+                    width: 24,
+                    height: 24,
+                    border: "none",
+                    background: "none",
+                    cursor: "pointer",
+                    color: "var(--ink-4)",
+                    display: "grid",
+                    placeItems: "center",
+                    borderRadius: 4,
+                  }}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* Pending annotation popover */}
+          {pendingAnnotation && (
+            <div style={pendingPopoverStyle()}>
+              {pendingAnnotation.type === "note" ? (
+                <>
+                  <p
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: ".06em",
+                      textTransform: "uppercase",
+                      color: "var(--ink-4)",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Note
+                  </p>
+                  <textarea
+                    autoFocus
+                    value={pendingText}
+                    onChange={(e) => setPendingText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        confirmPending();
+                      }
+                      if (e.key === "Escape") setPendingAnnotation(null);
+                    }}
+                    placeholder="Add a note…"
+                    rows={3}
+                    style={{
+                      width: "100%",
+                      fontSize: 13,
+                      resize: "none",
+                      border: "1px solid var(--border)",
+                      borderRadius: 4,
+                      padding: "6px 8px",
+                      background: "var(--bg-sunken)",
+                      color: "var(--ink)",
+                      outline: "none",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </>
+              ) : (
+                <>
+                  <p
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: ".06em",
+                      textTransform: "uppercase",
+                      color: "var(--ink-4)",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Cue annotation
+                  </p>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: 11.5,
+                      color: "var(--ink-3)",
+                      marginBottom: 3,
+                    }}
+                  >
+                    Cue number
+                  </label>
+                  <input
+                    autoFocus
+                    value={pendingCueNumber}
+                    onChange={(e) => setPendingCueNumber(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setPendingAnnotation(null);
+                    }}
+                    placeholder="e.g. 12.5"
+                    style={{
+                      width: "100%",
+                      fontSize: 13,
+                      border: "1px solid var(--border)",
+                      borderRadius: 4,
+                      padding: "5px 8px",
+                      background: "var(--bg-sunken)",
+                      color: "var(--ink)",
+                      outline: "none",
+                      marginBottom: 8,
+                      fontFamily: "inherit",
+                    }}
+                  />
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: 11.5,
+                      color: "var(--ink-3)",
+                      marginBottom: 3,
+                    }}
+                  >
+                    Description
+                  </label>
+                  <input
+                    value={pendingCueDesc}
+                    onChange={(e) => setPendingCueDesc(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") confirmPending();
+                      if (e.key === "Escape") setPendingAnnotation(null);
+                    }}
+                    placeholder="e.g. Sound: doorbell"
+                    style={{
+                      width: "100%",
+                      fontSize: 13,
+                      border: "1px solid var(--border)",
+                      borderRadius: 4,
+                      padding: "5px 8px",
+                      background: "var(--bg-sunken)",
+                      color: "var(--ink)",
+                      outline: "none",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </>
+              )}
+              <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                <button
+                  className="btn primary"
+                  onClick={confirmPending}
+                  style={{ fontSize: 12, height: 28, flex: 1 }}
+                >
+                  Save
+                </button>
+                <button
+                  className="btn ghost"
+                  onClick={() => setPendingAnnotation(null)}
+                  style={{ fontSize: 12, height: 28 }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Script info */}
+        <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
+          {script.title} · v{script.scriptVersion} · Your annotations are private
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── AnnotationShape ────────────────────────────────────────────────────────
+
+function AnnotationShape({
+  annotation,
+  canvasW,
+  canvasH,
+  selected,
+  onClick,
+}: {
+  annotation: Annotation;
+  canvasW: number;
+  canvasH: number;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const rx = annotation.rect.x * canvasW;
+  const ry = annotation.rect.y * canvasH;
+  const rw = annotation.rect.width * canvasW;
+  const rh = annotation.rect.height * canvasH;
+
+  if (annotation.type === "highlight") {
+    return (
+      <rect
+        x={rx}
+        y={ry}
+        width={rw}
+        height={rh}
+        fill={`${annotation.color}70`}
+        stroke={selected ? "var(--ink)" : "none"}
+        strokeWidth="1.5"
+        style={{ cursor: "pointer" }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+      />
+    );
+  }
+
+  if (annotation.type === "note") {
+    return (
+      <g onClick={(e) => { e.stopPropagation(); onClick(); }} style={{ cursor: "pointer" }}>
+        <rect
+          x={rx}
+          y={ry}
+          width={rw}
+          height={rh}
+          fill={`${annotation.color}55`}
+          stroke={annotation.color}
+          strokeWidth={selected ? "2" : "1"}
+        />
+        {/* Note indicator dot */}
+        <circle
+          cx={rx + rw}
+          cy={ry}
+          r={5}
+          fill={annotation.color}
+          stroke="white"
+          strokeWidth="1"
+        />
+      </g>
+    );
+  }
+
+  if (annotation.type === "cue") {
+    const centerY = ry + rh / 2;
+    const isLeft = annotation.leaderSide === "left";
+    const lineStartX = isLeft ? rx : rx + rw;
+    const MARGIN_OFFSET = 6;
+    const labelX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
+    const textAnchor = isLeft ? "start" : "end";
+
+    return (
+      <g onClick={(e) => { e.stopPropagation(); onClick(); }} style={{ cursor: "pointer" }}>
+        {/* Box */}
+        <rect
+          x={rx}
+          y={ry}
+          width={rw}
+          height={rh}
+          fill="rgba(239,68,68,0.08)"
+          stroke={CUE_STROKE}
+          strokeWidth={selected ? "2" : "1.5"}
+        />
+        {/* Leader line */}
+        <line
+          x1={lineStartX}
+          y1={centerY}
+          x2={labelX}
+          y2={centerY}
+          stroke={CUE_STROKE}
+          strokeWidth="1"
+        />
+        {/* End marker */}
+        <circle cx={labelX} cy={centerY} r="3" fill={CUE_STROKE} />
+        {/* Cue number */}
+        <text
+          x={isLeft ? labelX + 5 : labelX - 5}
+          y={centerY - 3}
+          textAnchor={textAnchor}
+          fontSize="11"
+          fill={CUE_STROKE}
+          fontWeight="700"
+          fontFamily="system-ui, sans-serif"
+        >
+          {annotation.cueNumber}
+        </text>
+        {/* Cue description */}
+        {annotation.cueDescription && (
+          <text
+            x={isLeft ? labelX + 5 : labelX - 5}
+            y={centerY + 13}
+            textAnchor={textAnchor}
+            fontSize="10"
+            fill={CUE_STROKE}
+            fontFamily="system-ui, sans-serif"
+          >
+            {annotation.cueDescription}
+          </text>
+        )}
+      </g>
+    );
+  }
+
+  return null;
+}
+
+// ── ToolButton ─────────────────────────────────────────────────────────────
+
+function ToolButton({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      title={label}
+      onClick={onClick}
+      style={{
+        width: 36,
+        height: 36,
+        display: "grid",
+        placeItems: "center",
+        border: "none",
+        borderRadius: 6,
+        background: active ? "var(--bg-elev)" : "transparent",
+        boxShadow: active ? "var(--shadow-1)" : "none",
+        color: active ? "var(--accent)" : "var(--ink-3)",
+        cursor: "pointer",
+        transition: "background .1s, color .1s",
+      }}
+      onMouseEnter={(e) => {
+        if (!active) {
+          (e.currentTarget as HTMLButtonElement).style.background =
+            "var(--bg-muted)";
+          (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          (e.currentTarget as HTMLButtonElement).style.background =
+            "transparent";
+          (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-3)";
+        }
+      }}
+    >
+      {icon}
+    </button>
+  );
+}
