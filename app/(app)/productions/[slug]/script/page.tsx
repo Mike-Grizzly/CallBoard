@@ -6,7 +6,7 @@ import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
 import { getDefaultScript, getScriptAnnotations } from "@/features/scripts/queries";
 import { getScriptUrl } from "@/features/scripts/actions";
-import type { Annotation, PageOverrides } from "@/features/scripts/constants";
+import type { Annotation, Bookmark, PageOverrides } from "@/features/scripts/constants";
 import { ScriptViewer } from "./script-viewer";
 
 export default async function ScriptPage({
@@ -74,6 +74,7 @@ export default async function ScriptPage({
   ]);
 
   const annotations = (annotationRow?.annotations ?? []) as Annotation[];
+  const bookmarks = (annotationRow?.bookmarks ?? []) as Bookmark[];
   const pageOverrides = (annotationRow?.pageOverrides ?? {}) as PageOverrides;
   const hasStalePages = annotationRow?.hasStalePages ?? false;
 
@@ -83,6 +84,7 @@ export default async function ScriptPage({
       productionId={production.id}
       pdfUrl={pdfUrl}
       initialAnnotations={annotations}
+      initialBookmarks={bookmarks}
       initialPageOverrides={pageOverrides}
       initialHasStalePages={hasStalePages}
     />

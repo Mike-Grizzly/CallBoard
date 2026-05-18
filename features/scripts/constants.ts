@@ -47,3 +47,10 @@ export type CueAnnotation = {
 
 export type Annotation = HighlightAnnotation | NoteAnnotation | CueAnnotation;
 export type PageOverrides = Record<string, string>;
+
+export type Bookmark = {
+  id: string;
+  page: number;
+  title: string;
+  createdAt: string;
+};

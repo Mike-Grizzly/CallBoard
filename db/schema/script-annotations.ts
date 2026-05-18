@@ -15,6 +15,7 @@ export const scriptAnnotations = pgTable("script_annotations", {
     .notNull()
     .references(() => productions.id, { onDelete: "cascade" }),
   annotations: jsonb("annotations").notNull().default([]),
+  bookmarks: jsonb("bookmarks").notNull().default([]),
   pageOverrides: jsonb("page_overrides").notNull().default({}),
   hasStalePages: boolean("has_stale_pages").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

@@ -71,6 +71,7 @@ export async function saveAnnotations(
   const scriptId = formData.get("script_id") as string;
   const productionId = formData.get("production_id") as string;
   const annotationsJson = formData.get("annotations") as string;
+  const bookmarksJson = formData.get("bookmarks") as string;
   const pageOverridesJson = formData.get("page_overrides") as string;
 
   if (!scriptId || !productionId) {
@@ -78,6 +79,7 @@ export async function saveAnnotations(
   }
 
   const annotations = JSON.parse(annotationsJson || "[]");
+  const bookmarks = JSON.parse(bookmarksJson || "[]");
   const pageOverrides = JSON.parse(pageOverridesJson || "{}");
 
   const existing = await db
@@ -94,7 +96,7 @@ export async function saveAnnotations(
   if (existing.length > 0) {
     await db
       .update(scriptAnnotations)
-      .set({ annotations, pageOverrides, updatedAt: new Date() })
+      .set({ annotations, bookmarks, pageOverrides, updatedAt: new Date() })
       .where(
         and(
           eq(scriptAnnotations.scriptId, scriptId),
@@ -107,6 +109,7 @@ export async function saveAnnotations(
       userId: user.id,
       productionId,
       annotations,
+      bookmarks,
       pageOverrides,
     });
   }
