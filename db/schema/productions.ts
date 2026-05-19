@@ -16,6 +16,7 @@ export const productions = pgTable("productions", {
   title: text("title").notNull(),
   slug: text("slug").notNull(),
   status: text("status").notNull().default("draft"),
+  color: text("color"),
   openingDate: date("opening_date"),
   closingDate: date("closing_date"),
   createdAt: timestamp("created_at", { withTimezone: true })

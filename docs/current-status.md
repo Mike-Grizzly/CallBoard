@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-05-19
 
-**Current milestone:** Steps 1-13 complete + Script Editor (Step 14). Latest: per-user PDF annotation editor ("Your Script" tab) with highlights, notes, cue markers, bookmarks, page thumbnails sidebar, zoom, inline annotation editing, download annotated PDF for printing.
+**Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15). Latest: cross-production calendar at `/calendar` with month/week views, production color filters, and a per-production color column reused by the sidebar rail.
 
 ## Feature status
 
@@ -198,6 +198,18 @@
 - **Stale script banner:** shown when the default script is replaced; dismissible
 - **DB:** `script_annotations` table with `annotations`, `bookmarks`, `pageOverrides`, `hasStalePages` JSONB/boolean columns; `documents.isDefaultScript` + `documents.scriptVersion` fields; "Set as default script" action in document row menu
 - **Known scaffold:** `pageOverrides` data model exists (stored/loaded) but no UI to set overrides yet
+
+### Step 15: Personal Calendar — IMPLEMENTED
+
+- Top-level `/calendar` route showing calls across every production the user is a member of (admins/producers see all org productions)
+- Month grid (default) and week view, swappable via `?view=` param; `?date=` anchors the visible window
+- Production filter chips with toggle per-production + "All"; selection persists via `?productions=` param
+- Past calls greyed out via `opacity-60`; "Today" cell highlighted in clay
+- Call chips show production color stripe, production title, time, and focus; click opens that production's call schedule page
+- New `productions.color` column (nullable text, one of 6 palette values); deterministic hash fallback for productions without a color (`fallbackColorForId`)
+- Color picker swatches on the new-production form; same color reused in the sidebar rail's production dot and the productions list card
+- New query: `getCallsForUserInRange({ userId, organizationId, startDate, endDate, manageAll })` in `features/calls/queries.ts`
+- **Migration required:** run `pnpm db:push` after pulling to add the `color` column
 
 ## Scaffolded only (not implemented)
 
