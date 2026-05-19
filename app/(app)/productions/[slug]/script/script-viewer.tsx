@@ -902,17 +902,16 @@ export function ScriptViewer({
             background: "var(--bg-sunken)",
             borderRadius: 8,
             padding: "28px 32px",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "flex-start",
+            overflow: "auto",
           }}
         >
         <div
           ref={containerRef}
           style={{
             position: "relative",
-            display: "inline-block",
-            maxWidth: "100%",
+            display: "block",
+            width: "fit-content",
+            margin: "0 auto",
             borderRadius: 3,
             overflow: "hidden",
             boxShadow: "0 4px 32px rgba(0,0,0,.28), 0 1px 4px rgba(0,0,0,.12)",
@@ -924,7 +923,7 @@ export function ScriptViewer({
           {/* PDF canvas */}
           <canvas
             ref={pdfCanvasRef}
-            style={{ display: "block", maxWidth: "100%" }}
+            style={{ display: "block" }}
           />
 
           {/* Text layer — transparent text for selection */}
