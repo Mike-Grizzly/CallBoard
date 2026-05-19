@@ -202,14 +202,17 @@
 ### Step 15: Personal Calendar — IMPLEMENTED
 
 - Top-level `/calendar` route showing calls across every production the user is a member of (admins/producers see all org productions)
-- Month grid (default) and week view, swappable via `?view=` param; `?date=` anchors the visible window
+- Four views: **month**, **week**, **day**, **agenda** — swappable via segmented control in the toolbar (`?view=`); `?date=` anchors the visible window
+- Toolbar uses the project design vocabulary: Newsreader title, `.btn` prev/today/next, soft segmented `.cal-views` switcher
 - Production filter chips with toggle per-production + "All"; selection persists via `?productions=` param
-- Past calls greyed out via `opacity-60`; "Today" cell highlighted in clay
-- Call chips show production color stripe, production title, time, and focus; click opens that production's call schedule page
-- New `productions.color` column (nullable text, one of 6 palette values); deterministic hash fallback for productions without a color (`fallbackColorForId`)
+- Past calls dimmed; "Today" highlighted in `--accent`
+- Call chips/cards use the warm soft palette and a 3px border-stripe in the production color via `data-c="clay|sage|dusk|amber|plum|sand"`
+- Live calls get an `--accent` outline + pulsing dot
+- New `productions.color` column (nullable text storing a palette token); deterministic hash fallback via `fallbackColorTokenForId` for productions without a color; legacy `var(--c-...)` strings normalized at read time
 - Color picker swatches on the new-production form; same color reused in the sidebar rail's production dot and the productions list card
 - New query: `getCallsForUserInRange({ userId, organizationId, startDate, endDate, manageAll })` in `features/calls/queries.ts`
-- **Migration required:** run `pnpm db:push` after pulling to add the `color` column
+- Calendar styles live in a `.cal-*` section of `app/globals.css`
+- **DB migration** was applied directly via Supabase MCP (`add_production_color`) — no `pnpm db:push` needed
 
 ## Scaffolded only (not implemented)
 

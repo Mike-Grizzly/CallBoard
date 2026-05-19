@@ -14,7 +14,7 @@ export function CreateProductionForm() {
     CreateProductionResult | undefined,
     FormData
   >(createProduction, undefined);
-  const [color, setColor] = useState<string>(PRODUCTION_COLOR_PALETTE[0].value);
+  const [color, setColor] = useState<string>(PRODUCTION_COLOR_PALETTE[0].token);
 
   return (
     <form
@@ -65,20 +65,20 @@ export function CreateProductionForm() {
         <input type="hidden" name="color" value={color} />
         <div className="flex flex-wrap gap-2">
           {PRODUCTION_COLOR_PALETTE.map((c) => {
-            const selected = c.value === color;
+            const selected = c.token === color;
             return (
               <button
-                key={c.value}
+                key={c.token}
                 type="button"
-                aria-label={c.name}
+                aria-label={c.label}
                 aria-pressed={selected}
-                onClick={() => setColor(c.value)}
+                onClick={() => setColor(c.token)}
                 className={`h-7 w-7 rounded-full transition-shadow focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)] ${
                   selected
                     ? "ring-2 ring-offset-2 ring-[color:var(--ring)] ring-offset-[color:var(--card)]"
                     : ""
                 }`}
-                style={{ background: c.value }}
+                style={{ background: c.cssVar }}
               />
             );
           })}

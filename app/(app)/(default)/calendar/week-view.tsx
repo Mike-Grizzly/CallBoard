@@ -1,6 +1,9 @@
 import Link from "next/link";
 import type { UserCalendarCall } from "@/features/calls/queries";
-import { resolveProductionColor } from "@/features/productions/constants";
+import {
+  colorVarForToken,
+  resolveProductionColorToken,
+} from "@/features/productions/constants";
 import {
   callStatus,
   formatDisplayTime,
@@ -28,23 +31,16 @@ export function WeekView({
   const byDate = groupCallsByDate(calls);
 
   return (
-    <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] overflow-hidden">
-      <div className="grid grid-cols-7 border-b border-[color:var(--border)]">
+    <div className="cal-week">
+      <div className="cal-week-head">
         {days.map((d, i) => {
           const dateStr = toDateStr(d);
           const isToday = dateStr === today;
           return (
-            <div
-              key={dateStr}
-              className="px-2 py-2 text-center border-r border-[color:var(--border)] last:border-r-0"
-            >
-              <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted-foreground)]">
-                {WEEKDAYS[i]}
-              </div>
+            <div key={dateStr}>
+              <div className="cal-week-day-label">{WEEKDAYS[i]}</div>
               <div
-                className={`mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${
-                  isToday ? "bg-[#c4572a] text-white" : ""
-                }`}
+                className={`cal-week-day-num${isToday ? " cal-week-day-num--today" : ""}`}
               >
                 {d.getDate()}
               </div>
@@ -52,24 +48,18 @@ export function WeekView({
           );
         })}
       </div>
-
-      <div className="grid grid-cols-7 min-h-[400px]">
+      <div className="cal-week-grid">
         {days.map((d) => {
           const dateStr = toDateStr(d);
           const dayCalls = byDate.get(dateStr) ?? [];
           const isPast = dateStr < today;
-
           return (
             <div
               key={dateStr}
-              className={`border-r border-[color:var(--border)] last:border-r-0 p-2 flex flex-col gap-2 ${
-                isPast ? "opacity-60" : ""
-              }`}
+              className={`cal-week-col${isPast ? " cal-week-col--past" : ""}`}
             >
               {dayCalls.length === 0 ? (
-                <div className="text-xs text-[color:var(--muted-foreground)] italic px-1">
-                  No calls
-                </div>
+                <div className="cal-week-empty">No calls</div>
               ) : (
                 dayCalls.map((call) => (
                   <WeekCard
@@ -98,7 +88,7 @@ function WeekCard({
   currentTime: string;
 }) {
   const status = callStatus(call, today, currentTime);
-  const color = resolveProductionColor({
+  const token = resolveProductionColorToken({
     id: call.productionId,
     color: call.productionColor,
   });
@@ -108,41 +98,29 @@ function WeekCard({
   return (
     <Link
       href={`/productions/${call.productionSlug}/calls`}
-      className={`block rounded-md border border-[color:var(--border)] bg-[color:var(--card)] p-2 transition-colors hover:bg-[color:var(--muted)] ${
-        status === "live" ? "ring-1 ring-[#c4572a]" : ""
-      }`}
+      className="cal-card"
+      data-c={token}
     >
-      <div className="flex items-center gap-1.5">
+      <div className="cal-card-prod">
         <span
-          className="h-2 w-2 shrink-0 rounded-full"
-          style={{ background: color }}
+          className="prod-dot"
+          style={{ background: colorVarForToken(token) }}
           aria-hidden
         />
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--muted-foreground)] truncate">
-          {call.productionTitle}
-        </span>
+        <span>{call.productionTitle}</span>
       </div>
       {timeLabel && (
-        <div className="mt-1 text-xs font-medium">
-          {timeLabel}
-          {endLabel && ` – ${endLabel}`}
-          {status === "live" && (
-            <span className="ml-1 inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wide text-[#c4572a]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#c4572a] animate-pulse" />
-              Live
-            </span>
-          )}
+        <div className="cal-card-time">
+          {status === "live" && <span className="cal-live-dot" aria-hidden />}
+          <span>
+            {timeLabel}
+            {endLabel && ` – ${endLabel}`}
+          </span>
         </div>
       )}
-      {call.focus && (
-        <div className="mt-0.5 text-xs text-[color:var(--muted-foreground)] line-clamp-2">
-          {call.focus}
-        </div>
-      )}
+      {call.focus && <div className="cal-card-focus">{call.focus}</div>}
       {!call.focus && call.location && (
-        <div className="mt-0.5 text-xs text-[color:var(--muted-foreground)] truncate">
-          {call.location}
-        </div>
+        <div className="cal-card-meta">{call.location}</div>
       )}
     </Link>
   );

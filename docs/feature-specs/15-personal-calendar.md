@@ -24,7 +24,7 @@ itself requires `requireCurrentUser()`.
 | Route | Description |
 |-------|-------------|
 | `/calendar` | Personal calendar (defaults to month view, today) |
-| `/calendar?view=month\|week` | Switch view |
+| `/calendar?view=month\|week\|day\|agenda` | Switch view |
 | `/calendar?date=YYYY-MM-DD` | Anchor the visible window on a date |
 | `/calendar?productions=id1,id2` | Filter to a subset of productions |
 
@@ -34,10 +34,12 @@ itself requires `requireCurrentUser()`.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `color` | `text` (nullable) | One of the palette values defined in `features/productions/constants.ts` |
+| `color` | `text` (nullable) | One of the palette tokens defined in `features/productions/constants.ts` (`"clay"`, `"sage"`, `"dusk"`, `"amber"`, `"plum"`, `"sand"`) |
 
-Migration: `pnpm db:push` after pulling. The column is nullable, so existing
-rows fall back to a deterministic hash-based color (`fallbackColorForId`).
+Migration: applied directly via Supabase MCP (`add_production_color`). The
+column is nullable, so existing rows fall back to a deterministic hash-based
+token via `fallbackColorTokenForId`. Legacy `"var(--c-...)"` values written
+by early builds are normalized at read time.
 
 ## Palette
 
@@ -57,22 +59,47 @@ and valid, otherwise the deterministic fallback.
 
 ## Views
 
-### Month grid
+All four views share the same design vocabulary: warm `--bg-elev` card
+surfaces with `--shadow-1`, `--border` outlines, Newsreader display font
+for headings, soft-color chips that pick up the production's palette
+token via `data-c="clay|sage|dusk|amber|plum|sand"`.
+
+### Month grid (`.cal-month`)
 
 - 7-column grid covering full weeks from the first-of-month back to Sunday
   and the last-of-month forward to Saturday
-- Cells outside the current month are dimmed (`bg-[color:var(--muted)]/30`)
-- Past dates: `opacity-60`
-- Today: clay-filled circle around day number
-- Call chips: left border-stripe in production color, time line, production
-  title (small caps), focus line; live calls get a pulse dot + ring
+- Cells outside the current month use `--bg-sunken`; past cells use a
+  blend of elev/sunken (`.cal-day-cell--past`)
+- Today: `--accent` filled circle around day number
+- Call chips (`.cal-chip[data-c=...]`): soft palette background with a 3px
+  left border in the production color, time + production title + focus;
+  live calls get an `--accent` outline and pulse dot
 
-### Week view
+### Week view (`.cal-week`)
 
-- 7-column day grid (current week, Sun–Sat)
-- Each day is a vertical stack of call cards
-- Each card shows production color dot, time range, focus/location
+- 7-column day grid (current week, Sun–Sat) with sunken header strip
+- Each day is a vertical stack of `.cal-card` items (border-left in
+  production color, hover lift)
 - Empty days show "No calls" italic placeholder
+- Past days dim via `.cal-week-col--past`
+
+### Day view (`.cal-day`)
+
+- Two-column layout (`280px` rail + flex body) above 900px; stacks below
+- Left rail: Newsreader-styled date, weekday eyebrow, count summary
+- Right body: rows of `96px` time gutter + call detail, divided by
+  `--border`; live calls show an inline accent "Live now" line
+- Empty state: "Nothing on the schedule for this day."
+
+### Agenda view (`.cal-agenda`)
+
+- Card surface with `120px` date column + rows
+- Each date header shows day-of-month in Newsreader display font + short
+  weekday eyebrow; today date in `--accent`
+- Each row: time gutter + production dot/title + focus + optional Live
+  pill on the right
+- Default window: today + 30 days (configurable via `AGENDA_LOOKAHEAD_DAYS`)
+- Empty state: "No calls in this window."
 
 ## Production filter
 
@@ -105,11 +132,14 @@ status is computed at render time.
 | `features/productions/actions.ts` | Writes color on create |
 | `features/productions/queries.ts` | `getUserProductions` returns color |
 | `features/calls/queries.ts` | `getCallsForUserInRange` + `UserCalendarCall` type |
-| `app/(app)/(default)/calendar/page.tsx` | Server component, view + filter + nav |
+| `app/(app)/(default)/calendar/page.tsx` | Server component, toolbar + 4-view switcher |
 | `app/(app)/(default)/calendar/month-grid.tsx` | Month grid + chip |
 | `app/(app)/(default)/calendar/week-view.tsx` | Week grid + card |
+| `app/(app)/(default)/calendar/day-view.tsx` | Day rail + timeline |
+| `app/(app)/(default)/calendar/agenda-view.tsx` | Flat date-grouped list |
 | `app/(app)/(default)/calendar/production-filter.tsx` | URL-driven filter chips |
 | `app/(app)/(default)/calendar/utils.ts` | Date helpers + status |
+| `app/globals.css` | `.cal-*` styles section (month, week, day, agenda, chip, card, filter, toolbar) |
 | `app/(app)/productions/new/create-production-form.tsx` | Swatch picker on create |
 | `app/(app)/productions/production-list.tsx` | Color dot before title |
 | `components/app-shell/rail.tsx` | Sidebar dot now reads `production.color` |

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { UserCalendarCall } from "@/features/calls/queries";
-import { resolveProductionColor } from "@/features/productions/constants";
+import { resolveProductionColorToken } from "@/features/productions/constants";
 import {
   callStatus,
   formatDisplayTime,
@@ -36,18 +36,13 @@ export function MonthGrid({
   const currentMonth = monthDate.getMonth();
 
   return (
-    <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] overflow-hidden">
-      <div className="grid grid-cols-7 border-b border-[color:var(--border)]">
+    <div className="cal-month">
+      <div className="cal-month-head">
         {WEEKDAYS.map((d) => (
-          <div
-            key={d}
-            className="px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[color:var(--muted-foreground)]"
-          >
-            {d}
-          </div>
+          <span key={d}>{d}</span>
         ))}
       </div>
-      <div className="grid grid-cols-7">
+      <div className="cal-month-grid">
         {cells.map((cell) => {
           const dateStr = toDateStr(cell);
           const dayCalls = byDate.get(dateStr) ?? [];
@@ -55,29 +50,25 @@ export function MonthGrid({
           const isPast = dateStr < today;
           const inMonth = cell.getMonth() === currentMonth;
 
+          const cls = [
+            "cal-day-cell",
+            !inMonth && "cal-day-cell--out",
+            inMonth && isPast && "cal-day-cell--past",
+          ]
+            .filter(Boolean)
+            .join(" ");
+
           return (
-            <div
-              key={dateStr}
-              className={`min-h-[110px] border-b border-r border-[color:var(--border)] p-2 flex flex-col gap-1 [&:nth-child(7n)]:border-r-0 ${
-                !inMonth ? "bg-[color:var(--muted)]/30" : ""
-              } ${isPast ? "opacity-60" : ""}`}
-            >
-              <div className="flex items-center justify-between">
+            <div key={dateStr} className={cls}>
+              <div className="cal-day-num-row">
                 <span
-                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-                    isToday
-                      ? "bg-[#c4572a] text-white"
-                      : inMonth
-                        ? "text-[color:var(--foreground)]"
-                        : "text-[color:var(--muted-foreground)]"
-                  }`}
+                  className={`cal-day-num${isToday ? " cal-day-num--today" : ""}`}
                 >
                   {cell.getDate()}
                 </span>
               </div>
-
               {dayCalls.map((call) => (
-                <CallChip
+                <MonthChip
                   key={call.id}
                   call={call}
                   today={today}
@@ -92,7 +83,7 @@ export function MonthGrid({
   );
 }
 
-function CallChip({
+function MonthChip({
   call,
   today,
   currentTime,
@@ -102,7 +93,7 @@ function CallChip({
   currentTime: string;
 }) {
   const status = callStatus(call, today, currentTime);
-  const color = resolveProductionColor({
+  const token = resolveProductionColorToken({
     id: call.productionId,
     color: call.productionColor,
   });
@@ -112,27 +103,21 @@ function CallChip({
     ? endLabel
       ? `${timeLabel}–${endLabel}`
       : timeLabel
-    : null;
+    : "Call";
 
   return (
     <Link
       href={`/productions/${call.productionSlug}/calls`}
-      className={`group/chip block rounded border-l-[3px] bg-[color:var(--muted)]/40 px-1.5 py-1 text-xs leading-tight transition-opacity hover:opacity-80 ${
-        status === "live" ? "ring-1 ring-[#c4572a]" : ""
-      }`}
-      style={{ borderLeftColor: color }}
+      className={`cal-chip${status === "live" ? " cal-chip--live" : ""}`}
+      data-c={token}
       title={`${call.productionTitle}${call.focus ? " — " + call.focus : ""}`}
     >
-      <div className="flex items-center gap-1">
-        {status === "live" && (
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#c4572a] animate-pulse" />
-        )}
-        <span className="font-medium truncate">{timeDisplay ?? "Call"}</span>
-      </div>
-      <span className="block truncate text-[10px] text-[color:var(--muted-foreground)] uppercase tracking-wide">
-        {call.productionTitle}
+      <span className="cal-chip-time">
+        {status === "live" && <span className="cal-live-dot" aria-hidden />}
+        {timeDisplay}
       </span>
-      {call.focus && <span className="block truncate opacity-80">{call.focus}</span>}
+      <span className="cal-chip-prod">{call.productionTitle}</span>
+      {call.focus && <span className="cal-chip-focus">{call.focus}</span>}
     </Link>
   );
 }

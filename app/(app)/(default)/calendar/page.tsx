@@ -7,6 +7,8 @@ import { getUserProductions } from "@/features/productions/queries";
 import { getCallsForUserInRange } from "@/features/calls/queries";
 import { MonthGrid } from "./month-grid";
 import { WeekView } from "./week-view";
+import { DayView } from "./day-view";
+import { AgendaView } from "./agenda-view";
 import { ProductionFilter } from "./production-filter";
 import {
   addDays,
@@ -18,7 +20,17 @@ import {
   startOfMonthGrid,
   startOfWeek,
   toDateStr,
+  type CalendarView,
 } from "./utils";
+
+const VIEW_OPTIONS: { value: CalendarView; label: string }[] = [
+  { value: "month", label: "Month" },
+  { value: "week", label: "Week" },
+  { value: "day", label: "Day" },
+  { value: "agenda", label: "Agenda" },
+];
+
+const AGENDA_LOOKAHEAD_DAYS = 30;
 
 export default async function CalendarPage({
   searchParams,
@@ -43,13 +55,22 @@ export default async function CalendarPage({
     return <EmptyState />;
   }
 
-  // Determine date window based on view
-  const rangeStart =
-    view === "month" ? startOfMonthGrid(anchorDate) : startOfWeek(anchorDate);
-  const rangeEnd =
-    view === "month" ? endOfMonthGrid(anchorDate) : endOfWeek(anchorDate);
+  let rangeStart: Date;
+  let rangeEnd: Date;
+  if (view === "month") {
+    rangeStart = startOfMonthGrid(anchorDate);
+    rangeEnd = endOfMonthGrid(anchorDate);
+  } else if (view === "week") {
+    rangeStart = startOfWeek(anchorDate);
+    rangeEnd = endOfWeek(anchorDate);
+  } else if (view === "day") {
+    rangeStart = anchorDate;
+    rangeEnd = anchorDate;
+  } else {
+    rangeStart = anchorDate;
+    rangeEnd = addDays(anchorDate, AGENDA_LOOKAHEAD_DAYS);
+  }
 
-  // Parse production filter (default: show all)
   const productionIds = new Set(userProductions.map((p) => p.id));
   const selected: Set<string> = params.productions
     ? new Set(
@@ -80,102 +101,110 @@ export default async function CalendarPage({
           month: "long",
           year: "numeric",
         })
-      : `${startOfWeek(anchorDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${endOfWeek(anchorDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+      : view === "week"
+        ? `${startOfWeek(anchorDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${endOfWeek(anchorDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+        : view === "day"
+          ? anchorDate.toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })
+          : `Next ${AGENDA_LOOKAHEAD_DAYS} days`;
 
-  const prevAnchor = view === "month" ? addMonths(anchorDate, -1) : addDays(anchorDate, -7);
-  const nextAnchor = view === "month" ? addMonths(anchorDate, 1) : addDays(anchorDate, 7);
+  const navStep = (dir: -1 | 1): Date => {
+    if (view === "month") return addMonths(anchorDate, dir);
+    if (view === "week") return addDays(anchorDate, dir * 7);
+    if (view === "day") return addDays(anchorDate, dir);
+    return addDays(anchorDate, dir * 7);
+  };
 
-  const buildHref = (overrides: { view?: string; date?: string }) => {
+  const buildHref = (overrides: { view?: CalendarView; date?: string }) => {
     const sp = new URLSearchParams();
     sp.set("view", overrides.view ?? view);
-    if (overrides.date) sp.set("date", overrides.date);
+    const targetDate = overrides.date ?? toDateStr(anchorDate);
+    if (
+      targetDate !== toDateStr(new Date(new Date().setHours(0, 0, 0, 0)))
+    ) {
+      sp.set("date", targetDate);
+    }
     if (params.productions) sp.set("productions", params.productions);
     return `/calendar?${sp.toString()}`;
   };
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Calendar</h1>
-          <p className="mt-0.5 text-sm text-[color:var(--muted-foreground)]">
-            {manageAll
-              ? "All scheduled calls across the organization."
-              : `Calls across your ${userProductions.length} production${userProductions.length === 1 ? "" : "s"}.`}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-md border border-[color:var(--border)] overflow-hidden">
-            <Link
-              href={buildHref({ view: "month" })}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                view === "month"
-                  ? "bg-[color:var(--foreground)] text-[color:var(--background)]"
-                  : "text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
-              }`}
-            >
-              Month
-            </Link>
-            <Link
-              href={buildHref({ view: "week" })}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                view === "week"
-                  ? "bg-[color:var(--foreground)] text-[color:var(--background)]"
-                  : "text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
-              }`}
-            >
-              Week
-            </Link>
+    <div className="page-narrow">
+      <header className="cal-toolbar">
+        <div className="cal-toolbar-left">
+          <div className="cal-title-row">
+            <h1 className="cal-title">Calendar</h1>
+            <span className="cal-subtitle">{headerLabel}</span>
           </div>
         </div>
-      </div>
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Link
-            href={buildHref({ date: toDateStr(prevAnchor) })}
-            className="flex items-center justify-center h-8 w-8 rounded-md border border-[color:var(--border)] hover:bg-[color:var(--muted)] transition-colors text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
-            aria-label={`Previous ${view}`}
-          >
-            <Icon name="ChevronLeft" className="h-4 w-4" />
-          </Link>
-          <h2 className="text-base font-semibold min-w-[180px] text-center">
-            {headerLabel}
-          </h2>
-          <Link
-            href={buildHref({ date: toDateStr(nextAnchor) })}
-            className="flex items-center justify-center h-8 w-8 rounded-md border border-[color:var(--border)] hover:bg-[color:var(--muted)] transition-colors text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
-            aria-label={`Next ${view}`}
-          >
-            <Icon name="ChevronRight" className="h-4 w-4" />
-          </Link>
-          <Link
-            href={buildHref({ date: toDateStr(new Date()) })}
-            className="ml-2 rounded-md border border-[color:var(--border)] px-3 py-1.5 text-xs font-medium hover:bg-[color:var(--muted)] transition-colors"
-          >
-            Today
-          </Link>
+        <div className="cal-toolbar-right">
+          <div className="cal-nav">
+            <Link
+              href={buildHref({ date: toDateStr(navStep(-1)) })}
+              className="btn btn-icon"
+              aria-label={`Previous ${view}`}
+            >
+              <Icon name="ChevronLeft" className="ico" />
+            </Link>
+            <Link
+              href={buildHref({ date: toDateStr(new Date()) })}
+              className="btn"
+            >
+              Today
+            </Link>
+            <Link
+              href={buildHref({ date: toDateStr(navStep(1)) })}
+              className="btn btn-icon"
+              aria-label={`Next ${view}`}
+            >
+              <Icon name="ChevronRight" className="ico" />
+            </Link>
+          </div>
+
+          <div className="cal-views" role="tablist" aria-label="Calendar view">
+            {VIEW_OPTIONS.map((v) => (
+              <Link
+                key={v.value}
+                href={buildHref({ view: v.value })}
+                className="cal-view"
+                data-active={view === v.value ? "1" : "0"}
+                role="tab"
+                aria-selected={view === v.value}
+              >
+                {v.label}
+              </Link>
+            ))}
+          </div>
         </div>
+      </header>
 
-        <ProductionFilter
-          productions={userProductions.map((p) => ({
-            id: p.id,
-            title: p.title,
-            color: p.color,
-          }))}
-          selected={selected}
-        />
-      </div>
+      {userProductions.length > 1 && (
+        <div style={{ marginBottom: 14 }}>
+          <ProductionFilter
+            productions={userProductions.map((p) => ({
+              id: p.id,
+              title: p.title,
+              color: p.color,
+            }))}
+            selected={selected}
+          />
+        </div>
+      )}
 
-      {view === "month" ? (
+      {view === "month" && (
         <MonthGrid
           monthDate={anchorDate}
           calls={filteredCalls}
           today={today}
           currentTime={currentTime}
         />
-      ) : (
+      )}
+      {view === "week" && (
         <WeekView
           anchorDate={anchorDate}
           calls={filteredCalls}
@@ -183,30 +212,47 @@ export default async function CalendarPage({
           currentTime={currentTime}
         />
       )}
-
-      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-[color:var(--muted-foreground)]">
-        <span>Colored stripe = production · click a call to open its schedule</span>
-      </div>
+      {view === "day" && (
+        <DayView
+          date={anchorDate}
+          calls={filteredCalls}
+          today={today}
+          currentTime={currentTime}
+        />
+      )}
+      {view === "agenda" && (
+        <AgendaView
+          calls={filteredCalls}
+          today={today}
+          currentTime={currentTime}
+        />
+      )}
     </div>
   );
 }
 
 function EmptyState() {
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-12 text-center">
-        <Icon
-          name="CalendarDays"
-          className="mx-auto mb-3 h-10 w-10 text-[color:var(--muted-foreground)]"
-        />
-        <h1 className="text-lg font-semibold">Your calendar is empty</h1>
-        <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
-          You aren&apos;t a member of any productions yet. Once a stage manager
-          adds you, calls will show up here.
+    <div className="page-narrow">
+      <div className="cal-empty">
+        <Icon name="CalendarDays" className="ico" />
+        <h1 className="h-section" style={{ fontSize: 20 }}>
+          Your calendar is empty
+        </h1>
+        <p
+          style={{
+            marginTop: 8,
+            fontSize: 13,
+            color: "var(--ink-3)",
+          }}
+        >
+          You aren&apos;t a member of any productions yet. Once a stage
+          manager adds you, calls will show up here.
         </p>
         <Link
           href="/productions"
-          className="mt-4 inline-flex rounded-md border border-[color:var(--border)] px-3 py-1.5 text-sm font-medium hover:bg-[color:var(--muted)] transition-colors"
+          className="btn"
+          style={{ marginTop: 16, display: "inline-flex" }}
         >
           Browse productions
         </Link>

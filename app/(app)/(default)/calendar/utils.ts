@@ -1,9 +1,10 @@
 import type { UserCalendarCall } from "@/features/calls/queries";
 
-export type CalendarView = "month" | "week";
+export type CalendarView = "month" | "week" | "day" | "agenda";
 
 export function parseView(raw: string | undefined): CalendarView {
-  return raw === "week" ? "week" : "month";
+  if (raw === "week" || raw === "day" || raw === "agenda") return raw;
+  return "month";
 }
 
 export function parseDate(raw: string | undefined): Date {
