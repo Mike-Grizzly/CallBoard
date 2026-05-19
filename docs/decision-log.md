@@ -312,6 +312,36 @@ Record of durable project decisions. Add new entries at the bottom with date and
 
 ---
 
+## 2026-05-19 — Script editor uses pdfjs-dist canvas rendering + SVG annotation overlay
+
+**Decision:** The "Your Script" PDF annotation editor renders pages via `pdfjs-dist` to an HTML `<canvas>` element, with a sized SVG overlay for annotations. Annotations are stored as normalized 0–1 coordinates relative to the canvas dimensions.
+
+**Reason:** `pdfjs-dist` was already installed (blocking tool). A canvas-based render gives full pixel control for the overlay. Normalized coordinates are resolution-independent — they survive zoom level changes and canvas rescales without remapping.
+
+**Impact:** Rendering is done client-side via dynamic import. The module-level `pdfBitmapCache` (keyed by `url::page::scale`) prevents re-renders when the signed URL regenerates between sessions or after revalidation. The SVG `viewBox` is set to `0 0 canvasW canvasH`, so annotations scale correctly at any zoom level.
+
+---
+
+## 2026-05-19 — Annotation auto-save reads from refs, not state
+
+**Decision:** `latestAnnotationsRef` and `latestBookmarksRef` mirror the annotations/bookmarks state. The debounced `triggerSave` function reads from these refs rather than from the state values at call time.
+
+**Reason:** React closures capture state values at render time. If `triggerSave` captured `annotations` directly and the user made rapid changes (adding a bookmark immediately after drawing a highlight), the 1.5s-debounced save would fire with a stale `annotations` value, dropping the highlight. Refs always hold the current value regardless of when the closure was created.
+
+**Impact:** Any future save-triggering operation must update both the state (for rendering) and the ref (for saving) together, using the same `next` array.
+
+---
+
+## 2026-05-19 — Annotated PDF download composites canvas + Canvas 2D drawing client-side
+
+**Decision:** The "Download PDF" feature renders every page at 2× scale, draws annotation shapes on top using the Canvas 2D API (fillRect, strokeRect, arc, fillText), then assembles pages into a PDF using `jsPDF`. All processing happens in the browser; no server action is involved.
+
+**Reason:** The original PDF is a Supabase signed URL accessible from the browser. All annotation data is already in client state. Server-side PDF generation would require re-fetching both the PDF and the user's annotations and adds latency. Client-side compositing reuses the same `pdfjs-dist` pipeline already used for display.
+
+**Impact:** `jspdf` added as a dependency. Download time scales linearly with page count (~1–2s per page on a modern device). The output PDF is a raster image (JPEG pages), not a vector PDF — text is not selectable in the downloaded file, but the result prints cleanly. Print quality uses a fixed 2× scale regardless of the user's current zoom setting.
+
+---
+
 ## 2026-05-11 — RLS enabled on all public tables; policies intentionally omitted
 
 **Decision:** Turn on Row Level Security for the 9 remaining unsecured tables (`organizations`, `productions`, `announcements`, `production_scenes`, `scene_beats`, `stage_configurations`, `blocking_positions`, `note_tags`, `production_notes`) without writing any policies. Migration `enable_rls_on_public_tables` applied via Supabase MCP.
