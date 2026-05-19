@@ -4,6 +4,7 @@ import { useState, useTransition, useRef } from "react";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { uploadDocument } from "@/features/documents/actions";
+import { DOCUMENT_TYPES } from "@/features/documents/constants";
 import type { DocumentFolder } from "@/features/documents/queries";
 
 export function DocumentUploadForm({
@@ -46,7 +47,7 @@ export function DocumentUploadForm({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
+          gridTemplateColumns: "1fr 1fr 1fr 1fr",
           gap: 10,
         }}
       >
@@ -78,6 +79,39 @@ export function DocumentUploadForm({
             }}
             placeholder="e.g. Act 1 Script"
           />
+        </div>
+        <div>
+          <label
+            style={{
+              display: "block",
+              fontSize: 12,
+              fontWeight: 500,
+              color: "var(--ink-3)",
+              marginBottom: 4,
+            }}
+          >
+            Type
+          </label>
+          <select
+            name="document_type"
+            defaultValue="general"
+            style={{
+              width: "100%",
+              borderRadius: "var(--radius-s)",
+              border: "1px solid var(--border)",
+              background: "var(--bg-elev)",
+              padding: "6px 10px",
+              fontSize: 13,
+              color: "var(--ink)",
+              outline: "none",
+            }}
+          >
+            {DOCUMENT_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label

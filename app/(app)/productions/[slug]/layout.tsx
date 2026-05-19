@@ -126,7 +126,7 @@ export default async function ProductionLayout({
   }
   tabs.push(
     {
-      label: "Calls",
+      label: "Rehearsal Schedule",
       href: `/productions/${slug}/calls`,
       icon: "Phone",
     },
@@ -143,13 +143,7 @@ export default async function ProductionLayout({
       count: announcements.length,
     },
   );
-  if (canCreateReports) {
-    tabs.push({
-      label: "Daily Log",
-      href: `/productions/${slug}/log`,
-      icon: "PenLine",
-    });
-  }
+
   if (canViewBlocking) {
     tabs.push({
       label: "Blocking",
@@ -157,6 +151,12 @@ export default async function ProductionLayout({
       icon: "Layout",
     });
   }
+
+  tabs.push({
+    label: "Your Script",
+    href: `/productions/${slug}/script`,
+    icon: "BookOpen",
+  });
 
   return (
     <>

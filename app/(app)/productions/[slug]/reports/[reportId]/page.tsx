@@ -16,6 +16,8 @@ import {
   getReportAttachments,
   getAttachmentUrl,
 } from "@/features/reports/attachments";
+import { getIsPinned } from "@/features/pins/queries";
+import { PinButton } from "@/features/pins/pin-button";
 import { AttachmentUpload } from "./attachment-upload";
 import { EmailReportButton } from "./email-report-button";
 import { DetailTabs } from "./detail-tabs";
@@ -100,9 +102,10 @@ export default async function ReportDetailPage({
     notFound();
   }
 
-  const [attachments, productionMembers] = await Promise.all([
+  const [attachments, productionMembers, isPinned] = await Promise.all([
     getReportAttachments(reportId),
     getProductionMembers(production.id),
+    getIsPinned(user.id, "report", reportId),
   ]);
   const canUpload = can(user.role, "reports:create");
   const canEdit = can(user.role, "reports:create");
@@ -169,6 +172,7 @@ export default async function ReportDetailPage({
             </div>
           </div>
           <div className="row" style={{ gap: 8 }}>
+            <PinButton itemType="report" itemId={reportId} initialPinned={isPinned} />
             <EmailReportButton reportId={reportId} slug={slug} members={productionMembers} />
             {canEdit && (
               <Link href={`/productions/${slug}/reports/${reportId}/edit`} prefetch>

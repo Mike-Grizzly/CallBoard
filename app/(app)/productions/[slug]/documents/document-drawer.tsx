@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import {
   X,
   File,
+  Pin,
   Download,
   MessageSquare,
   MessageSquareOff,
@@ -11,6 +12,7 @@ import {
   Minimize2,
 } from "lucide-react";
 import { getDocumentUrl, getDocumentDownloadUrl } from "@/features/documents/actions";
+import { pinItem } from "@/features/pins/actions";
 import { DocumentCommentsPanel } from "./document-comments-panel";
 import { FolderSelect } from "./folder-select";
 import type { FolderOption } from "./folder-select";
@@ -76,14 +78,26 @@ interface Props {
   doc: DocumentWithUploader;
   members: ProductionMember[];
   folders: FolderOption[];
+  initialPinned: boolean;
   onClose: () => void;
 }
 
-export function DocumentDrawer({ doc, members, folders, onClose }: Props) {
+export function DocumentDrawer({ doc, members, folders, initialPinned, onClose }: Props) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loadingUrl, setLoadingUrl] = useState(true);
   const [showComments, setShowComments] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
+  const [pinned, setPinned] = useState(initialPinned);
+  const [, startPinTransition] = useTransition();
+
+  function handlePinToggle() {
+    const next = !pinned;
+    setPinned(next);
+    startPinTransition(async () => {
+      const result = await pinItem("document", doc.id, next);
+      setPinned(result.pinned);
+    });
+  }
 
   useEffect(() => {
     let canceled = false;
@@ -316,6 +330,14 @@ export function DocumentDrawer({ doc, members, folders, onClose }: Props) {
             </div>
           </div>
           <DownloadButton storagePath={doc.storagePath} fileName={doc.fileName} />
+          <button
+            className="btn ghost btn-icon"
+            onClick={handlePinToggle}
+            title={pinned ? "Unpin from dashboard" : "Pin to dashboard"}
+            style={{ color: pinned ? "var(--c-amber)" : undefined }}
+          >
+            <Pin size={16} />
+          </button>
           {(isPdf || isImage) && (
             <button
               className="btn ghost btn-icon"

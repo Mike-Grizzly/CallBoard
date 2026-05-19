@@ -59,6 +59,7 @@ interface Props {
   slug: string;
   canUpload: boolean;
   initialDocId?: string;
+  pinnedDocIds: string[];
 }
 
 const ALL_FILES = "All files";
@@ -73,6 +74,7 @@ export function DocumentsClient({
   slug,
   canUpload,
   initialDocId,
+  pinnedDocIds,
 }: Props) {
   const router = useRouter();
   const [activeFolder, setActiveFolder] = useState(ALL_FILES);
@@ -491,13 +493,39 @@ export function DocumentsClient({
                     <div style={{ minWidth: 0 }}>
                       <div
                         style={{
-                          fontWeight: 500,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
                           overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
                         }}
                       >
-                        {doc.title}
+                        <span
+                          style={{
+                            fontWeight: 500,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {doc.title}
+                        </span>
+                        {doc.isDefaultScript && (
+                          <span
+                            style={{
+                              flexShrink: 0,
+                              fontSize: 10,
+                              fontWeight: 600,
+                              letterSpacing: ".04em",
+                              textTransform: "uppercase",
+                              padding: "2px 6px",
+                              borderRadius: 999,
+                              background: "var(--c-sage-soft)",
+                              color: "color-mix(in oklch, var(--c-sage) 60%, var(--ink))",
+                            }}
+                          >
+                            Default Script
+                          </span>
+                        )}
                       </div>
                       <div
                         style={{
@@ -541,6 +569,9 @@ export function DocumentsClient({
                           storagePath={doc.storagePath}
                           fileName={doc.fileName}
                           slug={slug}
+                          productionId={productionId}
+                          documentType={doc.documentType}
+                          isDefaultScript={doc.isDefaultScript}
                         />
                       </div>
                     )}
@@ -620,6 +651,7 @@ export function DocumentsClient({
           doc={openDoc}
           members={members}
           folders={folders}
+          initialPinned={pinnedDocIds.includes(openDoc.id)}
           onClose={() => setOpenDoc(null)}
         />
       )}
