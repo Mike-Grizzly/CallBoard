@@ -63,9 +63,10 @@ export function TrashDrawer({ productionId, initialTrashCount }: Props) {
     setLoaded(true);
   }, [productionId]);
 
-  useEffect(() => {
-    if (open && !loaded) reload();
-  }, [open, loaded, reload]);
+  function openDrawer() {
+    setOpen(true);
+    if (!loaded) reload();
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -107,7 +108,7 @@ export function TrashDrawer({ productionId, initialTrashCount }: Props) {
         className="btn ghost btn-icon"
         title="Recently deleted"
         aria-label="Recently deleted"
-        onClick={() => setOpen(true)}
+        onClick={openDrawer}
         style={{ position: "relative" }}
       >
         <Trash2 className="ico" aria-hidden size={16} />

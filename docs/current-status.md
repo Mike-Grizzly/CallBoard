@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-05-19
 
-**Current milestone:** Steps 1-13 complete + Script Editor (Step 14). Latest: per-user PDF annotation editor ("Your Script" tab) with highlights, notes, cue markers, bookmarks, page thumbnails sidebar, zoom, inline annotation editing, download annotated PDF for printing.
+**Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15). Latest: cross-production calendar at `/calendar` with month/week views, production color filters, and a per-production color column reused by the sidebar rail.
 
 ## Feature status
 
@@ -198,6 +198,25 @@
 - **Stale script banner:** shown when the default script is replaced; dismissible
 - **DB:** `script_annotations` table with `annotations`, `bookmarks`, `pageOverrides`, `hasStalePages` JSONB/boolean columns; `documents.isDefaultScript` + `documents.scriptVersion` fields; "Set as default script" action in document row menu
 - **Known scaffold:** `pageOverrides` data model exists (stored/loaded) but no UI to set overrides yet
+
+### Step 15: Personal Calendar — IMPLEMENTED
+
+- Top-level `/calendar` route — restyled to match `design-reference/jsx/tab-calendar.jsx` 1:1
+- Two-column layout: 248px sidebar (mini-month + production filter + upcoming) + main canvas
+- Four views: **month**, **week**, **day**, **agenda** — swappable via segmented `.seg` control; client-side switching (no page reloads)
+- Week + day views render an hourly grid (8 AM–11 PM) with events absolutely positioned by `(callTime, durMin)`; live "now" line in `--accent`
+- Month view: 6×7 grid with `.month-chip` rows; up to 4 per cell, "+N more" jumps to day view
+- Agenda view: 21-day window grouped by date, display-font day numbers, "Today" pill
+- Event drawer slides in from the right with type chip, display-font title, production link, when/where, Edit + Open schedule actions
+- Each event chip/block uses its production's color via `--evt-color` CSS variable, mixed into background + border via `color-mix`
+- Production filter (sidebar) toggles which shows are included; admins/producers see all org productions, members see only their own
+- Mini-month picker shows event pips and respects today / cursor highlights
+- Data window: `-45d / +120d` from page load — generous enough to cover typical month/week/day/agenda navigation without refetch
+- New `productions.color` column (nullable text storing a palette token); deterministic hash fallback via `fallbackColorTokenForId`; legacy `var(--c-...)` strings normalized at read time
+- Color picker swatches on the new-production form; same color reused in the sidebar rail's production dot and the productions list card
+- New query: `getCallsForUserInRange({ userId, organizationId, startDate, endDate, manageAll })` in `features/calls/queries.ts`
+- All calendar styles live in `app/globals.css` under `.cal-*`, `.week-*`, `.month-*`, `.day-*`, `.agenda-*`, `.mini-*`, plus utility helpers `.seg`, `.row`, `.gap-sm`, `.mono`, `.truncate`, `.anim-in`
+- **DB migration** was applied directly via Supabase MCP (`add_production_color`) — no `pnpm db:push` needed
 
 ## Scaffolded only (not implemented)
 

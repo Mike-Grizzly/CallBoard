@@ -353,3 +353,16 @@ Record of durable project decisions. Add new entries at the bottom with date and
 - Anon-key REST clients can no longer read or write any public table directly. All access goes through the Next.js server.
 - If a future change moves data access from Drizzle to the Supabase JS client (anon key), policies will need to be written before that change ships.
 - `calls` is the only table with actual policies; that remains a one-off until we revisit defense-in-depth.
+
+---
+
+## 2026-05-19 — RLS enabled on 8 tables added since the 2026-05-11 pass
+
+**Decision:** Turn on Row Level Security for the 8 tables that were created (via `drizzle-kit push`) after the 2026-05-11 RLS pass and never had it enabled: `document_folders`, `document_comments`, `notifications`, `custom_set_pieces`, `beat_arrows`, `mentions`, `user_pins`, `script_annotations`. No policies written. Migration `enable_rls_on_unprotected_tables` applied via Supabase MCP.
+
+**Reason:** Same rationale as the 2026-05-11 entry — `drizzle-kit push` does not manage RLS, so any table added after that pass shipped with RLS off and was fully exposed to the anon/authenticated PostgREST roles. The Supabase advisory flagged this as `rls_disabled` (critical). The app's Drizzle layer connects through the Postgres pooler role that bypasses RLS, and a grep confirmed no `supabase.from("<table>")` client access exists (only `supabase.storage`), so RLS-on-no-policies closes the anon REST path without affecting the app. This brings all 25 public tables in line with the convention.
+
+**Impact:**
+- The `rls_disabled` critical advisory clears; the 8 tables now show only the benign INFO-level `rls_enabled_no_policy`, identical to the other 23.
+- Same future caveat: if data access ever moves to the Supabase JS client (anon key), policies must be written first.
+- Unrelated: the security advisor still reports a WARN for `auth_leaked_password_protection` (HaveIBeenPwned check disabled in Auth settings) — not addressed here.

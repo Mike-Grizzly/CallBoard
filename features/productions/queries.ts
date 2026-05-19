@@ -35,6 +35,7 @@ export async function getUserProductions(userId: string) {
       title: productions.title,
       slug: productions.slug,
       status: productions.status,
+      color: productions.color,
       openingDate: productions.openingDate,
       closingDate: productions.closingDate,
       role: productionMemberships.role,

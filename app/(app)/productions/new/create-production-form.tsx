@@ -1,18 +1,20 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import {
   createProduction,
   type CreateProductionResult,
 } from "@/features/productions/actions";
 import { Button } from "@/components/ui/button";
+import { PRODUCTION_COLOR_PALETTE } from "@/features/productions/constants";
 
 export function CreateProductionForm() {
   const [state, formAction, pending] = useActionState<
     CreateProductionResult | undefined,
     FormData
   >(createProduction, undefined);
+  const [color, setColor] = useState<string>(PRODUCTION_COLOR_PALETTE[0].token);
 
   return (
     <form
@@ -56,6 +58,35 @@ export function CreateProductionForm() {
           <option value="active">Active</option>
           <option value="archived">Archived</option>
         </select>
+      </div>
+
+      <div className="mb-4">
+        <label className="mb-1.5 block text-sm font-medium">Color</label>
+        <input type="hidden" name="color" value={color} />
+        <div className="flex flex-wrap gap-2">
+          {PRODUCTION_COLOR_PALETTE.map((c) => {
+            const selected = c.token === color;
+            return (
+              <button
+                key={c.token}
+                type="button"
+                aria-label={c.label}
+                aria-pressed={selected}
+                onClick={() => setColor(c.token)}
+                className={`h-7 w-7 rounded-full transition-shadow focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)] ${
+                  selected
+                    ? "ring-2 ring-offset-2 ring-[color:var(--ring)] ring-offset-[color:var(--card)]"
+                    : ""
+                }`}
+                style={{ background: c.cssVar }}
+              />
+            );
+          })}
+        </div>
+        <p className="mt-1.5 text-xs text-[color:var(--muted-foreground)]">
+          Used as this production&apos;s dot in the sidebar and on the
+          calendar.
+        </p>
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3">

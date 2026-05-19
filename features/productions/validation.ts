@@ -1,3 +1,5 @@
+import { isValidProductionColor } from "./constants";
+
 export type ProductionFormErrors = {
   title?: string;
   opening_date?: string;
@@ -8,6 +10,7 @@ export type ProductionFormData = {
   title: string;
   slug: string;
   status: string;
+  color: string | null;
   openingDate: string | null;
   closingDate: string | null;
 };
@@ -20,6 +23,8 @@ export function validateProductionForm(formData: FormData): {
   const openingDate = (formData.get("opening_date") as string) || null;
   const closingDate = (formData.get("closing_date") as string) || null;
   const status = (formData.get("status") as string) || "draft";
+  const rawColor = (formData.get("color") as string) || null;
+  const color = isValidProductionColor(rawColor) ? rawColor : null;
 
   const errors: ProductionFormErrors = {};
 
@@ -47,6 +52,7 @@ export function validateProductionForm(formData: FormData): {
       title,
       slug,
       status,
+      color,
       openingDate,
       closingDate,
     },

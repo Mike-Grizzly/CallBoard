@@ -42,6 +42,7 @@ export async function createProduction(
       title: data!.title,
       slug: data!.slug,
       status: data!.status,
+      color: data!.color,
       openingDate: data!.openingDate,
       closingDate: data!.closingDate,
     })

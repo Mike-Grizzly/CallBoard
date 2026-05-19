@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Lock, Theater } from "lucide-react";
 import type { Production } from "@/db/schema";
+import { resolveProductionColor } from "@/features/productions/constants";
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -62,6 +63,11 @@ export function ProductionList({
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ background: resolveProductionColor(production) }}
+                        aria-hidden
+                      />
                       <h2 className="truncate text-sm font-semibold">
                         {production.title}
                       </h2>
@@ -87,6 +93,11 @@ export function ProductionList({
             <CardContent className="flex items-center justify-between p-4">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ background: resolveProductionColor(production) }}
+                    aria-hidden
+                  />
                   <h2 className="truncate text-sm font-semibold">
                     {production.title}
                   </h2>

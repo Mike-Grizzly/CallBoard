@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { calls } from "@/db/schema";
-import { and, eq, gte, asc, inArray } from "drizzle-orm";
+import { calls, productions, productionMemberships } from "@/db/schema";
+import { and, eq, gte, lte, asc, inArray } from "drizzle-orm";
 
 function nowParts() {
   const now = new Date();
@@ -76,6 +76,84 @@ export async function getCallById(callId: string) {
 }
 
 export type ScheduledCall = NonNullable<Awaited<ReturnType<typeof getNextCall>>>;
+
+/**
+ * All calls for productions the user is a member of, within a date window.
+ * Used by the personal calendar at /calendar.
+ *
+ * `manageAll` short-circuits the membership filter for admins/producers,
+ * who can see every production in the org regardless of membership.
+ */
+export async function getCallsForUserInRange(args: {
+  userId: string;
+  organizationId: string;
+  startDate: string;
+  endDate: string;
+  manageAll: boolean;
+}) {
+  const { userId, organizationId, startDate, endDate, manageAll } = args;
+
+  const baseWhere = and(
+    eq(productions.organizationId, organizationId),
+    gte(calls.callDate, startDate),
+    lte(calls.callDate, endDate),
+    eq(calls.status, "scheduled"),
+  );
+
+  if (manageAll) {
+    return db
+      .select({
+        id: calls.id,
+        productionId: calls.productionId,
+        callDate: calls.callDate,
+        callTime: calls.callTime,
+        endTime: calls.endTime,
+        location: calls.location,
+        focus: calls.focus,
+        scenes: calls.scenes,
+        castCalled: calls.castCalled,
+        schedule: calls.schedule,
+        notes: calls.notes,
+        productionTitle: productions.title,
+        productionSlug: productions.slug,
+        productionColor: productions.color,
+      })
+      .from(calls)
+      .innerJoin(productions, eq(calls.productionId, productions.id))
+      .where(baseWhere)
+      .orderBy(asc(calls.callDate), asc(calls.callTime));
+  }
+
+  return db
+    .selectDistinct({
+      id: calls.id,
+      productionId: calls.productionId,
+      callDate: calls.callDate,
+      callTime: calls.callTime,
+      endTime: calls.endTime,
+      location: calls.location,
+      focus: calls.focus,
+      scenes: calls.scenes,
+      castCalled: calls.castCalled,
+      schedule: calls.schedule,
+      notes: calls.notes,
+      productionTitle: productions.title,
+      productionSlug: productions.slug,
+      productionColor: productions.color,
+    })
+    .from(calls)
+    .innerJoin(productions, eq(calls.productionId, productions.id))
+    .innerJoin(
+      productionMemberships,
+      eq(productionMemberships.productionId, productions.id),
+    )
+    .where(and(baseWhere, eq(productionMemberships.userId, userId)))
+    .orderBy(asc(calls.callDate), asc(calls.callTime));
+}
+
+export type UserCalendarCall = Awaited<
+  ReturnType<typeof getCallsForUserInRange>
+>[number];
 
 export async function getNextCallsForProductions(
   productionIds: string[],

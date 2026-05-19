@@ -1,29 +1,12 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { getUserProductions } from "@/features/productions/queries";
+import { resolveProductionColor } from "@/features/productions/constants";
 import { can } from "@/lib/permissions";
 import { Icon } from "@/components/ui/icon";
 import { NAV_ITEMS } from "./nav-items";
 import { RailLink } from "./rail-link";
 import { LogoutButton } from "./logout-button";
-
-/**
- * Color the per-production dot in the rail. Stable per-id so reorders
- * don't shuffle the palette.
- */
-const PROD_DOT_PALETTE = [
-  "var(--c-clay)",
-  "var(--c-sage)",
-  "var(--c-dusk)",
-  "var(--c-amber)",
-  "var(--c-plum)",
-  "var(--c-sand)",
-];
-function dotForId(id: string): string {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return PROD_DOT_PALETTE[h % PROD_DOT_PALETTE.length];
-}
 
 function initialsFor(firstName: string, lastName: string, email: string) {
   const a = (firstName || "").trim()[0];
@@ -116,7 +99,7 @@ export async function Rail() {
               >
                 <span
                   className="prod-dot"
-                  style={{ background: dotForId(p.id) }}
+                  style={{ background: resolveProductionColor(p) }}
                   aria-hidden
                 />
                 <span className="truncate">{p.title}</span>
