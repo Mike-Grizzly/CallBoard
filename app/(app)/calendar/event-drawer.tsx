@@ -7,9 +7,11 @@ import { type CalEvent, fmtTime, parseYmd } from "./utils";
 
 export function EventDrawer({
   event,
+  canEdit,
   onClose,
 }: {
   event: CalEvent;
+  canEdit: boolean;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -20,7 +22,7 @@ export function EventDrawer({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const endLabel = (() => {
+  const whenLabel = (() => {
     if (event.allDay) return "All day";
     const [h, m] = event.time.split(":").map(Number);
     const total = h * 60 + m + event.durMin;
@@ -78,7 +80,7 @@ export function EventDrawer({
               day: "numeric",
             })}
             <br />
-            {endLabel}
+            {whenLabel}
           </dd>
 
           {event.loc && (
@@ -87,16 +89,46 @@ export function EventDrawer({
               <dd>{event.loc}</dd>
             </>
           )}
+
+          {event.scenes && (
+            <>
+              <dt>Scenes</dt>
+              <dd>{event.scenes}</dd>
+            </>
+          )}
+
+          {event.castCalled && (
+            <>
+              <dt>Called</dt>
+              <dd>{event.castCalled}</dd>
+            </>
+          )}
+
+          {event.schedule && (
+            <>
+              <dt>Schedule</dt>
+              <dd className="cal-drawer-pre">{event.schedule}</dd>
+            </>
+          )}
+
+          {event.notes && (
+            <>
+              <dt>Notes</dt>
+              <dd className="cal-drawer-pre">{event.notes}</dd>
+            </>
+          )}
         </dl>
 
         <div className="cal-drawer-actions">
-          <Link
-            href={`/productions/${event.productionSlug}/calls/${event.id}/edit`}
-            className="btn primary"
-          >
-            <Icon name="PenLine" className="ico" />
-            Edit
-          </Link>
+          {canEdit && (
+            <Link
+              href={`/productions/${event.productionSlug}/calls/${event.id}/edit`}
+              className="btn primary"
+            >
+              <Icon name="PenLine" className="ico" />
+              Edit
+            </Link>
+          )}
           <Link
             href={`/productions/${event.productionSlug}/calls`}
             className="btn"

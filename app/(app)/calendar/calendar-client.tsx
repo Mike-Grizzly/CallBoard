@@ -32,11 +32,13 @@ export function CalendarClient({
   productions,
   initialView,
   initialDate,
+  canEdit,
 }: {
   events: CalEvent[];
   productions: Production[];
   initialView: string | undefined;
   initialDate: string | undefined;
+  canEdit: boolean;
 }) {
   const today = useMemo(() => {
     const d = new Date();
@@ -186,7 +188,11 @@ export function CalendarClient({
         </main>
 
         {selected && (
-          <EventDrawer event={selected} onClose={() => setSelected(null)} />
+          <EventDrawer
+            event={selected}
+            canEdit={canEdit}
+            onClose={() => setSelected(null)}
+          />
         )}
       </div>
     </div>

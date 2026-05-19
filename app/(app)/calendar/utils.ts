@@ -17,6 +17,14 @@ export type CalEvent = {
   durMin: number;
   endTime: string | null;
   allDay: boolean;
+  /** Free text — specific scenes / numbers. */
+  scenes: string | null;
+  /** Free text — "Full Cast", "Principals", or comma-separated names. */
+  castCalled: string | null;
+  /** Free text — minute-by-minute schedule. */
+  schedule: string | null;
+  /** Free text — extra notes from the SM. */
+  notes: string | null;
 };
 
 export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -125,5 +133,9 @@ export function callToEvent(
     durMin,
     endTime: call.endTime,
     allDay,
+    scenes: call.scenes,
+    castCalled: call.castCalled,
+    schedule: call.schedule,
+    notes: call.notes,
   };
 }

@@ -2778,6 +2778,11 @@ div.mention:hover {
   border-bottom: 1px dashed var(--border);
   color: var(--ink-2);
 }
+.cal-drawer-meta dd.cal-drawer-pre {
+  white-space: pre-wrap;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
 .cal-drawer-actions {
   margin-top: auto;
   padding-top: 12px;

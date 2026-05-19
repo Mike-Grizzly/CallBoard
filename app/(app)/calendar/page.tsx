@@ -21,6 +21,9 @@ export default async function CalendarPage({
   const user = await requireCurrentUser();
   const org = await getOrCreateDefaultOrganization();
   const manageAll = can(user.role, "productions:manage");
+  // Same gate as the per-production call edit page — admin, producer,
+  // director, choreographer, stage_manager.
+  const canEdit = can(user.role, "reports:create");
 
   const userProductions = await getUserProductions(user.id);
   if (userProductions.length === 0) {
@@ -63,6 +66,7 @@ export default async function CalendarPage({
       productions={productions}
       initialView={params.view}
       initialDate={params.date}
+      canEdit={canEdit}
     />
   );
 }
