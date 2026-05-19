@@ -22,6 +22,7 @@ const I = {
   ChevRight: (p) => <Icon {...p}><path d="M9 6l6 6-6 6"/></Icon>,
   ChevLeft: (p) => <Icon {...p}><path d="M15 18l-6-6 6-6"/></Icon>,
   Dots: (p) => <Icon {...p}><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></Icon>,
+  MoreV: (p) => <Icon {...p}><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></Icon>,
   // Tab icons
   Layout: (p) => <Icon {...p}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></Icon>,
   Clipboard: (p) => <Icon {...p}><rect x="6" y="4" width="12" height="17" rx="2"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></Icon>,
