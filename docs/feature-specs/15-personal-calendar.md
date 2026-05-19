@@ -1,6 +1,6 @@
 # Feature Spec: Personal Calendar (Step 15)
 
-**Status:** IMPLEMENTED (2026-05-19)
+**Status:** IMPLEMENTED (2026-05-19) · Restyled to match the design-reference `tab-calendar.jsx` (2026-05-19)
 
 ## Purpose
 
@@ -57,49 +57,58 @@ Defined in `features/productions/constants.ts`:
 `resolveProductionColor({ id, color })` returns the chosen color if set
 and valid, otherwise the deterministic fallback.
 
+## Layout
+
+Two-column grid (`.cal`): 248px sidebar + flexible main area. Below 980px
+the sidebar hides and the day view collapses to single column.
+
+**Sidebar** (`.cal-side`)
+- Mini-month picker (`.mini-month`) — clickable day cells, prev/next month
+  buttons that move the cursor; pip dot on dates with events
+- Productions filter — checkbox-style swatches; off = transparent fill with
+  colored outline, on = fully filled
+- Upcoming — 5 next events with spine in production color, weekday/time/title
+
+**Main** (`.cal-main`)
+- Toolbar: prev/next/today + display-font period label on the left,
+  segmented view switcher (`.seg`) on the right
+- Canvas (`.cal-canvas`) — rounded `--radius-l` card with `--shadow-1`,
+  hosts the active view, full-height with internal scrolling
+
 ## Views
 
-All four views share the same design vocabulary: warm `--bg-elev` card
-surfaces with `--shadow-1`, `--border` outlines, Newsreader display font
-for headings, soft-color chips that pick up the production's palette
-token via `data-c="clay|sage|dusk|amber|plum|sand"`.
+All views render inside `.cal-canvas`. Live "now" indicator computes from
+the actual current time at render — no client polling required.
 
-### Month grid (`.cal-month`)
+### Month (`.month`)
 
-- 7-column grid covering full weeks from the first-of-month back to Sunday
-  and the last-of-month forward to Saturday
-- Cells outside the current month use `--bg-sunken`; past cells use a
-  blend of elev/sunken (`.cal-day-cell--past`)
-- Today: `--accent` filled circle around day number
-- Call chips (`.cal-chip[data-c=...]`): soft palette background with a 3px
-  left border in the production color, time + production title + focus;
-  live calls get an `--accent` outline and pulse dot
+6×7 grid, full weeks. Today gets an `--accent` filled circle on the day
+number. Cells outside the current month muted via `[data-mute="1"]`.
+Up to 4 `.month-chip` entries per cell; overflow becomes "+N more" that
+jumps to day view. Each chip = colored dot + tabular-numeric time + title.
 
-### Week view (`.cal-week`)
+### Week (`.week`)
 
-- 7-column day grid (current week, Sun–Sat) with sunken header strip
-- Each day is a vertical stack of `.cal-card` items (border-left in
-  production color, hover lift)
-- Empty days show "No calls" italic placeholder
-- Past days dim via `.cal-week-col--past`
+60px hour gutter + 7 columns; hour rows at `--hour-px` (44px). Events
+positioned absolutely by `(callTime, durMin)`. Today column tinted with
+30% of `--accent-soft`. Live "now" line in `--accent` with dot + pill.
+Each event uses `--evt-color` (production color) mixed into background
+via `color-mix(... 14%, --bg-elev)` and into border at 35%. Short events
+(≤45 min) collapse padding.
 
-### Day view (`.cal-day`)
+### Day (`.day`)
 
-- Two-column layout (`280px` rail + flex body) above 900px; stacks below
-- Left rail: Newsreader-styled date, weekday eyebrow, count summary
-- Right body: rows of `96px` time gutter + call detail, divided by
-  `--border`; live calls show an inline accent "Live now" line
-- Empty state: "Nothing on the schedule for this day."
+Two-column: timeline track on the left (same hour grid as week), 280px
+sidebar on the right. Sidebar shows huge display-font date (weekday
+eyebrow, big day number, italic month), all-day events, then a list of
+that day's calls with spine, time, title, location.
 
-### Agenda view (`.cal-agenda`)
+### Agenda (`.agenda`)
 
-- Card surface with `120px` date column + rows
-- Each date header shows day-of-month in Newsreader display font + short
-  weekday eyebrow; today date in `--accent`
-- Each row: time gutter + production dot/title + focus + optional Live
-  pill on the right
-- Default window: today + 30 days (configurable via `AGENDA_LOOKAHEAD_DAYS`)
-- Empty state: "No calls in this window."
+3-week window starting at the cursor's week. Each day with events gets a
+header row (display-font day number, weekday eyebrow, italic month, "Today"
+accent pill) and a list of rows. Each row: 4px spine + monospace time +
+title + right-aligned location.
 
 ## Production filter
 
@@ -132,14 +141,17 @@ status is computed at render time.
 | `features/productions/actions.ts` | Writes color on create |
 | `features/productions/queries.ts` | `getUserProductions` returns color |
 | `features/calls/queries.ts` | `getCallsForUserInRange` + `UserCalendarCall` type |
-| `app/(app)/(default)/calendar/page.tsx` | Server component, toolbar + 4-view switcher |
-| `app/(app)/(default)/calendar/month-grid.tsx` | Month grid + chip |
-| `app/(app)/(default)/calendar/week-view.tsx` | Week grid + card |
-| `app/(app)/(default)/calendar/day-view.tsx` | Day rail + timeline |
-| `app/(app)/(default)/calendar/agenda-view.tsx` | Flat date-grouped list |
-| `app/(app)/(default)/calendar/production-filter.tsx` | URL-driven filter chips |
-| `app/(app)/(default)/calendar/utils.ts` | Date helpers + status |
-| `app/globals.css` | `.cal-*` styles section (month, week, day, agenda, chip, card, filter, toolbar) |
+| `app/(app)/calendar/page.tsx` | Server: fetches user, productions, calls window (-45d / +120d) |
+| `app/(app)/calendar/calendar-client.tsx` | Client wrapper, toolbar + 4-view switcher + drawer state |
+| `app/(app)/calendar/calendar-sidebar.tsx` | Mini-month + production filter + upcoming list |
+| `app/(app)/calendar/mini-month.tsx` | Compact month picker with event pips |
+| `app/(app)/calendar/week-view.tsx` | Hourly grid with absolutely-positioned events + now-line |
+| `app/(app)/calendar/month-view.tsx` | 6×7 grid with chips |
+| `app/(app)/calendar/day-view.tsx` | Hour timeline + side list |
+| `app/(app)/calendar/agenda-view.tsx` | 3-week grouped list |
+| `app/(app)/calendar/event-drawer.tsx` | Right-side details drawer |
+| `app/(app)/calendar/utils.ts` | Date helpers + `callToEvent` adapter |
+| `app/globals.css` | `.cal-*`, `.week-*`, `.month-*`, `.day-*`, `.agenda-*`, `.mini-*`, `.seg`, `.row`, `.mono` |
 | `app/(app)/productions/new/create-production-form.tsx` | Swatch picker on create |
 | `app/(app)/productions/production-list.tsx` | Color dot before title |
 | `components/app-shell/rail.tsx` | Sidebar dot now reads `production.color` |
@@ -151,10 +163,14 @@ status is computed at render time.
 - **No edit UI for production color.** Color is set at creation time only.
   Existing productions get the deterministic-hash fallback until someone
   adds an "Edit production" page (none exists in the codebase yet).
-- **No hour grid in week view.** Calls only store `HH:MM` strings, not full
-  timestamps, so the week view shows time-ordered cards per day rather
-  than positioning by hour.
+- **Data window is fixed at -45 / +120 days from page load.** Far-future
+  navigation will show empty results until the page is refreshed.
+- **No event types yet.** Demo distinguishes rehearsal/tech/fitting/etc;
+  our schema only has calls. Drawer always shows "Rehearsal" as the type
+  chip. To enable: add a `kind` column to `calls` + filter in the sidebar.
+- **No "New event" CTA from the calendar.** Demo has it; we deferred
+  because the picker needs production-of-context. Stage managers can add
+  calls from each production's call schedule page.
+- **No conflict detection** (e.g., actor double-booked across productions).
 - **No real-time refresh** — same caveat as the per-production calendar.
-- **Live status indicator is render-time only.** A live call won't flip
-  to "past" on screen without a reload.
 - **No iCal export / external feed.**
