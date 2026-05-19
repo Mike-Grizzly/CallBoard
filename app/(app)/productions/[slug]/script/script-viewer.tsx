@@ -76,7 +76,9 @@ export function ScriptViewer({
   const textLayerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const workspaceRef = useRef<HTMLDivElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null);
   // Refs hold the latest values so the debounced save always reads current state
   const latestAnnotationsRef = useRef<Annotation[]>(initialAnnotations);
   const latestBookmarksRef = useRef<Bookmark[]>(initialBookmarks);
@@ -113,6 +115,7 @@ export function ScriptViewer({
   const [showAddBookmark, setShowAddBookmark] = useState(false);
   const [newBookmarkTitle, setNewBookmarkTitle] = useState("");
 
+  const [panning, setPanning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<{ current: number; total: number } | null>(null);
@@ -246,6 +249,41 @@ export function ScriptViewer({
       });
     }, 1500);
   }, [script.id, productionId, pageOverrides]);
+
+  // ── Pan (drag to scroll) ───────────────────────────────────────────────────
+
+  // Global move/up listeners so panning survives the cursor leaving the workspace
+  useEffect(() => {
+    if (!panning) return;
+    function onMove(e: MouseEvent) {
+      const start = panStartRef.current;
+      const ws = workspaceRef.current;
+      if (!start || !ws) return;
+      ws.scrollLeft = start.scrollLeft - (e.clientX - start.x);
+      ws.scrollTop = start.scrollTop - (e.clientY - start.y);
+    }
+    function onUp() {
+      panStartRef.current = null;
+      setPanning(false);
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    return () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+  }, [panning]);
+
+  function handleWorkspaceMouseDown(e: React.MouseEvent<HTMLDivElement>) {
+    const isMiddle = e.button === 1;
+    const isPrimary = e.button === 0 && activeTool === "pointer";
+    if (!isMiddle && !isPrimary) return;
+    const ws = workspaceRef.current;
+    if (!ws) return;
+    panStartRef.current = { x: e.clientX, y: e.clientY, scrollLeft: ws.scrollLeft, scrollTop: ws.scrollTop };
+    setPanning(true);
+    e.preventDefault();
+  }
 
   // ── Coordinate helpers ─────────────────────────────────────────────────────
 
@@ -512,7 +550,7 @@ export function ScriptViewer({
 
   const svgCursor =
     activeTool === "pointer"
-      ? "default"
+      ? panning ? "grabbing" : "grab"
       : activeTool === "highlight-text"
         ? "text"
         : "crosshair";
@@ -898,11 +936,14 @@ export function ScriptViewer({
 
         {/* PDF + annotation layer */}
         <div
+          ref={workspaceRef}
+          onMouseDown={handleWorkspaceMouseDown}
           style={{
             background: "var(--bg-sunken)",
             borderRadius: 8,
             padding: "28px 32px",
             overflow: "auto",
+            cursor: activeTool === "pointer" ? (panning ? "grabbing" : "grab") : "default",
           }}
         >
         <div
