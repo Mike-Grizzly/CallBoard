@@ -24,6 +24,9 @@ import {
   Check,
   Download,
   LayoutList,
+  ZoomIn,
+  ZoomOut,
+  Pencil,
 } from "lucide-react";
 import { saveAnnotations, dismissStaleBanner } from "@/features/scripts/actions";
 import {
@@ -41,6 +44,10 @@ import type { DefaultScript } from "@/features/scripts/queries";
 // Module-level cache so re-renders don't re-decode the same page
 const pdfBitmapCache = new Map<string, ImageBitmap>();
 const pdfThumbnailCache = new Map<string, string>(); // "url::page" -> jpeg dataURL
+
+const ZOOM_STEPS = [0.75, 1.0, 1.25, 1.5, 2.0] as const;
+const ZOOM_LABELS = ["75%", "100%", "125%", "150%", "200%"] as const;
+const BASE_RENDER_SCALE = 1.8;
 
 interface Props {
   script: DefaultScript;
@@ -85,6 +92,9 @@ export function ScriptViewer({
   const [hasStalePages, setHasStalePages] = useState(initialHasStalePages);
 
   const [showThumbnails, setShowThumbnails] = useState(false);
+  const [zoomIndex, setZoomIndex] = useState(1); // index into ZOOM_STEPS; 1 = 100%
+
+  const renderScale = BASE_RENDER_SCALE * ZOOM_STEPS[zoomIndex];
 
   const [activeTool, setActiveTool] = useState<Tool>("pointer");
   const [activeColor, setActiveColor] = useState(DEFAULT_ANNOTATION_COLOR);
@@ -113,7 +123,7 @@ export function ScriptViewer({
   useEffect(() => {
     if (!pdfUrl) return;
     let cancelled = false;
-    const cacheKey = `${pdfUrl}::${currentPage}`;
+    const cacheKey = `${pdfUrl}::${currentPage}::${renderScale}`;
 
     async function render() {
       const mainCanvas = pdfCanvasRef.current;
@@ -144,7 +154,7 @@ export function ScriptViewer({
       const page = await pdf.getPage(currentPage);
       if (cancelled) return;
 
-      const SCALE = 1.8;
+      const SCALE = renderScale;
       const viewport = page.getViewport({ scale: SCALE });
 
       const offscreen = document.createElement("canvas");
@@ -216,7 +226,7 @@ export function ScriptViewer({
     return () => {
       cancelled = true;
     };
-  }, [pdfUrl, currentPage]);
+  }, [pdfUrl, currentPage, renderScale]);
 
   // ── Auto-save ──────────────────────────────────────────────────────────────
 
@@ -266,6 +276,15 @@ export function ScriptViewer({
     latestAnnotationsRef.current = next;
     setAnnotations(next);
     setSelectedId(null);
+    triggerSave();
+  }
+
+  function updateAnnotation(id: string, changes: Partial<Annotation>) {
+    const next = latestAnnotationsRef.current.map((a) =>
+      a.id === id ? ({ ...a, ...changes } as Annotation) : a,
+    );
+    latestAnnotationsRef.current = next;
+    setAnnotations(next);
     triggerSave();
   }
 
@@ -748,6 +767,31 @@ export function ScriptViewer({
               <ChevronRight size={16} />
             </button>
           </div>
+          {/* Zoom controls */}
+          <div style={{ display: "flex", alignItems: "center", gap: 0, border: "1px solid var(--border)", borderRadius: 5, overflow: "hidden" }}>
+            <button
+              className="btn ghost btn-icon"
+              onClick={() => setZoomIndex((i) => Math.max(0, i - 1))}
+              disabled={zoomIndex === 0}
+              title="Zoom out"
+              style={{ width: 28, height: 28, borderRadius: 0, borderRight: "1px solid var(--border)" }}
+            >
+              <ZoomOut size={13} />
+            </button>
+            <span style={{ fontSize: 12, color: "var(--ink-3)", minWidth: 38, textAlign: "center", padding: "0 4px" }}>
+              {ZOOM_LABELS[zoomIndex]}
+            </span>
+            <button
+              className="btn ghost btn-icon"
+              onClick={() => setZoomIndex((i) => Math.min(ZOOM_STEPS.length - 1, i + 1))}
+              disabled={zoomIndex === ZOOM_STEPS.length - 1}
+              title="Zoom in"
+              style={{ width: 28, height: 28, borderRadius: 0, borderLeft: "1px solid var(--border)" }}
+            >
+              <ZoomIn size={13} />
+            </button>
+          </div>
+
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <button
               className="btn ghost"
@@ -1212,6 +1256,7 @@ export function ScriptViewer({
           selectedId={selectedId}
           onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
           onDelete={deleteAnnotation}
+          onEdit={updateAnnotation}
         />
       </div>
     </div>
@@ -1735,19 +1780,24 @@ function AnnotationsPanel({
   selectedId,
   onSelect,
   onDelete,
+  onEdit,
 }: {
   annotations: Annotation[];
   currentPage: number;
   selectedId: string | null;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onEdit: (id: string, changes: Partial<Annotation>) => void;
 }) {
-  const sorted = [...annotations].sort((a, b) =>
-    a.rect.y !== b.rect.y ? a.rect.y - b.rect.y : a.rect.x - b.rect.x,
-  );
+  const byY = (a: Annotation, b: Annotation) =>
+    a.rect.y !== b.rect.y ? a.rect.y - b.rect.y : a.rect.x - b.rect.x;
+
+  const cues = annotations.filter((a) => a.type === "cue").sort(byY);
+  const others = annotations.filter((a) => a.type !== "cue").sort(byY);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -1762,36 +1812,67 @@ function AnnotationsPanel({
           Page {currentPage}
         </span>
         {annotations.length > 0 && (
-          <span
-            style={{
-              fontSize: 10.5,
-              fontWeight: 600,
-              padding: "1px 6px",
-              borderRadius: 999,
-              background: "var(--bg-sunken)",
-              color: "var(--ink-3)",
-            }}
-          >
+          <span style={{ fontSize: 10.5, fontWeight: 600, padding: "1px 6px", borderRadius: 999, background: "var(--bg-sunken)", color: "var(--ink-3)" }}>
             {annotations.length}
           </span>
         )}
       </div>
 
-      {sorted.length === 0 ? (
+      {annotations.length === 0 && (
         <p style={{ fontSize: 12, color: "var(--ink-4)", padding: "8px 2px" }}>
           No annotations on this page.
         </p>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {sorted.map((ann) => (
-            <PanelAnnotationItem
-              key={ann.id}
-              annotation={ann}
-              selected={selectedId === ann.id}
-              onSelect={() => onSelect(ann.id)}
-              onDelete={() => onDelete(ann.id)}
-            />
-          ))}
+      )}
+
+      {/* Cues section */}
+      {cues.length > 0 && (
+        <div style={{ marginBottom: others.length > 0 ? 12 : 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 2px 6px", marginBottom: 4 }}>
+            <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: CUE_STROKE }}>
+              Cues
+            </span>
+            <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 999, background: `color-mix(in oklch, ${CUE_STROKE} 12%, transparent)`, color: CUE_STROKE }}>
+              {cues.length}
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {cues.map((ann) => (
+              <PanelAnnotationItem
+                key={ann.id}
+                annotation={ann}
+                selected={selectedId === ann.id}
+                onSelect={() => onSelect(ann.id)}
+                onDelete={() => onDelete(ann.id)}
+                onEdit={(changes) => onEdit(ann.id, changes)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Notes / highlights section */}
+      {others.length > 0 && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 2px 6px", marginBottom: 4 }}>
+            <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-4)" }}>
+              Notes
+            </span>
+            <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 999, background: "var(--bg-sunken)", color: "var(--ink-3)" }}>
+              {others.length}
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {others.map((ann) => (
+              <PanelAnnotationItem
+                key={ann.id}
+                annotation={ann}
+                selected={selectedId === ann.id}
+                onSelect={() => onSelect(ann.id)}
+                onDelete={() => onDelete(ann.id)}
+                onEdit={(changes) => onEdit(ann.id, changes)}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -1803,18 +1884,56 @@ function PanelAnnotationItem({
   selected,
   onSelect,
   onDelete,
+  onEdit,
 }: {
   annotation: Annotation;
   selected: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  onEdit: (changes: Partial<Annotation>) => void;
 }) {
-  const accentColor =
-    annotation.type === "cue" ? CUE_STROKE : annotation.color;
+  const [editing, setEditing] = useState(false);
+  const [draftText, setDraftText] = useState("");
+  const [draftCueNum, setDraftCueNum] = useState("");
+  const [draftCueDesc, setDraftCueDesc] = useState("");
+
+  const canEdit = annotation.type === "note" || annotation.type === "cue";
+  const accentColor = annotation.type === "cue" ? CUE_STROKE : annotation.color;
+
+  function startEdit(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (annotation.type === "note") setDraftText(annotation.text);
+    if (annotation.type === "cue") {
+      setDraftCueNum(annotation.cueNumber);
+      setDraftCueDesc(annotation.cueDescription);
+    }
+    setEditing(true);
+  }
+
+  function confirmEdit() {
+    if (annotation.type === "note" && draftText.trim()) {
+      onEdit({ text: draftText.trim() } as Partial<Annotation>);
+    } else if (annotation.type === "cue" && draftCueNum.trim()) {
+      onEdit({ cueNumber: draftCueNum.trim(), cueDescription: draftCueDesc.trim() } as Partial<Annotation>);
+    }
+    setEditing(false);
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    fontSize: 12,
+    border: "1px solid var(--border)",
+    borderRadius: 4,
+    padding: "4px 6px",
+    background: "var(--bg-sunken)",
+    color: "var(--ink)",
+    outline: "none",
+    fontFamily: "inherit",
+  };
 
   return (
     <div
-      onClick={onSelect}
+      onClick={() => { if (!editing) onSelect(); }}
       style={{
         display: "flex",
         alignItems: "flex-start",
@@ -1823,109 +1942,111 @@ function PanelAnnotationItem({
         borderRadius: 6,
         borderLeft: `3px solid ${accentColor}`,
         background: selected ? "var(--bg-muted)" : "transparent",
-        cursor: "pointer",
+        cursor: editing ? "default" : "pointer",
         transition: "background .1s",
       }}
       onMouseEnter={(e) => {
-        if (!selected)
+        if (!selected && !editing)
           (e.currentTarget as HTMLDivElement).style.background = "var(--bg-muted)";
       }}
       onMouseLeave={(e) => {
-        if (!selected)
+        if (!selected && !editing)
           (e.currentTarget as HTMLDivElement).style.background = "transparent";
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
         {annotation.type === "highlight" && (
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: 2,
-                background: annotation.color,
-                flexShrink: 0,
-              }}
-            />
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: annotation.color, flexShrink: 0 }} />
             <span style={{ fontSize: 12, color: "var(--ink-3)" }}>Highlight</span>
           </div>
         )}
 
         {annotation.type === "note" && (
-          <>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", marginBottom: 2 }}>
-              Note
-            </div>
-            <div
-              style={{
-                fontSize: 12.5,
-                color: "var(--ink)",
-                lineHeight: 1.4,
-                overflow: "hidden",
-                display: "-webkit-box",
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: "vertical",
+          editing ? (
+            <textarea
+              autoFocus
+              value={draftText}
+              onChange={(e) => setDraftText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); confirmEdit(); }
+                if (e.key === "Escape") setEditing(false);
               }}
-            >
-              {annotation.text}
-            </div>
-          </>
+              onBlur={confirmEdit}
+              rows={3}
+              style={{ ...inputStyle, resize: "none" }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", marginBottom: 2 }}>Note</div>
+              <div style={{ fontSize: 12.5, color: "var(--ink)", lineHeight: 1.4, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
+                {annotation.text}
+              </div>
+            </>
+          )
         )}
 
         {annotation.type === "cue" && (
-          <>
-            <div style={{ fontSize: 12, fontWeight: 700, color: CUE_STROKE }}>
-              {annotation.cueNumber}
-            </div>
-            {annotation.cueDescription && (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "var(--ink-2)",
-                  marginTop: 1,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
+          editing ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }} onClick={(e) => e.stopPropagation()}>
+              <input
+                autoFocus
+                value={draftCueNum}
+                onChange={(e) => setDraftCueNum(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Escape") setEditing(false); }}
+                placeholder="Cue number"
+                style={inputStyle}
+              />
+              <input
+                value={draftCueDesc}
+                onChange={(e) => setDraftCueDesc(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") confirmEdit();
+                  if (e.key === "Escape") setEditing(false);
                 }}
-              >
-                {annotation.cueDescription}
-              </div>
-            )}
-          </>
+                onBlur={confirmEdit}
+                placeholder="Description"
+                style={inputStyle}
+              />
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: 12, fontWeight: 700, color: CUE_STROKE }}>{annotation.cueNumber}</div>
+              {annotation.cueDescription && (
+                <div style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {annotation.cueDescription}
+                </div>
+              )}
+            </>
+          )
         )}
       </div>
 
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        title="Delete"
-        style={{
-          flexShrink: 0,
-          width: 20,
-          height: 20,
-          display: "grid",
-          placeItems: "center",
-          border: "none",
-          background: "none",
-          cursor: "pointer",
-          color: "var(--ink-4)",
-          borderRadius: 3,
-          opacity: 0.6,
-          transition: "opacity .1s, color .1s",
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.opacity = "1";
-          (e.currentTarget as HTMLButtonElement).style.color = "var(--c-clay)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.opacity = "0.6";
-          (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-4)";
-        }}
-      >
-        <Trash2 size={12} />
-      </button>
+      {!editing && (
+        <div style={{ display: "flex", flexShrink: 0, gap: 2 }}>
+          {canEdit && (
+            <button
+              onClick={startEdit}
+              title="Edit"
+              style={{ width: 20, height: 20, display: "grid", placeItems: "center", border: "none", background: "none", cursor: "pointer", color: "var(--ink-4)", borderRadius: 3, opacity: 0.6, transition: "opacity .1s, color .1s" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; (e.currentTarget as HTMLButtonElement).style.color = "var(--accent)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.6"; (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-4)"; }}
+            >
+              <Pencil size={11} />
+            </button>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            title="Delete"
+            style={{ width: 20, height: 20, display: "grid", placeItems: "center", border: "none", background: "none", cursor: "pointer", color: "var(--ink-4)", borderRadius: 3, opacity: 0.6, transition: "opacity .1s, color .1s" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; (e.currentTarget as HTMLButtonElement).style.color = "var(--c-clay)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.6"; (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-4)"; }}
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,8 +1,8 @@
 # Current Status
 
-**Last updated:** 2026-05-15
+**Last updated:** 2026-05-19
 
-**Current milestone:** Steps 1-13 complete. Latest: @mention autocomplete in all rich-text editors (reports, dept notes, announcements, my notes), mention write path to DB, clickable mention cards on dashboard (mark-as-read on click, fade-not-remove UX, mark-all-read, mark-as-unread), unpin from dashboard pinned section, tab renamed to "Rehearsal Schedule", daily log removed.
+**Current milestone:** Steps 1-13 complete + Script Editor (Step 14). Latest: per-user PDF annotation editor ("Your Script" tab) with highlights, notes, cue markers, bookmarks, page thumbnails sidebar, zoom, inline annotation editing, download annotated PDF for printing.
 
 ## Feature status
 
@@ -180,6 +180,24 @@
 
 **Navigation rename**
 - "Calls" tab renamed to "Rehearsal Schedule" in the production tab strip
+
+### Step 14: Script Editor ("Your Script" tab) — IMPLEMENTED
+
+- "Your Script" tab added to every production (gated to production members)
+- Per-user PDF annotation editor; annotations are private per user
+- **Annotation tools:** highlight (draw box), highlight (text selection), sticky note (with text), cue marker (box + leader line to margin with cue number + description)
+- Left/right leader side toggle for cue tool; leader line connects at bottom edge of box
+- **Annotations panel** (right column): grouped into "Cues" and "Notes" sections with section headers and count badges; sorted top-to-bottom by position
+- **Inline editing:** pencil button on note/cue panel items opens in-place text fields; Enter or blur to confirm, Escape to cancel
+- **Bookmarks panel** (above annotations panel): add titled bookmark for any page, click to navigate, sorted by page, accent highlight on current page
+- **Page thumbnails sidebar:** collapsible (toggle via LayoutList icon in toolbar); all pages rendered progressively at 0.25× scale; cached in module-level map; sticky positioning; auto-scrolls active page into view
+- **Zoom controls:** 5 steps (75–200%) in nav bar; each zoom level cached separately in bitmap cache
+- **Breathing room:** PDF page floats on `--bg-sunken` workspace background with enhanced drop shadow
+- **Download annotated PDF:** renders every page at 2× quality with annotations composited via Canvas 2D API; assembled with jsPDF; shows per-page progress
+- **Auto-save:** 1.5s debounce after any annotation/bookmark change; saves to `script_annotations` DB table (per-user, per-script)
+- **Stale script banner:** shown when the default script is replaced; dismissible
+- **DB:** `script_annotations` table with `annotations`, `bookmarks`, `pageOverrides`, `hasStalePages` JSONB/boolean columns; `documents.isDefaultScript` + `documents.scriptVersion` fields; "Set as default script" action in document row menu
+- **Known scaffold:** `pageOverrides` data model exists (stored/loaded) but no UI to set overrides yet
 
 ## Scaffolded only (not implemented)
 
