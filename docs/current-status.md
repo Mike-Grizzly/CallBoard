@@ -256,13 +256,15 @@ Branch `claude/people-mass-upload-feature-PkU2l` — new Step 16. Full spec in
 - **Multi-production assignment** — multi-select people and assign them to a
   production in bulk, or assign from the drawer; reuses `assignProductionMember`.
 - **Schema:** `profiles` gained `phone`, `pronouns`, `status`, `last_active_at`
-  (all additive — apply with `npm run db:push`).
+  (all additive) — applied to the `CallBoard` project via Supabase MCP migration
+  `add_people_directory_profile_columns`.
 - New feature module files: `features/members/{constants,validation}.ts`,
   `inviteMembers` / `updatePersonProfile` / `setMemberStatus` / `resendInvite`
   in `features/members/actions.ts`, `getPeopleDirectory` in `queries.ts`, and
   `lib/supabase/admin.ts` (service-role client).
-- **Not yet done:** `npm run db:push` to apply the columns; live verification
-  of the invite email flow against a real Supabase project.
+- **Not yet done:** live verification of the invite email flow against the
+  Supabase project — needs `SUPABASE_SERVICE_ROLE_KEY` set, the callback URL in
+  the Auth "Redirect URLs" allowlist, and (for bulk invites) custom SMTP.
 
 ## Scaffolded only (not implemented)
 

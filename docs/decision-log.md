@@ -398,15 +398,24 @@ gain. The cost is one new server-only env var, `SUPABASE_SERVICE_ROLE_KEY`
 
 ---
 
-## 2026-05-20 — `profiles` columns added via `drizzle-kit push`, not Supabase MCP
+## 2026-05-20 — People directory `profiles` columns applied via Supabase MCP
 
 **Decision:** The four new `profiles` columns (`phone`, `pronouns`, `status`,
-`last_active_at`) are applied with `npm run db:push`, not a direct Supabase MCP
-migration.
+`last_active_at`) were applied to the `CallBoard` project with a direct
+`apply_migration` call (`add_people_directory_profile_columns`) via the Supabase
+MCP, not `drizzle-kit push`.
 
-**Reason:** All four are additive and either nullable or defaulted, so `push`
-will not hang (the hang only affects composite unique constraints) and there is
-no risk to existing rows — `status` defaults to `active` so already-signed-up
-people stay correct. Keeping the change in the Drizzle schema is the project's
-normal path; the direct-SQL route via MCP is reserved for cases `push` cannot
-handle (RLS, constraints).
+**Reason:** `npm run db:push` was run but the columns did not land on the
+database (a query against `information_schema` afterward still showed the
+original 7 columns). `drizzle-kit push` is interactive under `strict: true` and
+is already documented in this repo as prone to hanging. Rather than chase the
+push, the columns were applied directly — they are additive and either nullable
+or defaulted (`status` defaults to `'active'`, so existing signed-up rows stay
+correct), so direct DDL carries no risk. This matches the established fallback
+("`drizzle-kit push` may hang — SQL was applied directly" in current-status).
+
+**Impact:**
+- The Drizzle schema in `db/schema/users.ts` and the live `profiles` table now
+  match; a future `db:push` will be a no-op for these columns.
+- If `db:push` is consistently failing locally, check the interactive prompt and
+  confirm `.env.local`'s `DATABASE_URL` points at the `CallBoard` project.
