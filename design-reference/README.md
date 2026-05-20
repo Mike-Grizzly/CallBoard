@@ -18,14 +18,21 @@ data layer, while matching the demo's visuals closely.
 - `jsx/` — the demo's React components, transpiled by Babel-standalone at
   load time. They use globals (`window.I`, `window.DATA`, `window.Shell`)
   which we replace with real imports during port.
-  - `shell.jsx` — Rail (left nav), ProductionHeader (topbar + tabs),
-    NotificationsPopover.
+  - `shell.jsx` — Rail (left nav — now with workspace/production/people
+    view switching + a new-production trigger), ProductionHeader
+    (topbar + tabs), NotificationsPopover.
   - `app-entry.jsx` — top-level App that wires shell + tabs + tweaks.
     Now also carries a workspace/production/people view switcher and the
     new-production menu/quick-add/overlay state.
   - `new-production.jsx` — 6-step New Production setup wizard (basics,
     calendar, departments, roles, team, review). Runs standalone or as an
     in-app overlay. NOT yet ported — see note below.
+  - `quick-add.jsx` — Quick Add modal (title + opening date), the
+    new-production menu popover, and the full-screen overlay wrapper for
+    the wizard.
+  - `people.jsx` — workspace-level People directory: table/grid views,
+    filters, person drawer, and the 3-path Add People modal (manual, CSV
+    upload, bulk paste wizard). Backed by `data-people.jsx`.
   - `tab-overview.jsx` — Production dashboard ("Today's call" hero).
   - `tab-reports.jsx` — Rehearsal Reports list/view/edit.
   - `tab-notes.jsx` — Notes / To-dos workspace.
