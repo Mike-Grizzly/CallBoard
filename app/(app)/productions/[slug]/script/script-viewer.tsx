@@ -40,6 +40,7 @@ import {
   type PageOverrides,
 } from "@/features/scripts/constants";
 import type { DefaultScript } from "@/features/scripts/queries";
+import { loadPdfDocument } from "@/lib/pdf";
 
 // Module-level cache so re-renders don't re-decode the same page
 const pdfBitmapCache = new Map<string, ImageBitmap>();
@@ -144,15 +145,9 @@ export function ScriptViewer({
         return;
       }
 
-      const pdfjsLib = await import("pdfjs-dist");
-      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-        "pdfjs-dist/build/pdf.worker.min.mjs",
-        import.meta.url,
-      ).toString();
-
-      const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+      const pdf = await loadPdfDocument(pdfUrl);
       if (cancelled) return;
-      if (!cancelled) setTotalPages(pdf.numPages);
+      setTotalPages(pdf.numPages);
 
       const page = await pdf.getPage(currentPage);
       if (cancelled) return;
@@ -479,15 +474,9 @@ export function ScriptViewer({
     if (isDownloading) return;
     setIsDownloading(true);
     try {
-      const pdfjsLib = await import("pdfjs-dist");
-      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-        "pdfjs-dist/build/pdf.worker.min.mjs",
-        import.meta.url,
-      ).toString();
-
       const { jsPDF } = await import("jspdf");
 
-      const pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
+      const pdfDoc = await loadPdfDocument(pdfUrl);
       const numPages = pdfDoc.numPages;
       let doc: InstanceType<typeof jsPDF> | null = null;
 
@@ -943,9 +932,37 @@ export function ScriptViewer({
             borderRadius: 8,
             padding: "28px 32px",
             overflow: "auto",
+            position: "relative",
             cursor: activeTool === "pointer" ? (panning ? "grabbing" : "grab") : "default",
           }}
         >
+        {!pdfLoaded && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "grid",
+              placeItems: "center",
+              zIndex: 50,
+              pointerEvents: "none",
+              color: "var(--accent)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <div className="pdf-spinner" aria-hidden />
+              <span style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
+                Loading script…
+              </span>
+            </div>
+          </div>
+        )}
         <div
           ref={containerRef}
           style={{
@@ -1326,13 +1343,7 @@ function ThumbnailPanel({
     let cancelled = false;
 
     async function renderAll() {
-      const pdfjsLib = await import("pdfjs-dist");
-      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-        "pdfjs-dist/build/pdf.worker.min.mjs",
-        import.meta.url,
-      ).toString();
-
-      const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+      const pdf = await loadPdfDocument(pdfUrl);
       if (cancelled) return;
 
       for (let i = 1; i <= totalPages; i++) {

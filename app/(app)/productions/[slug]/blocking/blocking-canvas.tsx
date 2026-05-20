@@ -56,6 +56,7 @@ import { SET_PIECES, ACTOR_COLORS } from "@/features/blocking/constants";
 import type { StageConfiguration, BlockingPosition } from "@/db/schema";
 import type { SceneWithBeats } from "@/features/scenes/queries";
 import type { CastMember } from "@/features/blocking/queries";
+import { loadPdfDocument } from "@/lib/pdf";
 
 type Position = {
   xPercent: number;
@@ -851,12 +852,7 @@ export function BlockingCanvas({
         return;
       }
 
-      const pdfjsLib = await import("pdfjs-dist");
-      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-        "pdfjs-dist/build/pdf.worker.min.mjs",
-        import.meta.url,
-      ).toString();
-      const pdf = await pdfjsLib.getDocument(pdfUrl!).promise;
+      const pdf = await loadPdfDocument(pdfUrl!);
       if (cancelled) return;
       setNumPdfPages(pdf.numPages);
       const page = await pdf.getPage(currentPdfPage);
@@ -1930,6 +1926,22 @@ export function BlockingCanvas({
                   <div style={{ position: "absolute", bottom: 6, left: 8, fontSize: 10, letterSpacing: ".1em", color: "var(--ink-4)", textTransform: "uppercase" }}>Downstage / Audience</div>
                   <div style={{ position: "absolute", top: "50%", left: 6, fontSize: 10, letterSpacing: ".1em", color: "var(--ink-4)", textTransform: "uppercase", writingMode: "vertical-rl", transform: "rotate(180deg)" }}>Stage Right</div>
                   <div style={{ position: "absolute", top: "50%", right: 6, fontSize: 10, letterSpacing: ".1em", color: "var(--ink-4)", textTransform: "uppercase", writingMode: "vertical-rl" }}>Stage Left</div>
+                </div>
+              )}
+
+              {pdfUrl && !pdfLoaded && (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "grid",
+                    placeItems: "center",
+                    zIndex: 30,
+                    pointerEvents: "none",
+                    color: "white",
+                  }}
+                >
+                  <div className="pdf-spinner" aria-hidden />
                 </div>
               )}
 

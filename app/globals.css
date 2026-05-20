@@ -833,6 +833,22 @@ textarea.field {
   animation: fadeUp 0.25s ease-out both;
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* PDF load spinner — inherits `color` from its container so it reads on
+   both the light script workspace and the dark blocking canvas. */
+.pdf-spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid color-mix(in oklch, currentColor 22%, transparent);
+  border-top-color: currentColor;
+  animation: spin 0.7s linear infinite;
+}
+
 /* Tooltip-style notification badge in topbar */
 .icon-badge {
   position: relative;

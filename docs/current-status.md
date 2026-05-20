@@ -232,6 +232,11 @@ Branch `claude/improve-page-performance-YXRgv` — page-load optimizations, no b
 - **Reports list is paginated.** `/productions/[slug]/reports` pages 25 rows at a time via `?page=` (preserves the `?status=` filter). `getReportsByProduction` takes optional `{ status, limit, offset }`; calling it with no options is unchanged.
 - **Request-level dedup with `React.cache()`.** The layout and the page of a single request each ran the full auth chain — `getCurrentUser` (a Supabase `auth.getUser()` network call plus DB queries), `getOrCreateDefaultOrganization`, `getProductionBySlug` — independently. These three are now wrapped in `cache()`, so each runs once per request. `getCurrentUser` also parallelizes its org + profile lookups. This was the main cause of multi-second tab loads.
 
+## Script & blocking PDF performance (2026-05-20)
+
+- **Parsed PDFs are cached.** New `lib/pdf.ts` exposes `loadPdfDocument(url)`, which caches the parsed `PDFDocumentProxy` per URL. Previously both the script viewer and the blocking canvas re-downloaded and re-parsed the whole PDF on every page turn / zoom change (and the script thumbnail panel loaded it a third time). Now the document loads once and navigation only renders a page.
+- **Loading states.** A `.pdf-spinner` (new `@keyframes spin` in `globals.css`) shows while a PDF page renders in both viewers. New route-level `loading.tsx` files for the `script/` and `blocking/` segments give an immediate response on tab switch instead of a frozen-feeling gap.
+
 ## Scaffolded only (not implemented)
 
 - **Activity log** — placeholder page exists, capability defined, feature directory has only .gitkeep
