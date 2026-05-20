@@ -36,6 +36,7 @@
 - Role dropdown with change/remove capabilities
 - Requested role hint visible to admins in member list
 - Admin cannot change own role or remove self
+- **UI port (2026-05-20):** the org member page (`/settings/members`) and production member page (`/productions/[slug]/members`) restyled to the warm `people.jsx` table look — `.pp-table` rows, role-tinted avatars, role pills — on a new `.pp-*` CSS block. See `docs/ui-port-roadmap.md`.
 - **Not fully verified:** All role/capability edge cases across every page and action
 
 ### Step 4: Productions — IMPLEMENTED

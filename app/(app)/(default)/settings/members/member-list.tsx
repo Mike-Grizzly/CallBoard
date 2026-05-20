@@ -1,8 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { ROLES } from "@/types/roles";
 import {
   updateMemberRole,
@@ -10,34 +9,36 @@ import {
   type MemberActionResult,
 } from "@/features/members/actions";
 import type { OrgMember } from "@/features/members/queries";
-import { Users } from "lucide-react";
 
-function RoleBadge({ role }: { role: string }) {
-  const colors: Record<string, string> = {
-    admin: "bg-purple-100 text-purple-700",
-    producer: "bg-blue-100 text-blue-700",
-    director: "bg-indigo-100 text-indigo-700",
-    stage_manager: "bg-teal-100 text-teal-700",
-    cast: "bg-gray-100 text-gray-700",
-    crew: "bg-gray-100 text-gray-700",
-  };
+const ROLE_META: Record<string, { label: string; c: string }> = {
+  admin: { label: "Admin", c: "accent" },
+  producer: { label: "Producer", c: "clay" },
+  director: { label: "Director", c: "plum" },
+  choreographer: { label: "Choreographer", c: "dusk" },
+  stage_manager: { label: "Stage Manager", c: "sage" },
+  cast: { label: "Cast", c: "amber" },
+  crew: { label: "Crew", c: "sand" },
+};
 
-  const labels: Record<string, string> = {
-    admin: "Admin",
-    producer: "Producer",
-    director: "Director",
-    stage_manager: "Stage Manager",
-    cast: "Cast",
-    crew: "Crew",
-  };
+function roleLabel(role: string): string {
+  return ROLE_META[role]?.label ?? role;
+}
+function roleColor(role: string): string {
+  return ROLE_META[role]?.c ?? "";
+}
 
-  return (
-    <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colors[role] ?? colors.cast}`}
-    >
-      {labels[role] ?? role}
-    </span>
-  );
+type Person = {
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+};
+
+function displayName(m: Person): string {
+  return `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim() || m.email;
+}
+function initials(m: Person): string {
+  const pair = `${m.firstName?.[0] ?? ""}${m.lastName?.[0] ?? ""}`;
+  return (pair || m.email[0] || "?").toUpperCase();
 }
 
 function MemberRow({
@@ -51,94 +52,83 @@ function MemberRow({
     MemberActionResult | undefined,
     FormData
   >(updateMemberRole, undefined);
-
   const [removeState, removeAction, removePending] = useActionState<
     MemberActionResult | undefined,
     FormData
   >(removeMember, undefined);
 
-  const displayName =
-    member.firstName || member.lastName
-      ? `${member.firstName} ${member.lastName}`.trim()
-      : member.email;
+  const error = roleState?.error ?? removeState?.error;
 
   return (
-    <Card>
-      <CardContent className="flex items-center justify-between p-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3">
-            <span className="truncate text-sm font-semibold">
-              {displayName}
-            </span>
-            <RoleBadge role={member.role} />
-            {isCurrentUser && (
-              <span className="text-xs text-[color:var(--muted-foreground)]">
-                (you)
-              </span>
+    <tr>
+      <td>
+        <div className="pp-cell-member">
+          <div className="pp-av" data-c={roleColor(member.role)}>
+            {initials(member)}
+          </div>
+          <div>
+            <div className="pp-name">
+              {displayName(member)}
+              {isCurrentUser && <span className="pp-you">You</span>}
+            </div>
+            <div className="pp-email">{member.email}</div>
+            {member.requestedRole &&
+              member.requestedRole !== member.role && (
+                <div className="pp-requested">
+                  Requested {roleLabel(member.requestedRole)}
+                </div>
+              )}
+            {error && (
+              <div
+                className="pp-requested"
+                style={{ color: "var(--c-clay)" }}
+              >
+                {error}
+              </div>
             )}
           </div>
-          <p className="mt-0.5 text-xs text-[color:var(--muted-foreground)]">
-            {member.email}
-          </p>
-          {member.requestedRole &&
-            member.requestedRole !== member.role && (
-              <p className="mt-0.5 text-xs text-amber-600">
-                Requested: {member.requestedRole === "stage_manager" ? "Stage Manager" : member.requestedRole.charAt(0).toUpperCase() + member.requestedRole.slice(1)}
-              </p>
-            )}
-          {(roleState?.error || removeState?.error) && (
-            <p className="mt-1 text-xs text-red-600">
-              {roleState?.error || removeState?.error}
-            </p>
-          )}
         </div>
-
-        {!isCurrentUser && (
-          <div className="ml-4 flex items-center gap-2">
-            <form action={roleAction}>
-              <input
-                type="hidden"
-                name="membership_id"
-                value={member.id}
-              />
-              <select
-                name="role"
-                defaultValue={member.role}
-                className="rounded-md border border-[color:var(--border)] bg-transparent px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
-                onChange={(e) => {
-                  const form = e.currentTarget.form;
-                  if (form) form.requestSubmit();
-                }}
-                disabled={rolePending}
-              >
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r === "stage_manager" ? "Stage Manager" : r.charAt(0).toUpperCase() + r.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </form>
-
-            <form action={removeAction}>
-              <input
-                type="hidden"
-                name="membership_id"
-                value={member.id}
-              />
-              <Button
-                type="submit"
-                variant="ghost"
-                size="sm"
-                disabled={removePending}
-                className="text-red-600 hover:bg-red-50 hover:text-red-700"
-              >
-                Remove
-              </Button>
-            </form>
-          </div>
+      </td>
+      <td>
+        {isCurrentUser ? (
+          <span className="pill" data-c={roleColor(member.role)}>
+            {roleLabel(member.role)}
+          </span>
+        ) : (
+          <form action={roleAction}>
+            <input type="hidden" name="membership_id" value={member.id} />
+            <select
+              name="role"
+              defaultValue={member.role}
+              className="field"
+              style={{ width: 170 }}
+              disabled={rolePending}
+              onChange={(e) => e.currentTarget.form?.requestSubmit()}
+            >
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {roleLabel(r)}
+                </option>
+              ))}
+            </select>
+          </form>
         )}
-      </CardContent>
-    </Card>
+      </td>
+      <td style={{ textAlign: "right" }}>
+        {!isCurrentUser && (
+          <form action={removeAction}>
+            <input type="hidden" name="membership_id" value={member.id} />
+            <button
+              type="submit"
+              className="btn ghost sm danger"
+              disabled={removePending}
+            >
+              {removePending ? "Removing..." : "Remove"}
+            </button>
+          </form>
+        )}
+      </td>
+    </tr>
   );
 }
 
@@ -151,27 +141,36 @@ export function MemberList({
 }) {
   if (members.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Users className="mb-3 h-10 w-10 text-[color:var(--muted-foreground)]" />
-          <p className="text-sm font-medium">No team members yet</p>
-          <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
-            Team members will appear here as they sign up.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="pp-empty">
+        <div className="pp-empty-ico">
+          <Icon name="Users" size={26} />
+        </div>
+        <b>No team members yet</b>
+        <span>Team members will appear here as they sign up.</span>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {members.map((member) => (
-        <MemberRow
-          key={member.id}
-          member={member}
-          isCurrentUser={member.userId === currentUserId}
-        />
-      ))}
+    <div className="pp-table-wrap">
+      <table className="pp-table">
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Role</th>
+            <th style={{ width: 96 }} />
+          </tr>
+        </thead>
+        <tbody>
+          {members.map((member) => (
+            <MemberRow
+              key={member.id}
+              member={member}
+              isCurrentUser={member.userId === currentUserId}
+            />
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

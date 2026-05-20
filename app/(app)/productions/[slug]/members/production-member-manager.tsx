@@ -1,8 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { ROLES } from "@/types/roles";
 import {
   assignProductionMember,
@@ -10,30 +9,39 @@ import {
   updateCharacterName,
   type MemberActionResult,
 } from "@/features/members/actions";
-import type {
-  ProductionMember,
-  OrgMember,
-} from "@/features/members/queries";
-import { UserPlus, Users, Check, X } from "lucide-react";
+import type { ProductionMember, OrgMember } from "@/features/members/queries";
 
 const PRODUCTION_ROLES = ROLES.filter((r) => r !== "admin");
 
+const ROLE_META: Record<string, { label: string; c: string }> = {
+  admin: { label: "Admin", c: "accent" },
+  producer: { label: "Producer", c: "clay" },
+  director: { label: "Director", c: "plum" },
+  choreographer: { label: "Choreographer", c: "dusk" },
+  stage_manager: { label: "Stage Manager", c: "sage" },
+  cast: { label: "Cast", c: "amber" },
+  crew: { label: "Crew", c: "sand" },
+};
+
 function roleLabel(role: string): string {
-  const labels: Record<string, string> = {
-    producer: "Producer",
-    director: "Director",
-    stage_manager: "Stage Manager",
-    cast: "Cast",
-    crew: "Crew",
-    admin: "Admin",
-  };
-  return labels[role] ?? role;
+  return ROLE_META[role]?.label ?? role;
+}
+function roleColor(role: string): string {
+  return ROLE_META[role]?.c ?? "";
 }
 
-function displayName(member: { firstName: string; lastName: string; email: string }) {
-  return member.firstName || member.lastName
-    ? `${member.firstName} ${member.lastName}`.trim()
-    : member.email;
+type Person = {
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+};
+
+function displayName(m: Person): string {
+  return `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim() || m.email;
+}
+function initials(m: Person): string {
+  const pair = `${m.firstName?.[0] ?? ""}${m.lastName?.[0] ?? ""}`;
+  return (pair || m.email[0] || "?").toUpperCase();
 }
 
 function BulkAssignForm({
@@ -52,7 +60,7 @@ function BulkAssignForm({
 
   if (availableMembers.length === 0) {
     return (
-      <p className="text-sm text-[color:var(--muted-foreground)]">
+      <p className="muted" style={{ fontSize: 13 }}>
         All organization members are already assigned to this production.
       </p>
     );
@@ -61,45 +69,49 @@ function BulkAssignForm({
   function toggleMember(userId: string) {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(userId)) {
-        next.delete(userId);
-      } else {
-        next.add(userId);
-      }
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
       return next;
     });
   }
-
   function toggleAll() {
-    if (selected.size === availableMembers.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(availableMembers.map((m) => m.userId)));
-    }
+    setSelected((prev) =>
+      prev.size === availableMembers.length
+        ? new Set()
+        : new Set(availableMembers.map((m) => m.userId)),
+    );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm">
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="row-between">
+        <label
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 7,
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
           <input
             type="checkbox"
             checked={selected.size === availableMembers.length}
             onChange={toggleAll}
-            className="h-4 w-4 rounded border-gray-300"
           />
-          <span className="font-medium">Select all</span>
+          <span>Select all · {availableMembers.length}</span>
         </label>
-
-        <div className="flex items-center gap-2">
-          <label htmlFor="bulk-role" className="text-sm font-medium">
-            Role:
-          </label>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+          <span
+            style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-3)" }}
+          >
+            Assign as
+          </span>
           <select
-            id="bulk-role"
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="rounded-md border border-[color:var(--border)] bg-transparent px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+            className="field"
+            style={{ width: 160 }}
           >
             {PRODUCTION_ROLES.map((r) => (
               <option key={r} value={r}>
@@ -110,22 +122,21 @@ function BulkAssignForm({
         </div>
       </div>
 
-      <div className="max-h-64 space-y-1 overflow-y-auto rounded-md border border-[color:var(--border)] p-2">
+      <div className="pp-pick">
         {availableMembers.map((m) => (
-          <label
-            key={m.userId}
-            className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-[color:var(--muted)]"
-          >
+          <label key={m.userId} className="pp-pick-row">
             <input
               type="checkbox"
               checked={selected.has(m.userId)}
               onChange={() => toggleMember(m.userId)}
-              className="h-4 w-4 rounded border-gray-300"
             />
-            <span className="text-sm font-medium">{displayName(m)}</span>
-            <span className="text-xs text-[color:var(--muted-foreground)]">
-              {m.email}
-            </span>
+            <div className="pp-av" data-c={roleColor(m.role)}>
+              {initials(m)}
+            </div>
+            <div>
+              <div className="pp-name">{displayName(m)}</div>
+              <div className="pp-email">{m.email}</div>
+            </div>
           </label>
         ))}
       </div>
@@ -140,16 +151,24 @@ function BulkAssignForm({
           formAction(formData);
         }}
       >
-        <Button type="submit" disabled={pending || selected.size === 0}>
-          <UserPlus className="h-4 w-4" aria-hidden />
-          {pending
-            ? "Assigning..."
-            : `Assign ${selected.size} member${selected.size !== 1 ? "s" : ""}`}
-        </Button>
+        <button
+          type="submit"
+          className="btn primary"
+          disabled={pending || selected.size === 0}
+        >
+          <Icon name="UserPlus" size={14} />
+          <span>
+            {pending
+              ? "Assigning..."
+              : `Assign ${selected.size} member${selected.size !== 1 ? "s" : ""}`}
+          </span>
+        </button>
       </form>
 
       {state?.error && (
-        <p className="text-sm text-red-600">{state.error}</p>
+        <p className="pp-requested" style={{ color: "var(--c-clay)" }}>
+          {state.error}
+        </p>
       )}
     </div>
   );
@@ -164,7 +183,7 @@ function CharacterNameEditor({
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(current ?? "");
-  const [state, formAction, pending] = useActionState<
+  const [, formAction, pending] = useActionState<
     MemberActionResult | undefined,
     FormData
   >(updateCharacterName, undefined);
@@ -172,14 +191,14 @@ function CharacterNameEditor({
   if (!editing) {
     return (
       <button
+        type="button"
+        className="pp-char-btn"
         onClick={() => setEditing(true)}
-        className="flex items-center gap-1 text-xs text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
-        title="Set character name"
       >
         {current ? (
-          <span className="italic">{current}</span>
+          <span style={{ fontStyle: "italic" }}>{current}</span>
         ) : (
-          <span className="opacity-60">+ character name</span>
+          <span className="muted">+ Add character</span>
         )}
       </button>
     );
@@ -193,7 +212,7 @@ function CharacterNameEditor({
         formAction(fd);
         setEditing(false);
       }}
-      className="flex items-center gap-1"
+      style={{ display: "flex", alignItems: "center", gap: 4 }}
     >
       <input
         autoFocus
@@ -202,73 +221,141 @@ function CharacterNameEditor({
         onKeyDown={(e) => {
           if (e.key === "Escape") setEditing(false);
         }}
-        placeholder="Character name"
-        className="rounded border border-[color:var(--border)] bg-[color:var(--background)] px-1.5 py-0.5 text-xs"
+        placeholder="Character"
+        className="field"
+        style={{ width: 132, padding: "4px 8px", fontSize: 12.5 }}
       />
       <button
         type="submit"
+        className="pp-icon-btn"
         disabled={pending}
-        className="rounded p-0.5 text-green-600 hover:bg-green-50"
+        aria-label="Save character name"
       >
-        <Check className="h-3.5 w-3.5" />
+        <Icon name="Check" size={13} />
       </button>
       <button
         type="button"
+        className="pp-icon-btn"
         onClick={() => setEditing(false)}
-        className="rounded p-0.5 text-[color:var(--muted-foreground)] hover:bg-[color:var(--muted)]"
+        aria-label="Cancel"
       >
-        <X className="h-3.5 w-3.5" />
+        <Icon name="X" size={13} />
       </button>
-      {state?.error && (
-        <span className="text-xs text-red-600">{state.error}</span>
-      )}
     </form>
   );
 }
 
-function CurrentMemberRow({ member }: { member: ProductionMember }) {
+function CurrentMemberRow({
+  member,
+  showCharacter,
+}: {
+  member: ProductionMember;
+  showCharacter: boolean;
+}) {
   const [state, formAction, pending] = useActionState<
     MemberActionResult | undefined,
     FormData
   >(removeProductionMember, undefined);
 
   return (
-    <Card>
-      <CardContent className="flex items-center justify-between p-3">
-        <div>
-          <span className="text-sm font-medium">{displayName(member)}</span>
-          <span className="ml-2 text-xs text-[color:var(--muted-foreground)]">
-            {member.email}
-          </span>
-          <span className="ml-2 inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-            {roleLabel(member.role)}
-          </span>
-          {member.role === "cast" && (
-            <span className="ml-3">
-              <CharacterNameEditor
-                membershipId={member.id}
-                current={member.characterName ?? null}
-              />
+    <tr>
+      <td>
+        <div className="pp-cell-member">
+          <div className="pp-av" data-c={roleColor(member.role)}>
+            {initials(member)}
+          </div>
+          <div>
+            <div className="pp-name">{displayName(member)}</div>
+            <div className="pp-email">{member.email}</div>
+            {state?.error && (
+              <div
+                className="pp-requested"
+                style={{ color: "var(--c-clay)" }}
+              >
+                {state.error}
+              </div>
+            )}
+          </div>
+        </div>
+      </td>
+      <td>
+        <span className="pill" data-c={roleColor(member.role)}>
+          {roleLabel(member.role)}
+        </span>
+      </td>
+      {showCharacter && (
+        <td>
+          {member.role === "cast" ? (
+            <CharacterNameEditor
+              membershipId={member.id}
+              current={member.characterName ?? null}
+            />
+          ) : (
+            <span className="muted" style={{ fontSize: 12.5 }}>
+              —
             </span>
           )}
-        </div>
+        </td>
+      )}
+      <td style={{ textAlign: "right" }}>
         <form action={formAction}>
           <input type="hidden" name="membership_id" value={member.id} />
-          <Button
+          <button
             type="submit"
-            variant="ghost"
-            size="sm"
+            className="btn ghost sm danger"
             disabled={pending}
-            className="text-red-600 hover:bg-red-50 hover:text-red-700"
           >
             {pending ? "Removing..." : "Remove"}
-          </Button>
+          </button>
         </form>
-        {state?.error && (
-          <p className="text-xs text-red-600">{state.error}</p>
-        )}
-      </CardContent>
-    </Card>
+      </td>
+    </tr>
+  );
+}
+
+function ProductionMembersTable({
+  members,
+}: {
+  members: ProductionMember[];
+}) {
+  if (members.length === 0) {
+    return (
+      <div className="pp-empty">
+        <div className="pp-empty-ico">
+          <Icon name="Users" size={26} />
+        </div>
+        <b>No one assigned yet</b>
+        <span>
+          Add organization members above to build this production&apos;s team.
+        </span>
+      </div>
+    );
+  }
+
+  const showCharacter = members.some((m) => m.role === "cast");
+
+  return (
+    <div className="pp-table-wrap">
+      <table className="pp-table">
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Role</th>
+            {showCharacter && <th>Character</th>}
+            <th style={{ width: 96 }} />
+          </tr>
+        </thead>
+        <tbody>
+          {members.map((member) => (
+            <CurrentMemberRow
+              key={member.id}
+              member={member}
+              showCharacter={showCharacter}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -282,39 +369,24 @@ export function ProductionMemberManager({
   availableMembers: OrgMember[];
 }) {
   return (
-    <div className="space-y-8">
+    <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Add Members</h2>
-        <Card>
-          <CardContent className="p-4">
-            <BulkAssignForm
-              productionId={productionId}
-              availableMembers={availableMembers}
-            />
-          </CardContent>
-        </Card>
+        <div className="h-eyebrow" style={{ marginBottom: 10 }}>
+          Add to this production
+        </div>
+        <div className="card card-pad">
+          <BulkAssignForm
+            productionId={productionId}
+            availableMembers={availableMembers}
+          />
+        </div>
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold">
-          Current Members ({currentMembers.length})
-        </h2>
-        {currentMembers.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-              <Users className="mb-2 h-8 w-8 text-[color:var(--muted-foreground)]" />
-              <p className="text-sm text-[color:var(--muted-foreground)]">
-                No members assigned yet.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            {currentMembers.map((member) => (
-              <CurrentMemberRow key={member.id} member={member} />
-            ))}
-          </div>
-        )}
+        <div className="h-eyebrow" style={{ marginBottom: 10 }}>
+          Current team · {currentMembers.length}
+        </div>
+        <ProductionMembersTable members={currentMembers} />
       </section>
     </div>
   );

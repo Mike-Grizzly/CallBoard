@@ -14,10 +14,11 @@ export default async function MembersPage() {
   const members = await getOrganizationMembers(user.organizationId);
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Team Members</h1>
-        <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
+    <div className="page-narrow anim-in">
+      <div style={{ marginBottom: 20 }}>
+        <div className="h-eyebrow">Workspace</div>
+        <h1 className="h-section">Team members</h1>
+        <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
           Manage who has access and what role they have in your organization.
         </p>
       </div>

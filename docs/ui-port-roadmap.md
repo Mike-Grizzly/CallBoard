@@ -35,11 +35,10 @@ match the demo, tab by tab.
 
 ### Phase 2 — per-tab content port — IN PROGRESS
 
-Most screens are ported. What remains: the **Members** pages and a few
-**embedded forms** still on old shadcn — Calls new/edit, Documents
-upload, the Blocking setup wizard, and the new-production form. The
-**Calls / Rehearsal Schedule** calendar itself is ported; only its form
-is not.
+Most screens are ported. What remains is a handful of **embedded forms**
+still on old shadcn — Calls new/edit, Documents upload, the Blocking
+setup wizard, and the new-production form. The **Calls / Rehearsal
+Schedule** calendar itself is ported; only its form is not.
 
 ## Feature ↔ demo module ↔ route map
 
@@ -56,9 +55,9 @@ is not.
 | Personalized Dashboard | `tab-home.jsx` | `/dashboard` | **Done** — but predates the newer `tab-home.jsx` Workspace Home design (see note) |
 | Announcements (production) | `tab-home.jsx` `.ann-card`s | `/productions/[slug]/announcements` | **Done** (build-verified; not yet browser-verified) |
 | Announcements (global) | `tab-home.jsx` `.ann-card`s | `/announcements` | **Done** (build-verified; not yet browser-verified) |
-| Production Members | `people.jsx` | `/productions/[slug]/members` | **Not started** |
+| Production Members | `people.jsx` | `/productions/[slug]/members` | **Done** (build-verified; not yet browser-verified) |
 | Productions list | `tab-home.jsx` `.prod-card`s | `/productions` | **Done** (build-verified; not yet browser-verified) |
-| Org member management | `people.jsx` | `/settings/members` | **Not started** |
+| Org member management | `people.jsx` | `/settings/members` | **Done** (build-verified; not yet browser-verified) |
 | Auth screens | (no demo module) | `/login`, `/signup`, `/forgot-password`, `/reset-password` | **Done** (build-verified; not yet browser-verified) |
 
 The demo's **Video** tab (`tab-video.jsx`) has no backend feature and is
@@ -99,6 +98,9 @@ For every screen, the same recipe applies:
 - [x] **Auth** — login / signup / signup-confirm / forgot-password /
       reset-password — warm restyle on a new `.auth-*` CSS block; the
       stale "Show Portal" brand corrected to "CallBoard"
+- [x] **Members** — `/productions/[slug]/members` + `/settings/members` —
+      restyled to `people.jsx` table/row styling on a new `.pp-*` CSS
+      block
 
 ### Calls — `/productions/[slug]/calls` — PARTIAL
 
@@ -122,11 +124,23 @@ For every screen, the same recipe applies:
 - Not browser-verified: no `DATABASE_URL` in this container. Compiles +
   type-checks clean.
 
-### Members — `/productions/[slug]/members` — NOT STARTED
+### Members — `/productions/[slug]/members` + `/settings/members` — DONE
 
-- [ ] Production members page restyled (`people.jsx` table/row styling as
-      the reference)
-- [ ] Member assignment + role controls restyled
+- [x] Both member screens rebuilt as a warm `.pp-table` (avatar with
+      role-tinted initials, `.pp-name`/`.pp-email`, role `.pill`)
+- [x] Org page: inline role `<select>` + Remove, "You" tag, requested-role
+      hint preserved
+- [x] Production page: bulk-assign panel (`.pp-pick` checklist) + current
+      team table with the inline cast character-name editor
+- [x] Added a `.pp-*` CSS block + `.btn.sm` / `.btn.danger` modifiers;
+      `UserPlus` added to the `Icon` registry
+- [x] Replaced `<Card>` / `<CardContent>` / `<Button>` shadcn primitives
+      and raw `lucide-react` imports
+- The demo's drawer, add-people modal, CSV import, bulk wizard, stat
+  cards, and toast were intentionally not ported — no backend exists for
+  invites, per-member activity, or org-wide stats.
+- Not browser-verified: no `DATABASE_URL` in this container. Compiles +
+  type-checks clean.
 
 ### Productions list — `/productions` — DONE
 
@@ -159,11 +173,6 @@ For every screen, the same recipe applies:
 - [ ] Documents upload form (`documents/document-upload-form.tsx`)
 - [ ] Blocking setup wizard (`blocking/setup/setup-wizard.tsx`)
 - [ ] New-production form (`productions/new/create-production-form.tsx`)
-
-### Settings — `/settings/members` — NOT STARTED
-
-- [ ] Org member management restyled (`people.jsx` reference); lower
-      priority than the production-facing screens above
 
 ## Cross-cutting cleanups
 
