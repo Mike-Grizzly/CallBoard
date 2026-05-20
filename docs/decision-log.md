@@ -419,3 +419,32 @@ correct), so direct DDL carries no risk. This matches the established fallback
   match; a future `db:push` will be a no-op for these columns.
 - If `db:push` is consistently failing locally, check the interactive prompt and
   confirm `.env.local`'s `DATABASE_URL` points at the `CallBoard` project.
+
+---
+
+## 2026-05-20 — Dropped two CHECK constraints to unblock `drizzle-kit push`
+
+**Decision:** Dropped `beat_comments_body_check` and
+`rehearsal_reports_status_check` from the `CallBoard` database (migration
+`drop_check_constraints_for_drizzle_kit_push`).
+
+**Reason:** `drizzle-kit push` (0.30.6) crashes during schema introspection
+with `TypeError: Cannot read properties of undefined (reading 'replace')` while
+parsing CHECK constraints — it never reaches the apply step, so nothing lands
+(this is why an earlier `db:push` silently did nothing). The identical
+unguarded line is present in the latest drizzle-kit (0.31.10), so upgrading
+does not fix it; with this tooling the database can have CHECK constraints or a
+working `push`, not both. The two constraints were added by ad-hoc SQL, were
+never represented in the Drizzle schema (so a working push would have dropped
+them as drift anyway), and both duplicate validation already enforced in server
+actions — `features/blocking/actions.ts:232-234` trims and caps comment body at
+2000 chars; report `status` is Zod-validated to `draft`/`distributed`.
+
+**Impact:**
+- `public` now has zero CHECK constraints; `drizzle-kit push` introspection no
+  longer crashes.
+- No data or table-structure change — beat comments and rehearsal reports
+  behave identically. The only loss is a redundant DB-level backstop for two
+  rules the app already enforces.
+- If DB-level CHECK constraints are wanted again, schema changes must go through
+  `apply_migration` (Supabase MCP) rather than `db:push`.
