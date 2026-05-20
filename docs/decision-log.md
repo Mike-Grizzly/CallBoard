@@ -448,3 +448,25 @@ actions — `features/blocking/actions.ts:232-234` trims and caps comment body a
   rules the app already enforces.
 - If DB-level CHECK constraints are wanted again, schema changes must go through
   `apply_migration` (Supabase MCP) rather than `db:push`.
+
+---
+
+## 2026-05-20 — `schemaFilter: ["public"]` added to `drizzle.config.ts` (real `db:push` fix)
+
+**Decision:** Added `schemaFilter: ["public"]` to `drizzle.config.ts`.
+
+**Reason:** This is the actual root cause of the `drizzle-kit push` crash. With
+`schemaFilter` omitted, drizzle-kit's config-prep treats it as "no filter" and
+its introspection lists tables from **every** schema — including Supabase's
+managed `auth` (43 CHECK constraints) and `realtime` (1) — then crashes parsing
+those constraints (`TypeError: ... reading 'replace'`). The earlier removal of
+the two `public` CHECK constraints did not help because the crash was on the
+`auth`/`realtime` constraints, which must not be touched. Pinning
+`schemaFilter` to `["public"]` scopes introspection to the app's own schema, so
+`auth`/`realtime` are never read.
+
+**Impact:**
+- `db:push` introspects only `public` and no longer crashes.
+- The earlier CHECK-constraint drop (previous entry) was not strictly necessary
+  given this fix, but is harmless and left as-is — those constraints duplicated
+  app-layer validation and were never in the Drizzle schema.
