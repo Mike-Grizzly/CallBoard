@@ -1,9 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import { signup, type AuthResult } from "@/app/actions/auth";
-import { Button } from "@/components/ui/button";
 
 export function SignupForm() {
   const [state, formAction, pending] = useActionState<
@@ -12,22 +10,19 @@ export function SignupForm() {
   >(signup, undefined);
 
   return (
-    <form
-      action={formAction}
-      className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-6 shadow-sm"
-    >
-      {state?.error && (
-        <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
-          {state.error}
-        </div>
-      )}
+    <form action={formAction} className="card card-pad">
+      {state?.error && <div className="auth-error">{state.error}</div>}
 
-      <div className="mb-4 grid grid-cols-2 gap-3">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 10,
+          marginBottom: 14,
+        }}
+      >
         <div>
-          <label
-            htmlFor="first_name"
-            className="mb-1.5 block text-sm font-medium"
-          >
+          <label htmlFor="first_name" className="label">
             First name
           </label>
           <input
@@ -35,15 +30,12 @@ export function SignupForm() {
             name="first_name"
             type="text"
             autoComplete="given-name"
-            className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm placeholder:text-[color:var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+            className="field"
             placeholder="Jane"
           />
         </div>
         <div>
-          <label
-            htmlFor="last_name"
-            className="mb-1.5 block text-sm font-medium"
-          >
+          <label htmlFor="last_name" className="label">
             Last name
           </label>
           <input
@@ -51,17 +43,14 @@ export function SignupForm() {
             name="last_name"
             type="text"
             autoComplete="family-name"
-            className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm placeholder:text-[color:var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+            className="field"
             placeholder="Doe"
           />
         </div>
       </div>
 
-      <div className="mb-4">
-        <label
-          htmlFor="position"
-          className="mb-1.5 block text-sm font-medium"
-        >
+      <div className="auth-field">
+        <label htmlFor="position" className="label">
           Position
         </label>
         <select
@@ -69,7 +58,7 @@ export function SignupForm() {
           name="position"
           defaultValue=""
           required
-          className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+          className="field"
         >
           <option value="" disabled>
             Select your role...
@@ -80,16 +69,13 @@ export function SignupForm() {
           <option value="cast">Cast</option>
           <option value="crew">Crew</option>
         </select>
-        <p className="mt-1 text-xs text-[color:var(--muted-foreground)]">
+        <p className="auth-hint">
           Your admin will confirm your permissions after signup.
         </p>
       </div>
 
-      <div className="mb-4">
-        <label
-          htmlFor="email"
-          className="mb-1.5 block text-sm font-medium"
-        >
+      <div className="auth-field">
+        <label htmlFor="email" className="label">
           Email
         </label>
         <input
@@ -98,16 +84,13 @@ export function SignupForm() {
           type="email"
           required
           autoComplete="email"
-          className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm placeholder:text-[color:var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+          className="field"
           placeholder="you@example.com"
         />
       </div>
 
-      <div className="mb-6">
-        <label
-          htmlFor="password"
-          className="mb-1.5 block text-sm font-medium"
-        >
+      <div className="auth-field">
+        <label htmlFor="password" className="label">
           Password
         </label>
         <input
@@ -117,27 +100,19 @@ export function SignupForm() {
           required
           minLength={6}
           autoComplete="new-password"
-          className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm placeholder:text-[color:var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+          className="field"
           placeholder="••••••••"
         />
-        <p className="mt-1 text-xs text-[color:var(--muted-foreground)]">
-          Must be at least 6 characters
-        </p>
+        <p className="auth-hint">Must be at least 6 characters</p>
       </div>
 
-      <Button type="submit" className="w-full" disabled={pending}>
+      <button
+        type="submit"
+        className="btn primary auth-submit"
+        disabled={pending}
+      >
         {pending ? "Creating account..." : "Create account"}
-      </Button>
-
-      <p className="mt-4 text-center text-sm text-[color:var(--muted-foreground)]">
-        Already have an account?{" "}
-        <Link
-          href="/login"
-          className="font-medium text-[color:var(--foreground)] underline underline-offset-4"
-        >
-          Sign in
-        </Link>
-      </p>
+      </button>
     </form>
   );
 }

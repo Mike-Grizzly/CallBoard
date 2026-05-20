@@ -35,9 +35,11 @@ match the demo, tab by tab.
 
 ### Phase 2 — per-tab content port — IN PROGRESS
 
-Most production tabs and top-level screens are ported. What remains:
-the **production Members** page and the **auth screens**. The **Calls /
-Rehearsal Schedule** screen is only partially ported.
+Most screens are ported. What remains: the **Members** pages and a few
+**embedded forms** still on old shadcn — Calls new/edit, Documents
+upload, the Blocking setup wizard, and the new-production form. The
+**Calls / Rehearsal Schedule** calendar itself is ported; only its form
+is not.
 
 ## Feature ↔ demo module ↔ route map
 
@@ -47,8 +49,8 @@ Rehearsal Schedule** screen is only partially ported.
 | Rehearsal Schedule | `tab-calendar.jsx` | `/productions/[slug]/calls` | **Partial** — CSS vars in place, residual old Tailwind utilities |
 | Rehearsal Reports | `tab-reports.jsx` | `/productions/[slug]/reports` | **Done** |
 | Notes ("My Notes") | `tab-notes.jsx` | `/productions/[slug]/notes` | **Done** |
-| Document Center | `tab-documents.jsx` | `/productions/[slug]/documents` | **Done** |
-| Blocking Tool | `tab-blocking.jsx` | `/productions/[slug]/blocking` | **Done** (built natively in the warm system) |
+| Document Center | `tab-documents.jsx` | `/productions/[slug]/documents` | **Done** — except `document-upload-form.tsx` (still old shadcn) |
+| Blocking Tool | `tab-blocking.jsx` | `/productions/[slug]/blocking` | **Done** — except `blocking/setup/setup-wizard.tsx` (still old shadcn) |
 | Script Editor | (no demo module) | `/productions/[slug]/script` | **Done** (built natively) |
 | Personal Calendar | `tab-calendar.jsx` | `/calendar` | **Done** |
 | Personalized Dashboard | `tab-home.jsx` | `/dashboard` | **Done** — but predates the newer `tab-home.jsx` Workspace Home design (see note) |
@@ -57,7 +59,7 @@ Rehearsal Schedule** screen is only partially ported.
 | Production Members | `people.jsx` | `/productions/[slug]/members` | **Not started** |
 | Productions list | `tab-home.jsx` `.prod-card`s | `/productions` | **Done** (build-verified; not yet browser-verified) |
 | Org member management | `people.jsx` | `/settings/members` | **Not started** |
-| Auth screens | (no demo module) | `/login`, `/signup`, `/forgot-password`, `/reset-password` | **Not started** |
+| Auth screens | (no demo module) | `/login`, `/signup`, `/forgot-password`, `/reset-password` | **Done** (build-verified; not yet browser-verified) |
 
 The demo's **Video** tab (`tab-video.jsx`) has no backend feature and is
 explicitly skipped. The demo's **Tweaks** panel is dev-only and skipped.
@@ -89,11 +91,14 @@ For every screen, the same recipe applies:
 - [x] **Reports** — list / detail / new / edit (demo-parity spec
       `docs/feature-specs/11-rehearsal-report-demo-parity.md`)
 - [x] **Notes** — `/productions/[slug]/notes`
-- [x] **Documents** — list + viewer
-- [x] **Blocking** — `/productions/[slug]/blocking` (+ setup)
+- [x] **Documents** — list + viewer (upload form still pending — see below)
+- [x] **Blocking** — canvas + panels (setup wizard still pending — see below)
 - [x] **Script** — `/productions/[slug]/script`
 - [x] **Calendar** — `/calendar`
 - [x] **Dashboard** — `/dashboard` (caveat: see Workspace Home note above)
+- [x] **Auth** — login / signup / signup-confirm / forgot-password /
+      reset-password — warm restyle on a new `.auth-*` CSS block; the
+      stale "Show Portal" brand corrected to "CallBoard"
 
 ### Calls — `/productions/[slug]/calls` — PARTIAL
 
@@ -137,10 +142,23 @@ For every screen, the same recipe applies:
 - Not browser-verified: this container has no `DATABASE_URL`, so the
   authenticated page can't be rendered. Compiles + type-checks clean.
 
-### Auth screens — NOT STARTED
+### Auth screens — DONE
 
-- [ ] login / signup / forgot-password / reset-password — minimal warm
-      restyle so the first impression matches the app
+- [x] login / signup / signup-confirm / forgot-password / reset-password
+      restyled on a new `.auth-*` CSS block (warm radial-spotlight
+      background, `.card` form, `.field` inputs, `CallBoard` wordmark)
+- [x] Replaced `<Button>` shadcn primitive and raw `lucide-react` imports
+- [x] Corrected the stale "Show Portal" brand to "CallBoard" (the rail +
+      metadata already use "CallBoard")
+- No demo module exists for auth — this is an original warm design.
+- Not browser-verified: no `DATABASE_URL` in this container.
+
+### Embedded forms still on old shadcn — NOT STARTED
+
+- [ ] Calls new/edit form (`calls/new/call-form.tsx`)
+- [ ] Documents upload form (`documents/document-upload-form.tsx`)
+- [ ] Blocking setup wizard (`blocking/setup/setup-wizard.tsx`)
+- [ ] New-production form (`productions/new/create-production-form.tsx`)
 
 ### Settings — `/settings/members` — NOT STARTED
 

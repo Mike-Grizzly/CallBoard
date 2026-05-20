@@ -1,16 +1,24 @@
+import Link from "next/link";
 import { LoginForm } from "./login-form";
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[color:var(--muted)] px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">Show Portal</h1>
-          <p className="mt-2 text-sm text-[color:var(--muted-foreground)]">
-            Sign in to your account
-          </p>
+    <div className="auth-screen">
+      <div className="auth-card-wrap">
+        <div className="auth-head">
+          <div className="auth-brand">
+            <span className="auth-mark">C</span>
+            <span className="auth-wordmark">
+              Call<em>Board</em>
+            </span>
+          </div>
+          <h1 className="auth-title">Welcome back</h1>
+          <p className="auth-sub">Sign in to your production workspace.</p>
         </div>
         <LoginForm />
+        <p className="auth-foot">
+          Don&apos;t have an account? <Link href="/signup">Sign up</Link>
+        </p>
       </div>
     </div>
   );

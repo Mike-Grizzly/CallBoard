@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 import { resendVerification, type AuthResult } from "@/app/actions/auth";
-import { Button } from "@/components/ui/button";
 
 export function ResendForm({ email }: { email: string }) {
   const [state, formAction, pending] = useActionState<
@@ -16,26 +15,17 @@ export function ResendForm({ email }: { email: string }) {
     <form action={formAction}>
       <input type="hidden" name="email" value={email} />
 
-      {state?.error && (
-        <div className="mb-3 rounded-md bg-red-50 p-3 text-sm text-red-700">
-          {state.error}
-        </div>
-      )}
+      {state?.error && <div className="auth-error">{state.error}</div>}
 
       {sent && (
-        <div className="mb-3 rounded-md bg-green-50 p-3 text-sm text-green-700">
+        <div className="auth-success">
           Verification email resent. Check your inbox.
         </div>
       )}
 
-      <Button
-        type="submit"
-        variant="outline"
-        className="w-full"
-        disabled={pending}
-      >
+      <button type="submit" className="btn auth-submit" disabled={pending}>
         {pending ? "Sending..." : "Resend verification email"}
-      </Button>
+      </button>
     </form>
   );
 }

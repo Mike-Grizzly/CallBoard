@@ -24,6 +24,7 @@
 - Auth callback handler (PKCE + implicit flows)
 - Auto-profile creation on first login
 - First user in org becomes admin, subsequent users get "cast" role
+- **UI port (2026-05-20):** all auth screens (login, signup, signup-confirm, forgot/reset password) restyled to the warm design on a new `.auth-*` CSS block; the stale "Show Portal" brand corrected to "CallBoard". See `docs/ui-port-roadmap.md`.
 - **Not fully verified:** Password reset flow was deferred due to Supabase email rate limits during testing
 
 ### Step 3: Roles & Permissions — IMPLEMENTED
