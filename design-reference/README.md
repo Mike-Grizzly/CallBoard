@@ -33,7 +33,13 @@ data layer, while matching the demo's visuals closely.
   - `people.jsx` — workspace-level People directory: table/grid views,
     filters, person drawer, and the 3-path Add People modal (manual, CSV
     upload, bulk paste wizard). Backed by `data-people.jsx`.
+  - `tab-home.jsx` — workspace Home: personal landing across all
+    productions (greeting + "Right now" strip, announcements,
+    productions browser, @mentions, pinned items). The "workspace" view
+    behind the rail switcher; carries its own self-contained mock data.
   - `tab-overview.jsx` — Production dashboard ("Today's call" hero).
+  - `tab-calendar.jsx` — Calendar tab (month/week/day/agenda views).
+    Already ported — see commit "Port calendar to match design-reference".
   - `tab-reports.jsx` — Rehearsal Reports list/view/edit.
   - `tab-notes.jsx` — Notes / To-dos workspace.
   - `tab-documents.jsx` — Shared files.
