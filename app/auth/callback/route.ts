@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   // Implicit / magic-link flow — verifying a token hash
   if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({
-      type: type as "recovery" | "signup" | "email",
+      type: type as "recovery" | "signup" | "email" | "invite",
       token_hash: tokenHash,
     });
     if (!error) {

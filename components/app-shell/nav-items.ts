@@ -16,5 +16,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Documents", href: "/documents", icon: "FolderOpen", capability: "documents:view" },
   { label: "Announcements", href: "/announcements", icon: "Megaphone", capability: "announcements:view" },
   { label: "Activity", href: "/activity", icon: "Activity", capability: "activity:view" },
+  { label: "People", href: "/people", icon: "Users", capability: "settings:manage" },
   { label: "Settings", href: "/settings", icon: "Settings", capability: "settings:manage" },
 ];

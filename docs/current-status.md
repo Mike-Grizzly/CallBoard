@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-05-20
 
-**Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15). Latest: cross-production calendar at `/calendar` with month/week views, production color filters, and a per-production color column reused by the sidebar rail.
+**Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15) + People Directory (Step 16). Latest: org-wide people directory at `/people` with invite-based mass upload (manual / CSV / bulk paste) and multi-production assignment.
 
 ## Feature status
 
@@ -236,6 +236,33 @@ Branch `claude/improve-page-performance-YXRgv` — page-load optimizations, no b
 
 - **Parsed PDFs are cached.** New `lib/pdf.ts` exposes `loadPdfDocument(url)`, which caches the parsed `PDFDocumentProxy` per URL. Previously both the script viewer and the blocking canvas re-downloaded and re-parsed the whole PDF on every page turn / zoom change (and the script thumbnail panel loaded it a third time). Now the document loads once and navigation only renders a page.
 - **Loading states.** A `.pdf-spinner` (new `@keyframes spin` in `globals.css`) shows while a PDF page renders in both viewers. New route-level `loading.tsx` files for the `script/` and `blocking/` segments give an immediate response on tab switch instead of a frozen-feeling gap.
+
+## People directory & mass upload (2026-05-20)
+
+Branch `claude/people-mass-upload-feature-PkU2l` — new Step 16. Full spec in
+`docs/feature-specs/16-people-directory.md`.
+
+- **New `/people` page** (admin-only, in the Workspace rail section) — org-wide
+  directory with stat-card filters, search, category/production/status filters,
+  table and card views, and a person detail/edit drawer.
+- **Mass upload** via an Add People modal with three paths: a manual
+  single-person form, a CSV importer (auto-detect delimiter, column mapping,
+  validated preview), and a bulk paste wizard.
+- **Invite model** — uploaded people become Supabase auth users in an
+  `invited` state via the Admin API; `profiles` stays 1:1 with auth users so
+  org and production memberships need no FK changes. `lib/auth.ts` promotes
+  `invited` → `active` on first sign-in. Requires a new env var
+  `SUPABASE_SERVICE_ROLE_KEY` (server-only) — already listed in `.env.example`.
+- **Multi-production assignment** — multi-select people and assign them to a
+  production in bulk, or assign from the drawer; reuses `assignProductionMember`.
+- **Schema:** `profiles` gained `phone`, `pronouns`, `status`, `last_active_at`
+  (all additive — apply with `npm run db:push`).
+- New feature module files: `features/members/{constants,validation}.ts`,
+  `inviteMembers` / `updatePersonProfile` / `setMemberStatus` / `resendInvite`
+  in `features/members/actions.ts`, `getPeopleDirectory` in `queries.ts`, and
+  `lib/supabase/admin.ts` (service-role client).
+- **Not yet done:** `npm run db:push` to apply the columns; live verification
+  of the invite email flow against a real Supabase project.
 
 ## Scaffolded only (not implemented)
 

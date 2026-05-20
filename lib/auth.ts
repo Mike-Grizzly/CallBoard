@@ -71,6 +71,15 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     };
   }
 
+  // An invited user signing in for the first time already has a profile
+  // (created at invite time). Promote them from "invited" to "active".
+  if (existing[0].status === "invited") {
+    await db
+      .update(profiles)
+      .set({ status: "active", lastActiveAt: new Date() })
+      .where(eq(profiles.id, authUser.id));
+  }
+
   const membership = await db
     .select()
     .from(organizationMemberships)

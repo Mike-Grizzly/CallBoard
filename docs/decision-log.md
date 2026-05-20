@@ -366,3 +366,47 @@ Record of durable project decisions. Add new entries at the bottom with date and
 - The `rls_disabled` critical advisory clears; the 8 tables now show only the benign INFO-level `rls_enabled_no_policy`, identical to the other 23.
 - Same future caveat: if data access ever moves to the Supabase JS client (anon key), policies must be written first.
 - Unrelated: the security advisor still reports a WARN for `auth_leaked_password_protection` (HaveIBeenPwned check disabled in Auth settings) — not addressed here.
+
+---
+
+## 2026-05-20 — People directory uses Supabase Admin invites, not a separate invitation table
+
+**Decision:** For the People directory mass-upload feature (Step 16), people
+added before they sign up are created as real Supabase auth users in an
+unconfirmed state via the Admin API (`auth.admin.inviteUserByEmail` /
+`createUser`), rather than introducing a standalone `invitations` table or
+decoupling `profiles` from auth users.
+
+**Reason:** Supabase ships the standard SaaS invite flow as a built-in
+primitive — `inviteUserByEmail` creates the user, generates the token, and
+sends the email. Using it keeps `profiles` 1:1 with auth users, so
+`organization_memberships` and `production_memberships` keep their existing
+foreign keys and invited people can be assigned to productions immediately
+(which the demo requires). The alternative — standalone profile records — would
+have forced a migration rewriting `lib/auth.ts`'s identity model for no real
+gain. The cost is one new server-only env var, `SUPABASE_SERVICE_ROLE_KEY`
+(the Admin API cannot run on the anon key).
+
+**Impact:**
+- New `lib/supabase/admin.ts` service-role client; used only in server actions.
+- `profiles.status` (`active | invited | inactive`) tracks invite state;
+  `lib/auth.ts` promotes `invited` → `active` on first sign-in.
+- The Supabase project must have the "Invite user" email template enabled.
+- The demo's separate "permission level" concept was collapsed into CallBoard's
+  single role model — permissions remain role-derived; the People table's
+  Permission column is a read-only role-derived tier.
+
+---
+
+## 2026-05-20 — `profiles` columns added via `drizzle-kit push`, not Supabase MCP
+
+**Decision:** The four new `profiles` columns (`phone`, `pronouns`, `status`,
+`last_active_at`) are applied with `npm run db:push`, not a direct Supabase MCP
+migration.
+
+**Reason:** All four are additive and either nullable or defaulted, so `push`
+will not hang (the hang only affects composite unique constraints) and there is
+no risk to existing rows — `status` defaults to `active` so already-signed-up
+people stay correct. Keeping the change in the Drizzle schema is the project's
+normal path; the direct-SQL route via MCP is reserved for cases `push` cannot
+handle (RLS, constraints).
