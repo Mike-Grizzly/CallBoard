@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { RichTextEditor } from "@/components/ui/rich-text-editor-lazy";
 import { Icon } from "@/components/ui/icon";
 import type { IconName } from "@/components/ui/icon";
 import type { MentionMember } from "@/components/ui/mention-textarea";

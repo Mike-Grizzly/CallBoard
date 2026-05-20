@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef } from "react";
 import { Megaphone } from "lucide-react";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { RichTextEditor } from "@/components/ui/rich-text-editor-lazy";
 import type { MentionMember } from "@/components/ui/mention-textarea";
 import { createAnnouncement } from "@/features/announcements/actions";
 

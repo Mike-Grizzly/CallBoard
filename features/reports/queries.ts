@@ -1,9 +1,24 @@
 import { db } from "@/db";
 import { rehearsalReports, profiles } from "@/db/schema";
-import { and, eq, desc, isNull, isNotNull } from "drizzle-orm";
+import { and, eq, desc, isNull, isNotNull, count } from "drizzle-orm";
 
-export async function getReportsByProduction(productionId: string) {
-  return db
+export async function getReportsByProduction(
+  productionId: string,
+  opts: {
+    status?: "draft" | "distributed";
+    limit?: number;
+    offset?: number;
+  } = {},
+) {
+  const conditions = [
+    eq(rehearsalReports.productionId, productionId),
+    isNull(rehearsalReports.deletedAt),
+  ];
+  if (opts.status) {
+    conditions.push(eq(rehearsalReports.status, opts.status));
+  }
+
+  const base = db
     .select({
       id: rehearsalReports.id,
       reportNumber: rehearsalReports.reportNumber,
@@ -19,18 +34,74 @@ export async function getReportsByProduction(productionId: string) {
     })
     .from(rehearsalReports)
     .innerJoin(profiles, eq(rehearsalReports.createdBy, profiles.id))
+    .where(and(...conditions))
+    .orderBy(desc(rehearsalReports.reportDate))
+    .$dynamic();
+
+  const limited = opts.limit !== undefined ? base.limit(opts.limit) : base;
+  return opts.offset !== undefined ? limited.offset(opts.offset) : limited;
+}
+
+export type ReportWithAuthor = Awaited<
+  ReturnType<typeof getReportsByProduction>
+>[number];
+
+/** Non-deleted report count for a production (tab badges, summaries). */
+export async function getReportCountByProduction(
+  productionId: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ value: count() })
+    .from(rehearsalReports)
+    .where(
+      and(
+        eq(rehearsalReports.productionId, productionId),
+        isNull(rehearsalReports.deletedAt),
+      ),
+    );
+  return row?.value ?? 0;
+}
+
+/** Per-status counts for the reports list filter chips. */
+export async function getReportStatusCounts(
+  productionId: string,
+): Promise<{ total: number; draft: number; distributed: number }> {
+  const rows = await db
+    .select({ status: rehearsalReports.status, value: count() })
+    .from(rehearsalReports)
     .where(
       and(
         eq(rehearsalReports.productionId, productionId),
         isNull(rehearsalReports.deletedAt),
       ),
     )
-    .orderBy(desc(rehearsalReports.reportDate));
+    .groupBy(rehearsalReports.status);
+
+  let total = 0;
+  let draft = 0;
+  let distributed = 0;
+  for (const row of rows) {
+    total += row.value;
+    if (row.status === "draft") draft = row.value;
+    else if (row.status === "distributed") distributed = row.value;
+  }
+  return { total, draft, distributed };
 }
 
-export type ReportWithAuthor = Awaited<
-  ReturnType<typeof getReportsByProduction>
->[number];
+export async function getDeletedReportCountByProduction(
+  productionId: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ value: count() })
+    .from(rehearsalReports)
+    .where(
+      and(
+        eq(rehearsalReports.productionId, productionId),
+        isNotNull(rehearsalReports.deletedAt),
+      ),
+    );
+  return row?.value ?? 0;
+}
 
 export async function getReportById(reportId: string) {
   const results = await db

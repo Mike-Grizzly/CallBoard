@@ -1,6 +1,6 @@
 # Current Status
 
-**Last updated:** 2026-05-19
+**Last updated:** 2026-05-20
 
 **Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15). Latest: cross-production calendar at `/calendar` with month/week views, production color filters, and a per-production color column reused by the sidebar rail.
 
@@ -221,6 +221,15 @@
 - New query: `getCallsForUserInRange({ userId, organizationId, startDate, endDate, manageAll })` in `features/calls/queries.ts`
 - All calendar styles live in `app/globals.css` under `.cal-*`, `.week-*`, `.month-*`, `.day-*`, `.agenda-*`, `.mini-*`, plus utility helpers `.seg`, `.row`, `.gap-sm`, `.mono`, `.truncate`, `.anim-in`
 - **DB migration** was applied directly via Supabase MCP (`add_production_color`) — no `pnpm db:push` needed
+
+## Performance pass (2026-05-20)
+
+Branch `claude/improve-page-performance-YXRgv` — page-load optimizations, no behavior change except reports pagination:
+
+- **Production layout no longer over-fetches.** `app/(app)/productions/[slug]/layout.tsx` runs on every production sub-page and fetched full reports/documents/announcements/deleted-items rows only to read `.length` for tab badges. Replaced with `COUNT(*)` queries: `getReportCountByProduction`, `getReportStatusCounts`, `getDeletedReportCountByProduction` (reports), `getDocumentCountByProduction`, `getDeletedDocumentCountByProduction` (documents), `getAnnouncementCountByProduction` (announcements).
+- **Blocking page N+1 fixed.** `getScenesWithBeats` in `features/scenes/queries.ts` issued one beats query per scene; now a single `inArray` query grouped in memory.
+- **TipTap is lazy-loaded.** `RichTextDisplay` moved to its own server-safe file `components/ui/rich-text-display.tsx` (no TipTap import); the editor loads on demand via `components/ui/rich-text-editor-lazy.tsx` (`next/dynamic`, `ssr: false`). Display-only pages no longer ship the ~300KB editor bundle.
+- **Reports list is paginated.** `/productions/[slug]/reports` pages 25 rows at a time via `?page=` (preserves the `?status=` filter). `getReportsByProduction` takes optional `{ status, limit, offset }`; calling it with no options is unchanged.
 
 ## Scaffolded only (not implemented)
 

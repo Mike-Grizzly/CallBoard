@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { productionScenes, sceneBeats } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, inArray } from "drizzle-orm";
 
 export async function getScenesByProduction(productionId: string) {
   return db
@@ -20,13 +20,30 @@ export async function getBeatsByScene(sceneId: string) {
 
 export async function getScenesWithBeats(productionId: string) {
   const scenes = await getScenesByProduction(productionId);
-  const result = await Promise.all(
-    scenes.map(async (scene) => ({
-      ...scene,
-      beats: await getBeatsByScene(scene.id),
-    })),
-  );
-  return result;
+  if (scenes.length === 0) return [];
+
+  const beats = await db
+    .select()
+    .from(sceneBeats)
+    .where(
+      inArray(
+        sceneBeats.sceneId,
+        scenes.map((s) => s.id),
+      ),
+    )
+    .orderBy(asc(sceneBeats.orderIndex));
+
+  const beatsByScene = new Map<string, typeof beats>();
+  for (const beat of beats) {
+    const list = beatsByScene.get(beat.sceneId);
+    if (list) list.push(beat);
+    else beatsByScene.set(beat.sceneId, [beat]);
+  }
+
+  return scenes.map((scene) => ({
+    ...scene,
+    beats: beatsByScene.get(scene.id) ?? [],
+  }));
 }
 
 export type SceneWithBeats = Awaited<

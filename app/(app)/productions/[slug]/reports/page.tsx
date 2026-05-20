@@ -6,9 +6,22 @@ import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
-import { getReportsByProduction } from "@/features/reports/queries";
+import {
+  getReportsByProduction,
+  getReportStatusCounts,
+} from "@/features/reports/queries";
 
 type Filter = "all" | "draft" | "distributed";
+
+const PAGE_SIZE = 25;
+
+function pageHref(base: string, filter: Filter, page: number): string {
+  const params = new URLSearchParams();
+  if (filter !== "all") params.set("status", filter);
+  if (page > 1) params.set("page", String(page));
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : base;
+}
 
 function formatReportDate(dateStr: string) {
   const d = new Date(`${dateStr}T00:00:00`);
@@ -72,12 +85,13 @@ export default async function ReportsPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; page?: string }>;
 }) {
   const { slug } = await params;
-  const { status: rawStatus } = await searchParams;
+  const { status: rawStatus, page: rawPage } = await searchParams;
   const filter: Filter =
     rawStatus === "draft" || rawStatus === "distributed" ? rawStatus : "all";
+  const requestedPage = Math.max(1, Number.parseInt(rawPage ?? "1", 10) || 1);
 
   const user = await requireCurrentUser();
   const org = await getOrCreateDefaultOrganization();
@@ -95,19 +109,28 @@ export default async function ReportsPage({
     }
   }
 
-  const allReports = await getReportsByProduction(production.id);
   const canCreate = can(user.role, "reports:create");
 
-  const total = allReports.length;
-  const drafts = allReports.filter((r) => r.status === "draft").length;
-  const distributed = allReports.filter(
-    (r) => r.status === "distributed",
-  ).length;
+  const {
+    total,
+    draft: drafts,
+    distributed,
+  } = await getReportStatusCounts(production.id);
 
-  const filtered =
-    filter === "all"
-      ? allReports
-      : allReports.filter((r) => r.status === filter);
+  const filteredTotal =
+    filter === "draft"
+      ? drafts
+      : filter === "distributed"
+        ? distributed
+        : total;
+  const pageCount = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
+  const page = Math.min(requestedPage, pageCount);
+
+  const reports = await getReportsByProduction(production.id, {
+    status: filter === "all" ? undefined : filter,
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
+  });
 
   const base = `/productions/${slug}/reports`;
 
@@ -149,7 +172,7 @@ export default async function ReportsPage({
         />
       </div>
 
-      {filtered.length === 0 ? (
+      {filteredTotal === 0 ? (
         <div className="card card-pad" style={{ textAlign: "center", padding: "48px 16px" }}>
           <Icon name="FileText" size={28} aria-hidden />
           <div style={{ marginTop: 10, fontSize: 14, fontWeight: 500, color: "var(--ink-2)" }}>
@@ -189,7 +212,7 @@ export default async function ReportsPage({
             <span>Filed</span>
             <span>Status</span>
           </div>
-          {filtered.map((report) => {
+          {reports.map((report) => {
             const { weekday, date } = formatReportDate(report.reportDate);
             const author =
               report.createdByFirstName || report.createdByLastName
@@ -249,6 +272,46 @@ export default async function ReportsPage({
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {pageCount > 1 && (
+        <div className="row-between" style={{ fontSize: 13 }}>
+          <span className="muted">
+            Page {page} of {pageCount}
+          </span>
+          <div className="row" style={{ gap: 6 }}>
+            {page > 1 ? (
+              <Link
+                href={pageHref(base, filter, page - 1)}
+                prefetch
+                className="btn"
+              >
+                <Icon name="ChevronLeft" size={14} aria-hidden />
+                <span>Previous</span>
+              </Link>
+            ) : (
+              <button className="btn" disabled>
+                <Icon name="ChevronLeft" size={14} aria-hidden />
+                <span>Previous</span>
+              </button>
+            )}
+            {page < pageCount ? (
+              <Link
+                href={pageHref(base, filter, page + 1)}
+                prefetch
+                className="btn"
+              >
+                <span>Next</span>
+                <Icon name="ChevronRight" size={14} aria-hidden />
+              </Link>
+            ) : (
+              <button className="btn" disabled>
+                <span>Next</span>
+                <Icon name="ChevronRight" size={14} aria-hidden />
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

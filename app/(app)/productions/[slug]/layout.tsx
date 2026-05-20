@@ -11,9 +11,9 @@ import {
   getProductionMembers,
   getProductionMembership,
 } from "@/features/members/queries";
-import { getReportsByProduction, getDeletedReportsByProduction } from "@/features/reports/queries";
-import { getDocumentsByProduction, getDeletedDocumentsByProduction } from "@/features/documents/queries";
-import { getAnnouncementsByProduction } from "@/features/announcements/queries";
+import { getReportCountByProduction, getDeletedReportCountByProduction } from "@/features/reports/queries";
+import { getDocumentCountByProduction, getDeletedDocumentCountByProduction } from "@/features/documents/queries";
+import { getAnnouncementCountByProduction } from "@/features/announcements/queries";
 import { getUnreadNotificationCount } from "@/features/notifications/actions";
 import { NotificationBell } from "./notification-bell";
 import { TrashDrawer } from "./trash-drawer";
@@ -84,18 +84,25 @@ export default async function ProductionLayout({
   const canViewBlocking = can(user.role, "blocking:view");
   const canViewNotes = can(user.role, "notes:view");
 
-  const [members, reports, documents, announcements, unreadCount, deletedDocs, deletedReports] =
-    await Promise.all([
-      getProductionMembers(production.id),
-      getReportsByProduction(production.id),
-      getDocumentsByProduction(production.id),
-      getAnnouncementsByProduction(production.id, org.id),
-      getUnreadNotificationCount(),
-      getDeletedDocumentsByProduction(production.id),
-      getDeletedReportsByProduction(production.id),
-    ]);
+  const [
+    members,
+    reportCount,
+    documentCount,
+    announcementCount,
+    unreadCount,
+    deletedDocCount,
+    deletedReportCount,
+  ] = await Promise.all([
+    getProductionMembers(production.id),
+    getReportCountByProduction(production.id),
+    getDocumentCountByProduction(production.id),
+    getAnnouncementCountByProduction(production.id, org.id),
+    getUnreadNotificationCount(),
+    getDeletedDocumentCountByProduction(production.id),
+    getDeletedReportCountByProduction(production.id),
+  ]);
 
-  const initialTrashCount = deletedDocs.length + deletedReports.length;
+  const initialTrashCount = deletedDocCount + deletedReportCount;
 
   const director = members.find((m) => m.role === "director");
   const directorName = director
@@ -114,7 +121,7 @@ export default async function ProductionLayout({
       label: "Rehearsal Reports",
       href: `/productions/${slug}/reports`,
       icon: "FileText",
-      count: reports.length,
+      count: reportCount,
     },
   ];
   if (canViewNotes) {
@@ -134,13 +141,13 @@ export default async function ProductionLayout({
       label: "Documents",
       href: `/productions/${slug}/documents`,
       icon: "FolderOpen",
-      count: documents.length,
+      count: documentCount,
     },
     {
       label: "Announcements",
       href: `/productions/${slug}/announcements`,
       icon: "Megaphone",
-      count: announcements.length,
+      count: announcementCount,
     },
   );
 

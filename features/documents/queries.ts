@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { documents, documentFolders, documentComments, profiles } from "@/db/schema";
-import { and, eq, desc, asc, isNull, isNotNull } from "drizzle-orm";
+import { and, eq, desc, asc, isNull, isNotNull, count } from "drizzle-orm";
 
 export async function getFoldersByProduction(productionId: string) {
   return db
@@ -44,6 +44,37 @@ export async function getDocumentsByProduction(productionId: string) {
       ),
     )
     .orderBy(desc(documents.createdAt));
+}
+
+/** Non-deleted document count for a production (tab badges). */
+export async function getDocumentCountByProduction(
+  productionId: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ value: count() })
+    .from(documents)
+    .where(
+      and(
+        eq(documents.productionId, productionId),
+        isNull(documents.deletedAt),
+      ),
+    );
+  return row?.value ?? 0;
+}
+
+export async function getDeletedDocumentCountByProduction(
+  productionId: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ value: count() })
+    .from(documents)
+    .where(
+      and(
+        eq(documents.productionId, productionId),
+        isNotNull(documents.deletedAt),
+      ),
+    );
+  return row?.value ?? 0;
 }
 
 export async function getDocumentById(documentId: string) {

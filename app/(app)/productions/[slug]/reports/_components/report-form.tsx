@@ -9,7 +9,8 @@ import {
 } from "@/features/reports/actions";
 import { DEPARTMENTS } from "@/features/reports/constants";
 import type { ReportDetail } from "@/features/reports/queries";
-import { RichTextEditor, RichTextDisplay } from "@/components/ui/rich-text-editor";
+import { RichTextEditor } from "@/components/ui/rich-text-editor-lazy";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import type { MentionMember } from "@/components/ui/mention-textarea";
 import { Icon } from "@/components/ui/icon";
 import { DeptNoteModal } from "./dept-note-modal";

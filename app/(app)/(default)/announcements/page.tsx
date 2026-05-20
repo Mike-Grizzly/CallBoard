@@ -1,5 +1,5 @@
 import { Icon } from "@/components/ui/icon";
-import { RichTextDisplay } from "@/components/ui/rich-text-editor";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
