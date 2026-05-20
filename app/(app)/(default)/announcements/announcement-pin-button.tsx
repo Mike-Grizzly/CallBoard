@@ -27,10 +27,11 @@ export function AnnouncementPinButton({
       type="button"
       onClick={handleClick}
       disabled={isPending}
-      className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--muted)] hover:text-[color:var(--foreground)]"
+      className="btn ghost btn-icon"
       title={pinned ? "Unpin announcement" : "Pin announcement"}
+      style={pinned ? { color: "var(--accent)" } : undefined}
     >
-      {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+      {pinned ? <PinOff size={14} /> : <Pin size={14} />}
     </button>
   );
 }

@@ -1,17 +1,36 @@
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { Megaphone, Pin } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icon";
 import { RichTextDisplay } from "@/components/ui/rich-text-editor";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
-import { getProductionMembership, getProductionMembers } from "@/features/members/queries";
+import {
+  getProductionMembership,
+  getProductionMembers,
+} from "@/features/members/queries";
 import { getAnnouncementsByProduction } from "@/features/announcements/queries";
 import { AnnouncementForm } from "./announcement-form";
 import { AnnouncementDeleteButton } from "./announcement-delete-button";
 import { AnnouncementPinButton } from "./announcement-pin-button";
+
+const AVATAR_PALETTE = ["clay", "sage", "dusk", "amber", "plum", "sand"] as const;
+
+function avatarColor(seed: string): string {
+  let h = 0;
+  for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
+}
+
+function authorInitials(
+  firstName: string | null,
+  lastName: string | null,
+  email: string,
+): string {
+  if (firstName && lastName) return `${firstName[0]}${lastName[0]}`.toUpperCase();
+  if (firstName) return firstName[0].toUpperCase();
+  return email[0].toUpperCase();
+}
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString("en-US", {
@@ -57,89 +76,130 @@ export default async function ProductionAnnouncementsPage({
   }));
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <div className="mb-6">
-        <Link
-          href={`/productions/${slug}`}
-          className="text-sm text-[color:var(--muted-foreground)] underline underline-offset-4 hover:text-[color:var(--foreground)]"
-        >
-          &larr; Back to {production.title}
-        </Link>
-        <div className="mt-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Announcements</h1>
-        </div>
-        <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
+    <div
+      className="page-narrow anim-in"
+      style={{ display: "flex", flexDirection: "column", gap: 14 }}
+    >
+      <div>
+        <h2 className="h-section">Announcements</h2>
+        <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+          {items.length} {items.length === 1 ? "announcement" : "announcements"} ·{" "}
           {production.title}
-        </p>
+        </div>
       </div>
 
-      {canCreate && <AnnouncementForm productionId={production.id} members={mentionMembers} />}
+      {canCreate && (
+        <AnnouncementForm productionId={production.id} members={mentionMembers} />
+      )}
 
       {items.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Megaphone className="mb-3 h-10 w-10 text-[color:var(--muted-foreground)]" />
-            <p className="text-sm font-medium">No announcements yet</p>
-            <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
-              {canCreate
-                ? "Post an update for the team."
-                : "No announcements have been posted yet."}
-            </p>
-          </CardContent>
-        </Card>
+        <div
+          className="card card-pad"
+          style={{ textAlign: "center", padding: "48px 24px" }}
+        >
+          <Icon
+            name="Megaphone"
+            style={{
+              width: 32,
+              height: 32,
+              margin: "0 auto 10px",
+              color: "var(--ink-4)",
+            }}
+          />
+          <p style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-2)" }}>
+            No announcements yet
+          </p>
+          <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+            {canCreate
+              ? "Post an update for the team."
+              : "No announcements have been posted yet."}
+          </p>
+        </div>
       ) : (
-        <div className="space-y-3">
+        <div className="ann-list">
           {items.map((item) => {
             const authorName =
               item.authorFirstName || item.authorLastName
-                ? `${item.authorFirstName} ${item.authorLastName}`.trim()
+                ? `${item.authorFirstName ?? ""} ${item.authorLastName ?? ""}`.trim()
                 : item.authorEmail;
             const isAuthor = item.createdById === user.id;
             const canDelete = isAuthor || canManage;
             const isOrgWide = item.productionId === null;
 
             return (
-              <Card
-                key={item.id}
-                className={item.pinned ? "border-[color:var(--primary)]/40 bg-[color:var(--primary)]/5" : ""}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {item.pinned && (
-                          <Pin className="h-3.5 w-3.5 shrink-0 text-[color:var(--primary)]" aria-hidden />
-                        )}
-                        <h2 className="text-sm font-semibold">{item.title}</h2>
-                        {isOrgWide && (
-                          <span className="rounded-full bg-[color:var(--muted)] px-2 py-0.5 text-xs font-medium">
-                            Org-wide
-                          </span>
+              <article key={item.id} className="ann-card">
+                <div className="ann-rail" data-c={isOrgWide ? "amber" : "dusk"} />
+                <div className="ann-main">
+                  <div className="ann-header">
+                    <div className="row" style={{ gap: 10 }}>
+                      <div
+                        className="avatar"
+                        style={{
+                          width: 26,
+                          height: 26,
+                          fontSize: 11,
+                          background: `var(--c-${avatarColor(authorName)})`,
+                        }}
+                      >
+                        {authorInitials(
+                          item.authorFirstName,
+                          item.authorLastName,
+                          item.authorEmail,
                         )}
                       </div>
-                      <p className="mt-0.5 text-xs text-[color:var(--muted-foreground)]">
-                        {authorName} &middot; {formatDate(item.createdAt)}
-                      </p>
-                      {item.body && (
-                        <div className="mt-2 text-sm">
-                          <RichTextDisplay content={item.body} />
+                      <div>
+                        <div className="ann-from">{authorName}</div>
+                        <div className="ann-meta">
+                          {isOrgWide && (
+                            <>
+                              <span className="pill" data-c="amber">
+                                <Icon name="Megaphone" size={10} />
+                                Org-wide
+                              </span>
+                              <span>·</span>
+                            </>
+                          )}
+                          <span>{formatDate(item.createdAt)}</span>
+                          {item.pinned && (
+                            <>
+                              <span>·</span>
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 3,
+                                }}
+                              >
+                                <Icon name="Pin" size={10} />
+                                Pinned
+                              </span>
+                            </>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      {canManage && (
-                        <AnnouncementPinButton
-                          announcementId={item.id}
-                          pinned={item.pinned}
-                        />
-                      )}
-                      {canDelete && (
-                        <AnnouncementDeleteButton announcementId={item.id} />
-                      )}
-                    </div>
+                    {(canManage || canDelete) && (
+                      <div className="row" style={{ gap: 4 }}>
+                        {canManage && (
+                          <AnnouncementPinButton
+                            announcementId={item.id}
+                            pinned={item.pinned}
+                          />
+                        )}
+                        {canDelete && (
+                          <AnnouncementDeleteButton announcementId={item.id} />
+                        )}
+                      </div>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
+                  <h3 className="ann-title">{item.title}</h3>
+                  {item.body && (
+                    <div className="ann-body">
+                      <RichTextDisplay content={item.body} />
+                    </div>
+                  )}
+                </div>
+              </article>
             );
           })}
         </div>

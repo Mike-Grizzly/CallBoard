@@ -4,7 +4,11 @@ import { useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { deleteAnnouncement } from "@/features/announcements/actions";
 
-export function AnnouncementDeleteButton({ announcementId }: { announcementId: string }) {
+export function AnnouncementDeleteButton({
+  announcementId,
+}: {
+  announcementId: string;
+}) {
   const [isPending, startTransition] = useTransition();
 
   function handleClick() {
@@ -23,10 +27,10 @@ export function AnnouncementDeleteButton({ announcementId }: { announcementId: s
       type="button"
       onClick={handleClick}
       disabled={isPending}
-      className="rounded p-1.5 text-[color:var(--muted-foreground)] transition-colors hover:bg-red-50 hover:text-red-600"
+      className="btn ghost btn-icon"
       title="Delete announcement"
     >
-      <Trash2 className="h-4 w-4" />
+      <Trash2 size={14} />
     </button>
   );
 }

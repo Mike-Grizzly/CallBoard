@@ -85,6 +85,7 @@
 - Delete: author or admin/producer
 - Org-wide badge on all announcement cards
 - Announcements tab and overview card added to production detail page
+- **UI port (2026-05-20):** production + global announcement pages restyled to the warm `.ann-card` design (colored scope rail, author avatar, scope pill, display-font title); the create form moved to a warm `.card`. See `docs/ui-port-roadmap.md`.
 - **Not fully verified:** Live testing in browser pending
 
 ### Step 9: Rehearsal Report Overhaul — IMPLEMENTED

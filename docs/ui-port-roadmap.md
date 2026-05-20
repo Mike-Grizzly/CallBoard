@@ -36,8 +36,7 @@ match the demo, tab by tab.
 ### Phase 2 — per-tab content port — IN PROGRESS
 
 Most production tabs and top-level screens are ported. What remains:
-**Announcements** (production + global), the **production Members** page,
-the **productions list**, and the **auth screens**. The **Calls /
+the **production Members** page and the **auth screens**. The **Calls /
 Rehearsal Schedule** screen is only partially ported.
 
 ## Feature ↔ demo module ↔ route map
@@ -53,8 +52,8 @@ Rehearsal Schedule** screen is only partially ported.
 | Script Editor | (no demo module) | `/productions/[slug]/script` | **Done** (built natively) |
 | Personal Calendar | `tab-calendar.jsx` | `/calendar` | **Done** |
 | Personalized Dashboard | `tab-home.jsx` | `/dashboard` | **Done** — but predates the newer `tab-home.jsx` Workspace Home design (see note) |
-| Announcements (production) | `tab-home.jsx` `.ann-card`s | `/productions/[slug]/announcements` | **Not started** |
-| Announcements (global) | `tab-home.jsx` `.ann-card`s | `/announcements` | **Not started** |
+| Announcements (production) | `tab-home.jsx` `.ann-card`s | `/productions/[slug]/announcements` | **Done** (build-verified; not yet browser-verified) |
+| Announcements (global) | `tab-home.jsx` `.ann-card`s | `/announcements` | **Done** (build-verified; not yet browser-verified) |
 | Production Members | `people.jsx` | `/productions/[slug]/members` | **Not started** |
 | Productions list | `tab-home.jsx` `.prod-card`s | `/productions` | **Done** (build-verified; not yet browser-verified) |
 | Org member management | `people.jsx` | `/settings/members` | **Not started** |
@@ -103,14 +102,20 @@ For every screen, the same recipe applies:
       `text-[color:var(--muted-foreground)]`) with warm classes
 - [ ] Audit call detail / new / edit forms for warm styling
 
-### Announcements — `/productions/[slug]/announcements` + `/announcements` — NOT STARTED
+### Announcements — `/productions/[slug]/announcements` + `/announcements` — DONE
 
-- [ ] Production announcement list → demo `.ann-card` broadcast cards
-      (author avatar, scope pill, body, acknowledge bar)
-- [ ] Global `/announcements` page mirrored
-- [ ] New/Edit form restyled with TipTap chrome matching Notes
-- [ ] Replace `<Card>` / `<CardContent>` shadcn primitives and raw
-      `lucide-react` imports
+- [x] Production announcement list → demo `.ann-card` broadcast cards
+      (colored scope rail, author avatar, scope pill, display-font title)
+- [x] Global `/announcements` page mirrored (scope pill shows
+      "Org-wide" or the production title)
+- [x] Create form restyled as a warm `.card` with `.field` inputs; the
+      shared `RichTextEditor` chrome is unchanged
+- [x] Replaced `<Card>` / `<CardContent>` shadcn primitives and the
+      Tailwind-styled buttons with `.ann-*` / `.btn` classes and `<Icon>`
+- The demo's acknowledge bar + Acknowledge/Reply actions were dropped —
+  there is no backend for acknowledgements or replies.
+- Not browser-verified: no `DATABASE_URL` in this container. Compiles +
+  type-checks clean.
 
 ### Members — `/productions/[slug]/members` — NOT STARTED
 
