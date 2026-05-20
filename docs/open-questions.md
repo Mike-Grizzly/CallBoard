@@ -68,6 +68,10 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 - Should there be a search/filter capability on the documents list?
 - Should the production overview cards show more metadata (dates, member count)?
 
+## UI port questions
+
+- **Workspace Home vs. current `/dashboard`:** `design-reference/jsx/tab-home.jsx` is a richer workspace landing (greeting hero, "Right now" strip, announcement broadcast cards, productions browser, @mentions, pinned items). The current `/dashboard` was ported against an earlier design and does not match it. Should `/dashboard` be re-ported to the Workspace Home design? The new shell mockup (`design-reference/jsx/shell.jsx`) also adds a workspace/production/people view switcher in the rail — adopting it is a connected decision.
+
 ## Notes questions
 
 - **Visibility enforcement:** Private notes are visible to all team members in the current implementation. Should the `getNotesByProduction` query filter by `visibility = 'shared' OR created_by = currentUserId`?

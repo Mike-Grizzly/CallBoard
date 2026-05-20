@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { Icon } from "@/components/ui/icon";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
@@ -40,19 +41,18 @@ export default async function ProductionMembersPage({
   );
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <div className="mb-6">
-        <Link
-          href={`/productions/${slug}`}
-          className="text-sm text-[color:var(--muted-foreground)] underline underline-offset-4 hover:text-[color:var(--foreground)]"
-        >
-          &larr; Back to {production.title}
-        </Link>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight">
-          Manage Team — {production.title}
-        </h1>
-        <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
-          Assign organization members to this production with a specific role.
+    <div className="page-narrow anim-in">
+      <Link href={`/productions/${slug}`} className="pp-back">
+        <Icon name="ChevronLeft" size={14} />
+        <span>Back to {production.title}</span>
+      </Link>
+
+      <div style={{ margin: "10px 0 22px" }}>
+        <div className="h-eyebrow">Production</div>
+        <h1 className="h-section">Cast &amp; crew</h1>
+        <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+          Assign organization members to this production and set each
+          person&apos;s role.
         </p>
       </div>
 

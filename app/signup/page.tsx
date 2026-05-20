@@ -1,16 +1,26 @@
+import Link from "next/link";
 import { SignupForm } from "./signup-form";
 
 export default function SignupPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[color:var(--muted)] px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">Show Portal</h1>
-          <p className="mt-2 text-sm text-[color:var(--muted-foreground)]">
-            Create a new account
+    <div className="auth-screen">
+      <div className="auth-card-wrap">
+        <div className="auth-head">
+          <div className="auth-brand">
+            <span className="auth-mark">C</span>
+            <span className="auth-wordmark">
+              Call<em>Board</em>
+            </span>
+          </div>
+          <h1 className="auth-title">Create your account</h1>
+          <p className="auth-sub">
+            Join your company&apos;s production workspace.
           </p>
         </div>
         <SignupForm />
+        <p className="auth-foot">
+          Already have an account? <Link href="/login">Sign in</Link>
+        </p>
       </div>
     </div>
   );

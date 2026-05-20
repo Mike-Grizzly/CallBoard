@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useRef } from "react";
 import { Megaphone } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { createAnnouncement } from "@/features/announcements/actions";
 
@@ -36,29 +35,23 @@ export function OrgAnnouncementForm() {
   }
 
   return (
-    <form
-      ref={formRef}
-      onSubmit={handleSubmit}
-      className="mb-6 rounded-lg border border-[color:var(--border)] p-4"
-    >
-      <h2 className="mb-3 text-sm font-semibold">Post Org-Wide Announcement</h2>
-      <div className="space-y-3">
+    <form ref={formRef} onSubmit={handleSubmit} className="card card-pad">
+      <h2 className="h-card" style={{ marginBottom: 12 }}>
+        Post org-wide announcement
+      </h2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div>
-          <label className="mb-1 block text-xs font-medium text-[color:var(--muted-foreground)]">
-            Title
-          </label>
+          <label className="label">Title</label>
           <input
             type="text"
             name="title"
             required
-            className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+            className="field"
             placeholder="e.g. Studio closed this Saturday"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-[color:var(--muted-foreground)]">
-            Details (optional)
-          </label>
+          <label className="label">Details (optional)</label>
           <RichTextEditor
             content={body}
             onChange={setBody}
@@ -66,13 +59,19 @@ export function OrgAnnouncementForm() {
           />
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-3">
-        <Button type="submit" disabled={isPending} size="sm">
-          <Megaphone className="h-4 w-4" aria-hidden />
-          {isPending ? "Posting..." : "Post"}
-        </Button>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {success && <p className="text-sm text-green-600">Announcement posted.</p>}
+      <div className="row" style={{ gap: 12, marginTop: 12 }}>
+        <button type="submit" className="btn primary" disabled={isPending}>
+          <Megaphone size={14} aria-hidden />
+          <span>{isPending ? "Posting..." : "Post"}</span>
+        </button>
+        {error && (
+          <span style={{ fontSize: 13, color: "var(--accent)" }}>{error}</span>
+        )}
+        {success && (
+          <span style={{ fontSize: 13, color: "var(--c-sage)" }}>
+            Announcement posted.
+          </span>
+        )}
       </div>
     </form>
   );

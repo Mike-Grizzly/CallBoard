@@ -3,7 +3,8 @@
 const { I } = window;
 const { ME, PRODUCTIONS, TABS, NOTIFICATIONS } = window.DATA;
 
-function Rail({ activeProd, onPickProd }) {
+function Rail({ activeProd, onPickProd, onAddProduction, view, onNav }) {
+  const plusRef = React.useRef(null);
   return (
     <aside className="rail">
       <div className="rail-brand">
@@ -13,27 +14,30 @@ function Rail({ activeProd, onPickProd }) {
 
       <div className="rail-section">
         <div className="rail-section-h"><span>Workspace</span></div>
-        <div className="rail-item" data-active="1">
+        <div className="rail-item" data-active={view === "workspace" ? "1" : "0"} onClick={() => onNav && onNav("workspace")}>
           <I.Home /><span>Home</span>
         </div>
-        <div className="rail-item">
+        <div className="rail-item" onClick={() => onNav && onNav("workspace")}>
           <I.Bell /><span>Inbox</span><span className="badge">3</span>
         </div>
-        <div className="rail-item">
+        <div className="rail-item" data-active={view === "calendar" ? "1" : "0"} onClick={() => onNav && onNav("calendar")}>
           <I.Calendar /><span>Calendar</span>
         </div>
-        <div className="rail-item">
+        <div className="rail-item" data-active={view === "people" ? "1" : "0"} onClick={() => onNav && onNav("people")}>
           <I.Users /><span>People</span>
         </div>
       </div>
 
-      <div className="rail-section">
+      <div className="rail-section" style={{position:"relative"}}>
         <div className="rail-section-h">
           <span>Productions</span>
-          <button title="New production"><I.Plus size={14} /></button>
+          <button ref={plusRef} title="New production"
+                  onClick={(e) => onAddProduction && onAddProduction(plusRef.current)}>
+            <I.Plus size={14} />
+          </button>
         </div>
         {PRODUCTIONS.map(p => (
-          <div key={p.id} className="prod-item" data-active={p.id === activeProd ? "1" : "0"}
+          <div key={p.id} className="prod-item" data-active={view === "production" && p.id === activeProd ? "1" : "0"}
                onClick={() => onPickProd(p.id)}>
             <span className="prod-dot" style={{background:p.color}} />
             <span className="truncate">{p.title}</span>

@@ -18,10 +18,28 @@ data layer, while matching the demo's visuals closely.
 - `jsx/` — the demo's React components, transpiled by Babel-standalone at
   load time. They use globals (`window.I`, `window.DATA`, `window.Shell`)
   which we replace with real imports during port.
-  - `shell.jsx` — Rail (left nav), ProductionHeader (topbar + tabs),
-    NotificationsPopover.
+  - `shell.jsx` — Rail (left nav — now with workspace/production/people
+    view switching + a new-production trigger), ProductionHeader
+    (topbar + tabs), NotificationsPopover.
   - `app-entry.jsx` — top-level App that wires shell + tabs + tweaks.
+    Now also carries a workspace/production/people view switcher and the
+    new-production menu/quick-add/overlay state.
+  - `new-production.jsx` — 6-step New Production setup wizard (basics,
+    calendar, departments, roles, team, review). Runs standalone or as an
+    in-app overlay. NOT yet ported — see note below.
+  - `quick-add.jsx` — Quick Add modal (title + opening date), the
+    new-production menu popover, and the full-screen overlay wrapper for
+    the wizard.
+  - `people.jsx` — workspace-level People directory: table/grid views,
+    filters, person drawer, and the 3-path Add People modal (manual, CSV
+    upload, bulk paste wizard). Backed by `data-people.jsx`.
+  - `tab-home.jsx` — workspace Home: personal landing across all
+    productions (greeting + "Right now" strip, announcements,
+    productions browser, @mentions, pinned items). The "workspace" view
+    behind the rail switcher; carries its own self-contained mock data.
   - `tab-overview.jsx` — Production dashboard ("Today's call" hero).
+  - `tab-calendar.jsx` — Calendar tab (month/week/day/agenda views).
+    Already ported — see commit "Port calendar to match design-reference".
   - `tab-reports.jsx` — Rehearsal Reports list/view/edit.
   - `tab-notes.jsx` — Notes / To-dos workspace.
   - `tab-documents.jsx` — Shared files.
@@ -30,6 +48,9 @@ data layer, while matching the demo's visuals closely.
   - `rich-text-editor.jsx` — Lightweight RTE used by notes and reports.
   - `icons.jsx` — Lucide-style outline icon set used by the demo.
   - `mock-data.jsx` — Hardcoded productions, ME, notifications, etc.
+  - `data-people.jsx` — Org-level people directory mock data (ORG_ROLES,
+    PERMISSIONS, PRONOUNS, PEOPLE, ALL_PRODUCTIONS). Backs the demo's
+    PeoplePage, which lands in a later batch.
   - `tweaks-panel.jsx` — Dev-only theme/density tweaker (NOT being ported).
 
 ## Port status
@@ -58,6 +79,10 @@ Short version:
 
 - Do NOT port the Tweaks panel — it's a dev-time theme switcher we don't need.
 - The "Video" tab maps to no current backend; skip until a feature exists.
+- The New Production wizard (`new-production.jsx`) collects far more than
+  the current backend supports (departments, roles, team invites, rehearsal
+  pattern). It is a *feature*, not a pure reskin — port it under its own
+  feature spec, separate from the visual overhaul.
 - Geist + Newsreader come from Google Fonts via `next/font`, not from the
   demo's bundled woff2 blobs.
 - `--accent` in this codebase now means **curtain crimson** (the demo's

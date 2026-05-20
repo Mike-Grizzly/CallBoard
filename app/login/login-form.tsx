@@ -3,7 +3,6 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { login, type AuthResult } from "@/app/actions/auth";
-import { Button } from "@/components/ui/button";
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState<
@@ -12,21 +11,11 @@ export function LoginForm() {
   >(login, undefined);
 
   return (
-    <form
-      action={formAction}
-      className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-6 shadow-sm"
-    >
-      {state?.error && (
-        <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
-          {state.error}
-        </div>
-      )}
+    <form action={formAction} className="card card-pad">
+      {state?.error && <div className="auth-error">{state.error}</div>}
 
-      <div className="mb-4">
-        <label
-          htmlFor="email"
-          className="mb-1.5 block text-sm font-medium"
-        >
+      <div className="auth-field">
+        <label htmlFor="email" className="label">
           Email
         </label>
         <input
@@ -35,20 +24,17 @@ export function LoginForm() {
           type="email"
           required
           autoComplete="email"
-          className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm placeholder:text-[color:var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+          className="field"
           placeholder="you@example.com"
         />
       </div>
 
-      <div className="mb-6">
-        <div className="mb-1.5 flex items-center justify-between">
-          <label htmlFor="password" className="text-sm font-medium">
+      <div className="auth-field">
+        <div className="auth-field-row">
+          <label htmlFor="password" className="label" style={{ marginBottom: 0 }}>
             Password
           </label>
-          <Link
-            href="/forgot-password"
-            className="text-xs text-[color:var(--muted-foreground)] underline underline-offset-4 hover:text-[color:var(--foreground)]"
-          >
+          <Link href="/forgot-password" className="auth-link">
             Forgot password?
           </Link>
         </div>
@@ -58,24 +44,18 @@ export function LoginForm() {
           type="password"
           required
           autoComplete="current-password"
-          className="w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm placeholder:text-[color:var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+          className="field"
           placeholder="••••••••"
         />
       </div>
 
-      <Button type="submit" className="w-full" disabled={pending}>
+      <button
+        type="submit"
+        className="btn primary auth-submit"
+        disabled={pending}
+      >
         {pending ? "Signing in..." : "Sign in"}
-      </Button>
-
-      <p className="mt-4 text-center text-sm text-[color:var(--muted-foreground)]">
-        Don&apos;t have an account?{" "}
-        <Link
-          href="/signup"
-          className="font-medium text-[color:var(--foreground)] underline underline-offset-4"
-        >
-          Sign up
-        </Link>
-      </p>
+      </button>
     </form>
   );
 }

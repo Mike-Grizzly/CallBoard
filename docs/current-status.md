@@ -24,6 +24,7 @@
 - Auth callback handler (PKCE + implicit flows)
 - Auto-profile creation on first login
 - First user in org becomes admin, subsequent users get "cast" role
+- **UI port (2026-05-20):** all auth screens (login, signup, signup-confirm, forgot/reset password) restyled to the warm design on a new `.auth-*` CSS block; the stale "Show Portal" brand corrected to "CallBoard". See `docs/ui-port-roadmap.md`.
 - **Not fully verified:** Password reset flow was deferred due to Supabase email rate limits during testing
 
 ### Step 3: Roles & Permissions — IMPLEMENTED
@@ -35,6 +36,7 @@
 - Role dropdown with change/remove capabilities
 - Requested role hint visible to admins in member list
 - Admin cannot change own role or remove self
+- **UI port (2026-05-20):** the org member page (`/settings/members`) and production member page (`/productions/[slug]/members`) restyled to the warm `people.jsx` table look — `.pp-table` rows, role-tinted avatars, role pills — on a new `.pp-*` CSS block. See `docs/ui-port-roadmap.md`.
 - **Not fully verified:** All role/capability edge cases across every page and action
 
 ### Step 4: Productions — IMPLEMENTED
@@ -47,6 +49,7 @@
 - Access gating: non-assigned users see dimmed/locked production cards
 - Non-assigned users without `productions:manage` are redirected from production detail
 - Personalized dashboard with stats (admin) and assigned productions list
+- **UI port (2026-05-20):** `/productions` list restyled to the warm `.prod-card` design (status dot, display-font title, Opens/Closes footer, "Open hub" hover CTA); locked non-assigned cards retained. See `docs/ui-port-roadmap.md`.
 
 ### Step 5: Reports — IMPLEMENTED (overhauled 2026-05-06; daily log removed 2026-05-15)
 - Structured rehearsal report: header (date, scheduled call, actual start, end), TipTap general notes, 12 fixed department text fields, next-rehearsal block
@@ -84,6 +87,7 @@
 - Delete: author or admin/producer
 - Org-wide badge on all announcement cards
 - Announcements tab and overview card added to production detail page
+- **UI port (2026-05-20):** production + global announcement pages restyled to the warm `.ann-card` design (colored scope rail, author avatar, scope pill, display-font title); the create form moved to a warm `.card`. See `docs/ui-port-roadmap.md`.
 - **Not fully verified:** Live testing in browser pending
 
 ### Step 9: Rehearsal Report Overhaul — IMPLEMENTED
