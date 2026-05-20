@@ -72,6 +72,41 @@ explicitly skipped. The demo's **Tweaks** panel is dev-only and skipped.
 > workspace/production/people view switcher — is an open product
 > decision. Tracked in `docs/open-questions.md`.
 
+## Remaining work — visual overhaul punch list
+
+Every screen in the route map is now **Done**. What's left is form-level
+polish, one page-wrapper cleanup, and verification. In priority order:
+
+1. **Embedded forms still on old shadcn.** Four forms sit inside
+   otherwise-ported screens and were never restyled:
+   - `app/(app)/productions/[slug]/calls/new/call-form.tsx` — call create/edit
+   - `app/(app)/productions/[slug]/documents/document-upload-form.tsx` — document upload
+   - `app/(app)/productions/[slug]/blocking/setup/setup-wizard.tsx` — blocking stage-setup wizard
+   - `app/(app)/productions/new/create-production-form.tsx` — new production
+
+   Recipe: swap `<Card>` / `<Button>` / shadcn inputs for `.card` /
+   `.btn` / `.field` / `.label`, and route any client-side Lucide icons
+   through `<Icon>`.
+
+2. **Calls page wrapper.** `/productions/[slug]/calls` still has residual
+   old Tailwind on its wrapper (`mx-auto max-w-5xl`,
+   `text-[color:var(--muted-foreground)]`). Replace with `.page-narrow`
+   + warm classes — the calendar grid itself is already ported.
+
+3. **`<RichTextDisplay>` typography.** Match the demo's prose styling
+   (Newsreader for headings inside rendered rich text).
+
+4. **Browser verification.** Nothing in this port has been verified in a
+   browser — every screen was build- and type-checked only, because the
+   build container has no `DATABASE_URL`. Run the app against a real
+   Supabase instance and walk every ported screen for layout/regression
+   bugs and `can(role, capability)` gating.
+
+5. **Workspace Home — open product decision.** `/dashboard` predates the
+   newer `tab-home.jsx` design and does not match it. Re-porting it is a
+   product call, not a mechanical port — see the note above and
+   `docs/open-questions.md`.
+
 ## Per-tab port checklist
 
 For every screen, the same recipe applies:
@@ -169,17 +204,8 @@ For every screen, the same recipe applies:
 
 ### Embedded forms still on old shadcn — NOT STARTED
 
-- [ ] Calls new/edit form (`calls/new/call-form.tsx`)
-- [ ] Documents upload form (`documents/document-upload-form.tsx`)
-- [ ] Blocking setup wizard (`blocking/setup/setup-wizard.tsx`)
-- [ ] New-production form (`productions/new/create-production-form.tsx`)
-
-## Cross-cutting cleanups
-
-- [ ] `<RichTextDisplay>` — match prose typography to the demo
-      (Newsreader for headings)
-- [ ] After each remaining port, regression-test tab navigation +
-      permission gating
+Tracked in detail under **Remaining work** above (item 1) — four forms
+inside otherwise-ported screens still need a warm restyle.
 
 ## Out of scope
 
@@ -191,7 +217,9 @@ For every screen, the same recipe applies:
 
 ## Definition of done for the UI port
 
-- Every screen in the route map above shows **Done**
+- Every screen in the route map shows **Done** — ✓ reached 2026-05-20
+- Every item in "Remaining work" above is cleared
 - No raw Lucide icons cross a server→client component boundary
+- The port has been browser-verified against a real Supabase instance
 - `current-status.md` reflects the port being complete and
   `design-reference/README.md` "Port status" is fully checked
