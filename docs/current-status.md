@@ -230,6 +230,7 @@ Branch `claude/improve-page-performance-YXRgv` — page-load optimizations, no b
 - **Blocking page N+1 fixed.** `getScenesWithBeats` in `features/scenes/queries.ts` issued one beats query per scene; now a single `inArray` query grouped in memory.
 - **TipTap is lazy-loaded.** `RichTextDisplay` moved to its own server-safe file `components/ui/rich-text-display.tsx` (no TipTap import); the editor loads on demand via `components/ui/rich-text-editor-lazy.tsx` (`next/dynamic`, `ssr: false`). Display-only pages no longer ship the ~300KB editor bundle.
 - **Reports list is paginated.** `/productions/[slug]/reports` pages 25 rows at a time via `?page=` (preserves the `?status=` filter). `getReportsByProduction` takes optional `{ status, limit, offset }`; calling it with no options is unchanged.
+- **Request-level dedup with `React.cache()`.** The layout and the page of a single request each ran the full auth chain — `getCurrentUser` (a Supabase `auth.getUser()` network call plus DB queries), `getOrCreateDefaultOrganization`, `getProductionBySlug` — independently. These three are now wrapped in `cache()`, so each runs once per request. `getCurrentUser` also parallelizes its org + profile lookups. This was the main cause of multi-second tab loads.
 
 ## Scaffolded only (not implemented)
 

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { profiles, organizationMemberships } from "@/db/schema";
@@ -15,7 +16,14 @@ export type CurrentUser = {
   organizationId: string;
 };
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+/**
+ * Resolves the signed-in user, their org, and their role.
+ *
+ * Wrapped in `cache()`: the layout and the page of one request each call
+ * `requireCurrentUser()`, and without dedup this whole chain — an auth
+ * network call plus several DB queries — would run twice per navigation.
+ */
+export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user: authUser },
@@ -23,13 +31,10 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   if (!authUser) return null;
 
-  const org = await getOrCreateDefaultOrganization();
-
-  const existing = await db
-    .select()
-    .from(profiles)
-    .where(eq(profiles.id, authUser.id))
-    .limit(1);
+  const [org, existing] = await Promise.all([
+    getOrCreateDefaultOrganization(),
+    db.select().from(profiles).where(eq(profiles.id, authUser.id)).limit(1),
+  ]);
 
   if (existing.length === 0) {
     const meta = authUser.user_metadata ?? {};
@@ -110,7 +115,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     role: membership[0].role as Role,
     organizationId: org.id,
   };
-}
+});
 
 export async function requireCurrentUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();

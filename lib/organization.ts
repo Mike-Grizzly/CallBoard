@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db } from "@/db";
 import { organizations } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -10,8 +11,11 @@ const DEFAULT_ORG_SLUG = "default";
  * MVP: we operate with a single organization. This helper removes
  * the need for a manual seed step — the org is created lazily on
  * first use.
+ *
+ * Wrapped in `cache()` so the layout and page of a single request
+ * share one lookup instead of each issuing their own query.
  */
-export async function getOrCreateDefaultOrganization() {
+export const getOrCreateDefaultOrganization = cache(async () => {
   const existing = await db
     .select()
     .from(organizations)
@@ -31,4 +35,4 @@ export async function getOrCreateDefaultOrganization() {
     .returning();
 
   return org;
-}
+});
