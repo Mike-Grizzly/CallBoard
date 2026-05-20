@@ -1,32 +1,36 @@
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Lock, Theater } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import type { Production } from "@/db/schema";
 import { resolveProductionColor } from "@/features/productions/constants";
 
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    draft: "bg-gray-100 text-gray-700",
-    active: "bg-green-100 text-green-700",
-    archived: "bg-amber-100 text-amber-700",
-  };
-
-  return (
-    <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] ?? colors.draft}`}
-    >
-      {status}
-    </span>
-  );
-}
+const STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  active: "Active",
+  archived: "Archived",
+};
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("en-US", {
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+}
+
+function ProductionFoot({ production }: { production: Production }) {
+  return (
+    <div className="prod-card-foot" style={{ gridTemplateColumns: "1fr 1fr" }}>
+      <div>
+        <div className="prod-card-foot-label">Opens</div>
+        <div className="prod-card-foot-val">{formatDate(production.openingDate)}</div>
+      </div>
+      <div>
+        <div className="prod-card-foot-label">Closes</div>
+        <div className="prod-card-foot-val">{formatDate(production.closingDate)}</div>
+      </div>
+    </div>
+  );
 }
 
 export function ProductionList({
@@ -38,86 +42,71 @@ export function ProductionList({
 }) {
   if (productions.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Theater className="mb-3 h-10 w-10 text-[color:var(--muted-foreground)]" />
-          <p className="text-sm font-medium">No productions yet</p>
-          <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
-            Create your first production to get started.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
+        <Icon
+          name="Theater"
+          style={{ width: 32, height: 32, margin: "0 auto 10px", color: "var(--ink-4)" }}
+        />
+        <p style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-2)" }}>
+          No productions yet
+        </p>
+        <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+          Create your first production to get started.
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="prod-cards">
       {productions.map((production) => {
         const hasAccess =
           accessibleIds === null || accessibleIds.has(production.id);
+        const dotColor = resolveProductionColor(production);
+        const statusLabel =
+          STATUS_LABELS[production.status] ?? production.status;
 
-        if (hasAccess) {
+        if (!hasAccess) {
           return (
-            <Link key={production.id} href={`/productions/${production.slug}`}>
-              <Card className="transition-colors hover:bg-[color:var(--muted)]">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ background: resolveProductionColor(production) }}
-                        aria-hidden
-                      />
-                      <h2 className="truncate text-sm font-semibold">
-                        {production.title}
-                      </h2>
-                      <StatusBadge status={production.status} />
-                    </div>
-                    <div className="mt-1 flex items-center gap-1 text-xs text-[color:var(--muted-foreground)]">
-                      <Calendar className="h-3 w-3" aria-hidden />
-                      <span>
-                        {formatDate(production.openingDate)}
-                        {production.closingDate &&
-                          ` — ${formatDate(production.closingDate)}`}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+            <div key={production.id} className="prod-card" data-locked="1">
+              <div className="prod-card-head">
+                <span className="prod-card-status">
+                  <span className="prod-card-dot" style={{ background: dotColor }} />
+                  {statusLabel}
+                </span>
+                <span
+                  className="row"
+                  style={{ gap: 4, fontSize: 11.5, color: "var(--ink-4)" }}
+                >
+                  <Icon name="Lock" size={11} />
+                  Not assigned
+                </span>
+              </div>
+              <h2 className="prod-card-title">{production.title}</h2>
+              <ProductionFoot production={production} />
+            </div>
           );
         }
 
         return (
-          <Card key={production.id} className="opacity-60">
-            <CardContent className="flex items-center justify-between p-4">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-3">
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ background: resolveProductionColor(production) }}
-                    aria-hidden
-                  />
-                  <h2 className="truncate text-sm font-semibold">
-                    {production.title}
-                  </h2>
-                  <StatusBadge status={production.status} />
-                </div>
-                <div className="mt-1 flex items-center gap-1 text-xs text-[color:var(--muted-foreground)]">
-                  <Calendar className="h-3 w-3" aria-hidden />
-                  <span>
-                    {formatDate(production.openingDate)}
-                    {production.closingDate &&
-                      ` — ${formatDate(production.closingDate)}`}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-[color:var(--muted-foreground)]">
-                <Lock className="h-3 w-3" aria-hidden />
-                <span>Not assigned</span>
-              </div>
-            </CardContent>
-          </Card>
+          <Link
+            key={production.id}
+            href={`/productions/${production.slug}`}
+            className="prod-card"
+            data-status={production.status}
+          >
+            <span className="prod-card-cta">
+              Open hub <Icon name="ChevronRight" size={14} />
+            </span>
+            <div className="prod-card-head">
+              <span className="prod-card-status">
+                <span className="prod-card-dot" style={{ background: dotColor }} />
+                {statusLabel}
+              </span>
+            </div>
+            <h2 className="prod-card-title">{production.title}</h2>
+            <ProductionFoot production={production} />
+          </Link>
         );
       })}
     </div>

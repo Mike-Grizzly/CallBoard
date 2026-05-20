@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -20,29 +19,25 @@ export default async function ProductionsPage() {
 
   return (
     <div className="page">
-    <div className="mx-auto max-w-4xl">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Productions</h1>
-          <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
-            Manage the shows your organization is producing.
-          </p>
+      <div className="page-narrow anim-in">
+        <div className="row-between" style={{ marginBottom: 20, alignItems: "flex-start" }}>
+          <div>
+            <div className="h-eyebrow">Workspace</div>
+            <h1 className="h-section">Productions</h1>
+            <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+              Every show your organization is producing.
+            </p>
+          </div>
+          {canManage && (
+            <Link href="/productions/new" className="btn primary">
+              <Icon name="Plus" size={14} />
+              <span>New production</span>
+            </Link>
+          )}
         </div>
-        {canManage && (
-          <Link href="/productions/new">
-            <Button>
-              <Plus className="h-4 w-4" aria-hidden />
-              New production
-            </Button>
-          </Link>
-        )}
-      </div>
 
-      <ProductionList
-        productions={productionsList}
-        accessibleIds={assignedIds}
-      />
-    </div>
+        <ProductionList productions={productionsList} accessibleIds={assignedIds} />
+      </div>
     </div>
   );
 }

@@ -56,7 +56,7 @@ Rehearsal Schedule** screen is only partially ported.
 | Announcements (production) | `tab-home.jsx` `.ann-card`s | `/productions/[slug]/announcements` | **Not started** |
 | Announcements (global) | `tab-home.jsx` `.ann-card`s | `/announcements` | **Not started** |
 | Production Members | `people.jsx` | `/productions/[slug]/members` | **Not started** |
-| Productions list | `tab-home.jsx` `.prod-card`s | `/productions` | **Not started** |
+| Productions list | `tab-home.jsx` `.prod-card`s | `/productions` | **Done** (build-verified; not yet browser-verified) |
 | Org member management | `people.jsx` | `/settings/members` | **Not started** |
 | Auth screens | (no demo module) | `/login`, `/signup`, `/forgot-password`, `/reset-password` | **Not started** |
 
@@ -118,11 +118,19 @@ For every screen, the same recipe applies:
       the reference)
 - [ ] Member assignment + role controls restyled
 
-### Productions list — `/productions` — NOT STARTED
+### Productions list — `/productions` — DONE
 
-- [ ] Card grid → demo `.prod-card` styling (status dot, stacked avatars,
-      role / opens / next footer)
-- [ ] Replace `<Button>` + raw `lucide-react` imports
+- [x] Card grid → demo `.prod-card` styling (status dot + label, display-font
+      title, dashed Opens/Closes footer, hover "Open hub" CTA)
+- [x] Replaced `<Button>` / `<Card>` + raw `lucide-react` imports with the
+      warm `.btn`/`.prod-card` classes and `<Icon>`
+- [x] Locked (non-assigned) cards keep the dimmed + "Not assigned" lock
+      treatment via a new `.prod-card[data-locked]` rule
+- Stacked principal avatars + "next call" footer column from the demo were
+  intentionally dropped — that data isn't fetched by the list query, and
+  per-production member/call lookups would be backend scope creep.
+- Not browser-verified: this container has no `DATABASE_URL`, so the
+  authenticated page can't be rendered. Compiles + type-checks clean.
 
 ### Auth screens — NOT STARTED
 

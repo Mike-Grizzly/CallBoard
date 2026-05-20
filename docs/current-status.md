@@ -47,6 +47,7 @@
 - Access gating: non-assigned users see dimmed/locked production cards
 - Non-assigned users without `productions:manage` are redirected from production detail
 - Personalized dashboard with stats (admin) and assigned productions list
+- **UI port (2026-05-20):** `/productions` list restyled to the warm `.prod-card` design (status dot, display-font title, Opens/Closes footer, "Open hub" hover CTA); locked non-assigned cards retained. See `docs/ui-port-roadmap.md`.
 
 ### Step 5: Reports — IMPLEMENTED (overhauled 2026-05-06; daily log removed 2026-05-15)
 - Structured rehearsal report: header (date, scheduled call, actual start, end), TipTap general notes, 12 fixed department text fields, next-rehearsal block
