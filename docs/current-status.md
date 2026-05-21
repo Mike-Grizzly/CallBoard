@@ -4,6 +4,8 @@
 
 **Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15) + People Directory (Step 16). Latest: org-wide people directory at `/people` with invite-based mass upload (manual / CSV / bulk paste) and multi-production assignment.
 
+**Launch planning:** the path from feature-complete MVP to a soft launch (testing site + invited testers) and on to public launch is tracked in `docs/launch-roadmap.md`.
+
 ## Feature status
 
 ### Step 1: Foundation & App Shell — IMPLEMENTED

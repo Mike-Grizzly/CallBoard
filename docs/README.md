@@ -41,6 +41,7 @@ These docs **must** be updated whenever:
 | `architecture.md` | System architecture and patterns |
 | `dev-rules.md` | Development rules, operating constraints, closeout workflow |
 | `current-status.md` | Living status of all features and milestones |
+| `launch-roadmap.md` | Phased plan to take the MVP to a soft launch (testing site + testers) and on to public launch |
 | `ui-port-roadmap.md` | Roadmap for porting the HTML demo UI tab-by-tab onto the existing features |
 | `decision-log.md` | Record of durable project decisions |
 | `open-questions.md` | Unresolved questions, risks, and concerns |
