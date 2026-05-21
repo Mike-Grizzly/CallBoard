@@ -55,7 +55,7 @@ export default async function DocumentDetailPage({
   }
 
   const [signedUrl, isPinned] = await Promise.all([
-    getDocumentUrl(doc.storagePath),
+    getDocumentUrl(documentId),
     getIsPinned(user.id, "document", documentId),
   ]);
 

@@ -1,9 +1,16 @@
 import { db } from "@/db";
 import { productionNotes, noteTags, profiles } from "@/db/schema";
-import { eq, desc, asc } from "drizzle-orm";
+import { eq, and, desc, asc } from "drizzle-orm";
 import { DEFAULT_NOTE_TAGS } from "./constants";
 
-export async function getNotesByProduction(productionId: string) {
+/**
+ * Notes are always private to their author (Step 11 removed the shared
+ * visibility option), so this only ever returns the caller's own notes.
+ */
+export async function getNotesByProduction(
+  productionId: string,
+  userId: string,
+) {
   return db
     .select({
       id: productionNotes.id,
@@ -25,7 +32,12 @@ export async function getNotesByProduction(productionId: string) {
     })
     .from(productionNotes)
     .innerJoin(profiles, eq(productionNotes.createdBy, profiles.id))
-    .where(eq(productionNotes.productionId, productionId))
+    .where(
+      and(
+        eq(productionNotes.productionId, productionId),
+        eq(productionNotes.createdBy, userId),
+      ),
+    )
     .orderBy(desc(productionNotes.isPinned), desc(productionNotes.updatedAt));
 }
 

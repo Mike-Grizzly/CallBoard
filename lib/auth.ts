@@ -1,10 +1,15 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { profiles, organizationMemberships } from "@/db/schema";
+import {
+  profiles,
+  organizationMemberships,
+  productionMemberships,
+} from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
+import { can } from "@/lib/permissions";
 import type { Role } from "@/types/roles";
 
 export type CurrentUser = {
@@ -132,4 +137,30 @@ export async function requireCurrentUser(): Promise<CurrentUser> {
     redirect("/login");
   }
   return user;
+}
+
+/**
+ * Whether the user may access a production's data. Mirrors the page-level
+ * gate: holders of `productions:manage` reach any production; everyone else
+ * needs a production membership. Used to guard signed-URL generation so a
+ * caller cannot pull files for a production they are not part of.
+ */
+export async function userCanAccessProduction(
+  user: CurrentUser,
+  productionId: string,
+): Promise<boolean> {
+  if (can(user.role, "productions:manage")) return true;
+
+  const rows = await db
+    .select({ id: productionMemberships.id })
+    .from(productionMemberships)
+    .where(
+      and(
+        eq(productionMemberships.userId, user.id),
+        eq(productionMemberships.productionId, productionId),
+      ),
+    )
+    .limit(1);
+
+  return rows.length > 0;
 }

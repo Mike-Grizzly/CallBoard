@@ -39,17 +39,17 @@ function pdfViewerUrl(url: string): string {
 }
 
 function DownloadButton({
-  storagePath,
+  documentId,
   fileName,
 }: {
-  storagePath: string;
+  documentId: string;
   fileName: string;
 }) {
   const [isPending, startTransition] = useTransition();
 
   function handleDownload() {
     startTransition(async () => {
-      const url = await getDocumentDownloadUrl(storagePath, fileName);
+      const url = await getDocumentDownloadUrl(documentId, fileName);
       if (url) {
         const a = document.createElement("a");
         a.href = url;
@@ -101,7 +101,7 @@ export function DocumentDrawer({ doc, members, folders, initialPinned, onClose }
 
   useEffect(() => {
     let canceled = false;
-    getDocumentUrl(doc.storagePath).then((url) => {
+    getDocumentUrl(doc.id).then((url) => {
       if (!canceled) {
         setSignedUrl(url || null);
         setLoadingUrl(false);
@@ -110,7 +110,7 @@ export function DocumentDrawer({ doc, members, folders, initialPinned, onClose }
     return () => {
       canceled = true;
     };
-  }, [doc.storagePath]);
+  }, [doc.id]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -181,7 +181,7 @@ export function DocumentDrawer({ doc, members, folders, initialPinned, onClose }
           Preview not available for this file type
         </p>
         {signedUrl && (
-          <DownloadButton storagePath={doc.storagePath} fileName={doc.fileName} />
+          <DownloadButton documentId={doc.id} fileName={doc.fileName} />
         )}
       </div>
     );
@@ -329,7 +329,7 @@ export function DocumentDrawer({ doc, members, folders, initialPinned, onClose }
               </span>
             </div>
           </div>
-          <DownloadButton storagePath={doc.storagePath} fileName={doc.fileName} />
+          <DownloadButton documentId={doc.id} fileName={doc.fileName} />
           <button
             className="btn ghost btn-icon"
             onClick={handlePinToggle}

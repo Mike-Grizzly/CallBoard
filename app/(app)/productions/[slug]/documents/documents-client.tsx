@@ -566,7 +566,6 @@ export function DocumentsClient({
                       <div onClick={(e) => e.stopPropagation()}>
                         <DocumentRowMenu
                           documentId={doc.id}
-                          storagePath={doc.storagePath}
                           fileName={doc.fileName}
                           slug={slug}
                           productionId={productionId}

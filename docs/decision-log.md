@@ -470,3 +470,52 @@ the two `public` CHECK constraints did not help because the crash was on the
 - The earlier CHECK-constraint drop (previous entry) was not strictly necessary
   given this fix, but is harmless and left as-is — those constraints duplicated
   app-layer validation and were never in the Drizzle schema.
+
+---
+
+## 2026-05-21 — P0 security hardening for soft launch
+
+**Decision:** Completed Phase 0 of `docs/launch-roadmap.md` — the security
+fixes that gate inviting external testers.
+
+**Changes:**
+- **Signed-URL access control.** `getDocumentUrl`, `getDocumentDownloadUrl`
+  (`features/documents/actions.ts`), `getAttachmentUrl`
+  (`features/reports/attachments.ts`), and `getCustomSetPieceUrls`
+  (`features/blocking/actions.ts`) previously accepted a client-supplied
+  storage path and signed it with no checks. They now accept a record **id**,
+  load the authoritative row from the DB, and verify access via the new
+  `userCanAccessProduction()` guard before signing. A client can no longer pass
+  an arbitrary path, and cannot get URLs for a production it is not part of.
+- **`userCanAccessProduction()`** added to `lib/auth.ts` — mirrors the
+  page-level gate (`productions:manage` reaches any production; everyone else
+  needs a production membership).
+- **HTML sanitization.** Added `isomorphic-dompurify` (new dependency, approved
+  as decision D1) and `lib/sanitize.ts`. All `dangerouslySetInnerHTML` render
+  paths — `RichTextDisplay` and the notes panel — now sanitize first, closing
+  the stored-XSS vector in reports, announcements, and notes.
+- **File-type validation.** `uploadDocument` and `uploadReportAttachment` now
+  enforce a MIME allowlist (PDF, common images, Office documents), matching the
+  pattern already in `uploadCustomSetPiece`.
+- **Filename sanitization.** Document and report-attachment uploads now
+  sanitize the filename used in the storage path (special chars → `_`),
+  matching `uploadCustomSetPiece`. Original filenames are still stored for
+  display.
+- **Notes privacy.** Notes are private to their author (Step 11 removed shared
+  visibility), but `getNotesByProduction` returned every member's notes. It now
+  filters to the caller's own notes.
+
+**Reason:** These were confirmed vulnerabilities, not theoretical risks. The
+app has never been used by anyone outside development; external testers will
+handle each other's data, so these fixes precede any P3 invite.
+
+**Deferred (not P0 blockers):**
+- Storage-bucket RLS is still permissive (any authenticated user can
+  read/write/delete any object). The signed-URL access check above is the real
+  gate; tightening `storage.objects` RLS by path is defense-in-depth, tracked
+  for later.
+- A broad sweep adding org/ownership checks to every mutating server action
+  (e.g. `uploadDocument` trusts the passed `productionId`) is deferred to a
+  later hardening pass — the signed-URL read leaks were the high-value fix.
+- Leaked-password protection is a Supabase dashboard toggle, to be enabled by
+  the project owner.

@@ -6,7 +6,7 @@ import { stageConfigurations, blockingPositions, beatComments, profiles, customS
 import type { BeatArrow } from "@/db/schema";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { eq, and, asc } from "drizzle-orm";
-import { requireCurrentUser } from "@/lib/auth";
+import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 
 export type BlockingActionResult = { error?: string };
@@ -283,16 +283,25 @@ export type CustomSetPieceClient = {
 };
 
 export async function getCustomSetPieceUrls(
-  storagePaths: string[],
+  productionId: string,
 ): Promise<Record<string, string>> {
-  if (storagePaths.length === 0) return {};
+  const user = await requireCurrentUser();
+  if (!(await userCanAccessProduction(user, productionId))) return {};
+
+  const pieces = await db
+    .select({ storagePath: customSetPieces.storagePath })
+    .from(customSetPieces)
+    .where(eq(customSetPieces.productionId, productionId));
+
+  if (pieces.length === 0) return {};
+
   const supabase = await createSupabaseServerClient();
   const entries = await Promise.all(
-    storagePaths.map(async (path) => {
+    pieces.map(async ({ storagePath }) => {
       const { data } = await supabase.storage
         .from("attachments")
-        .createSignedUrl(path, 3600);
-      return [path, data?.signedUrl ?? ""] as const;
+        .createSignedUrl(storagePath, 3600);
+      return [storagePath, data?.signedUrl ?? ""] as const;
     }),
   );
   return Object.fromEntries(entries);

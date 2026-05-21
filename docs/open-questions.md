@@ -52,13 +52,12 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ## File upload / storage questions
 
-- **Access control gap:** `getDocumentUrl()` and `getAttachmentUrl()` generate signed URLs without verifying the user has access to the parent production or report. Should these actions check production membership before returning a URL?
-- **Storage RLS is permissive:** Current policies allow any authenticated user to insert/select/delete any file in the `attachments` bucket. Should policies be scoped to production membership?
-- **No file type validation:** Any file type is accepted for upload. Should there be an allowlist of accepted file types?
+- **Storage RLS is permissive:** Current policies allow any authenticated user to insert/select/delete any file in the `attachments` bucket. Signed-URL generation is now access-checked in app code (P0, 2026-05-21), so this is defense-in-depth — but should policies still be scoped to production membership?
 - **No duplicate detection:** Users can upload the same file multiple times. Is this acceptable or should duplicates be detected?
 - **No virus/malware scanning:** Uploaded files are served back to users via signed URLs. Should files be scanned before serving?
-- **File naming:** Storage paths use `{timestamp}-{filename}`. Should filenames be sanitized to remove special characters?
 - **Orphaned files:** If a database insert fails after a successful storage upload, the file remains in storage with no DB record. Should there be cleanup logic?
+
+_Resolved in P0 (2026-05-21): signed-URL actions now verify production access; uploads enforce a MIME allowlist; storage-path filenames are sanitized. See `decision-log.md`._
 
 ## UX questions
 
@@ -74,7 +73,6 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ## Notes questions
 
-- **Visibility enforcement:** Private notes are visible to all team members in the current implementation. Should the `getNotesByProduction` query filter by `visibility = 'shared' OR created_by = currentUserId`?
 - **Cross-production notes view:** User wants a dashboard glimpse of notes from all productions. When should this be built?
 - **Real-time updates:** Notes from other team members only appear on reload. Should Supabase Realtime subscriptions be used here?
 - **Note editing rights:** Currently only the author or a manage_tags user can edit a note. Should this be loosened for "shared" notes?
@@ -86,8 +84,8 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 - There are zero test files in the repo. When should testing be introduced?
 - What level of testing is appropriate for MVP? (Unit tests, integration tests, E2E?)
 - Password reset flow was never fully tested due to Supabase email rate limits. Needs verification.
-- Should server actions validate that referenced IDs (productionId, reportId, documentId) actually exist and belong to the correct org before proceeding?
-- `dangerouslySetInnerHTML` in `RichTextDisplay` renders unsanitized HTML. Should a sanitization library (e.g., DOMPurify) be added?
+- **Server-action ID ownership sweep:** the signed-URL read actions now verify production access (P0, 2026-05-21), but mutating actions (e.g. `uploadDocument`, `uploadCustomSetPiece`) still trust a client-supplied `productionId` without confirming the caller belongs to it. A broad ownership-check pass across mutating server actions is still outstanding.
+- Leaked-password protection (HaveIBeenPwned check) must be enabled in the Supabase Auth dashboard — a project-owner action, not a code change.
 
 ## Scope control questions
 

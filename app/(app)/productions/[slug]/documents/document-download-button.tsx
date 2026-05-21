@@ -5,17 +5,17 @@ import { Eye, Download } from "lucide-react";
 import { getDocumentUrl, getDocumentDownloadUrl } from "@/features/documents/actions";
 
 export function DocumentViewButton({
-  storagePath,
+  documentId,
   fileName,
 }: {
-  storagePath: string;
+  documentId: string;
   fileName: string;
 }) {
   const [isPending, startTransition] = useTransition();
 
   function handleView() {
     startTransition(async () => {
-      const url = await getDocumentUrl(storagePath);
+      const url = await getDocumentUrl(documentId);
       if (url) {
         window.open(url, "_blank");
       }
@@ -24,7 +24,7 @@ export function DocumentViewButton({
 
   function handleDownload() {
     startTransition(async () => {
-      const url = await getDocumentDownloadUrl(storagePath, fileName);
+      const url = await getDocumentDownloadUrl(documentId, fileName);
       if (url) {
         const a = document.createElement("a");
         a.href = url;

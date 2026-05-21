@@ -1,9 +1,9 @@
 "use server";
 
 import { db } from "@/db";
-import { reportAttachments } from "@/db/schema";
+import { reportAttachments, rehearsalReports } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { requireCurrentUser } from "@/lib/auth";
+import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -33,8 +33,29 @@ export async function uploadReportAttachment(
     return { error: "File size must be under 10MB." };
   }
 
+  const allowedTypes = [
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "text/plain",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ];
+  if (!allowedTypes.includes(file.type)) {
+    return {
+      error: "Unsupported file type. Upload a PDF, image, or Office document.",
+    };
+  }
+
   const supabase = await createSupabaseServerClient();
-  const storagePath = `reports/${reportId}/${Date.now()}-${file.name}`;
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const storagePath = `reports/${reportId}/${Date.now()}-${safeName}`;
 
   const { error: uploadError } = await supabase.storage
     .from("attachments")
@@ -57,16 +78,35 @@ export async function uploadReportAttachment(
   return { success: true };
 }
 
-export async function getAttachmentUrl(storagePath: string): Promise<string> {
+export async function getAttachmentUrl(attachmentId: string): Promise<string> {
+  const user = await requireCurrentUser();
+
+  const [row] = await db
+    .select({
+      storagePath: reportAttachments.storagePath,
+      productionId: rehearsalReports.productionId,
+    })
+    .from(reportAttachments)
+    .innerJoin(
+      rehearsalReports,
+      eq(reportAttachments.reportId, rehearsalReports.id),
+    )
+    .where(eq(reportAttachments.id, attachmentId))
+    .limit(1);
+
+  if (!row) return "";
+  if (!(await userCanAccessProduction(user, row.productionId))) return "";
+
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.storage
     .from("attachments")
-    .createSignedUrl(storagePath, 3600);
+    .createSignedUrl(row.storagePath, 3600);
 
   return data?.signedUrl ?? "";
 }
 
 export async function getReportAttachments(reportId: string) {
+  await requireCurrentUser();
   return db
     .select()
     .from(reportAttachments)

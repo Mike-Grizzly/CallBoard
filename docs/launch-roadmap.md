@@ -30,17 +30,17 @@ Effort sizing: **S** = a few hours · **M** = roughly one work session ·
 
 ### Decisions — see the Decisions section
 
-Still open: D1 sanitization library · D3 beta Supabase project · D5 beta
-org model · D6 scaffolded-feature scope · D7 PWA offline support.
+Still open: D3 beta Supabase project · D5 beta org model · D6
+scaffolded-feature scope · D7 PWA offline support.
 
-Resolved 2026-05-21: **D2** (domain being registered) · **D4** (uploads
-go client-direct to Supabase Storage).
+Resolved 2026-05-21: **D1** (added `isomorphic-dompurify`) · **D2** (domain
+being registered) · **D4** (uploads go client-direct to Supabase Storage).
 
 ## Phase overview
 
 | Phase | Goal | Gates | Owner |
 |---|---|---|---|
-| **P0** | Security hardening | Soft launch | Claude |
+| **P0** | Security hardening — **done 2026-05-21** | Soft launch | Claude |
 | **P1** | Deploy testing site to Vercel | Soft launch | Shared |
 | **P2** | Mobile web experience + PWA | Soft launch (partial) | Claude |
 | **P3** | Beta testing program | *is* the soft launch | Shared |
@@ -53,41 +53,37 @@ until P0 is complete** — testers will be handling each other's data.
 
 ---
 
-## P0 — Security hardening
+## P0 — Security hardening — DONE (2026-05-21)
 
-These are real vulnerabilities confirmed in the code, not theoretical
-risks. They must land before anyone outside the team touches the app.
+These were real vulnerabilities confirmed in the code, not theoretical
+risks. They had to land before anyone outside the team touches the app.
 
-- [ ] **Signed-URL access control.** `getDocumentUrl` /
-  `getDocumentDownloadUrl` (`features/documents/actions.ts:271`) and
-  `getAttachmentUrl` (`features/reports/attachments.ts:60`) accept a raw
-  `storagePath` from the client and return a signed URL with **no
-  membership check** — any logged-in user can pull any file. Change them
-  to take a document/attachment **id**, load the row, verify the caller
-  is a member of the parent production (or has `productions:manage`),
-  then sign. Update all callers. — **M**
-- [ ] **HTML sanitization.** `RichTextDisplay`
-  (`components/ui/rich-text-display.tsx:5`) and the notes panel
-  (`notes-panel.tsx:575`) render user-authored TipTap HTML via
-  `dangerouslySetInnerHTML` with no sanitization — a stored-XSS vector in
-  reports, announcements, and notes. Sanitize on render (and on write).
-  Needs a library — see **Decision D1**. — **M**
-- [ ] **File-type validation.** Upload actions accept any file type. Add
-  an allowlist (PDF, common image types, common doc types) to the
-  document, report-attachment, and custom-set-piece upload actions. — **S**
-- [ ] **Notes privacy enforcement.** Notes are "always private" by design
-  (Step 11) but `getNotesByProduction` returns every member's notes.
-  Filter the query to `created_by = currentUserId`. — **M**
+- [x] **Signed-URL access control.** `getDocumentUrl`,
+  `getDocumentDownloadUrl`, `getAttachmentUrl`, and `getCustomSetPieceUrls`
+  accepted a client-supplied storage path and signed it with no checks.
+  They now take a record **id**, load the authoritative row, and verify
+  access via `userCanAccessProduction()` (new, in `lib/auth.ts`) before
+  signing. All callers updated.
+- [x] **HTML sanitization.** Added `isomorphic-dompurify` and
+  `lib/sanitize.ts`; `RichTextDisplay` and the notes panel now sanitize
+  before `dangerouslySetInnerHTML`, closing the stored-XSS vector.
+- [x] **File-type validation.** `uploadDocument` and
+  `uploadReportAttachment` now enforce a MIME allowlist (PDF, common
+  images, Office docs). `uploadCustomSetPiece` already had one.
+- [x] **Filename sanitization.** Document and report-attachment uploads
+  sanitize the filename used in the storage path.
+- [x] **Notes privacy enforcement.** `getNotesByProduction` now filters to
+  the caller's own notes (notes are private by design since Step 11).
 - [ ] **Leaked-password protection.** Enable the HaveIBeenPwned check in
-  Supabase → Auth settings (clears a standing advisory). — **S**, You
-- [ ] **Server-action ID ownership checks.** Several actions trust that a
-  passed `productionId` / `reportId` / `documentId` belongs to the
-  caller's org. Add ownership checks at the boundary. — **M** (may extend
-  into P6)
+  Supabase → Auth settings. — **S**, You (dashboard toggle, still pending)
+- [ ] **Server-action ID ownership checks.** Mutating actions (e.g.
+  `uploadDocument`, `uploadCustomSetPiece`) still trust a client-supplied
+  `productionId`. A broad ownership-check sweep is **deferred** — the
+  signed-URL read leaks were the high-value fix. (extends into P6)
 - [ ] **Storage RLS (defense-in-depth).** Current `attachments` bucket
   policies let any authenticated user read/write/delete any file. The
   signed-URL fix above is the real gate; scoping `storage.objects` RLS by
-  path is harder and lower priority — track, don't block beta. — **L**
+  path is harder and lower priority — **deferred**, does not block beta.
 
 ---
 
@@ -264,7 +260,7 @@ $25), plus Xcode (macOS) and Android Studio for builds.
 
 | # | Decision | Recommendation |
 |---|---|---|
-| **D1** | Sanitization library for the XSS fix (P0). Needs approval — dev-rules forbid new libraries without sign-off. | Add `isomorphic-dompurify`. Small, standard, well-maintained. |
+| **D1** | Sanitization library for the XSS fix (P0). | **Resolved 2026-05-21** — added `isomorphic-dompurify`; sanitization centralised in `lib/sanitize.ts`. |
 | **D2** | Email deliverability during beta. Sandbox email won't reach external testers. | **Resolved 2026-05-21** — domain being registered, so a Resend sending domain + Supabase custom SMTP can be set up. Unblocks report and invite emails to real testers. |
 | **D3** | Which Supabase project is the beta environment. | Reuse the current `CallBoard` project as the beta environment; cut a fresh production project at P6 if a clean slate is wanted. |
 | **D4** | File uploads on Vercel. Server-action uploads fail above ~4.5 MB on every Vercel plan. | **Resolved 2026-05-21** — switch to client-direct Supabase Storage uploads via server-issued signed upload URLs; the file never touches Vercel. Raise the bucket limit to 50 MB (free-plan max); files beyond 50 MB require Supabase Pro. |

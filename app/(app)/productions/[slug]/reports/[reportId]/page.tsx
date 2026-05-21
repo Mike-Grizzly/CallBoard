@@ -113,7 +113,7 @@ export default async function ReportDetailPage({
   const attachmentUrls = await Promise.all(
     attachments.map(async (a) => ({
       ...a,
-      url: await getAttachmentUrl(a.storagePath),
+      url: await getAttachmentUrl(a.id),
     })),
   );
 

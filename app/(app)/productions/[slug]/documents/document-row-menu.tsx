@@ -9,7 +9,6 @@ import { useRouter } from "next/navigation";
 
 interface Props {
   documentId: string;
-  storagePath: string;
   fileName: string;
   slug: string;
   productionId: string;
@@ -24,7 +23,6 @@ interface MenuPos {
 
 export function DocumentRowMenu({
   documentId,
-  storagePath,
   fileName,
   slug,
   productionId,
@@ -92,7 +90,7 @@ export function DocumentRowMenu({
     e.stopPropagation();
     setPos(null);
     startTransition(async () => {
-      const url = await getDocumentDownloadUrl(storagePath, fileName);
+      const url = await getDocumentDownloadUrl(documentId, fileName);
       if (url) {
         const a = document.createElement("a");
         a.href = url;

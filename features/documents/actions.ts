@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { documents, documentFolders, documentComments, notifications, profiles, productions } from "@/db/schema";
 import { eq, and, isNotNull, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { requireCurrentUser } from "@/lib/auth";
+import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DEFAULT_FOLDERS } from "./constants";
@@ -88,8 +88,29 @@ export async function uploadDocument(
     return { error: "File size must be under 25MB." };
   }
 
+  const allowedTypes = [
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "text/plain",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ];
+  if (!allowedTypes.includes(file.type)) {
+    return {
+      error: "Unsupported file type. Upload a PDF, image, or Office document.",
+    };
+  }
+
   const supabase = await createSupabaseServerClient();
-  const storagePath = `documents/${productionId}/${Date.now()}-${file.name}`;
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const storagePath = `documents/${productionId}/${Date.now()}-${safeName}`;
 
   const { error: uploadError } = await supabase.storage
     .from("attachments")
@@ -268,23 +289,47 @@ export async function postComment(
   return { success: true };
 }
 
-export async function getDocumentUrl(storagePath: string): Promise<string> {
+async function resolveAccessibleDocument(documentId: string) {
+  const user = await requireCurrentUser();
+
+  const [doc] = await db
+    .select({
+      storagePath: documents.storagePath,
+      productionId: documents.productionId,
+    })
+    .from(documents)
+    .where(eq(documents.id, documentId))
+    .limit(1);
+
+  if (!doc) return null;
+  if (!(await userCanAccessProduction(user, doc.productionId))) return null;
+
+  return doc;
+}
+
+export async function getDocumentUrl(documentId: string): Promise<string> {
+  const doc = await resolveAccessibleDocument(documentId);
+  if (!doc) return "";
+
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.storage
     .from("attachments")
-    .createSignedUrl(storagePath, 3600);
+    .createSignedUrl(doc.storagePath, 3600);
 
   return data?.signedUrl ?? "";
 }
 
 export async function getDocumentDownloadUrl(
-  storagePath: string,
+  documentId: string,
   fileName: string,
 ): Promise<string> {
+  const doc = await resolveAccessibleDocument(documentId);
+  if (!doc) return "";
+
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.storage
     .from("attachments")
-    .createSignedUrl(storagePath, 3600, { download: fileName });
+    .createSignedUrl(doc.storagePath, 3600, { download: fileName });
 
   return data?.signedUrl ?? "";
 }

@@ -44,6 +44,7 @@ import {
   deleteNoteTag,
 } from "@/features/notes/actions";
 import { pinItem } from "@/features/pins/actions";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 // ── Toolbar ──────────────────────────────────────────────────────────────────
 
@@ -572,7 +573,7 @@ function NoteEditor({
           <div
             className="prose prose-sm"
             style={{ maxWidth: "none", padding: "0 12px" }}
-            dangerouslySetInnerHTML={{ __html: note.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
           />
         )}
       </div>

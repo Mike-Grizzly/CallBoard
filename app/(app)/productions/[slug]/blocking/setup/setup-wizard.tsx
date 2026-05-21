@@ -68,7 +68,7 @@ export function SetupWizard({
   async function loadPdfUrl(docId: string): Promise<string | null> {
     const doc = pdfDocuments.find((d) => d.id === docId);
     if (!doc) return null;
-    return getDocumentUrl(doc.storagePath);
+    return getDocumentUrl(doc.id);
   }
 
   async function goToCalibration() {

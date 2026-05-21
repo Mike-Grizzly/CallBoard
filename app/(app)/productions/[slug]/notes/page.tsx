@@ -28,7 +28,7 @@ export default async function NotesPage({
   if (!can(user.role, "notes:view")) redirect(`/productions/${slug}`);
 
   const [notes, tags, members] = await Promise.all([
-    getNotesByProduction(production.id),
+    getNotesByProduction(production.id, user.id),
     getNoteTagsByOrg(org.id, user.id),
     getProductionMembers(production.id),
   ]);

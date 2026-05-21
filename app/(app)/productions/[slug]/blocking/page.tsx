@@ -51,11 +51,11 @@ export default async function BlockingPage({
   if (stageConfig?.groundPlanDocumentId) {
     const doc = await getDocumentById(stageConfig.groundPlanDocumentId);
     if (doc) {
-      pdfUrl = await getDocumentUrl(doc.storagePath);
+      pdfUrl = await getDocumentUrl(doc.id);
     }
   }
 
-  const signedUrls = await getCustomSetPieceUrls(customPieceRows.map((p) => p.storagePath));
+  const signedUrls = await getCustomSetPieceUrls(production.id);
   const initialCustomSetPieces = customPieceRows.map((p) => ({
     id: p.id,
     name: p.name,
