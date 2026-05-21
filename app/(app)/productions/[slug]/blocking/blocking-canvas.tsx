@@ -36,13 +36,15 @@ import {
   saveBlockingPosition,
   removeBlockingPosition,
   fetchBeatPositions,
-  uploadCustomSetPiece,
+  requestCustomSetPieceUpload,
+  finalizeCustomSetPieceUpload,
   deleteCustomSetPiece,
   createBeatArrow,
   deleteBeatArrow,
   fetchBeatArrows,
   type CustomSetPieceClient,
 } from "@/features/blocking/actions";
+import { uploadFileToSignedUrl } from "@/lib/storage-upload";
 import type { BeatArrow } from "@/db/schema";
 import {
   createScene,
@@ -1386,17 +1388,46 @@ export function BlockingCanvas({
     if (!file) return;
     setUploading(true);
     setUploadError(null);
-    const fd = new FormData();
-    fd.append("productionId", production.id);
-    fd.append("file", file);
-    const result = await uploadCustomSetPiece(fd);
+
+    const finish = () => {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+    const signed = await requestCustomSetPieceUpload(
+      production.id,
+      file.name,
+      file.type,
+      file.size,
+    );
+    if (signed.error || !signed.path || !signed.token) {
+      setUploadError(signed.error ?? "Could not start upload.");
+      finish();
+      return;
+    }
+
+    const uploaded = await uploadFileToSignedUrl(
+      signed.path,
+      signed.token,
+      file,
+    );
+    if (uploaded.error) {
+      setUploadError(uploaded.error);
+      finish();
+      return;
+    }
+
+    const result = await finalizeCustomSetPieceUpload({
+      productionId: production.id,
+      storagePath: signed.path,
+      fileName: file.name,
+    });
     if (result.error) {
       setUploadError(result.error);
     } else if (result.piece) {
       setCustomPieces((prev) => [...prev, result.piece!]);
     }
-    setUploading(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    finish();
   }
 
   async function handleDeleteCustomPiece(pieceId: string) {

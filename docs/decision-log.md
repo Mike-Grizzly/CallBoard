@@ -519,3 +519,37 @@ handle each other's data, so these fixes precede any P3 invite.
   later hardening pass — the signed-URL read leaks were the high-value fix.
 - Leaked-password protection is a Supabase dashboard toggle, to be enabled by
   the project owner.
+
+---
+
+## 2026-05-21 — Uploads go client-direct to Supabase Storage (D4)
+
+**Decision:** All file uploads (documents, report attachments, blocking set
+pieces) now upload directly from the browser to Supabase Storage instead of
+POSTing the file through a Next.js server action.
+
+**Reason:** Vercel's serverless functions reject request bodies over ~4.5 MB on
+every plan — an infrastructure limit, not a billing tier. The previous pattern
+(`uploadDocument`, `uploadReportAttachment`, `uploadCustomSetPiece` each
+received the `File` in `FormData`) would have failed in production for any
+file larger than that, including typical script PDFs. Routing the file
+straight to Supabase removes Vercel from the upload path; it is also faster,
+cheaper, and the standard production pattern.
+
+**New shape — each flow is now two server actions plus a direct upload:**
+1. `request*Upload(... fileName, contentType, fileSize)` — checks permission,
+   validates type/size, generates the storage path under the production's
+   prefix, and returns a Supabase **signed upload URL** (`path` + `token`) via
+   `createSignedUploadUrl`.
+2. The browser uploads the file to that URL with `uploadToSignedUrl`
+   (`lib/storage-upload.ts` → `uploadFileToSignedUrl`).
+3. `finalize*Upload({ storagePath, ...metadata })` — inserts the DB row. It
+   rejects any `storagePath` not under `{kind}/{productionId}/` so a caller
+   cannot attach an arbitrary stored object to a production.
+
+**Impact:**
+- Upload size cap is now the Supabase bucket's file-size setting (50 MB on the
+  free plan; higher requires Pro), not Vercel's body limit.
+- `next.config.ts` still carries `bodySizeLimit: "25mb"` — now only relevant to
+  the small metadata payloads; left as-is, harmless.
+- Old single-action `upload*` functions were removed (no compatibility shim).

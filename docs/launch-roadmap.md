@@ -98,24 +98,29 @@ Supabase project. This is the first time the app is built and run for
 real — the dev container has no `DATABASE_URL`, so the production build
 is unverified.
 
+- [x] **Beta Supabase project** — decision 2026-05-21: reuse the current
+  `CallBoard` project as the beta environment (D3 resolved).
+- [x] **Upload rework (D4).** The three upload flows (documents, report
+  attachments, blocking set pieces) now upload **client-direct to Supabase
+  Storage** via server-issued signed upload URLs — a request action checks
+  permissions/type/size and issues the URL, the browser sends the file
+  straight to Supabase, a finalize action records only the metadata (and
+  verifies the storage path is under the production's prefix). The file
+  never passes through Vercel.
 - [ ] Create the Vercel project, link the GitHub repo, set the production
-  branch. — Shared
-- [ ] Choose the beta Supabase project — see **Decision D3**.
+  branch. — You
 - [ ] Set Vercel environment variables: `NEXT_PUBLIC_SUPABASE_URL`,
   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
   `DATABASE_URL`, `NEXT_PUBLIC_SITE_URL` (the `*.vercel.app` URL),
-  `RESEND_API_KEY`, `RESEND_FROM_EMAIL`. — Shared
+  `RESEND_API_KEY`, `RESEND_FROM_EMAIL`. — You
 - [ ] In Supabase → Auth → URL Configuration, add the deployed URL as the
   Site URL and to the Redirect URLs allowlist, so `/auth/callback`,
   password reset, and invite links resolve. — You
-- [ ] Verify the production build succeeds and the deployed site loads. — Claude
-- [ ] Rework the three upload flows (documents, report attachments,
-  blocking set pieces) to **client-direct Supabase Storage uploads**: the
-  server action checks permissions and issues a one-time signed upload
-  URL, the browser sends the file straight to Supabase, then a server
-  action records only the metadata. — Claude, **M/L**
 - [ ] Raise the `attachments` bucket file-size limit 25 MB → 50 MB
   (Supabase free-plan maximum). — **S**, You
+- [ ] Verify the production build succeeds and the deployed site loads.
+  (Build compiles clean locally; the dev container has no `DATABASE_URL`
+  so the full build is first verified on Vercel.) — Claude
 - [ ] Smoke test on the deployed site: signup → first user becomes admin
   → create a production → upload a file → file a rehearsal report. — Shared
 

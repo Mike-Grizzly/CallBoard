@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { uploadReportAttachment } from "@/features/reports/attachments";
+import {
+  requestReportAttachmentUpload,
+  finalizeReportAttachmentUpload,
+} from "@/features/reports/attachments";
+import { uploadFileToSignedUrl } from "@/lib/storage-upload";
 import { Paperclip } from "lucide-react";
 
 export function AttachmentUpload({ reportId }: { reportId: string }) {
@@ -10,23 +14,47 @@ export function AttachmentUpload({ reportId }: { reportId: string }) {
   const [isPending, startTransition] = useTransition();
 
   function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
 
     setError(null);
     setSuccess(false);
 
-    const formData = new FormData();
-    formData.set("report_id", reportId);
-    formData.set("file", file);
-
     startTransition(async () => {
-      const result = await uploadReportAttachment(formData);
+      const signed = await requestReportAttachmentUpload(
+        reportId,
+        file.name,
+        file.type,
+        file.size,
+      );
+      if (signed.error || !signed.path || !signed.token) {
+        setError(signed.error ?? "Could not start upload.");
+        return;
+      }
+
+      const uploaded = await uploadFileToSignedUrl(
+        signed.path,
+        signed.token,
+        file,
+      );
+      if (uploaded.error) {
+        setError(uploaded.error);
+        return;
+      }
+
+      const result = await finalizeReportAttachmentUpload({
+        reportId,
+        storagePath: signed.path,
+        fileName: file.name,
+        fileSize: file.size,
+        contentType: file.type,
+      });
       if (result.error) {
         setError(result.error);
       } else {
         setSuccess(true);
-        e.target.value = "";
+        input.value = "";
         setTimeout(() => setSuccess(false), 3000);
       }
     });

@@ -61,30 +61,23 @@ export async function createFolder(
   return { success: true };
 }
 
-export async function uploadDocument(
-  formData: FormData,
-): Promise<UploadDocumentResult> {
+export async function requestDocumentUpload(
+  productionId: string,
+  fileName: string,
+  contentType: string,
+  fileSize: number,
+): Promise<{ error?: string; path?: string; token?: string }> {
   const user = await requireCurrentUser();
 
   if (!can(user.role, "documents:upload")) {
     return { error: "You don't have permission to upload documents." };
   }
 
-  const productionId = formData.get("production_id") as string;
-  const title = (formData.get("title") as string)?.trim();
-  const folderId = (formData.get("folder_id") as string) || null;
-  const documentType = (formData.get("document_type") as string) || "general";
-  const file = formData.get("file") as File;
-
-  if (!productionId || !file || file.size === 0) {
+  if (!productionId) return { error: "Missing production." };
+  if (!fileName || fileSize <= 0) {
     return { error: "Please select a file to upload." };
   }
-
-  if (!title) {
-    return { error: "Title is required." };
-  }
-
-  if (file.size > 25 * 1024 * 1024) {
+  if (fileSize > 25 * 1024 * 1024) {
     return { error: "File size must be under 25MB." };
   }
 
@@ -102,34 +95,68 @@ export async function uploadDocument(
     "application/vnd.ms-powerpoint",
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   ];
-  if (!allowedTypes.includes(file.type)) {
+  if (!allowedTypes.includes(contentType)) {
     return {
       error: "Unsupported file type. Upload a PDF, image, or Office document.",
     };
   }
 
-  const supabase = await createSupabaseServerClient();
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storagePath = `documents/${productionId}/${Date.now()}-${safeName}`;
 
-  const { error: uploadError } = await supabase.storage
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.storage
     .from("attachments")
-    .upload(storagePath, file);
+    .createSignedUploadUrl(storagePath);
 
-  if (uploadError) {
-    return { error: `Upload failed: ${uploadError.message}` };
+  if (error || !data) {
+    return {
+      error: `Could not start upload: ${error?.message ?? "unknown error"}`,
+    };
+  }
+
+  return { path: data.path, token: data.token };
+}
+
+export async function finalizeDocumentUpload(input: {
+  productionId: string;
+  storagePath: string;
+  title: string;
+  folderId: string | null;
+  documentType: string;
+  fileName: string;
+  fileSize: number;
+  contentType: string;
+}): Promise<UploadDocumentResult> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "documents:upload")) {
+    return { error: "You don't have permission to upload documents." };
+  }
+
+  const title = input.title?.trim();
+  if (!title) return { error: "Title is required." };
+  if (!input.productionId || !input.storagePath) {
+    return { error: "Upload could not be completed." };
+  }
+
+  // The storage path was generated server-side under the production's
+  // prefix; reject anything else so a caller cannot attach an arbitrary
+  // stored object to a production.
+  if (!input.storagePath.startsWith(`documents/${input.productionId}/`)) {
+    return { error: "Upload could not be verified." };
   }
 
   await db.insert(documents).values({
-    productionId,
+    productionId: input.productionId,
     uploadedBy: user.id,
-    folderId: folderId || undefined,
+    folderId: input.folderId || undefined,
     title,
-    fileName: file.name,
-    fileSize: file.size,
-    contentType: file.type,
-    storagePath,
-    documentType,
+    fileName: input.fileName,
+    fileSize: input.fileSize,
+    contentType: input.contentType,
+    storagePath: input.storagePath,
+    documentType: input.documentType || "general",
   });
 
   revalidatePath("/productions");

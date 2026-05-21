@@ -13,23 +13,21 @@ export type UploadResult = {
   success?: boolean;
 };
 
-export async function uploadReportAttachment(
-  formData: FormData,
-): Promise<UploadResult> {
+export async function requestReportAttachmentUpload(
+  reportId: string,
+  fileName: string,
+  contentType: string,
+  fileSize: number,
+): Promise<{ error?: string; path?: string; token?: string }> {
   const user = await requireCurrentUser();
 
   if (!can(user.role, "reports:create")) {
     return { error: "You don't have permission to upload attachments." };
   }
 
-  const reportId = formData.get("report_id") as string;
-  const file = formData.get("file") as File;
-
-  if (!reportId || !file || file.size === 0) {
-    return { error: "Missing file or report." };
-  }
-
-  if (file.size > 10 * 1024 * 1024) {
+  if (!reportId) return { error: "Missing report." };
+  if (!fileName || fileSize <= 0) return { error: "Please select a file." };
+  if (fileSize > 10 * 1024 * 1024) {
     return { error: "File size must be under 10MB." };
   }
 
@@ -47,31 +45,56 @@ export async function uploadReportAttachment(
     "application/vnd.ms-powerpoint",
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   ];
-  if (!allowedTypes.includes(file.type)) {
+  if (!allowedTypes.includes(contentType)) {
     return {
       error: "Unsupported file type. Upload a PDF, image, or Office document.",
     };
   }
 
-  const supabase = await createSupabaseServerClient();
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storagePath = `reports/${reportId}/${Date.now()}-${safeName}`;
 
-  const { error: uploadError } = await supabase.storage
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.storage
     .from("attachments")
-    .upload(storagePath, file);
+    .createSignedUploadUrl(storagePath);
 
-  if (uploadError) {
-    return { error: `Upload failed: ${uploadError.message}` };
+  if (error || !data) {
+    return {
+      error: `Could not start upload: ${error?.message ?? "unknown error"}`,
+    };
+  }
+
+  return { path: data.path, token: data.token };
+}
+
+export async function finalizeReportAttachmentUpload(input: {
+  reportId: string;
+  storagePath: string;
+  fileName: string;
+  fileSize: number;
+  contentType: string;
+}): Promise<UploadResult> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "reports:create")) {
+    return { error: "You don't have permission to upload attachments." };
+  }
+
+  if (!input.reportId || !input.storagePath) {
+    return { error: "Upload could not be completed." };
+  }
+  if (!input.storagePath.startsWith(`reports/${input.reportId}/`)) {
+    return { error: "Upload could not be verified." };
   }
 
   await db.insert(reportAttachments).values({
-    reportId,
+    reportId: input.reportId,
     uploadedBy: user.id,
-    fileName: file.name,
-    fileSize: file.size,
-    contentType: file.type,
-    storagePath,
+    fileName: input.fileName,
+    fileSize: input.fileSize,
+    contentType: input.contentType,
+    storagePath: input.storagePath,
   });
 
   revalidatePath("/productions");

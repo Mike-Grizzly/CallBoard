@@ -3,7 +3,11 @@
 import { useState, useTransition, useRef } from "react";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { uploadDocument } from "@/features/documents/actions";
+import {
+  requestDocumentUpload,
+  finalizeDocumentUpload,
+} from "@/features/documents/actions";
+import { uploadFileToSignedUrl } from "@/lib/storage-upload";
 import { DOCUMENT_TYPES } from "@/features/documents/constants";
 import type { DocumentFolder } from "@/features/documents/queries";
 
@@ -25,10 +29,52 @@ export function DocumentUploadForm({
     setSuccess(false);
 
     const formData = new FormData(e.currentTarget);
-    formData.set("production_id", productionId);
+    const title = ((formData.get("title") as string) ?? "").trim();
+    const documentType = (formData.get("document_type") as string) || "general";
+    const folderId = (formData.get("folder_id") as string) || null;
+    const file = formData.get("file") as File | null;
+
+    if (!file || file.size === 0) {
+      setError("Please select a file to upload.");
+      return;
+    }
+    if (!title) {
+      setError("Title is required.");
+      return;
+    }
 
     startTransition(async () => {
-      const result = await uploadDocument(formData);
+      const signed = await requestDocumentUpload(
+        productionId,
+        file.name,
+        file.type,
+        file.size,
+      );
+      if (signed.error || !signed.path || !signed.token) {
+        setError(signed.error ?? "Could not start upload.");
+        return;
+      }
+
+      const uploaded = await uploadFileToSignedUrl(
+        signed.path,
+        signed.token,
+        file,
+      );
+      if (uploaded.error) {
+        setError(uploaded.error);
+        return;
+      }
+
+      const result = await finalizeDocumentUpload({
+        productionId,
+        storagePath: signed.path,
+        title,
+        folderId,
+        documentType,
+        fileName: file.name,
+        fileSize: file.size,
+        contentType: file.type,
+      });
       if (result.error) {
         setError(result.error);
       } else {

@@ -307,48 +307,79 @@ export async function getCustomSetPieceUrls(
   return Object.fromEntries(entries);
 }
 
-export async function uploadCustomSetPiece(
-  formData: FormData,
-): Promise<{ error?: string; piece?: CustomSetPieceClient }> {
+export async function requestCustomSetPieceUpload(
+  productionId: string,
+  fileName: string,
+  contentType: string,
+  fileSize: number,
+): Promise<{ error?: string; path?: string; token?: string }> {
   const user = await requireCurrentUser();
   if (!can(user.role, "blocking:edit")) {
     return { error: "You don't have permission to upload set pieces." };
   }
 
-  const productionId = formData.get("productionId") as string;
-  const file = formData.get("file") as File;
-  const nameRaw = (formData.get("name") as string | null)?.trim();
-
   if (!productionId) return { error: "Production ID is required." };
-  if (!file || file.size === 0) return { error: "No file selected." };
+  if (!fileName || fileSize <= 0) return { error: "No file selected." };
 
   const allowed = ["image/svg+xml", "image/png", "image/jpeg"];
-  if (!allowed.includes(file.type)) {
+  if (!allowed.includes(contentType)) {
     return { error: "Only SVG, PNG, and JPG files are supported." };
   }
-  if (file.size > 5 * 1024 * 1024) {
+  if (fileSize > 5 * 1024 * 1024) {
     return { error: "File must be under 5 MB." };
   }
 
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storagePath = `set-pieces/${productionId}/${Date.now()}-${safeName}`;
-  const fileType = file.name.split(".").pop()?.toLowerCase() ?? "png";
-  const name = nameRaw || file.name.replace(/\.[^.]+$/, "");
 
   const supabase = await createSupabaseServerClient();
-  const { error: uploadError } = await supabase.storage
+  const { data, error } = await supabase.storage
     .from("attachments")
-    .upload(storagePath, file);
-  if (uploadError) return { error: uploadError.message };
+    .createSignedUploadUrl(storagePath);
+
+  if (error || !data) {
+    return { error: error?.message ?? "Could not start upload." };
+  }
+
+  return { path: data.path, token: data.token };
+}
+
+export async function finalizeCustomSetPieceUpload(input: {
+  productionId: string;
+  storagePath: string;
+  fileName: string;
+  name?: string;
+}): Promise<{ error?: string; piece?: CustomSetPieceClient }> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "blocking:edit")) {
+    return { error: "You don't have permission to upload set pieces." };
+  }
+
+  if (!input.productionId || !input.storagePath) {
+    return { error: "Upload could not be completed." };
+  }
+  if (!input.storagePath.startsWith(`set-pieces/${input.productionId}/`)) {
+    return { error: "Upload could not be verified." };
+  }
+
+  const fileType = input.fileName.split(".").pop()?.toLowerCase() ?? "png";
+  const name = input.name?.trim() || input.fileName.replace(/\.[^.]+$/, "");
 
   const [row] = await db
     .insert(customSetPieces)
-    .values({ productionId, name, storagePath, fileType, uploadedBy: user.id })
+    .values({
+      productionId: input.productionId,
+      name,
+      storagePath: input.storagePath,
+      fileType,
+      uploadedBy: user.id,
+    })
     .returning();
 
+  const supabase = await createSupabaseServerClient();
   const { data: urlData } = await supabase.storage
     .from("attachments")
-    .createSignedUrl(storagePath, 3600);
+    .createSignedUrl(input.storagePath, 3600);
 
   revalidatePath("/productions");
   return {

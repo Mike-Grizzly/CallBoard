@@ -4,7 +4,7 @@
 
 **Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15) + People Directory (Step 16). Latest: org-wide people directory at `/people` with invite-based mass upload (manual / CSV / bulk paste) and multi-production assignment.
 
-**Launch planning:** the path from feature-complete MVP to a soft launch (testing site + invited testers) and on to public launch is tracked in `docs/launch-roadmap.md`. Phase 0 (security hardening) is complete — signed-URL access control, HTML sanitization, file-type validation, and notes privacy. See `decision-log.md` (2026-05-21).
+**Launch planning:** the path from feature-complete MVP to a soft launch (testing site + invited testers) and on to public launch is tracked in `docs/launch-roadmap.md`. Phase 0 (security hardening) is complete — signed-URL access control, HTML sanitization, file-type validation, and notes privacy. Phase 1 in progress — file uploads reworked to go client-direct to Supabase Storage (D4); Vercel deployment is the remaining P1 work. See `decision-log.md` (2026-05-21).
 
 ## Feature status
 
