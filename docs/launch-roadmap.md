@@ -28,11 +28,13 @@ Effort sizing: **S** = a few hours · **M** = roughly one work session ·
 - **Domain:** free platform URLs (`*.vercel.app`) during beta; register a
   real domain before the public launch.
 
-### Open decisions (needed to keep moving) — see the Decisions section
+### Decisions — see the Decisions section
 
-D1 sanitization library · D2 email/domain · D3 beta Supabase project ·
-D4 file-upload path on Vercel · D5 beta org model · D6 scaffolded-feature
-scope · D7 PWA offline support.
+Still open: D1 sanitization library · D3 beta Supabase project · D5 beta
+org model · D6 scaffolded-feature scope · D7 PWA offline support.
+
+Resolved 2026-05-21: **D2** (domain being registered) · **D4** (uploads
+go client-direct to Supabase Storage).
 
 ## Phase overview
 
@@ -107,17 +109,25 @@ is unverified.
   Site URL and to the Redirect URLs allowlist, so `/auth/callback`,
   password reset, and invite links resolve. — You
 - [ ] Verify the production build succeeds and the deployed site loads. — Claude
+- [ ] Rework the three upload flows (documents, report attachments,
+  blocking set pieces) to **client-direct Supabase Storage uploads**: the
+  server action checks permissions and issues a one-time signed upload
+  URL, the browser sends the file straight to Supabase, then a server
+  action records only the metadata. — Claude, **M/L**
+- [ ] Raise the `attachments` bucket file-size limit 25 MB → 50 MB
+  (Supabase free-plan maximum). — **S**, You
 - [ ] Smoke test on the deployed site: signup → first user becomes admin
   → create a production → upload a file → file a rehearsal report. — Shared
 
-**Risk — file uploads on Vercel (Decision D4).** Uploads currently POST
+**Why the upload rework (Decision D4, locked).** Uploads currently POST
 the file *through* a Next.js server action. Vercel's serverless functions
-cap request bodies well below the app's 25 MB limit, so large uploads will
-fail in production even though they work locally. The fix is to upload
-directly from the browser to Supabase Storage (signed upload URL / the
-Supabase client) and only send metadata through the server action. This
-touches the document, report-attachment, and custom-set-piece upload
-flows — an architecture change that needs sign-off (D4).
+reject any request body over ~4.5 MB — on **every** Vercel plan; it is an
+infrastructure limit, not a billing tier — so large uploads (e.g. script
+PDFs) would fail in production even though they work locally. Routing the
+file directly from the browser to Supabase Storage removes Vercel from the
+path entirely; it is also faster and cheaper, and is the standard
+production pattern. The size cap then becomes the Supabase bucket setting
+(50 MB on the free plan; higher requires Supabase Pro — see Scaling notes).
 
 **Note — email during beta.** Resend's sandbox sender
 (`onboarding@resend.dev`) only delivers to your own Resend account
@@ -255,12 +265,44 @@ $25), plus Xcode (macOS) and Android Studio for builds.
 | # | Decision | Recommendation |
 |---|---|---|
 | **D1** | Sanitization library for the XSS fix (P0). Needs approval — dev-rules forbid new libraries without sign-off. | Add `isomorphic-dompurify`. Small, standard, well-maintained. |
-| **D2** | Email deliverability during beta. Sandbox email won't reach external testers. | Register a cheap domain early (~$12/yr) just to verify a Resend sending domain + Supabase SMTP. It is the one thing that genuinely needs a domain before public launch. |
+| **D2** | Email deliverability during beta. Sandbox email won't reach external testers. | **Resolved 2026-05-21** — domain being registered, so a Resend sending domain + Supabase custom SMTP can be set up. Unblocks report and invite emails to real testers. |
 | **D3** | Which Supabase project is the beta environment. | Reuse the current `CallBoard` project as the beta environment; cut a fresh production project at P6 if a clean slate is wanted. |
-| **D4** | File uploads on Vercel. Server-action uploads will fail above ~4.5 MB on Vercel. | Switch to client-direct Supabase Storage uploads (signed upload URLs); server actions handle only metadata. Architecture change — needs sign-off. |
+| **D4** | File uploads on Vercel. Server-action uploads fail above ~4.5 MB on every Vercel plan. | **Resolved 2026-05-21** — switch to client-direct Supabase Storage uploads via server-issued signed upload URLs; the file never touches Vercel. Raise the bucket limit to 50 MB (free-plan max); files beyond 50 MB require Supabase Pro. |
 | **D5** | Beta org model. Single-org MVP: all testers share one workspace. | For beta, recruit a single theatre company (one shared workspace). Multi-org is a larger project — defer. |
 | **D6** | Scaffolded features (Activity log, document comments, AI script analysis). | Cut from v1 — ship as "coming soon" or remove the placeholders. |
 | **D7** | PWA offline support. | Ship a basic installable PWA now (no library); revisit a service worker only if testers ask for offline. |
+
+---
+
+## Scaling notes (post-launch)
+
+### Storage is shared across the whole app, not per org
+
+Supabase's storage allotment (1 GB on free, 100 GB included on Pro) is
+**one number for the entire project** — every org's files draw from the
+same pool. Supabase has no concept of the app's "organizations"; that is
+purely an application-level idea.
+
+100 GB is **not a hard wall.** On Pro, storage beyond the included 100 GB
+is billed per GB used (~$0.02/GB/month) — the app keeps working, the bill
+just grows. Early growth is absorbed automatically.
+
+How storage scales as the app grows:
+
+1. **Pro plan + overage** carries the first phase — pay only for usage
+   above the included 100 GB.
+2. **Per-org storage metering** — track each org's usage in the database
+   and enforce plan-based quotas (e.g. free org 1 GB, paid tiers higher).
+   This is the same project as adding paid billing — storage limits
+   become a plan feature. Build it *with* paid plans, not before.
+3. **Lifecycle policies** — archive or purge files from long-finished
+   productions so old shows do not occupy storage forever.
+4. **Dedicated storage (far future, large scale only)** — Supabase
+   Storage is S3-compatible and can point at external object storage / a
+   CDN if storage ever dwarfs everything else.
+
+Do not build any of this now. The path is: Pro plan absorbs early growth,
+then per-org metering arrives alongside paid plans.
 
 ---
 
