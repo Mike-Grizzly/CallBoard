@@ -1,6 +1,6 @@
 # Current Status
 
-**Last updated:** 2026-05-20
+**Last updated:** 2026-05-21
 
 **Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15) + People Directory (Step 16). Latest: org-wide people directory at `/people` with invite-based mass upload (manual / CSV / bulk paste) and multi-production assignment.
 
@@ -290,7 +290,7 @@ Branch `claude/people-mass-upload-feature-PkU2l` — new Step 16. Full spec in
 - No duplicate file detection
 - `dangerouslySetInnerHTML` in RichTextDisplay without HTML sanitization
 - TipTap bullet points not rendering due to Tailwind prose CSS reset
-- `drizzle-kit push` may hang — SQL was applied directly via Supabase SQL Editor for later tables
+- `drizzle-kit push` is effectively retired — it crashes introspecting CHECK constraints on this Supabase database (a `drizzle-kit` CLI bug, unrelated to `drizzle-orm`). Schema changes are applied via the Supabase SQL Editor / MCP, with `db/schema/*` kept in sync by hand. See decision-log entries dated 2026-05-20.
 - README.md is outdated (still says "Phase 1: Foundation and app shell")
 
 ## Risks for future review
