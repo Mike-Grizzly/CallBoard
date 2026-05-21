@@ -74,8 +74,12 @@ risks. They had to land before anyone outside the team touches the app.
   sanitize the filename used in the storage path.
 - [x] **Notes privacy enforcement.** `getNotesByProduction` now filters to
   the caller's own notes (notes are private by design since Step 11).
-- [ ] **Leaked-password protection.** Enable the HaveIBeenPwned check in
-  Supabase → Auth settings. — **S**, You (dashboard toggle, still pending)
+- [ ] **Password strength (free substitute for leaked-password
+  protection).** Leaked-password protection (HaveIBeenPwned check) is a
+  Supabase **Pro-plan** feature — decision 2026-05-21: skip it for the
+  closed beta, re-enable at P6 when the project moves to Pro. Interim:
+  set Password Requirements (minimum length 8+, character mix) under
+  Authentication → Sign In/Providers → Email — free on every plan. — **S**, You
 - [ ] **Server-action ID ownership checks.** Mutating actions (e.g.
   `uploadDocument`, `uploadCustomSetPiece`) still trust a client-supplied
   `productionId`. A broad ownership-check sweep is **deferred** — the
@@ -241,6 +245,8 @@ $25), plus Xcode (macOS) and Android Studio for builds.
 - [ ] Verify a sending domain on Resend; set `RESEND_FROM_EMAIL`;
   configure Supabase custom SMTP (Resend SMTP) so invite emails scale
   past the built-in rate limit.
+- [ ] Enable leaked-password protection (HaveIBeenPwned check) in Supabase
+  Auth — available once the project is on the Pro plan (deferred from P0).
 - [ ] Resolve the production Supabase project (keep the beta project or
   cut a fresh one — see D3) and adopt proper SQL migration files
   (`drizzle-kit push` is effectively retired on this project).
