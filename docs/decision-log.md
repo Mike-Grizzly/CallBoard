@@ -578,3 +578,58 @@ Underline, TextAlign, TextStyle/Color, Highlight, Mention), and preserves
 - `sanitizeHtml(html)` keeps the same signature — `RichTextDisplay` and the
   notes panel are unchanged.
 - Supersedes the D1 decision (which chose `isomorphic-dompurify`).
+
+---
+
+## 2026-05-22 — P2 mobile navigation: slide-in drawer (not a bottom tab bar)
+
+**Decision:** At phone widths (≤720px) the rail becomes a left slide-in
+drawer opened from a hamburger button in a sticky top bar, rather than a
+bottom tab bar. Tablet widths (721–1100px) keep the existing 64px icon
+rail; the icon-collapse media query was rescoped from `max-width: 1100px`
+to `min-width: 721px and max-width: 1100px`.
+
+**Reason:** CallBoard's navigation has two variable-length sections —
+Workspace links (capability-gated) and the user's full Productions list.
+A bottom tab bar fits only 4–5 fixed destinations and would have needed a
+separate "More" sheet for everything else, splitting navigation across two
+patterns. A drawer presents the entire existing rail unchanged, so there is
+one nav surface and no per-item triage. It is also the smaller change: the
+rail markup and capability filtering are reused as-is.
+
+**Impact:**
+- New client component `components/app-shell/app-frame.tsx` wraps the
+  `(app)` layout and owns the drawer open/close state. The `Rail` server
+  component is passed to it as a prop, so data fetching stays on the server.
+- Drawer "open" is derived state (`openedOnPath === pathname`) — navigating
+  closes it without a state-syncing effect, which also satisfies the
+  `react-hooks/set-state-in-effect` lint rule.
+- The closed drawer uses `visibility: hidden` (not only a transform) so it
+  leaves the tab order and accessibility tree on mobile.
+- If a bottom bar is wanted later it can be added alongside the drawer
+  (roadmap P2 listed "drawer + bottom bar" as an option) without rework.
+
+---
+
+## 2026-05-22 — PWA icons: SVG manifest icons + generated PNG apple-touch-icon
+
+**Decision:** The installable-PWA icons are SVG (`public/icon.svg` and a
+maskable variant) referenced by `app/manifest.ts` with `sizes: "any"`. The
+iOS `apple-touch-icon` is generated as a PNG at build time by
+`app/apple-icon.tsx` using `next/og`'s `ImageResponse`. No raster icon
+files are committed and no image-processing dependency was added.
+
+**Reason:** This environment has no image tooling (`sharp`, ImageMagick,
+`rsvg-convert` all absent), so hand-authored PNG icon sets were not an
+option. Modern Android Chrome accepts SVG manifest icons, so a single
+scalable SVG covers Android install and the favicon. iOS does **not**
+support SVG touch icons, so that one icon must be a PNG —
+`ImageResponse` renders the same "C" mark to a 180×180 PNG during the
+build, which is the documented Next.js way to produce a generated icon
+without a binary asset.
+
+**Impact:**
+- If pixel-tuned PNG icon sets are wanted later (e.g. for older Android or
+  app-store assets in P5), they can be added to the manifest's `icons`
+  array; the SVGs do not need to be removed.
+- `next/og` is built into Next 16 — no dependency change.

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 
@@ -26,6 +26,22 @@ export const metadata: Metadata = {
   title: "CallBoard — Production Hub",
   description:
     "A lightweight production portal for small theatre companies.",
+  applicationName: "CallBoard",
+  icons: {
+    icon: "/icon.svg",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "CallBoard",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#fbf8f3",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

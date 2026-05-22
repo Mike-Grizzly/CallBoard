@@ -158,20 +158,33 @@ app must be *good on a phone browser* before either a PWA or a native
 wrapper is worth shipping. See the **Mobile app feasibility** section
 below for the full picture.
 
-- [ ] **Mobile navigation.** The sidebar rail is simply hidden on mobile
-  with no replacement — there is currently no way to navigate on a phone.
-  Add a mobile drawer / bottom nav. — **M**
+- [x] **Mobile navigation — done 2026-05-22.** The rail used to collapse to
+  a cramped 64px icon strip at all widths below 1100px. It now becomes a
+  slide-in drawer at phone widths (≤720px): a sticky top bar with a
+  hamburger + brand opens the full rail as an off-canvas drawer with a
+  dimmed backdrop, close (X) button, Escape-to-close, scroll lock, and
+  auto-close on navigation. The 64px icon strip is retained for tablet
+  widths (721–1100px). New `components/app-shell/app-frame.tsx` (client
+  shell); the icon-collapse media query is now scoped `min-width: 721px`. — **M**
 - [ ] **Responsive audit.** Walk every screen at phone widths. The
   blocking canvas and script editor need the most attention. — **L**
 - [ ] **Touch interactions.** @dnd-kit drag, PDF annotation drawing, and
   the set-piece rotation handle are mouse-built — test and fix for
   touch. — **M**
-- [ ] **PWA manifest.** Add `manifest.webmanifest`, app icons, an
-  `apple-touch-icon`, and theme-color meta. A basic installable PWA needs
-  **no new dependency**. — **M**
+- [x] **PWA manifest — done 2026-05-22.** Added `app/manifest.ts`
+  (standalone display, `/dashboard` start URL, theatre-cream theme color),
+  SVG app icons (`public/icon.svg` + a maskable variant), a generated PNG
+  `apple-touch-icon` via `app/apple-icon.tsx` (`next/og` `ImageResponse`),
+  and `themeColor` / `appleWebApp` metadata in the root layout. No new
+  dependency. — **M**
 - [ ] **PWA offline support (optional).** A service worker for offline /
   caching would need a library — see **Decision D7**. — **M**
 - [ ] Verify "Add to Home Screen" on iOS Safari and Android Chrome. — **S**
+
+**Done this session (2026-05-22):** mobile drawer navigation + PWA manifest
+— both code-only, build- and type-checked. **Still open:** the responsive
+audit, touch-interaction fixes, and live device verification all need
+real-device testing against the deployed site.
 
 Result: testers can install CallBoard to their home screen and use it
 like an app — the free interim "app" while the native wrapper waits for

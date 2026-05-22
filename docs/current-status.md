@@ -1,10 +1,10 @@
 # Current Status
 
-**Last updated:** 2026-05-21
+**Last updated:** 2026-05-22
 
 **Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15) + People Directory (Step 16). Latest: org-wide people directory at `/people` with invite-based mass upload (manual / CSV / bulk paste) and multi-production assignment.
 
-**Launch planning:** the path from feature-complete MVP to a soft launch (testing site + invited testers) and on to public launch is tracked in `docs/launch-roadmap.md`. Phase 0 (security hardening) and Phase 1 (Vercel deployment) are complete — the app is live at `call-board.vercel.app` on the `CallBoard` Supabase project, smoke test passed. Next: P2 (mobile/PWA) and P3 (beta testers). See `decision-log.md` (2026-05-21 / 05-22).
+**Launch planning:** the path from feature-complete MVP to a soft launch (testing site + invited testers) and on to public launch is tracked in `docs/launch-roadmap.md`. Phase 0 (security hardening) and Phase 1 (Vercel deployment) are complete — the app is live at `call-board.vercel.app` on the `CallBoard` Supabase project, smoke test passed. P2 (mobile/PWA) is in progress: mobile drawer navigation and the PWA manifest landed 2026-05-22; the responsive audit, touch-interaction fixes, and live device verification remain. Next after P2: P3 (beta testers). See `decision-log.md` (2026-05-21 / 05-22).
 
 ## Feature status
 
@@ -15,7 +15,12 @@
 - Local UI primitives (Button, Card, Separator)
 - Root redirect to /dashboard
 - Sidebar nav items with icons and capability-based filtering
-- **Not fully verified:** Mobile responsive behavior (sidebar hidden, no mobile drawer)
+- **Mobile navigation (2026-05-22, P2):** at phone widths (≤720px) the rail
+  becomes a slide-in drawer opened from a hamburger in a sticky top bar
+  (`components/app-shell/app-frame.tsx`); the 64px icon-rail is kept for
+  tablet widths (721–1100px). See `docs/launch-roadmap.md` P2.
+- **Not fully verified:** mobile drawer behavior on real devices (built and
+  type-checked only); broader responsive layout of inner pages
 
 ### Step 2: Auth — IMPLEMENTED
 - Supabase email/password auth (signup, login, logout)
@@ -268,6 +273,34 @@ Branch `claude/people-mass-upload-feature-PkU2l` — new Step 16. Full spec in
   Supabase project — needs `SUPABASE_SERVICE_ROLE_KEY` set, the callback URL in
   the Auth "Redirect URLs" allowlist, and (for bulk invites) custom SMTP.
 
+## Mobile navigation & PWA (2026-05-22)
+
+Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
+
+- **Mobile drawer navigation.** New client shell
+  `components/app-shell/app-frame.tsx` wraps the `(app)` layout. On desktop
+  it is a passive wrapper (the rail stays in the CSS grid). At ≤720px it
+  renders a sticky top bar (hamburger + brand) and turns the rail into an
+  off-canvas slide-in drawer: dimmed backdrop, close (X) button,
+  Escape-to-close, background scroll lock, focus moved into the drawer, and
+  auto-close on navigation (drawer state is derived from the route, so no
+  state-syncing effect). `globals.css` gained a mobile-navigation block; the
+  existing icon-collapse media query was rescoped to
+  `min-width: 721px and max-width: 1100px` so phones get the drawer and
+  tablets keep the 64px icon rail. `Rail`'s `<aside>` got `id="app-rail"`
+  for `aria-controls`.
+- **Installable PWA.** `app/manifest.ts` (`MetadataRoute.Manifest`:
+  standalone display, `/dashboard` start URL, `#fbf8f3` theme/background).
+  Icons: `public/icon.svg` + `public/icon-maskable.svg` (the CallBoard "C"
+  mark), and `app/apple-icon.tsx` which generates a 180×180 PNG
+  `apple-touch-icon` via `next/og` `ImageResponse` (iOS does not accept SVG
+  touch icons). Root layout gained `icons` / `appleWebApp` metadata and a
+  `viewport` export with `themeColor`. No new dependency.
+- **Verified:** `next build` compiles, `tsc --noEmit` and `eslint` pass.
+  **Not verified:** live device behavior — there is no `.env.local` in this
+  environment so the build cannot collect page data (`DATABASE_URL` unset).
+  "Add to Home Screen" on real iOS/Android still needs checking.
+
 ## Scaffolded only (not implemented)
 
 - **Activity log** — placeholder page exists, capability defined, feature directory has only .gitkeep
@@ -281,7 +314,7 @@ Branch `claude/people-mass-upload-feature-PkU2l` — new Step 16. Full spec in
 - Dark mode
 - Email notifications
 - Real-time updates
-- Mobile navigation drawer
+- PWA offline support / service worker (basic installable PWA shipped 2026-05-22; offline caching deferred — roadmap D7)
 
 ## Known limitations
 
