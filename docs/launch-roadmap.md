@@ -41,7 +41,7 @@ being registered) · **D4** (uploads go client-direct to Supabase Storage).
 | Phase | Goal | Gates | Owner |
 |---|---|---|---|
 | **P0** | Security hardening — **done 2026-05-21** | Soft launch | Claude |
-| **P1** | Deploy testing site to Vercel | Soft launch | Shared |
+| **P1** | Deploy testing site to Vercel — **done 2026-05-22** | Soft launch | Shared |
 | **P2** | Mobile web experience + PWA | Soft launch (partial) | Claude |
 | **P3** | Beta testing program | *is* the soft launch | Shared |
 | **P4** | Marketing / landing site + auth wiring | Public launch | You + Claude |
@@ -91,38 +91,39 @@ risks. They had to land before anyone outside the team touches the app.
 
 ---
 
-## P1 — Deploy the testing site to Vercel
+## P1 — Deploy the testing site to Vercel — DONE (2026-05-22)
 
-Goal: a live `*.vercel.app` URL running the real app against a real
-Supabase project. This is the first time the app is built and run for
-real — the dev container has no `DATABASE_URL`, so the production build
-is unverified.
+The app is live at **`call-board.vercel.app`**, running against the
+`CallBoard` Supabase project. Smoke test passed: create production, upload
+documents (incl. an 8 MB script — proving the D4 Vercel-bypass), create and
+view rehearsal reports.
 
-- [x] **Beta Supabase project** — decision 2026-05-21: reuse the current
-  `CallBoard` project as the beta environment (D3 resolved).
+- [x] **Beta Supabase project** — reuse the current `CallBoard` project (D3).
 - [x] **Upload rework (D4).** The three upload flows (documents, report
-  attachments, blocking set pieces) now upload **client-direct to Supabase
-  Storage** via server-issued signed upload URLs — a request action checks
-  permissions/type/size and issues the URL, the browser sends the file
-  straight to Supabase, a finalize action records only the metadata (and
-  verifies the storage path is under the production's prefix). The file
-  never passes through Vercel.
-- [ ] Create the Vercel project, link the GitHub repo, set the production
-  branch. — You
-- [ ] Set Vercel environment variables: `NEXT_PUBLIC_SUPABASE_URL`,
-  `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
-  `DATABASE_URL`, `NEXT_PUBLIC_SITE_URL` (the `*.vercel.app` URL),
-  `RESEND_API_KEY`, `RESEND_FROM_EMAIL`. — You
-- [ ] In Supabase → Auth → URL Configuration, add the deployed URL as the
-  Site URL and to the Redirect URLs allowlist, so `/auth/callback`,
-  password reset, and invite links resolve. — You
-- [ ] Raise the `attachments` bucket file-size limit 25 MB → 50 MB
-  (Supabase free-plan maximum). — **S**, You
-- [ ] Verify the production build succeeds and the deployed site loads.
-  (Build compiles clean locally; the dev container has no `DATABASE_URL`
-  so the full build is first verified on Vercel.) — Claude
-- [ ] Smoke test on the deployed site: signup → first user becomes admin
-  → create a production → upload a file → file a rehearsal report. — Shared
+  attachments, blocking set pieces) upload **client-direct to Supabase
+  Storage** via server-issued signed upload URLs — verified live with an
+  8 MB file.
+- [x] Vercel project created, GitHub repo linked, production branch set to
+  `claude/soft-launch-readiness-pmxel`.
+- [x] Vercel environment variables set (Supabase keys, `DATABASE_URL`,
+  `NEXT_PUBLIC_SITE_URL`, Resend).
+- [x] Production build verified on Vercel; the deployed site loads.
+- [x] Smoke test passed (productions, uploads, reports).
+- [x] Storage bucket — the `attachments` bucket has no file-size limit set,
+  so it already accepts up to the plan maximum; the "raise to 50 MB" step is
+  moot.
+- [ ] **Supabase Auth → URL Configuration** — set the Site URL + Redirect
+  URLs to `call-board.vercel.app`. Not required for login, but password
+  reset / email links need it — confirm before P3. — You
+
+**Issues shaken out during deploy (all environment, not app bugs):**
+1. **Vercel Deployment Protection** was on — it gated the whole site behind
+   a Vercel login; disabled it.
+2. **Stale deployment** — Vercel had built a commit predating D4, so large
+   uploads still failed; forced a redeploy of branch HEAD.
+3. **`isomorphic-dompurify` crashed server-side** — its jsdom dependency
+   fails in the Vercel runtime; swapped to `sanitize-html` (see decision
+   log, 2026-05-22).
 
 **Why the upload rework (Decision D4, locked).** Uploads currently POST
 the file *through* a Next.js server action. Vercel's serverless functions
