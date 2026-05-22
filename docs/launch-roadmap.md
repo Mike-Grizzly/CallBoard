@@ -112,9 +112,8 @@ view rehearsal reports.
 - [x] Storage bucket — the `attachments` bucket has no file-size limit set,
   so it already accepts up to the plan maximum; the "raise to 50 MB" step is
   moot.
-- [ ] **Supabase Auth → URL Configuration** — set the Site URL + Redirect
-  URLs to `call-board.vercel.app`. Not required for login, but password
-  reset / email links need it — confirm before P3. — You
+- [x] **Supabase Auth → URL Configuration** — Site URL + Redirect URLs set
+  to `call-board.vercel.app` so password-reset and email links resolve.
 
 **Issues shaken out during deploy (all environment, not app bugs):**
 1. **Vercel Deployment Protection** was on — it gated the whole site behind
@@ -124,6 +123,15 @@ view rehearsal reports.
 3. **`isomorphic-dompurify` crashed server-side** — its jsdom dependency
    fails in the Vercel runtime; swapped to `sanitize-html` (see decision
    log, 2026-05-22).
+
+**Deployment workflow going forward.** `main` is the Vercel production
+branch — every merge into `main` auto-deploys to `call-board.vercel.app`.
+Feature work happens on per-session branches; Vercel auto-deploys each
+branch to its own preview URL with no setup, and merging the branch into
+`main` ships it live. (During the initial P1 deploy the production branch
+was temporarily pointed at the `claude/soft-launch-readiness-pmxel` branch
+to get the site up before merging; it returns to `main` once that branch is
+merged.)
 
 **Why the upload rework (Decision D4, locked).** Uploads currently POST
 the file *through* a Next.js server action. Vercel's serverless functions
