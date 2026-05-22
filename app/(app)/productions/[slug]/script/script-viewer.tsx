@@ -41,6 +41,7 @@ import {
 } from "@/features/scripts/constants";
 import type { DefaultScript } from "@/features/scripts/queries";
 import { loadPdfDocument } from "@/lib/pdf";
+import { useIsPhone } from "@/lib/use-is-phone";
 
 // Module-level cache so re-renders don't re-decode the same page
 const pdfBitmapCache = new Map<string, ImageBitmap>();
@@ -99,7 +100,12 @@ export function ScriptViewer({
 
   const renderScale = BASE_RENDER_SCALE * ZOOM_STEPS[zoomIndex];
 
-  const [activeTool, setActiveTool] = useState<Tool>("pointer");
+  // The annotation tools are mouse-built (drag to draw) — on phones the
+  // script is presented view-only: the tool is locked to "pointer" so the
+  // canvas only pans, and the drawing tools / edit controls are hidden.
+  const isPhone = useIsPhone();
+  const [activeToolState, setActiveTool] = useState<Tool>("pointer");
+  const activeTool: Tool = isPhone ? "pointer" : activeToolState;
   const [activeColor, setActiveColor] = useState(DEFAULT_ANNOTATION_COLOR);
   const [preferredLeaderSide, setPreferredLeaderSide] = useState<"left" | "right">("right");
 
@@ -608,6 +614,8 @@ export function ScriptViewer({
           active={activeTool === "pointer"}
           onClick={() => setActiveTool("pointer")}
         />
+        {!isPhone && (
+          <>
         <ToolButton
           icon={<Highlighter size={16} />}
           label="Highlight (draw)"
@@ -717,6 +725,8 @@ export function ScriptViewer({
               />
             ))}
           </div>
+        )}
+          </>
         )}
       </div>
 
@@ -1314,6 +1324,7 @@ export function ScriptViewer({
           onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
           onDelete={deleteAnnotation}
           onEdit={updateAnnotation}
+          readOnly={isPhone}
         />
       </div>
     </div>
@@ -1832,6 +1843,7 @@ function AnnotationsPanel({
   onSelect,
   onDelete,
   onEdit,
+  readOnly,
 }: {
   annotations: Annotation[];
   currentPage: number;
@@ -1839,6 +1851,7 @@ function AnnotationsPanel({
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string, changes: Partial<Annotation>) => void;
+  readOnly: boolean;
 }) {
   const byY = (a: Annotation, b: Annotation) =>
     a.rect.y !== b.rect.y ? a.rect.y - b.rect.y : a.rect.x - b.rect.x;
@@ -1895,6 +1908,7 @@ function AnnotationsPanel({
                 onSelect={() => onSelect(ann.id)}
                 onDelete={() => onDelete(ann.id)}
                 onEdit={(changes) => onEdit(ann.id, changes)}
+                readOnly={readOnly}
               />
             ))}
           </div>
@@ -1921,6 +1935,7 @@ function AnnotationsPanel({
                 onSelect={() => onSelect(ann.id)}
                 onDelete={() => onDelete(ann.id)}
                 onEdit={(changes) => onEdit(ann.id, changes)}
+                readOnly={readOnly}
               />
             ))}
           </div>
@@ -1936,12 +1951,14 @@ function PanelAnnotationItem({
   onSelect,
   onDelete,
   onEdit,
+  readOnly,
 }: {
   annotation: Annotation;
   selected: boolean;
   onSelect: () => void;
   onDelete: () => void;
   onEdit: (changes: Partial<Annotation>) => void;
+  readOnly: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState("");
@@ -2074,7 +2091,7 @@ function PanelAnnotationItem({
         )}
       </div>
 
-      {!editing && (
+      {!editing && !readOnly && (
         <div style={{ display: "flex", flexShrink: 0, gap: 2 }}>
           {canEdit && (
             <button

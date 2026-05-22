@@ -4410,5 +4410,31 @@ select.pp-field {
     pointer-events: auto;
     transition: opacity 0.2s ease, visibility 0s;
   }
+
+  /* Production tab strip becomes a contained horizontal scroller, so a
+     long tab list scrolls within itself instead of widening the page.
+     The active tab is scrolled into view by production-tabs.tsx. The
+     negative margins let it scroll edge-to-edge while the padding keeps
+     the first tab aligned with the header content above it. */
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    margin-left: calc(-1 * var(--pad-x));
+    margin-right: calc(-1 * var(--pad-x));
+    padding-left: var(--pad-x);
+    padding-right: var(--pad-x);
+    padding-bottom: 1px;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .tab {
+    flex-shrink: 0;
+    white-space: nowrap;
+    scroll-snap-align: start;
+  }
 }
 

@@ -168,9 +168,17 @@ below for the full picture.
   shell); the icon-collapse media query is now scoped `min-width: 721px`. — **M**
 - [ ] **Responsive audit.** Walk every screen at phone widths. The
   blocking canvas and script editor need the most attention. — **L**
+  - *Done 2026-05-22:* the production tab strip (up to 8 tabs) used to
+    overflow and force a sideways page scroll on phones — it is now a
+    contained horizontal scroller that keeps the active tab in view. The
+    rest of the per-page responsive sweep still remains.
 - [ ] **Touch interactions.** @dnd-kit drag, PDF annotation drawing, and
   the set-piece rotation handle are mouse-built — test and fix for
   touch. — **M**
+  - *Interim 2026-05-22:* the blocking canvas and the script editor are
+    now **view-only on phones** (≤720px) — editing is disabled rather than
+    broken. Full touch editing (the goal is at least tablet parity for
+    blocking) is still the open work here.
 - [x] **PWA manifest — done 2026-05-22.** Added `app/manifest.ts`
   (standalone display, `/dashboard` start URL, theatre-cream theme color),
   SVG app icons (`public/icon.svg` + a maskable variant), a generated PNG
@@ -181,10 +189,12 @@ below for the full picture.
   caching would need a library — see **Decision D7**. — **M**
 - [ ] Verify "Add to Home Screen" on iOS Safari and Android Chrome. — **S**
 
-**Done this session (2026-05-22):** mobile drawer navigation + PWA manifest
-— both code-only, build- and type-checked. **Still open:** the responsive
-audit, touch-interaction fixes, and live device verification all need
-real-device testing against the deployed site.
+**Done so far (2026-05-22):** mobile drawer navigation, PWA manifest, the
+production tab strip overflow fix, and a view-only phone mode for the
+blocking canvas and script editor — all code-only, build- and
+type-checked. **Still open:** the rest of the per-page responsive audit,
+real touch-editing support (blocking/script), and live device
+verification, all of which need testing against the deployed site.
 
 Result: testers can install CallBoard to their home screen and use it
 like an app — the free interim "app" while the native wrapper waits for

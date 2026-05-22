@@ -296,7 +296,23 @@ Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
   `apple-touch-icon` via `next/og` `ImageResponse` (iOS does not accept SVG
   touch icons). Root layout gained `icons` / `appleWebApp` metadata and a
   `viewport` export with `themeColor`. No new dependency.
-- **Verified:** `next build` compiles, `tsc --noEmit` and `eslint` pass.
+- **Production tab strip.** The production header has up to 8 tabs in a
+  flex row with no overflow handling, so on a phone it forced a sideways
+  scroll of the whole page. At ≤720px `.tabs` is now a contained
+  horizontal scroller (edge-to-edge, snap, hidden scrollbar);
+  `production-tabs.tsx` scrolls the active tab into view on route change.
+- **View-only phone mode for mouse-built tools.** The blocking canvas and
+  the script editor are drag-and-drop / draw-built and unusable by touch.
+  New `lib/use-is-phone.ts` hook (`useSyncExternalStore` over a
+  `matchMedia` query). At ≤720px the blocking canvas derives
+  `canEdit = canEditProp && !isPhone` (its single edit gate, so all edit
+  affordances drop out); the script editor locks the tool to `pointer`,
+  hides the drawing tools, and hides the annotation panel's edit/delete
+  controls. Script bookmarks stay usable (navigation aid). Touch *editing*
+  remains future P2 work — the goal is at least tablet parity for blocking.
+- **Verified:** `next build` compiles, `tsc --noEmit` passes. No new
+  `eslint` errors (two pre-existing `set-state-in-effect` errors in
+  `blocking-canvas.tsx` are unrelated and untouched).
   **Not verified:** live device behavior — there is no `.env.local` in this
   environment so the build cannot collect page data (`DATABASE_URL` unset).
   "Add to Home Screen" on real iOS/Android still needs checking.

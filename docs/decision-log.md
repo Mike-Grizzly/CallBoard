@@ -633,3 +633,65 @@ without a binary asset.
   app-store assets in P5), they can be added to the manifest's `icons`
   array; the SVGs do not need to be removed.
 - `next/og` is built into Next 16 — no dependency change.
+
+---
+
+## 2026-05-22 — Blocking + script tools are view-only on phones (interim)
+
+**Decision:** On phone widths (≤720px) the blocking canvas and the script
+editor are presented **view-only** — all editing is disabled, not just
+left broken. Tablet and desktop keep full editing. This is an interim
+state: the eventual goal is real touch editing, at least tablet parity for
+the blocking tool (tracked under P2 "Touch interactions").
+
+**Reason:** Both tools are mouse-built — the blocking canvas is @dnd-kit
+drag-and-drop with a pointer-capture rotation handle; the script editor
+creates annotations by click-drag drawing. On a touchscreen these
+interactions are unusable, so a phone user who could "edit" would only
+produce a frustrating, broken experience. Disabling editing lets them
+still *view* blocking and scripts (the common phone use case — checking
+staging or reading the script) cleanly.
+
+**Implementation:**
+- New `lib/use-is-phone.ts` — `useIsPhone()` via `useSyncExternalStore`
+  over a `matchMedia("(max-width: 720px)")` query (SSR-safe, no
+  setState-in-effect, matches the CSS mobile breakpoint).
+- Blocking: `BlockingCanvas` already threaded a single `canEdit` prop
+  through every edit affordance. The component now derives
+  `canEdit = canEditProp && !isPhone`, so phone view-only needed no
+  per-control changes.
+- Script: `activeTool` is derived as `isPhone ? "pointer" : activeToolState`
+  (locks the canvas to panning, no drawing); the drawing tool buttons and
+  colour/cue options are hidden; `PanelAnnotationItem` gained a `readOnly`
+  prop that hides its edit/delete controls.
+- Script **bookmarks** were deliberately left usable on phones — they are a
+  navigation aid (jump to a page), not annotation editing, and work fine by
+  tap.
+
+**Impact:**
+- An editor-role user on a phone sees the same view-only experience that
+  Cast/Crew already get for blocking — a tested code path.
+- When touch editing is built, the `!isPhone` guards are the single place
+  to relax (e.g. allow editing on tablet-sized touch devices).
+
+---
+
+## 2026-05-22 — Production tab strip is a contained scroller on phones
+
+**Decision:** On phones the production header's tab strip (`.tabs`, up to 8
+tabs) becomes a contained horizontal scroller rather than a dropdown or a
+wrapped multi-row layout. `production-tabs.tsx` scrolls the active tab into
+view on route change.
+
+**Reason:** The flex row had no overflow handling, so a long tab list
+widened the page and forced a sideways scroll of the whole screen. A
+contained scroller (`overflow-x: auto` on `.tabs`, `flex-shrink: 0` tabs)
+keeps every section reachable with one familiar pattern and is the
+smallest, lowest-risk change — the existing tab markup and active-state
+logic are untouched. A dropdown would hide the at-a-glance row; wrapping to
+multiple rows is visually noisier and eats vertical space.
+
+**Impact:**
+- Scoped to ≤720px so desktop/tablet are unchanged.
+- If the strip ever overflows at narrow tablet widths too, the same rules
+  can be widened to that range.
