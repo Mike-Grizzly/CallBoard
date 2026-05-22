@@ -553,3 +553,28 @@ cheaper, and the standard production pattern.
 - `next.config.ts` still carries `bodySizeLimit: "25mb"` — now only relevant to
   the small metadata payloads; left as-is, harmless.
 - Old single-action `upload*` functions were removed (no compatibility shim).
+
+---
+
+## 2026-05-22 — Sanitizer swapped: isomorphic-dompurify → sanitize-html
+
+**Decision:** Replaced `isomorphic-dompurify` (added for the P0 XSS fix) with
+`sanitize-html` as the rich-text sanitizer in `lib/sanitize.ts`.
+
+**Reason:** `isomorphic-dompurify` depends on `jsdom` for server-side use.
+On the deployed Vercel build it crashed at runtime whenever `sanitizeHtml`
+ran inside a server component — every rehearsal-report detail page (which
+renders TipTap HTML via `RichTextDisplay`) returned a 500. The build
+compiled fine; the failure only surfaced in the serverless runtime. This is
+a documented incompatibility between jsdom and the Next.js server bundler.
+
+`sanitize-html` is a pure string parser with no `jsdom`/DOM dependency, so
+it runs identically on the server and the client. Its allowlist in
+`lib/sanitize.ts` is configured to match TipTap's output (StarterKit,
+Underline, TextAlign, TextStyle/Color, Highlight, Mention), and preserves
+`data-id` on mention spans so mention parsing still works.
+
+**Impact:**
+- `sanitizeHtml(html)` keeps the same signature — `RichTextDisplay` and the
+  notes panel are unchanged.
+- Supersedes the D1 decision (which chose `isomorphic-dompurify`).

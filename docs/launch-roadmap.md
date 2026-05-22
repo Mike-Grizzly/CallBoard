@@ -271,7 +271,7 @@ $25), plus Xcode (macOS) and Android Studio for builds.
 
 | # | Decision | Recommendation |
 |---|---|---|
-| **D1** | Sanitization library for the XSS fix (P0). | **Resolved 2026-05-21** — added `isomorphic-dompurify`; sanitization centralised in `lib/sanitize.ts`. |
+| **D1** | Sanitization library for the XSS fix (P0). | **Resolved** — sanitization centralised in `lib/sanitize.ts`. Started on `isomorphic-dompurify` (2026-05-21); swapped to `sanitize-html` 2026-05-22 after jsdom crashed in the Vercel server runtime. See decision log. |
 | **D2** | Email deliverability during beta. Sandbox email won't reach external testers. | **Resolved 2026-05-21** — domain being registered, so a Resend sending domain + Supabase custom SMTP can be set up. Unblocks report and invite emails to real testers. |
 | **D3** | Which Supabase project is the beta environment. | Reuse the current `CallBoard` project as the beta environment; cut a fresh production project at P6 if a clean slate is wanted. |
 | **D4** | File uploads on Vercel. Server-action uploads fail above ~4.5 MB on every Vercel plan. | **Resolved 2026-05-21** — switch to client-direct Supabase Storage uploads via server-issued signed upload URLs; the file never touches Vercel. Raise the bucket limit to 50 MB (free-plan max); files beyond 50 MB require Supabase Pro. |
