@@ -314,6 +314,32 @@ Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
   hides the drawing tools, and hides the annotation panel's edit/delete
   controls. Script bookmarks stay usable (navigation aid). Touch *editing*
   remains future P2 work — the goal is at least tablet parity for blocking.
+- **Bottom-tab nav replaces the drawer (slice 1 of demo port, 2026-05-24).**
+  Following review of the new Claude-design mobile demo, the slide-in drawer
+  was retired in favour of a 5-tab bottom bar (Today / Calendar / Reports /
+  Notes / More). `components/app-shell/mobile-tab-bar.tsx` is the new client
+  shell; tabs are context-aware — inside `/productions/[slug]/*` they scope
+  to that production, otherwise they fall back to workspace routes. The
+  `app/(app)/layout.tsx` `AppFrame` is now a passive wrapper that just
+  renders the rail + main + `<MobileTabBar />`; the desktop rail is hidden
+  at ≤720px via `.rail { display: none }` in the mobile block. `.main` gains
+  bottom padding for the fixed bar plus the iOS home-indicator safe area.
+- **Mobile Today / Dashboard (slice 2, 2026-05-24).** New server component
+  `app/(app)/(default)/dashboard/mobile-today-hero.tsx` renders inside the
+  existing `/dashboard` page and is CSS-gated to phone widths. Layout
+  mirrors the demo's "Promptbook" variant: greeting + next-call hero card
+  (production, time range, focus, location pill, "Open production" footer)
+  + 2×2 stat grid (Productions / Mentions / Pinned / Next call). The
+  desktop `.home-hero` and the "Upcoming rehearsals & calls" grid (now
+  marked `.dashboard-desktop-only`) are hidden at ≤720px so they don't
+  double up. Existing announcements / productions browser / mentions /
+  pinned sections still render below — they'll get mobile passes in later
+  slices.
+- **Calendar week-view overflow fix (2026-05-24).** The week and day grids
+  used `repeat(N, 1fr)` (= `minmax(auto, 1fr)`) so event titles forced
+  columns wider than the viewport, pushing the page sideways on phones.
+  Switched to `minmax(0, 1fr)` so columns can shrink below content and
+  events truncate inside them. `.cal-canvas` also gained `min-width: 0`.
 - **Verified:** `next build` compiles, `tsc --noEmit` passes. No new
   `eslint` errors (two pre-existing `set-state-in-effect` errors in
   `blocking-canvas.tsx` are unrelated and untouched).

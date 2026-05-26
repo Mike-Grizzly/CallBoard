@@ -2168,6 +2168,7 @@ div.mention:hover {
 .cal-canvas {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: var(--radius-l);
@@ -2186,7 +2187,7 @@ div.mention:hover {
 }
 .week-head {
   display: grid;
-  grid-template-columns: 60px repeat(7, 1fr);
+  grid-template-columns: 60px repeat(7, minmax(0, 1fr));
   border-bottom: 1px solid var(--border);
   background: var(--bg-elev);
 }
@@ -2226,7 +2227,7 @@ div.mention:hover {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 60px repeat(7, 1fr);
+  grid-template-columns: 60px repeat(7, minmax(0, 1fr));
   overflow-y: auto;
   position: relative;
 }
@@ -2525,7 +2526,7 @@ div.mention:hover {
 }
 .day-track {
   display: grid;
-  grid-template-columns: 60px 1fr;
+  grid-template-columns: 60px minmax(0, 1fr);
   overflow-y: auto;
   position: relative;
   border-right: 1px solid var(--border);
@@ -4286,6 +4287,13 @@ select.pp-field {
   display: none;
 }
 
+/* Mobile-only Today/Dashboard hero — hidden on desktop. Phone widths
+   reveal it (and hide the desktop hero + upcoming-rehearsals grid) in
+   the @media block below. */
+.mt-today {
+  display: none;
+}
+
 @media (max-width: 720px) {
   .app {
     grid-template-columns: 1fr;
@@ -4347,6 +4355,187 @@ select.pp-field {
     font-size: 10px;
     font-weight: 500;
     letter-spacing: 0.01em;
+  }
+
+  /* Mobile Today/Dashboard hero — replaces the desktop `.home-hero` and
+     the "Upcoming rehearsals & calls" grid at phone widths. The desktop
+     versions are hidden by the `.dashboard-desktop-only` and the
+     `.home-hero` rules below. */
+  .page-narrow.home > .home-hero,
+  .page-narrow.home > .dashboard-desktop-only {
+    display: none;
+  }
+  .mt-today {
+    display: block;
+    padding: 4px 14px 4px;
+  }
+  .mt-greeting {
+    padding: 4px 4px 14px;
+  }
+  .mt-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin-bottom: 4px;
+  }
+  .mt-greeting-title {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.018em;
+    line-height: 1.1;
+    margin: 0;
+  }
+  .mt-greeting-title em {
+    font-style: italic;
+    color: var(--accent);
+  }
+  .mt-greeting-sub {
+    font-size: 13px;
+    color: var(--ink-3);
+    margin: 6px 0 0;
+    line-height: 1.5;
+  }
+  .mt-greeting-sub b {
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .mt-call-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 14px;
+    box-shadow:
+      0 4px 20px -6px rgba(40, 20, 10, 0.12),
+      0 1px 2px rgba(40, 20, 10, 0.04);
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .mt-call-body {
+    padding: 14px 16px 16px;
+  }
+  .mt-call-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+  .mt-call-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .mt-call-time {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .mt-call-time-big {
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .mt-call-time-end {
+    font-size: 13px;
+    color: var(--ink-3);
+  }
+  .mt-call-focus {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink-2);
+    margin-top: 8px;
+  }
+  .mt-call-pills {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .mt-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    height: 22px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 500;
+    background: var(--bg-sunken);
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .mt-pill[data-c="accent"] {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+  .mt-call-foot {
+    border-top: 1px solid var(--border);
+    background: var(--bg-sunken);
+  }
+  .mt-call-foot-btn {
+    display: flex;
+    width: 100%;
+    padding: 12px 0;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    text-decoration: none;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .mt-call-foot-btn:active {
+    background: var(--bg-muted);
+  }
+  .mt-call-empty {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--ink-3);
+    font-size: 13px;
+  }
+  .mt-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .mt-stat {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 2px rgba(40, 30, 15, 0.04);
+    min-width: 0;
+  }
+  .mt-stat-h {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin-bottom: 5px;
+  }
+  .mt-stat-big {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 26px;
+    letter-spacing: -0.015em;
+    line-height: 1;
+  }
+  .mt-stat-sub {
+    font-size: 11.5px;
+    color: var(--ink-4);
+    margin-top: 3px;
   }
 
   /* Production tab strip becomes a contained horizontal scroller, so a
