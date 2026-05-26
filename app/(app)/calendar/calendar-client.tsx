@@ -97,8 +97,8 @@ export function CalendarClient({
   };
 
   return (
-    <div className="page cal-page">
-      <div className="cal anim-in">
+    <div className="cal-page anim-in">
+      <div className="cal">
         <CalSidebar
           cursor={cursor}
           setCursor={setCursor}

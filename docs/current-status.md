@@ -340,6 +340,25 @@ Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
   columns wider than the viewport, pushing the page sideways on phones.
   Switched to `minmax(0, 1fr)` so columns can shrink below content and
   events truncate inside them. `.cal-canvas` also gained `min-width: 0`.
+- **Week-view header on phones (2026-05-24).** The day-of-week header
+  was still bleeding into adjacent columns at ≤720px (weekday + date in
+  a flex row, too wide for ~43px columns). At phone widths `.week-day-h`
+  now stacks vertically (column, centered) with smaller fonts and the
+  hour gutter shrinks from 60px → 38px to give days more room.
+- **Production calendar unified with workspace `/calendar` (2026-05-24).**
+  Per user direction, the per-production calls page (`/productions/[slug]/calls`)
+  now renders the same `<CalendarClient />` as the workspace `/calendar`,
+  filtered to just that production. Same 4 views, same sidebar, same
+  event drawer — no UX divergence. The old standalone month grid is
+  gone. `CalendarClient` dropped `.page` from its outer div so the
+  component is portable; `.cal-page` is now self-sufficient (own padding,
+  `flex: 1; min-height: 0`). `.page` itself became a flex column to
+  allow children to flex-fill. A `.page:has(> .cal-page)` rule strips
+  outer padding when the calendar is nested inside the production
+  layout's `.page` wrapper, so padding doesn't double up. Trade-off: the
+  old page's inline "Schedule call" button is gone (matches the
+  dashboard, which never had one); editing existing calls still works
+  via the calendar drawer's "Edit" link.
 - **Verified:** `next build` compiles, `tsc --noEmit` passes. No new
   `eslint` errors (two pre-existing `set-state-in-effect` errors in
   `blocking-canvas.tsx` are unrelated and untouched).
