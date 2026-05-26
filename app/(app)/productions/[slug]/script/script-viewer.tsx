@@ -121,6 +121,9 @@ export function ScriptViewer({
 
   const [showAddBookmark, setShowAddBookmark] = useState(false);
   const [newBookmarkTitle, setNewBookmarkTitle] = useState("");
+  // Phone-only quick-access bookmarks sheet (the inline right panel
+  // also still stacks below the canvas via `.sv-side`).
+  const [mobileBookmarksOpen, setMobileBookmarksOpen] = useState(false);
 
   const [panning, setPanning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -584,6 +587,7 @@ export function ScriptViewer({
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
+    <>
     <div
       className="anim-in script-viewer-shell"
       style={{ display: "flex", gap: 0, minHeight: 0, maxWidth: 1440, margin: "0 auto" }}
@@ -937,6 +941,7 @@ export function ScriptViewer({
         {/* PDF + annotation layer */}
         <div
           ref={workspaceRef}
+          className="sv-workspace"
           onMouseDown={handleWorkspaceMouseDown}
           style={{
             background: "var(--bg-sunken)",
@@ -976,6 +981,7 @@ export function ScriptViewer({
         )}
         <div
           ref={containerRef}
+          className="sv-page"
           style={{
             position: "relative",
             display: "block",
@@ -1330,6 +1336,54 @@ export function ScriptViewer({
         />
       </div>
     </div>
+
+    {/* Mobile-only quick-access bookmarks (floating button + bottom sheet).
+        The desktop right panel and slice-6's mobile stacked panel still
+        render the same bookmarks; this is a convenience affordance so
+        users don't have to scroll past the whole PDF to reach them. */}
+    <button
+      type="button"
+      className="sv-mobile-bookmarks-btn"
+      onClick={() => setMobileBookmarksOpen(true)}
+      aria-label="Open bookmarks"
+    >
+      <BookmarkIcon size={18} aria-hidden />
+    </button>
+    {mobileBookmarksOpen && (
+      <>
+        <div
+          className="cal-scrim"
+          onClick={() => setMobileBookmarksOpen(false)}
+          aria-hidden
+        />
+        <div className="cal-day-sheet" role="dialog" aria-label="Bookmarks">
+          <div className="cal-day-sheet-grip" aria-hidden />
+          <header className="cal-day-sheet-h">
+            <h2>Bookmarks</h2>
+            <button
+              type="button"
+              onClick={() => setMobileBookmarksOpen(false)}
+              className="btn ghost btn-icon"
+              aria-label="Close"
+            >
+              <X size={16} aria-hidden />
+            </button>
+          </header>
+          <div className="sv-sheet-body">
+            <BookmarksPanel
+              bookmarks={bookmarks}
+              currentPage={currentPage}
+              onNavigate={(page) => {
+                setCurrentPage(page);
+                setMobileBookmarksOpen(false);
+              }}
+              onDelete={deleteBookmark}
+            />
+          </div>
+        </div>
+      </>
+    )}
+    </>
   );
 }
 

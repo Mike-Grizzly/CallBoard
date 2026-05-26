@@ -368,16 +368,23 @@ Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
   and pre-selects when the id matches. Mobile tab bar now points Notes
   at `/notes` unconditionally; production-scoped notes are still reached
   via the production tab strip.
-- **Script viewer mobile chrome (slice 6, 2026-05-24).** Pure-CSS pass
-  at ≤720px. The outer wrapper, tool sidebar, main canvas, and right
-  panel got marker classes (`.script-viewer-shell`, `.sv-tools`,
-  `.sv-canvas`, `.sv-side`). On phone the shell switches to
-  `flex-direction: column`, the 52px tool sidebar is hidden entirely
-  (we're already view-only on phone so it served no purpose), the
-  canvas takes full width, and the 248px right panel (bookmarks +
-  annotations) stacks beneath the PDF at full width. No JSX/state
-  changes — the inline-style flex direction is overridden with
-  `!important`.
+- **Script viewer mobile chrome (slice 6, 2026-05-24).** At ≤720px the
+  layout collapses to a single column, the 52px tool sidebar is hidden
+  (view-only mode disables editing anyway), and the 248px right panel
+  stacks beneath the PDF.
+- **Script viewer compact PDF + quick bookmarks (2026-05-24).** Slice 6
+  still required panning to read the PDF on a phone — the canvas
+  rendered at its high-DPI scale (~1300px wide) overflowed the
+  viewport. The PDF canvas is now CSS-scaled to fit the viewport
+  width on phone (`canvas { width: 100% !important; height: auto }`);
+  the SVG annotation overlay already uses `viewBox` so it scales
+  correctly with the canvas. Workspace padding and page shadow are
+  zeroed on phone so the script fills edge-to-edge. A new floating
+  bookmarks button (`.sv-mobile-bookmarks-btn`, fixed above the tab
+  bar) opens a bottom sheet that reuses the existing `BookmarksPanel`
+  — users no longer have to scroll past the entire PDF to reach
+  bookmarks. The right-panel bookmarks below the canvas are still
+  available as a second route.
 - **Deferred polish** (noted 2026-05-24, fix later): the bottom-tab
   "Today" button stays scoped to the current production when inside a
   production view (per the demo's mental model) — user feels it should

@@ -4476,6 +4476,13 @@ select.pp-field {
   display: none;
 }
 
+/* Floating bookmarks button — phone-only quick-access to the script's
+   bookmarks panel. The @media block below promotes it to `display:
+   grid`. */
+.sv-mobile-bookmarks-btn {
+  display: none;
+}
+
 /* Workspace notes feed — `app/(app)/(default)/notes` */
 .nf-page {
   display: flex;
@@ -5378,7 +5385,11 @@ select.pp-field {
      sidebar is hidden (view-only mode already disables editing), the
      right panel (bookmarks + annotations) stacks under the canvas, and
      inline-style flex direction is forced to column via !important
-     since the original styles are inline. */
+     since the original styles are inline. The PDF canvas itself is
+     CSS-scaled to the viewport width (it renders at high DPI then the
+     browser scales it down — the SVG annotation overlay already uses
+     `viewBox` so it scales correctly). A floating bookmarks button
+     gives quick access without scrolling past the whole PDF. */
   .script-viewer-shell {
     flex-direction: column !important;
     gap: 12px !important;
@@ -5388,10 +5399,52 @@ select.pp-field {
   }
   .sv-canvas {
     width: 100%;
+    min-width: 0;
   }
   .sv-side {
     width: 100% !important;
     margin-left: 0 !important;
+  }
+  .sv-workspace {
+    padding: 0 !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+  }
+  .sv-page {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+  .sv-page canvas {
+    width: 100% !important;
+    height: auto !important;
+    display: block;
+  }
+
+  .sv-mobile-bookmarks-btn {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    right: 14px;
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--bg);
+    border: 0;
+    box-shadow: 0 8px 24px -4px rgba(40, 20, 10, 0.28);
+    z-index: 45;
+    cursor: pointer;
+  }
+  .sv-mobile-bookmarks-btn:active {
+    transform: scale(0.96);
+  }
+  .sv-sheet-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px 0;
   }
 
   /* Notes — collapse to a single column and swap list/editor based on
