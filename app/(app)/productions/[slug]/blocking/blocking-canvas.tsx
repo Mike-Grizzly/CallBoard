@@ -1469,7 +1469,7 @@ export function BlockingCanvas({
       onDragCancel={handleDragCancel}
     >
     <div
-      className="anim-in"
+      className="anim-in bk-shell"
       style={
         fullscreen
           ? {
@@ -1494,6 +1494,7 @@ export function BlockingCanvas({
 
       {/* ─── Left panel: Scenes & Off-stage Cast ────────────── */}
       <div
+        className="bk-side-left"
         style={{
           display: "flex",
           flexDirection: "column",
@@ -1759,6 +1760,7 @@ export function BlockingCanvas({
 
       {/* ─── Center: Canvas ─────────────────────────────────── */}
       <div
+        className="bk-center"
         style={{
           display: "flex",
           flexDirection: "column",
@@ -2316,6 +2318,7 @@ export function BlockingCanvas({
 
       {/* ─── Right panel: Set Pieces & Beat Comments ─────────── */}
       <div
+        className="bk-side-right"
         style={{
           height: "100%",
           padding: "14px 12px 14px 0",

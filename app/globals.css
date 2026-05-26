@@ -5381,6 +5381,38 @@ select.pp-field {
     color: var(--ink-3);
   }
 
+  /* Blocking — collapse the 3-column editor layout to a single column.
+     The PDF ground plan + tokens stay visible (positions are stored as
+     percentages so they scale with the canvas width). Scenes/Beats and
+     Comments/Notes panels stack below the canvas. The fullscreen edge
+     case still uses the desktop grid; mobile users won't hit it. */
+  .bk-shell {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+  .bk-center {
+    height: auto !important;
+    min-height: 56vh;
+    padding: 8px 12px !important;
+    border-bottom: 1px solid var(--border);
+  }
+  .bk-side-left {
+    height: auto !important;
+    max-height: 50vh;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--border);
+    overflow-y: auto !important;
+  }
+  .bk-side-right {
+    height: auto !important;
+    max-height: 50vh;
+    padding: 14px 12px !important;
+    overflow-y: auto !important;
+  }
+
   /* Script viewer — collapse to a single column on phone. The tool
      sidebar is hidden (view-only mode already disables editing), the
      right panel (bookmarks + annotations) stacks under the canvas, and

@@ -372,6 +372,18 @@ Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
   layout collapses to a single column, the 52px tool sidebar is hidden
   (view-only mode disables editing anyway), and the 248px right panel
   stacks beneath the PDF.
+- **Blocking mobile layout (slice 7, 2026-05-24).** The blocking canvas
+  uses a 3-column editor layout (220px scenes/beats · canvas · 240px
+  set-pieces/comments). On a phone that left no room for the canvas.
+  Outer wrapper, left panel, center canvas, and right panel got marker
+  classes (`.bk-shell`, `.bk-side-left`, `.bk-center`, `.bk-side-right`).
+  At ≤720px the grid collapses to a single column and stacks: canvas
+  first (full width, ≥56vh tall — actor tokens stay aligned because
+  positions are stored as canvas percentages), then the scenes/beats
+  panel below (max 50vh, scrollable), then the comments/notes panel
+  (max 50vh, scrollable). The fullscreen edge case still uses the
+  desktop grid — mobile users don't hit it. Editing remains disabled
+  on phone (existing view-only mode).
 - **Script viewer compact PDF + quick bookmarks (2026-05-24).** Slice 6
   still required panning to read the PDF on a phone — the canvas
   rendered at its high-DPI scale (~1300px wide) overflowed the
