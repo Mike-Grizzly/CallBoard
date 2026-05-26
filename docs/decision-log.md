@@ -676,6 +676,39 @@ staging or reading the script) cleanly.
 
 ---
 
+## 2026-05-22 — Mobile primary nav: 5-tab bottom bar (supersedes the drawer)
+
+**Decision:** At phone widths (≤720px) primary navigation is a 5-tab
+**bottom bar** — Today / Calendar / Reports / Notes / More — rendered by
+`components/app-shell/mobile-tab-bar.tsx`. The desktop rail is hidden at
+this width. Tabs are **context-aware**: inside `/productions/[slug]/...`
+they route to that production's sub-pages (overview / calls / reports /
+notes); outside they route to the workspace equivalents (`/dashboard`,
+`/calendar`, `/reports`). This supersedes the same-day slide-in drawer
+decision earlier in the session.
+
+**Reason:** After porting a Claude-design mobile demo (`design-reference/`
+incoming files), bottom tabs were clearly the modern mobile pattern and
+unlocked all the other mobile screen designs (Today, Reports list, Notes,
+etc.), which the demo built around them. A drawer would have required
+duplicating that screen work for a less familiar pattern. Context-aware
+routing matches how the demo is laid out (production-scoped) without
+forcing a global "current production" concept into our data layer.
+
+**Impact:**
+- New `app/(app)/(default)/more/page.tsx` hosts the destinations that fall
+  off the tab bar: Productions, Documents, Announcements, Activity,
+  People, Settings, Sign out (capability-gated like the desktop rail).
+- The previous drawer code path is removed (`mobile-topbar`,
+  `rail-backdrop`, `rail-close`, the off-canvas `.rail` rules); `AppFrame`
+  is now a server component again — no client state needed for nav.
+- `.main` gets bottom padding (tab-bar height + iOS safe area) so fixed
+  content isn't covered.
+- `Icon` gained `Sun` (used for the Today tab).
+- The tab-strip-contained-scroller fix from earlier still applies.
+
+---
+
 ## 2026-05-22 — Production tab strip is a contained scroller on phones
 
 **Decision:** On phones the production header's tab strip (`.tabs`, up to 8

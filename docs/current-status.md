@@ -15,10 +15,14 @@
 - Local UI primitives (Button, Card, Separator)
 - Root redirect to /dashboard
 - Sidebar nav items with icons and capability-based filtering
-- **Mobile navigation (2026-05-22, P2):** at phone widths (≤720px) the rail
-  becomes a slide-in drawer opened from a hamburger in a sticky top bar
-  (`components/app-shell/app-frame.tsx`); the 64px icon-rail is kept for
-  tablet widths (721–1100px). See `docs/launch-roadmap.md` P2.
+- **Mobile navigation (2026-05-22, P2):** at phone widths (≤720px) primary
+  nav is a 5-tab bottom bar (Today / Calendar / Reports / Notes / More) —
+  context-aware: inside a production the tabs scope to that production's
+  sub-routes (`mobile-tab-bar.tsx`). A new `/more` page hosts the
+  workspace destinations that fall off the tab bar. The 64px icon-rail is
+  kept for tablet widths (721–1100px). The earlier slide-in drawer
+  (same day) was superseded after reviewing the mobile demo files. See
+  `docs/launch-roadmap.md` P2.
 - **Not fully verified:** mobile drawer behavior on real devices (built and
   type-checked only); broader responsive layout of inner pages
 

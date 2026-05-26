@@ -158,14 +158,18 @@ app must be *good on a phone browser* before either a PWA or a native
 wrapper is worth shipping. See the **Mobile app feasibility** section
 below for the full picture.
 
-- [x] **Mobile navigation — done 2026-05-22.** The rail used to collapse to
-  a cramped 64px icon strip at all widths below 1100px. It now becomes a
-  slide-in drawer at phone widths (≤720px): a sticky top bar with a
-  hamburger + brand opens the full rail as an off-canvas drawer with a
-  dimmed backdrop, close (X) button, Escape-to-close, scroll lock, and
-  auto-close on navigation. The 64px icon strip is retained for tablet
-  widths (721–1100px). New `components/app-shell/app-frame.tsx` (client
-  shell); the icon-collapse media query is now scoped `min-width: 721px`. — **M**
+- [x] **Mobile navigation — done 2026-05-22 (revised to bottom tabs).** The
+  rail used to collapse to a cramped 64px icon strip at all widths below
+  1100px. A slide-in drawer landed first (2026-05-22 morning), then was
+  superseded the same day after reviewing the Claude-design mobile demo:
+  primary nav at ≤720px is now a **5-tab bottom bar** (Today / Calendar /
+  Reports / Notes / More) — `components/app-shell/mobile-tab-bar.tsx`,
+  context-aware (inside `/productions/[slug]/...` the tabs scope to that
+  production's sub-routes; outside they go to the workspace equivalents).
+  The desktop rail is hidden at phone widths and a new `/more` page hosts
+  the destinations that fall off the tab bar (Productions, People,
+  Documents, Announcements, Activity, Settings, Sign out). The 64px icon
+  strip is retained for tablet widths (721–1100px). — **M**
 - [ ] **Responsive audit.** Walk every screen at phone widths. The
   blocking canvas and script editor need the most attention. — **L**
   - *Done 2026-05-22:* the production tab strip (up to 8 tabs) used to
