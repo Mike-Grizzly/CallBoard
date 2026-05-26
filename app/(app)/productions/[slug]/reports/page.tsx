@@ -10,6 +10,7 @@ import {
   getReportsByProduction,
   getReportStatusCounts,
 } from "@/features/reports/queries";
+import { MobileReportsList } from "./mobile-reports-list";
 
 type Filter = "all" | "draft" | "distributed";
 
@@ -191,7 +192,9 @@ export default async function ReportsPage({
           </div>
         </div>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
+        <>
+          <MobileReportsList reports={reports} basePath={base} />
+          <div className="reports-desktop card" style={{ overflow: "hidden" }}>
           <div
             style={{
               display: "grid",
@@ -272,7 +275,8 @@ export default async function ReportsPage({
               </Link>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
 
       {pageCount > 1 && (

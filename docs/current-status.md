@@ -345,6 +345,19 @@ Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
   a flex row, too wide for ~43px columns). At phone widths `.week-day-h`
   now stacks vertically (column, centered) with smaller fonts and the
   hour gutter shrinks from 60px → 38px to give days more room.
+- **Mobile reports list + detail (slice 3, 2026-05-24).** Two new server
+  components — `mobile-reports-list.tsx` and `mobile-report-detail.tsx` —
+  render alongside the existing desktop layouts in `/productions/[slug]/reports`
+  and `/.../reports/[reportId]`. At ≤720px the desktop table / multi-card
+  layout is hidden (`.reports-desktop`, `.report-detail-desktop`) and the
+  mobile views appear (`.reports-mobile`, `.report-detail-mobile`). List
+  cards match the demo: date strip + report number + status pill + summary
+  + chevron. Detail stacks date + status + Pin/Email/Edit actions, a hero
+  card with call/start/end times and Present/Absent/Late stat tiles, then
+  General notes, Scenes worked, Next rehearsal, all 12 Department notes
+  as small cards, Schedule changes / Line notes / Injuries, and
+  Attachments — no tabbed panels on phone, everything stacks. PinButton /
+  EmailReportButton / AttachmentUpload client components are reused as-is.
 - **Production calendar unified with workspace `/calendar` (2026-05-24).**
   Per user direction, the per-production calls page (`/productions/[slug]/calls`)
   now renders the same `<CalendarClient />` as the workspace `/calendar`,
