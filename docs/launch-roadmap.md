@@ -170,12 +170,32 @@ below for the full picture.
   the destinations that fall off the tab bar (Productions, People,
   Documents, Announcements, Activity, Settings, Sign out). The 64px icon
   strip is retained for tablet widths (721–1100px). — **M**
-- [ ] **Responsive audit.** Walk every screen at phone widths. The
-  blocking canvas and script editor need the most attention. — **L**
-  - *Done 2026-05-22:* the production tab strip (up to 8 tabs) used to
-    overflow and force a sideways page scroll on phones — it is now a
-    contained horizontal scroller that keeps the active tab in view. The
-    rest of the per-page responsive sweep still remains.
+- [x] **Responsive audit — done 2026-05-24.** Eight slices walked the
+  per-screen mobile pass, each guided by the Claude-design mobile demo
+  in `design-reference/`. All landed as new mobile-only renders or
+  CSS-only column collapses, gated at ≤720px; desktop layouts are
+  untouched. Highlights:
+  - Production tab strip is a contained horizontal scroller.
+  - Today/Dashboard: new `mobile-today-hero.tsx` (greeting + next-call
+    card + 2×2 stats).
+  - Reports list + detail: new `mobile-reports-list.tsx` +
+    `mobile-report-detail.tsx` (date strip + status pill + stacked
+    sections, no tabs on phone).
+  - Calendar: bottom-sheet event drawer, month view shows pip dots
+    instead of chips, new `day-sheet.tsx`, toolbar compaction.
+  - Workspace `/notes` feed across all productions plus list↔editor
+    swap in the per-production panel.
+  - Script viewer: tool sidebar hidden, right panel stacks below the
+    PDF, PDF is CSS-scaled to viewport width, floating bookmarks
+    button opens a bottom sheet.
+  - Blocking: 3-column editor stacks vertically; landscape rule hides
+    side panels so the PDF fills the viewport.
+  - Documents folder rail collapses to a horizontal pill strip;
+    `/people` table now scrolls horizontally inside its wrapper.
+  - Production calendar unified with `/calendar` so production and
+    workspace use the same calendar UI (just data-filtered).
+  - Workspace dashboard/calendar/notes routes for the bottom-tab
+    targets.
 - [ ] **Touch interactions.** @dnd-kit drag, PDF annotation drawing, and
   the set-piece rotation handle are mouse-built — test and fix for
   touch. — **M**
@@ -193,12 +213,16 @@ below for the full picture.
   caching would need a library — see **Decision D7**. — **M**
 - [ ] Verify "Add to Home Screen" on iOS Safari and Android Chrome. — **S**
 
-**Done so far (2026-05-22):** mobile drawer navigation, PWA manifest, the
-production tab strip overflow fix, and a view-only phone mode for the
-blocking canvas and script editor — all code-only, build- and
-type-checked. **Still open:** the rest of the per-page responsive audit,
-real touch-editing support (blocking/script), and live device
-verification, all of which need testing against the deployed site.
+**Done so far (2026-05-22 → 05-24):** bottom-tab mobile nav, PWA
+manifest, all 8 slices of the per-screen responsive audit, view-only
+phone mode for the blocking canvas + script editor, and the Today-tab
+fix to always return to the workspace dashboard. **Still open before
+P3:** real touch-editing support (blocking/script — the goal is at
+least tablet parity for blocking), live device verification including
+"Add to Home Screen", and the deferred polish items noted in
+`current-status.md` (production-view chrome cleanup, formal
+`/notifications` inbox, broader production-context nav review). User
+testing in P3 will surface the next round of styling/UX adjustments.
 
 Result: testers can install CallBoard to their home screen and use it
 like an app — the free interim "app" while the native wrapper waits for

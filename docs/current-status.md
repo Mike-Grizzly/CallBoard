@@ -1,10 +1,10 @@
 # Current Status
 
-**Last updated:** 2026-05-22
+**Last updated:** 2026-05-24
 
-**Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15) + People Directory (Step 16). Latest: org-wide people directory at `/people` with invite-based mass upload (manual / CSV / bulk paste) and multi-production assignment.
+**Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15) + People Directory (Step 16) + full mobile/PWA pass (P2). Branch `claude/bold-einstein-hHMHD` carries the mobile work and is ready for merge into the production branch.
 
-**Launch planning:** the path from feature-complete MVP to a soft launch (testing site + invited testers) and on to public launch is tracked in `docs/launch-roadmap.md`. Phase 0 (security hardening) and Phase 1 (Vercel deployment) are complete — the app is live at `call-board.vercel.app` on the `CallBoard` Supabase project, smoke test passed. P2 (mobile/PWA) is in progress: mobile drawer navigation and the PWA manifest landed 2026-05-22; the responsive audit, touch-interaction fixes, and live device verification remain. Next after P2: P3 (beta testers). See `decision-log.md` (2026-05-21 / 05-22).
+**Launch planning:** the path from feature-complete MVP to a soft launch (testing site + invited testers) and on to public launch is tracked in `docs/launch-roadmap.md`. Phases P0 (security hardening) and P1 (Vercel deployment) shipped. **P2 (mobile/PWA) is functionally complete**: bottom-tab mobile nav, PWA manifest, all 8 slices of the per-screen responsive audit, view-only mode for the blocking canvas and script editor, and a landscape-phone rule for blocking. Remaining P2 items before P3: real touch-editing support (currently view-only on phones), live device verification including "Add to Home Screen", and the deferred polish items below. User testing in **P3 (beta)** will surface the next round of styling/UX adjustments. See `decision-log.md` (2026-05-21 / 05-22).
 
 ## Feature status
 
