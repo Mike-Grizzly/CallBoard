@@ -368,11 +368,23 @@ Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
   and pre-selects when the id matches. Mobile tab bar now points Notes
   at `/notes` unconditionally; production-scoped notes are still reached
   via the production tab strip.
+- **Script viewer mobile chrome (slice 6, 2026-05-24).** Pure-CSS pass
+  at ≤720px. The outer wrapper, tool sidebar, main canvas, and right
+  panel got marker classes (`.script-viewer-shell`, `.sv-tools`,
+  `.sv-canvas`, `.sv-side`). On phone the shell switches to
+  `flex-direction: column`, the 52px tool sidebar is hidden entirely
+  (we're already view-only on phone so it served no purpose), the
+  canvas takes full width, and the 248px right panel (bookmarks +
+  annotations) stacks beneath the PDF at full width. No JSX/state
+  changes — the inline-style flex direction is overridden with
+  `!important`.
 - **Deferred polish** (noted 2026-05-24, fix later): the bottom-tab
   "Today" button stays scoped to the current production when inside a
   production view (per the demo's mental model) — user feels it should
   return to the workspace dashboard instead. Production-context mobile
-  navigation needs a broader review.
+  navigation needs a broader review. Also: the production-view visuals
+  feel a little forced once we drop into a show — a follow-up pass
+  should clean up the per-production mobile chrome together.
 - **Calendar mobile polish (slice 4, 2026-05-24).** Four demo-pattern
   changes to the calendar at phone widths: (a) the `EventDrawer` slides
   up from the bottom as a sheet instead of from the right as a side

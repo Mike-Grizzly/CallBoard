@@ -585,11 +585,12 @@ export function ScriptViewer({
 
   return (
     <div
-      className="anim-in"
+      className="anim-in script-viewer-shell"
       style={{ display: "flex", gap: 0, minHeight: 0, maxWidth: 1440, margin: "0 auto" }}
     >
       {/* ── Tool sidebar ── */}
       <div
+        className="sv-tools"
         style={{
           width: 52,
           flexShrink: 0,
@@ -741,7 +742,7 @@ export function ScriptViewer({
       )}
 
       {/* ── Main area ── */}
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="sv-canvas" style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
         {/* Stale banner */}
         {hasStalePages && (
           <div
@@ -1302,6 +1303,7 @@ export function ScriptViewer({
 
       {/* ── Right panel column ── */}
       <div
+        className="sv-side"
         style={{
           width: 248,
           flexShrink: 0,
