@@ -22,6 +22,7 @@ import {
   Heading2,
   Undo,
   Redo,
+  ChevronLeft,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -1023,17 +1024,14 @@ export function NotesPanel({
 
   return (
     <div
-      className="anim-in"
-      style={{
-        display: "grid",
-        gridTemplateColumns: "360px 1fr",
-        gap: 16,
-        maxWidth: 1180,
-        margin: "0 auto",
-      }}
+      className="notes-panel anim-in"
+      data-editor-open={selectedNote ? "1" : "0"}
     >
       {/* Left sidebar */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
+      <div
+        className="notes-list-col"
+        style={{ display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}
+      >
         {/* Header */}
         <div className="row-between">
           <h2 className="h-section">My notes</h2>
@@ -1144,21 +1142,32 @@ export function NotesPanel({
 
       {/* Right panel */}
       <div
-        className="card"
+        className="card notes-editor-col"
         style={{ display: "flex", flexDirection: "column", minHeight: 540 }}
       >
         {selectedNote ? (
-          <NoteEditor
-            key={selectedNote.id}
-            note={selectedNote}
-            tags={tags}
-            members={members}
-            currentUserId={currentUserId}
-            canManageTags={canManageTags}
-            productionSlug={productionSlug}
-            onClose={() => setSelectedId(null)}
-            onNoteUpdated={handleNoteUpdated}
-          />
+          <>
+            <button
+              type="button"
+              className="mn-back-btn"
+              onClick={() => setSelectedId(null)}
+              aria-label="Back to notes list"
+            >
+              <ChevronLeft style={{ width: 14, height: 14 }} />
+              <span>Notes</span>
+            </button>
+            <NoteEditor
+              key={selectedNote.id}
+              note={selectedNote}
+              tags={tags}
+              members={members}
+              currentUserId={currentUserId}
+              canManageTags={canManageTags}
+              productionSlug={productionSlug}
+              onClose={() => setSelectedId(null)}
+              onNoteUpdated={handleNoteUpdated}
+            />
+          </>
         ) : (
           <div
             style={{

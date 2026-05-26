@@ -345,6 +345,19 @@ Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
   a flex row, too wide for ~43px columns). At phone widths `.week-day-h`
   now stacks vertically (column, centered) with smaller fonts and the
   hour gutter shrinks from 60px → 38px to give days more room.
+- **Mobile notes list ↔ editor swap (slice 5, 2026-05-24).** The two-column
+  notes panel (360px list + editor) collapses to a single column at
+  ≤720px and CSS-swaps between views based on selection: with no note
+  selected the list fills the screen; tapping a note swaps to the
+  editor with a "← Notes" back button at the top to return. The outer
+  wrapper now has class `.notes-panel` and `data-editor-open` attribute;
+  `.notes-list-col` / `.notes-editor-col` mark the two columns. No
+  state-management changes — the existing `selectedId` drives the toggle.
+- **Deferred polish** (noted 2026-05-24, fix later): the bottom-tab
+  "Today" button stays scoped to the current production when inside a
+  production view (per the demo's mental model) — user feels it should
+  return to the workspace dashboard instead. Production-context mobile
+  navigation needs a broader review.
 - **Calendar mobile polish (slice 4, 2026-05-24).** Four demo-pattern
   changes to the calendar at phone widths: (a) the `EventDrawer` slides
   up from the bottom as a sheet instead of from the right as a side

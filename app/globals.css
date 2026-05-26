@@ -4476,6 +4476,21 @@ select.pp-field {
   display: none;
 }
 
+/* Notes panel — two columns (list + editor) on desktop. On phones the
+   grid collapses to a single column and `data-editor-open` toggles
+   which column is visible: open = editor only, closed = list only.
+   The `.mn-back-btn` shows up only at phone widths inside the editor. */
+.notes-panel {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.mn-back-btn {
+  display: none;
+}
+
 @media (max-width: 720px) {
   .app {
     grid-template-columns: 1fr;
@@ -5187,6 +5202,41 @@ select.pp-field {
   .rd-empty {
     font-size: 13px;
     color: var(--ink-3);
+  }
+
+  /* Notes — collapse to a single column and swap list/editor based on
+     whether a note is selected. Tap a list row → editor takes over;
+     tap the back button → list returns. */
+  .notes-panel {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .notes-panel[data-editor-open="1"] .notes-list-col {
+    display: none;
+  }
+  .notes-panel[data-editor-open="0"] .notes-editor-col {
+    display: none;
+  }
+  .notes-editor-col {
+    min-height: 0;
+  }
+  .mn-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    margin: 10px 12px 0;
+    padding: 6px 10px 6px 6px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .mn-back-btn:active {
+    background: var(--bg-muted);
   }
 
   /* Calendar event drawer slides up from the bottom as a sheet (matches
