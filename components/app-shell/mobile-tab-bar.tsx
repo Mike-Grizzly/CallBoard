@@ -23,9 +23,11 @@ const TABS: TabConfig[] = [
     id: "today",
     label: "Today",
     icon: "Sun" as IconName,
-    href: (slug) => (slug ? `/productions/${slug}` : "/dashboard"),
-    isActive: (pathname, slug) =>
-      slug ? pathname === `/productions/${slug}` : pathname.startsWith("/dashboard"),
+    // Always routes to the workspace dashboard — even from inside a
+    // production, tapping "Today" returns you home, matching user
+    // expectations.
+    href: () => "/dashboard",
+    isActive: (pathname) => pathname.startsWith("/dashboard"),
   },
   {
     id: "calendar",

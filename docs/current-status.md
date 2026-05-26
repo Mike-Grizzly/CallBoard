@@ -408,13 +408,16 @@ Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
   — users no longer have to scroll past the entire PDF to reach
   bookmarks. The right-panel bookmarks below the canvas are still
   available as a second route.
-- **Deferred polish** (noted 2026-05-24, fix later): the bottom-tab
-  "Today" button stays scoped to the current production when inside a
-  production view (per the demo's mental model) — user feels it should
-  return to the workspace dashboard instead. Production-context mobile
-  navigation needs a broader review. Also: the production-view visuals
-  feel a little forced once we drop into a show — a follow-up pass
-  should clean up the per-production mobile chrome together.
+- **Today tab always returns to workspace dashboard (2026-05-24).** The
+  bottom-tab "Today" used to scope itself to the current production when
+  inside a show (per the demo's single-production mental model), which
+  felt confusing — "Today" implied "home". It now always routes to
+  `/dashboard` and `isActive` only on `/dashboard`.
+- **Deferred polish** (noted 2026-05-24, fix later): the production-view
+  visuals feel a little forced once we drop into a show — a follow-up
+  pass should clean up the per-production mobile chrome (production
+  header, tab strip density, etc.) together. The broader review of
+  production-context mobile navigation also remains open.
 - **Calendar mobile polish (slice 4, 2026-05-24).** Four demo-pattern
   changes to the calendar at phone widths: (a) the `EventDrawer` slides
   up from the bottom as a sheet instead of from the right as a side
