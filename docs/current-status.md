@@ -372,6 +372,17 @@ Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
   layout collapses to a single column, the 52px tool sidebar is hidden
   (view-only mode disables editing anyway), and the 248px right panel
   stacks beneath the PDF.
+- **Documents + People mobile layout (slice 8, 2026-05-24).** Documents
+  used a 220px folder rail + 1fr docs grid that didn't fit on a phone.
+  Outer + folder rail + main got marker classes (`.docs-shell`,
+  `.docs-folders`, `.docs-main`); at ≤720px the grid collapses to a
+  single column and the folder rail becomes a horizontally-scrollable
+  pill strip at the top of the page. People uses a real `<table>` with
+  many columns; the wrapper (`.pp-table-wrap`) now scrolls horizontally
+  on phone and the table keeps a `min-width: 600px` so columns stay
+  legible. Notifications: the existing notification bell in the
+  production topbar and the dashboard mentions section already cover
+  the in-app cases — a formal `/notifications` inbox is deferred.
 - **Blocking mobile layout (slice 7, 2026-05-24).** The blocking canvas
   uses a 3-column editor layout (220px scenes/beats · canvas · 240px
   set-pieces/comments). On a phone that left no room for the canvas.

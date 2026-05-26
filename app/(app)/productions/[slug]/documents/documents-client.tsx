@@ -142,7 +142,7 @@ export function DocumentsClient({
   return (
     <>
       <div
-        className="anim-in"
+        className="anim-in docs-shell"
         style={{
           display: "grid",
           gridTemplateColumns: "220px 1fr",
@@ -152,7 +152,7 @@ export function DocumentsClient({
         }}
       >
         {/* ── Folder rail ── */}
-        <div>
+        <div className="docs-folders">
           <div className="h-eyebrow" style={{ marginBottom: 10 }}>
             Folders
           </div>
@@ -333,6 +333,7 @@ export function DocumentsClient({
 
         {/* ── Main area ── */}
         <div
+          className="docs-main"
           style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}
         >
           {/* Header */}
