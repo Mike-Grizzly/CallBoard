@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsPhone } from "@/lib/use-is-phone";
 import {
   type CalEvent,
   MONTHS,
@@ -27,6 +28,8 @@ export function MonthView({
   const first = startOfMonth(cursor);
   const startGrid = addDays(first, -first.getDay());
   const days = Array.from({ length: 42 }, (_, i) => addDays(startGrid, i));
+  const isPhone = useIsPhone();
+  const MAX_PIPS = 5;
 
   return (
     <div className="month">
@@ -42,6 +45,44 @@ export function MonthView({
           const inMonth = d.getMonth() === cursor.getMonth();
           const isToday = sameYMD(d, today);
           const dayEvents = events.filter((e) => e.date === ymd(d));
+          const dateLabel =
+            d.getDate() === 1
+              ? `${MONTHS[d.getMonth()].slice(0, 3)} 1`
+              : String(d.getDate());
+
+          // On phones the cell is a single button (whole-cell tap target)
+          // and events render as compact pip dots — the demo's pattern.
+          // Tap opens the day-detail bottom sheet (handled by jumpDay).
+          if (isPhone) {
+            return (
+              <button
+                key={i}
+                type="button"
+                className="month-cell month-cell-phone"
+                data-mute={!inMonth ? "1" : "0"}
+                data-today={isToday ? "1" : "0"}
+                onClick={() => jumpDay(d)}
+                aria-label={`${dateLabel}, ${dayEvents.length} event${dayEvents.length === 1 ? "" : "s"}`}
+              >
+                <span className="month-cell-num-m">{dateLabel}</span>
+                <span className="month-pips">
+                  {dayEvents.slice(0, MAX_PIPS).map((e) => (
+                    <span
+                      key={e.id}
+                      className="month-pip"
+                      style={{ background: e.productionColorVar }}
+                    />
+                  ))}
+                  {dayEvents.length > MAX_PIPS && (
+                    <span className="month-pip-more">
+                      +{dayEvents.length - MAX_PIPS}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          }
+
           return (
             <div
               key={i}
@@ -54,9 +95,7 @@ export function MonthView({
                   className="month-cell-num"
                   onClick={() => jumpDay(d)}
                 >
-                  {d.getDate() === 1
-                    ? `${MONTHS[d.getMonth()].slice(0, 3)} 1`
-                    : d.getDate()}
+                  {dateLabel}
                 </button>
               </div>
               <div className="month-cell-events">

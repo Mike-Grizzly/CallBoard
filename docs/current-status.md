@@ -345,6 +345,19 @@ Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
   a flex row, too wide for ~43px columns). At phone widths `.week-day-h`
   now stacks vertically (column, centered) with smaller fonts and the
   hour gutter shrinks from 60px → 38px to give days more room.
+- **Calendar mobile polish (slice 4, 2026-05-24).** Four demo-pattern
+  changes to the calendar at phone widths: (a) the `EventDrawer` slides
+  up from the bottom as a sheet instead of from the right as a side
+  drawer (CSS-only at ≤720px, reuses the existing animation primitives);
+  (b) the month view renders each cell as a single tap-target `<button>`
+  with the date in the top-right and up to 5 colored pip dots — chips
+  with titles only appear on desktop (branched in `month-view.tsx` via
+  `useIsPhone`); (c) tapping a day in the month view opens a new
+  `DaySheet` bottom sheet listing that day's events instead of jumping
+  the whole view to "day" — selecting an event there dismisses the day
+  sheet and opens the full `EventDrawer`; (d) the toolbar (prev/next,
+  period label, view switcher) is compacted on phone — smaller period
+  label, tighter view-switcher buttons.
 - **Mobile reports list + detail (slice 3, 2026-05-24).** Two new server
   components — `mobile-reports-list.tsx` and `mobile-report-detail.tsx` —
   render alongside the existing desktop layouts in `/productions/[slug]/reports`
