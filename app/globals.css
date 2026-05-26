@@ -5381,11 +5381,12 @@ select.pp-field {
     color: var(--ink-3);
   }
 
-  /* Blocking — collapse the 3-column editor layout to a single column.
-     The PDF ground plan + tokens stay visible (positions are stored as
-     percentages so they scale with the canvas width). Scenes/Beats and
-     Comments/Notes panels stack below the canvas. The fullscreen edge
-     case still uses the desktop grid; mobile users won't hit it. */
+  /* Blocking — collapse the 3-column editor layout to a single column
+     (portrait phones). The PDF ground plan + tokens stay visible
+     (positions are stored as percentages so they scale with the canvas
+     width). Scenes/Beats and Comments/Notes panels stack below the
+     canvas. The fullscreen edge case still uses the desktop grid;
+     mobile users won't hit it. */
   .bk-shell {
     grid-template-columns: 1fr !important;
     grid-template-rows: auto auto auto !important;
@@ -5572,6 +5573,25 @@ select.pp-field {
     flex-shrink: 0;
     white-space: nowrap;
     scroll-snap-align: start;
+  }
+}
+
+/* ─── Phone landscape (short viewport) — give the blocking PDF more
+       room by hiding the scenes/beats and comments side panels. Most
+       phones in landscape are 700-960px wide (so the standard ≤720px
+       mobile block doesn't apply) and ~380-430px tall. We key off
+       `max-height` to catch landscape phones without disturbing tablets
+       or short-laptop windows. ───────────────────────────────────────── */
+@media (orientation: landscape) and (max-height: 500px) {
+  .bk-shell {
+    grid-template-columns: 1fr !important;
+  }
+  .bk-side-left,
+  .bk-side-right {
+    display: none !important;
+  }
+  .bk-center {
+    padding: 6px 12px !important;
   }
 }
 
