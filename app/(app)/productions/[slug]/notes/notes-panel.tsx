@@ -903,6 +903,7 @@ export function NotesPanel({
   canCreate,
   canManageTags,
   organizationId,
+  initialSelectedId,
 }: {
   notes: NoteWithAuthor[];
   tags: NoteTagRow[];
@@ -913,12 +914,16 @@ export function NotesPanel({
   canCreate: boolean;
   canManageTags: boolean;
   organizationId: string;
+  initialSelectedId?: string;
 }) {
   const [notes, setNotes] = useState(initialNotes);
   const [tags, setTags] = useState(initialTags);
-  const [selectedId, setSelectedId] = useState<string | null>(
-    initialNotes[0]?.id ?? null,
-  );
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    if (initialSelectedId && initialNotes.some((n) => n.id === initialSelectedId)) {
+      return initialSelectedId;
+    }
+    return initialNotes[0]?.id ?? null;
+  });
   const [filter, setFilter] = useState<NoteFilter>("all");
   const [showTagManager, setShowTagManager] = useState(false);
   const [pendingComplete, setPendingComplete] = useState<Set<string>>(new Set());

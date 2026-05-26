@@ -51,9 +51,11 @@ const TABS: TabConfig[] = [
     id: "notes",
     label: "Notes",
     icon: "PenLine",
-    href: (slug) => (slug ? `/productions/${slug}/notes` : "/dashboard"),
-    isActive: (pathname, slug) =>
-      slug ? pathname.startsWith(`/productions/${slug}/notes`) : false,
+    // Workspace-level notes feed — aggregates the caller's notes across
+    // every production. Production-scoped notes are reached via the
+    // production tab strip, not this bottom tab.
+    href: () => "/notes",
+    isActive: (pathname) => pathname === "/notes" || pathname.startsWith("/notes/"),
   },
   {
     id: "more",

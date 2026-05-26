@@ -353,6 +353,21 @@ Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
   wrapper now has class `.notes-panel` and `data-editor-open` attribute;
   `.notes-list-col` / `.notes-editor-col` mark the two columns. No
   state-management changes — the existing `selectedId` drives the toggle.
+- **Workspace notes feed at `/notes` (2026-05-24).** The bottom-tab
+  "Notes" used to fall back to `/dashboard` when not in a production
+  (because notes were per-production), so tapping it from anywhere
+  outside a show did nothing visible. New `app/(app)/(default)/notes/`
+  route lists *every* note the caller has authored across every
+  production they belong to (admin/producer sees the org), newest-first
+  by `createdAt`. Cards match the mobile demo: colored production rail,
+  todo circle / pencil icon, title (strikethrough when complete), 2-line
+  excerpt, tag pill + due-date + relative-time footer. New query
+  `getAllNotesForUser` joins `production_notes` to `productions` for
+  title/slug/color. Tapping a card deep-links into the production-scoped
+  editor via `?id=` — `NotesPanel` accepts an `initialSelectedId` prop
+  and pre-selects when the id matches. Mobile tab bar now points Notes
+  at `/notes` unconditionally; production-scoped notes are still reached
+  via the production tab strip.
 - **Deferred polish** (noted 2026-05-24, fix later): the bottom-tab
   "Today" button stays scoped to the current production when inside a
   production view (per the demo's mental model) — user feels it should
