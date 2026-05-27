@@ -4693,6 +4693,18 @@ select.pp-field {
     max-width: 100%;
   }
 
+  /* Hard horizontal-overflow guard on the scrollable page container.
+     Anything wider than viewport that slipped past `overflow-wrap`
+     (intrinsic-width children, fixed grids, etc.) is clipped here
+     rather than triggering iOS Safari's "page is wider than viewport
+     so show it zoomed-out / horizontally scrollable" behavior. Safe
+     to clip on `.page` because it lives inside `.main` — the fixed
+     bottom tab bar is `.main`'s sibling, not inside it. */
+  .page {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
   .app {
     grid-template-columns: 1fr;
   }

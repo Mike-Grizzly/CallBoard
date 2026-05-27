@@ -869,8 +869,10 @@ export function BlockingCanvas({
       // and the ImageBitmap cache — iOS Safari's per-tab memory budget on
       // iPhone can't hold three copies of a large ground-plan bitmap and
       // kills the tab ("can't open this page") after the PDF finishes
-      // rendering. Tablets and desktop keep the 1.5× crisp render + cache.
-      const scale = isPhone ? 0.9 : 1.5;
+      // rendering. 0.5× is enough sharpness once CSS scales the canvas
+      // down to viewport width (~393px). Tablets and desktop keep the 1.5×
+      // crisp render + cache.
+      const scale = isPhone ? 0.5 : 1.5;
       const viewport = page.getViewport({ scale });
 
       if (isPhone) {
