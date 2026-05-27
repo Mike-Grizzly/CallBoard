@@ -25,16 +25,21 @@ Effort sizing: **S** = a few hours · **M** = roughly one work session ·
 - **Hosting:** Vercel (testing site and eventual production).
 - **Mobile:** ship an installable **PWA now** (free), add a **native App
   Store / Play Store wrapper after beta**.
-- **Domain:** free platform URLs (`*.vercel.app`) during beta; register a
-  real domain before the public launch.
+- **Domain:** the product was renamed from CallBoard to **Proscene** on
+  2026-05-27 (the `callboard` domain could not be secured) and lives at
+  **`proscene.app`**, wired to Vercel and live. The Vercel auto-URL
+  `call-board.vercel.app` is kept as a fallback during beta.
 
 ### Decisions — see the Decisions section
 
 Still open: D3 beta Supabase project · D5 beta org model · D6
 scaffolded-feature scope · D7 PWA offline support.
 
-Resolved 2026-05-21: **D1** (added `isomorphic-dompurify`) · **D2** (domain
-being registered) · **D4** (uploads go client-direct to Supabase Storage).
+Resolved 2026-05-21: **D1** (added `isomorphic-dompurify`) · **D4**
+(uploads go client-direct to Supabase Storage).
+Resolved 2026-05-27: **D2** (`proscene.app` registered, Resend domain
+verified, Supabase custom SMTP wired — emails now send from
+`noreply@proscene.app`).
 
 ## Phase overview
 
@@ -239,20 +244,40 @@ P5.
 
 ## P3 — Beta testing program (the soft launch)
 
+- [x] **Email + custom domain infrastructure (2026-05-27).** `proscene.app`
+  registered at Namecheap; Resend domain verified (SPF + DKIM + MX on
+  `send.proscene.app`); Supabase custom SMTP wired (host `smtp.resend.com`,
+  port 465, sender `noreply@proscene.app`); Site URL + redirect-URL
+  allowlist updated; Vercel custom domain live (apex A record + `www`
+  CNAME, certs auto-provisioned). Smoke test: Supabase Dashboard → Send
+  Magic Link delivered an email from `noreply@proscene.app` with a link
+  resolving to `https://proscene.app/...`. The Vercel auto-URL
+  `call-board.vercel.app` is kept as a fallback. See `current-status.md`
+  and `decision-log.md` (2026-05-27).
 - [ ] Confirm the beta org model — see **Decision D5**. The MVP is
   single-org: the first signup becomes admin, everyone else joins the
   same workspace as `cast`. This shapes who you can recruit.
 - [ ] Write short tester onboarding instructions (how to sign up, what to
   try, known limitations).
 - [ ] Set up a feedback channel (a form, an email alias, or GitHub
-  issues).
-- [ ] Test the invite flow end-to-end against the live project — depends
-  on email working (**D2**): invite → email → `/auth/callback` →
-  `/reset-password` → `invited` promoted to `active`.
+  issues). Quickest path now that the sending domain is verified:
+  forward `feedback@proscene.app` to a personal inbox via ImprovMX (free,
+  ~5 min, coexists with the Resend `send.` MX record because the hosts
+  differ).
+- [ ] **Verify invite flow end-to-end against the live deploy** —
+  infrastructure (D2) is done; this is the application-flow check:
+  invite from Settings → Members → email arrives from
+  `noreply@proscene.app` → `/auth/callback` → `/reset-password` →
+  `invited` promoted to `active`.
+- [ ] **Verify the app's `/forgot-password` flow end-to-end** — the
+  Supabase Dashboard magic link works, but `/forgot-password` uses a
+  different code path (the app reads `NEXT_PUBLIC_SITE_URL` for the
+  `redirectTo`). Confirm against the live deploy.
+- [ ] **Verify a rehearsal-report email** sends from
+  `noreply@proscene.app` and renders correctly in Gmail / Outlook / iOS
+  Mail.
 - [ ] Establish a bug-triage cadence; feed fixes back through P0-style
   hardening and normal feature work.
-- [ ] Verify password reset end-to-end (never fully tested — Supabase
-  email rate limits during dev).
 
 ---
 
@@ -342,7 +367,7 @@ $25), plus Xcode (macOS) and Android Studio for builds.
 | # | Decision | Recommendation |
 |---|---|---|
 | **D1** | Sanitization library for the XSS fix (P0). | **Resolved** — sanitization centralised in `lib/sanitize.ts`. Started on `isomorphic-dompurify` (2026-05-21); swapped to `sanitize-html` 2026-05-22 after jsdom crashed in the Vercel server runtime. See decision log. |
-| **D2** | Email deliverability during beta. Sandbox email won't reach external testers. | **Resolved 2026-05-21** — domain being registered, so a Resend sending domain + Supabase custom SMTP can be set up. Unblocks report and invite emails to real testers. |
+| **D2** | Email deliverability during beta. Sandbox email won't reach external testers. | **Fully resolved 2026-05-27** — `proscene.app` registered at Namecheap, Resend sending domain verified (SPF + DKIM + `send` MX), Supabase custom SMTP wired (`smtp.resend.com:465`, sender `noreply@proscene.app`), Supabase Site URL + redirect allowlist updated, Vercel env vars set. Smoke test (Supabase Dashboard magic link) delivered. P3 application-flow tests are unblocked. |
 | **D3** | Which Supabase project is the beta environment. | Reuse the current `CallBoard` project as the beta environment; cut a fresh production project at P6 if a clean slate is wanted. |
 | **D4** | File uploads on Vercel. Server-action uploads fail above ~4.5 MB on every Vercel plan. | **Resolved 2026-05-21** — switch to client-direct Supabase Storage uploads via server-issued signed upload URLs; the file never touches Vercel. Raise the bucket limit to 50 MB (free-plan max); files beyond 50 MB require Supabase Pro. |
 | **D5** | Beta org model. Single-org MVP: all testers share one workspace. | For beta, recruit a single theatre company (one shared workspace). Multi-org is a larger project — defer. |
