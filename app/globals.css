@@ -5573,6 +5573,44 @@ select.pp-field {
     padding: 12px 16px 0;
   }
 
+  /* Production overview supporting row — desktop is 2fr / 1fr (Recent
+     activity + Principals side-by-side). On a phone that squeezes both
+     columns into too-narrow strips; stack them vertically instead. */
+  .prod-overview-supporting {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Let any space-between control bar wrap on phone so toolbars with
+     several buttons (notes editor header, etc.) don't push their cards
+     off-screen. Used widely across the app for header rows. */
+  .row-between {
+    flex-wrap: wrap;
+  }
+
+  /* Script viewer page-nav row — prev/next + zoom + Bookmark/Download
+     buttons combined are wider than a phone viewport. Allow wrap. */
+  .sv-pagenav {
+    flex-wrap: wrap;
+  }
+
+  /* Belt-and-suspenders on the script viewer shell so the PDF and
+     side panel can't push the page sideways. The shell + canvas
+     column both clamp to 100% and zero their min-width so a wide
+     intrinsic child (PDF canvas drawing buffer) can shrink to fit. */
+  .script-viewer-shell {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .sv-canvas {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .sv-side {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
   /* Notes — collapse to a single column and swap list/editor based on
      whether a note is selected. Tap a list row → editor takes over;
      tap the back button → list returns. */
