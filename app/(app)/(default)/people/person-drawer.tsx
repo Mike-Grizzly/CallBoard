@@ -16,6 +16,7 @@ import {
   resendInvite,
   removeMember,
   removeProductionMember,
+  deletePerson,
 } from "@/features/members/actions";
 import type { DirectoryPerson } from "@/features/members/queries";
 import { displayName, initials, relativeTime, memberSince } from "./helpers";
@@ -107,6 +108,19 @@ export function PersonDrawer({
     fd.set("membership_id", person.membershipId);
     run(() => removeMember(undefined, fd), "Removed from organization.").then(
       () => onClose(),
+    );
+  };
+
+  const deleteAccount = () => {
+    const ok = window.confirm(
+      `Permanently delete ${displayName(person)}?\n\n` +
+        "This removes their account, organization & production memberships, " +
+        "and any reports, documents, announcements, or notes they created. " +
+        "This cannot be undone.",
+    );
+    if (!ok) return;
+    run(() => deletePerson(person.userId), "Account deleted.").then(() =>
+      onClose(),
     );
   };
 
@@ -312,6 +326,14 @@ export function PersonDrawer({
                 onClick={removeFromOrg}
               >
                 <span>Remove from org</span>
+              </button>
+              <button
+                className="btn ghost sm danger"
+                disabled={pending}
+                onClick={deleteAccount}
+              >
+                <Icon name="Trash2" size={12} />
+                <span>Delete account</span>
               </button>
             </div>
           )}

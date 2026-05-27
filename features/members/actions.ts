@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
   organizationMemberships,
+  organizations,
   productionMemberships,
   profiles,
 } from "@/db/schema";
@@ -100,6 +101,7 @@ export async function removeMember(
     .where(eq(organizationMemberships.id, membershipId));
 
   revalidatePath("/settings/members");
+  revalidatePath("/people");
   return {};
 }
 
@@ -335,8 +337,18 @@ export async function inviteMembers(
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const redirectTo = siteUrl
-    ? `${siteUrl}/auth/callback?next=/reset-password`
+    ? `${siteUrl}/auth/callback?next=/invite/accept`
     : undefined;
+
+  const [org] = await db
+    .select({ name: organizations.name })
+    .from(organizations)
+    .where(eq(organizations.id, currentUser.organizationId))
+    .limit(1);
+  const organizationName = org?.name ?? "your team";
+  const invitedByName =
+    `${currentUser.firstName} ${currentUser.lastName}`.trim() ||
+    currentUser.email;
 
   const results: InviteRowResult[] = [];
 
@@ -426,6 +438,8 @@ export async function inviteMembers(
       const metadata = {
         first_name: firstName,
         last_name: lastName,
+        invited_by_name: invitedByName,
+        organization_name: organizationName,
       };
 
       const { data, error } = input.sendInvite
@@ -552,6 +566,49 @@ export async function setMemberStatus(
   return {};
 }
 
+/**
+ * Permanently delete a person. Removes their profile row (which cascades to
+ * org/production memberships, mentions, reports, documents, announcements,
+ * notes, notifications, pins) and then deletes their auth user. There is no
+ * FK from auth.users to profiles in this project, so both sides must be
+ * cleared explicitly. Deletes are destructive — any content they authored
+ * goes with them.
+ */
+export async function deletePerson(
+  userId: string,
+): Promise<MemberActionResult> {
+  const currentUser = await requireCurrentUser();
+
+  if (!can(currentUser.role, "settings:manage")) {
+    return { error: "You don't have permission to manage team members." };
+  }
+
+  if (userId === currentUser.id) {
+    return { error: "You cannot delete your own account." };
+  }
+
+  try {
+    await db.delete(profiles).where(eq(profiles.id, userId));
+
+    const admin = createSupabaseAdminClient();
+    const { error } = await admin.auth.admin.deleteUser(userId);
+    // Ignore "user not found" — the auth user may already be gone (e.g.
+    // deleted from the Supabase dashboard); the profile cleanup above is
+    // what actually clears them from /people.
+    if (error && !/not\s*found/i.test(error.message)) {
+      return { error: error.message };
+    }
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Could not delete person.",
+    };
+  }
+
+  revalidatePath("/people");
+  revalidatePath("/settings/members");
+  return {};
+}
+
 export async function resendInvite(
   userId: string,
 ): Promise<MemberActionResult> {
@@ -571,12 +628,26 @@ export async function resendInvite(
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const redirectTo = siteUrl
-    ? `${siteUrl}/auth/callback?next=/reset-password`
+    ? `${siteUrl}/auth/callback?next=/invite/accept`
     : undefined;
+
+  const [org] = await db
+    .select({ name: organizations.name })
+    .from(organizations)
+    .where(eq(organizations.id, currentUser.organizationId))
+    .limit(1);
+  const organizationName = org?.name ?? "your team";
+  const invitedByName =
+    `${currentUser.firstName} ${currentUser.lastName}`.trim() ||
+    currentUser.email;
 
   try {
     const admin = createSupabaseAdminClient();
     const { error } = await admin.auth.admin.inviteUserByEmail(rows[0].email, {
+      data: {
+        invited_by_name: invitedByName,
+        organization_name: organizationName,
+      },
       redirectTo,
     });
     if (error) return { error: error.message };
