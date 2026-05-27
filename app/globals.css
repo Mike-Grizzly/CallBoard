@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * CallBoard design system — ported from the standalone HTML mockup.
+ * Proscene design system — ported from the standalone HTML mockup.
  * See /design-reference for the original. Three themes (warm/cool/dark) and
  * three densities (compact/regular/comfy) are toggled via body[data-theme]
  * and body[data-density].

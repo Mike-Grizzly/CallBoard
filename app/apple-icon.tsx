@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 // iOS does not support SVG touch icons, so the apple-touch-icon is generated
-// as a PNG from the same CallBoard mark used by the SVG icons.
+// as a PNG from the same Proscene mark used by the SVG icons.
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
@@ -22,7 +22,7 @@ export default function AppleIcon() {
           fontStyle: "italic",
         }}
       >
-        C
+        P
       </div>
     ),
     size,

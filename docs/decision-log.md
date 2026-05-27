@@ -392,7 +392,7 @@ gain. The cost is one new server-only env var, `SUPABASE_SERVICE_ROLE_KEY`
 - `profiles.status` (`active | invited | inactive`) tracks invite state;
   `lib/auth.ts` promotes `invited` → `active` on first sign-in.
 - The Supabase project must have the "Invite user" email template enabled.
-- The demo's separate "permission level" concept was collapsed into CallBoard's
+- The demo's separate "permission level" concept was collapsed into Proscene's
   single role model — permissions remain role-derived; the People table's
   Permission column is a read-only role-derived tier.
 
@@ -589,7 +589,7 @@ bottom tab bar. Tablet widths (721–1100px) keep the existing 64px icon
 rail; the icon-collapse media query was rescoped from `max-width: 1100px`
 to `min-width: 721px and max-width: 1100px`.
 
-**Reason:** CallBoard's navigation has two variable-length sections —
+**Reason:** Proscene's navigation has two variable-length sections —
 Workspace links (capability-gated) and the user's full Productions list.
 A bottom tab bar fits only 4–5 fixed destinations and would have needed a
 separate "More" sheet for everything else, splitting navigation across two
@@ -728,3 +728,45 @@ multiple rows is visually noisier and eats vertical space.
 - Scoped to ≤720px so desktop/tablet are unchanged.
 - If the strip ever overflows at narrow tablet widths too, the same rules
   can be widened to that range.
+
+---
+
+## 2026-05-27 — App rename: "CallBoard" → "Proscene"
+
+**Decision:** The product is renamed from **CallBoard** to **Proscene**.
+The `callboard` domain could not be secured, so a different name was
+chosen. A new domain has been purchased and will be wired up separately.
+
+**Scope of the rename (this change):**
+- Rail wordmark `Call<em>Board</em>` → `Pro<em>scene</em>` and the rail
+  mark glyph `C` → `P`.
+- PWA manifest (`name`, `short_name`) and root metadata (`title`,
+  `applicationName`, `appleWebApp.title`).
+- Apple touch icon (`app/apple-icon.tsx` glyph) and the SVG icons
+  (`public/icon.svg`, `public/icon-maskable.svg`) — the `C` mark is now a
+  `P`. The dark-brown `#28231f` square and italic Georgia type are
+  unchanged.
+- Rehearsal-report email footer: "Sent via CallBoard" → "Sent via Proscene".
+- `package.json` / `package-lock.json` `name` field: `callboard` → `proscene`.
+- Inline brand references in `docs/` updated to "Proscene" where they
+  refer to the app brand.
+
+**Intentionally NOT changed:**
+- The Supabase project is still literally named `CallBoard` in the
+  Supabase dashboard. Backticked `` `CallBoard` `` references in the
+  docs (e.g. "applied to the `CallBoard` project via Supabase MCP")
+  point to that project identifier and remain accurate. Renaming the
+  Supabase project is a separate operation on the Supabase side.
+- Historical changelog entries that read "the stale 'Show Portal' brand
+  corrected to 'CallBoard'" are left as-is — they describe an earlier
+  fix at the time it happened.
+- Domain references in `launch-roadmap.md` (`callboard.com`,
+  `app.callboard.com`) are stale and will be updated once the new
+  domain is confirmed.
+- All design tokens / colors / typography are unchanged.
+
+**Reason:** Naming follows the domain. We could not get the `callboard`
+domain; "Proscene" was the chosen alternative. The wordmark split
+`Pro<em>scene</em>` mirrors the original `Call<em>Board</em>` italic
+treatment, so the rail keeps the same visual weight without any CSS
+changes.

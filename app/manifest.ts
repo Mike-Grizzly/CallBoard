@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "CallBoard — Production Hub",
-    short_name: "CallBoard",
+    name: "Proscene — Production Hub",
+    short_name: "Proscene",
     description:
       "A lightweight production portal for small theatre companies.",
     start_url: "/dashboard",

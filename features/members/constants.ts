@@ -5,7 +5,7 @@ import type { Role } from "@/types/roles";
  * `c` is a color token consumed by `data-c` attributes in globals.css.
  * `category` groups roles for the stat-card filters.
  * `tier` is the human-readable access level shown in the Permission column —
- * CallBoard permissions are role-derived, so this is purely descriptive.
+ * Proscene permissions are role-derived, so this is purely descriptive.
  */
 export const ROLE_META: Record<
   Role,

@@ -31,10 +31,10 @@ export async function Rail() {
 
   return (
     <aside className="rail" id="app-rail">
-      <Link href="/dashboard" className="rail-brand" aria-label="CallBoard home">
-        <div className="rail-mark">C</div>
+      <Link href="/dashboard" className="rail-brand" aria-label="Proscene home">
+        <div className="rail-mark">P</div>
         <div className="rail-name">
-          Call<em>Board</em>
+          Pro<em>scene</em>
         </div>
       </Link>
 

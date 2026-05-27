@@ -1,13 +1,13 @@
-# Launch Roadmap — CallBoard
+# Launch Roadmap — Proscene
 
 **Created:** 2026-05-21
-**Status:** Active — this is the working plan to take CallBoard from a
+**Status:** Active — this is the working plan to take Proscene from a
 feature-complete MVP to a soft launch with invited testers, and on to a
 public launch.
 
 ## How to read this
 
-CallBoard is feature-rich — 16 build steps are implemented (see
+Proscene is feature-rich — 16 build steps are implemented (see
 `current-status.md`) — but it has **never been deployed or used by anyone
 outside development**. This roadmap covers that gap: security hardening,
 deployment, the mobile experience, a beta-tester program, the marketing /
@@ -231,7 +231,7 @@ cleanup, formal `/notifications` inbox, broader production-context
 nav review). User testing in P3 will surface the next round of
 styling/UX adjustments.
 
-Result: testers can install CallBoard to their home screen and use it
+Result: testers can install Proscene to their home screen and use it
 like an app — the free interim "app" while the native wrapper waits for
 P5.
 
@@ -259,7 +259,7 @@ P5.
 ## P4 — Marketing / landing site + auth wiring
 
 You build the marketing/landing site (pricing, product info). It stays
-**separate** from the app — auth lives entirely in the CallBoard app.
+**separate** from the app — auth lives entirely in the Proscene app.
 
 **Connection model (recommended, lowest-risk):** the marketing site's
 CTAs ("Get started", "Sign up", "Log in") are plain links to the app —
