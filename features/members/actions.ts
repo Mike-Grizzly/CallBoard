@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
   organizationMemberships,
+  organizations,
   productionMemberships,
   profiles,
 } from "@/db/schema";
@@ -335,8 +336,18 @@ export async function inviteMembers(
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const redirectTo = siteUrl
-    ? `${siteUrl}/auth/callback?next=/reset-password`
+    ? `${siteUrl}/auth/callback?next=/invite/accept`
     : undefined;
+
+  const [org] = await db
+    .select({ name: organizations.name })
+    .from(organizations)
+    .where(eq(organizations.id, currentUser.organizationId))
+    .limit(1);
+  const organizationName = org?.name ?? "your team";
+  const invitedByName =
+    `${currentUser.firstName} ${currentUser.lastName}`.trim() ||
+    currentUser.email;
 
   const results: InviteRowResult[] = [];
 
@@ -426,6 +437,8 @@ export async function inviteMembers(
       const metadata = {
         first_name: firstName,
         last_name: lastName,
+        invited_by_name: invitedByName,
+        organization_name: organizationName,
       };
 
       const { data, error } = input.sendInvite
@@ -571,12 +584,26 @@ export async function resendInvite(
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const redirectTo = siteUrl
-    ? `${siteUrl}/auth/callback?next=/reset-password`
+    ? `${siteUrl}/auth/callback?next=/invite/accept`
     : undefined;
+
+  const [org] = await db
+    .select({ name: organizations.name })
+    .from(organizations)
+    .where(eq(organizations.id, currentUser.organizationId))
+    .limit(1);
+  const organizationName = org?.name ?? "your team";
+  const invitedByName =
+    `${currentUser.firstName} ${currentUser.lastName}`.trim() ||
+    currentUser.email;
 
   try {
     const admin = createSupabaseAdminClient();
     const { error } = await admin.auth.admin.inviteUserByEmail(rows[0].email, {
+      data: {
+        invited_by_name: invitedByName,
+        organization_name: organizationName,
+      },
       redirectTo,
     });
     if (error) return { error: error.message };
