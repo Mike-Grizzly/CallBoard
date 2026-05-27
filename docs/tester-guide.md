@@ -156,8 +156,14 @@ Beta is the soft launch. Once we've shaken out the rough edges with
 real users, here's the order things are likely to ship in. None of
 this is locked — your feedback during beta will reorder it.
 
-### Right after beta (Tier 1)
+### During beta — week 1 (Tier 1)
 
+- **Multi-organization support.** The first beta workspace is a single
+  shared org. Within the first week we're opening this up so each
+  theatre company gets its own walled-off workspace — your productions,
+  people, announcements, and documents are visible only to your team.
+  Existing testers will be moved into their own org as part of the
+  rollout.
 - **Better mobile chrome.** Production header polish, tab-strip
   density, broader review of in-production navigation on phones.
 - **Touch editing for blocking + script editor.** Goal is at least
@@ -197,9 +203,6 @@ this is locked — your feedback during beta will reorder it.
 - **Native iOS / Android apps in the App Store and Play Store.**
   Wrapped Proscene in a Capacitor shell so it appears as a real app
   — same codebase, no second app to maintain.
-- **Multi-organization support.** Right now each Proscene instance
-  is single-org. Multi-org is a larger project we'll tackle once the
-  single-org product is dialed in.
 - **Paid plans.** Storage tiers and feature gating around them. The
   free tier will stay viable for small theatre companies.
 - **AI script analysis.** Surface characters, scenes, props from a
