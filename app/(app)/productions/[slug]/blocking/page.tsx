@@ -6,6 +6,7 @@ import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership, getProductionMembers } from "@/features/members/queries";
 import { getStageConfiguration, getCastMembers, getBlockingPositionsForBeat, getCustomSetPieces, getArrowsForBeat } from "@/features/blocking/queries";
 import { getScenesWithBeats } from "@/features/scenes/queries";
+import { ensureFirstSceneAndBeat } from "@/features/scenes/actions";
 import { getDocumentById } from "@/features/documents/queries";
 import { getDocumentUrl } from "@/features/documents/actions";
 import { getCustomSetPieceUrls } from "@/features/blocking/actions";
@@ -33,7 +34,7 @@ export default async function BlockingPage({
     redirect(`/productions/${slug}`);
   }
 
-  const [stageConfig, scenesWithBeats, castMembers, productionMembers, customPieceRows] =
+  const [stageConfig, scenesWithBeatsInitial, castMembers, productionMembers, customPieceRows] =
     await Promise.all([
       getStageConfiguration(production.id),
       getScenesWithBeats(production.id),
@@ -45,6 +46,17 @@ export default async function BlockingPage({
   // If no stage config, redirect to setup (only for editors)
   if (!stageConfig && can(user.role, "blocking:edit")) {
     redirect(`/productions/${slug}/blocking/setup`);
+  }
+
+  // First-time setup: an editor opening blocking on a production with no
+  // scenes/beats yet should land on a canvas they can drag onto
+  // immediately, not on an empty state that silently swallows drops. Seed
+  // a default Scene 1 / Beat 1 so the rest of the page renders ready to
+  // edit. Viewers don't trigger this; they'll see the empty state.
+  let scenesWithBeats = scenesWithBeatsInitial;
+  if (scenesWithBeats.length === 0 && can(user.role, "blocking:edit")) {
+    await ensureFirstSceneAndBeat(production.id);
+    scenesWithBeats = await getScenesWithBeats(production.id);
   }
 
   let pdfUrl: string | null = null;
