@@ -270,12 +270,15 @@ auth forms, no Supabase keys on the marketing site.
   separate small Next project — your call). — You
 - [ ] Point its CTAs at the app's `/signup` and `/login` routes. During
   beta that is the `*.vercel.app` URL; post-domain it becomes
-  `app.callboard.com`. — You
+  `proscene.app` (e.g. `https://proscene.app/signup`). — You
 - [ ] Claude wires the app side: confirm `NEXT_PUBLIC_SITE_URL`, the
   Supabase redirect-URL allowlist, and an optional post-signup redirect
   back to a chosen page. — **S**, Claude
-- [ ] Subdomain plan (once a domain exists, P6): `callboard.com` =
-  marketing, `app.callboard.com` = the product.
+- [ ] Domain plan (P6): the product lives at `proscene.app`. If a
+  separate marketing site is wanted, decide whether it lives on a
+  different domain or on a path of `proscene.app` (e.g. `/` for marketing
+  and `/app` or a subdomain `app.proscene.app` for the product). The
+  earlier `callboard.com` / `app.callboard.com` split is obsolete.
 
 **Pricing.** A pricing *page* is just content and you can build it now.
 **Paid plans / plan gating need a billing integration (e.g. Stripe)** —

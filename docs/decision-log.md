@@ -735,11 +735,15 @@ multiple rows is visually noisier and eats vertical space.
 
 **Decision:** The product is renamed from **CallBoard** to **Proscene**.
 The `callboard` domain could not be secured, so a different name was
-chosen. A new domain has been purchased and will be wired up separately.
+chosen. The product URL will be **`proscene.app`** (the `.app` TLD).
+DNS / Vercel domain wiring happens in P4–P6.
 
 **Scope of the rename (this change):**
 - Rail wordmark `Call<em>Board</em>` → `Pro<em>scene</em>` and the rail
   mark glyph `C` → `P`.
+- Auth screens (login, signup, forgot-password, reset-password): the
+  `.auth-mark` glyph `C` → `P` and the `.auth-wordmark`
+  `Call<em>Board</em>` → `Pro<em>scene</em>`.
 - PWA manifest (`name`, `short_name`) and root metadata (`title`,
   `applicationName`, `appleWebApp.title`).
 - Apple touch icon (`app/apple-icon.tsx` glyph) and the SVG icons

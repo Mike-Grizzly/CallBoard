@@ -6,9 +6,9 @@ export default function ResetPasswordPage() {
       <div className="auth-card-wrap">
         <div className="auth-head">
           <div className="auth-brand">
-            <span className="auth-mark">C</span>
+            <span className="auth-mark">P</span>
             <span className="auth-wordmark">
-              Call<em>Board</em>
+              Pro<em>scene</em>
             </span>
           </div>
           <h1 className="auth-title">Set a new password</h1>
