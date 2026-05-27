@@ -86,6 +86,15 @@ _Resolved in P0 (2026-05-21): signed-URL actions now verify production access; u
 - Should the document viewer support page-by-page navigation for multi-page PDFs?
 - Should there be a search/filter capability on the documents list?
 - Should the production overview cards show more metadata (dates, member count)?
+- **Invite landing polish (post-beta).** `/invite/accept` currently shows
+  a contextual welcome ("X invited you to Y on Proscene") + a password
+  form, but no product context — a new user accepting an invite has no
+  way to know what Proscene actually is before they create an account.
+  After beta, expand the page with a brief product blurb / value-prop
+  (rehearsal reports, blocking, calendars, etc.) above the password
+  form. Same applies to the Supabase "Invite user" email template body.
+  Deferred 2026-05-27 — fine for closed-beta testers who already know
+  what they're signing up for.
 
 ## UI port questions
 

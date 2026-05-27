@@ -79,12 +79,11 @@ risks. They had to land before anyone outside the team touches the app.
   sanitize the filename used in the storage path.
 - [x] **Notes privacy enforcement.** `getNotesByProduction` now filters to
   the caller's own notes (notes are private by design since Step 11).
-- [ ] **Password strength (free substitute for leaked-password
-  protection).** Leaked-password protection (HaveIBeenPwned check) is a
-  Supabase **Pro-plan** feature — decision 2026-05-21: skip it for the
-  closed beta, re-enable at P6 when the project moves to Pro. Interim:
-  set Password Requirements (minimum length 8+, character mix) under
-  Authentication → Sign In/Providers → Email — free on every plan. — **S**, You
+- [x] **Password strength (free substitute for leaked-password
+  protection).** Set in Supabase Auth → Sign In/Providers → Email on
+  2026-05-28. Leaked-password protection (HaveIBeenPwned check) is a
+  Supabase **Pro-plan** feature — re-enable at P6 when the project
+  moves to Pro.
 - [ ] **Server-action ID ownership checks.** Mutating actions (e.g.
   `uploadDocument`, `uploadCustomSetPiece`) still trust a client-supplied
   `productionId`. A broad ownership-check sweep is **deferred** — the
@@ -216,7 +215,7 @@ below for the full picture.
   dependency. — **M**
 - [ ] **PWA offline support (optional).** A service worker for offline /
   caching would need a library — see **Decision D7**. — **M**
-- [ ] Verify "Add to Home Screen" on iOS Safari and Android Chrome. — **S**
+- [x] Verify "Add to Home Screen" on iOS Safari and Android Chrome. (Verified on iPhone 2026-05-28.)
 
 **Done so far (2026-05-22 → 05-27):** bottom-tab mobile nav, PWA
 manifest, all 8 slices of the per-screen responsive audit, view-only
@@ -226,10 +225,10 @@ blocking-mobile follow-up (ground plan rasterized at setup so the
 blocking canvas renders an `<img>` instead of pdf.js — fixes iOS
 Safari OOM and speeds desktop loads; mobile beat nav with swipe;
 smaller on-canvas tokens; toolbar layout-shift fix; auto-seed first
-scene/beat so editors land on a usable canvas). **Still open before
-P3:** real touch-editing support (blocking/script — the goal is at
-least tablet parity for blocking), live device verification including
-"Add to Home Screen", the iOS post-auth zoom reset (parked — see
+scene/beat so editors land on a usable canvas). Add-to-Home-Screen
+verified on iPhone 2026-05-28. **Still open before P3 close:** real
+touch-editing support (blocking/script — the goal is at least tablet
+parity for blocking), the iOS post-auth zoom reset (parked — see
 `open-questions.md → Mobile / iOS questions`), and the deferred
 polish items noted in `current-status.md` (production-view chrome
 cleanup, formal `/notifications` inbox, broader production-context
@@ -264,11 +263,19 @@ P5.
   forward `feedback@proscene.app` to a personal inbox via ImprovMX (free,
   ~5 min, coexists with the Resend `send.` MX record because the hosts
   differ).
-- [ ] **Verify invite flow end-to-end against the live deploy** —
-  infrastructure (D2) is done; this is the application-flow check:
-  invite from Settings → Members → email arrives from
-  `noreply@proscene.app` → `/auth/callback` → `/reset-password` →
-  `invited` promoted to `active`.
+- [x] **Verify invite flow end-to-end against the live deploy
+  (2026-05-28).** Invite from Settings → People → Proscene-branded
+  email arrives from `noreply@proscene.app` → `/auth/confirm` (the
+  scanner-safe two-step confirm page added in PR #14) → `/invite/accept`
+  (welcome with inviter + org name, set password) → signed in at
+  `/dashboard`, profile auto-promoted from `invited` to `active`.
+  Required two follow-up PRs after the first failed test: PR #13
+  added the dedicated `/invite/accept` landing + invite metadata;
+  PR #14 added `/auth/confirm` to fix Gmail's link-scanner burning
+  the single-use OTP before the human could click. The Supabase
+  "Invite user" email template body is custom — see
+  `current-status.md` 2026-05-28 entry for the template and the
+  required `href`.
 - [ ] **Verify the app's `/forgot-password` flow end-to-end** — the
   Supabase Dashboard magic link works, but `/forgot-password` uses a
   different code path (the app reads `NEXT_PUBLIC_SITE_URL` for the

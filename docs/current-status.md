@@ -1,6 +1,6 @@
 # Current Status
 
-**Last updated:** 2026-05-27
+**Last updated:** 2026-05-28
 
 **App name:** **Proscene** (renamed from "CallBoard" on 2026-05-27 — the `callboard` domain could not be secured). The product is **live at [https://proscene.app](https://proscene.app)** with a verified email sending domain. The rebrand updates the rail wordmark (`Pro<em>scene</em>`), the rail/icon mark glyph (`C` → `P`), the four auth-screen brand headers (login, signup, forgot-password, reset-password), the PWA manifest, root metadata (`title` / `applicationName` / `appleWebApp.title`), `apple-icon.tsx`, `public/icon.svg` + `public/icon-maskable.svg`, the rehearsal-report email footer ("Sent via Proscene"), and `package.json` / `package-lock.json` `name`. The Supabase project is still literally named `CallBoard` in the Supabase dashboard — backticked `CallBoard` references in these docs point to that project identifier and are intentionally unchanged. Colors and design tokens are unchanged. PR [#10](https://github.com/Mike-Grizzly/CallBoard/pull/10) merged to `main` 2026-05-27.
 
@@ -8,7 +8,7 @@
 
 **Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15) + People Directory (Step 16) + full mobile/PWA pass (P2) + Proscene rebrand and email/domain wiring (P3 prep). All work through 2026-05-27 is merged to `main` (mobile/PWA via PR #9, rebrand via PR #10, docs catch-up via PR #11) and live at `proscene.app`.
 
-**Launch planning:** the path from feature-complete MVP to a soft launch (testing site + invited testers) and on to public launch is tracked in `docs/launch-roadmap.md`. Phases P0 (security hardening), P1 (Vercel deployment), and the email-deliverability + custom-domain unlocks for P3 are shipped. **P2 (mobile/PWA) is functionally complete**: bottom-tab mobile nav, PWA manifest, all 8 slices of the per-screen responsive audit, view-only mode for the blocking canvas and script editor, and a landscape-phone rule for blocking. Remaining P2 items before P3: real touch-editing support (currently view-only on phones), live device verification including "Add to Home Screen", and the deferred polish items below. **P3 (beta) is now unblocked**: with email + custom domain live, the remaining P3 work is end-to-end flow verification (invite, password reset, report email), beta org-model confirmation (D5), tester onboarding docs, and a feedback channel. See `decision-log.md` (2026-05-21 / 05-22 / 05-27).
+**Launch planning:** the path from feature-complete MVP to a soft launch (testing site + invited testers) and on to public launch is tracked in `docs/launch-roadmap.md`. Phases P0 (security hardening), P1 (Vercel deployment), and the email-deliverability + custom-domain unlocks for P3 are shipped. **P2 (mobile/PWA) is functionally complete**: bottom-tab mobile nav, PWA manifest, all 8 slices of the per-screen responsive audit, view-only mode for the blocking canvas and script editor, and a landscape-phone rule for blocking. Remaining P2 items before P3: real touch-editing support (currently view-only on phones), and the deferred polish items below. ("Add to Home Screen" verified working on-device 2026-05-28; Supabase password requirements also set on the same day, closing two P0/P2 hangovers.) **P3 (beta) is in progress**: with email + custom domain live and the invite flow now verified end-to-end (2026-05-28, PRs #13 + #14), the remaining P3 work is the `/forgot-password` and rehearsal-report email verifications, beta org-model confirmation (D5), tester onboarding docs, and a feedback channel. See `decision-log.md` (2026-05-21 / 05-22 / 05-27).
 
 ## Feature status
 
@@ -531,6 +531,69 @@ Branch `claude/vibrant-tesla-5kjsA` — follow-up P2 work after the
   prevent iOS input auto-zoom on most app forms (sign-in's `.field`
   class overrides this with higher specificity — intentional, the
   user prefers zoom-in there).
+
+## Invite flow + people deletion (2026-05-28)
+
+Closes the first P3 application-flow item and a People-page bug.
+Merged to `main` via PRs [#13](https://github.com/Mike-Grizzly/CallBoard/pull/13)
+and [#14](https://github.com/Mike-Grizzly/CallBoard/pull/14); verified
+end-to-end against a real Gmail inbox after the fix.
+
+- **Dedicated invite landing at `/invite/accept`.** Invited users used
+  to land on the generic `/reset-password` page with no context — easy
+  to mistake for a password reset and miss that the invite link IS the
+  account creation. New page greets them by name and shows who invited
+  them and to which workspace, then renders the same password form
+  (reuses `updatePassword` action). `inviteMembers` and `resendInvite`
+  in `features/members/actions.ts` now pass `invited_by_name` +
+  `organization_name` in the Supabase invite metadata and set
+  `redirectTo` to `/invite/accept`. The Supabase **"Invite user"**
+  email template was rewritten in the dashboard (Auth → Emails →
+  Templates) to a Proscene-branded HTML body using
+  `{{ .Data.invited_by_name }}` / `{{ .Data.organization_name }}`.
+- **Two-step `/auth/confirm` page (fixes email-scanner OTP burn).**
+  First test invite to a Gmail address landed on
+  `/login?error=auth_callback` with `otp_expired` in the hash. Supabase
+  auth logs showed two GET `/verify` hits on the same single-use OTP
+  8 seconds apart: the first succeeded (`user_signedup` event) and
+  the second failed (`One-time token not found`). A link scanner /
+  pre-fetcher (Gmail safe browsing, antivirus, etc.) was consuming
+  the OTP before the human could click it. New `app/auth/confirm/`
+  page is the canonical Supabase fix: GETs render a branded "Accept
+  invitation" / "Reset password" / "Verify email" button (safe to
+  pre-fetch — token untouched); only the form POST calls
+  `verifyOtp` and redirects to `?next=…`. Handles all four OTP types
+  (`invite`, `recovery`, `signup`, `email`). The invite email
+  template's button `href` was updated to
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/invite/accept`
+  in place of `{{ .ConfirmationURL }}`. The same swap is available
+  for password-reset / signup-confirm templates whenever those flows
+  get verified.
+- **Delete person from `/people`.** Existing "Remove from org" only
+  cleared `organization_memberships`; the profile + auth user stayed
+  put, so users deleted from the Supabase dashboard kept appearing
+  on the People page. New `deletePerson(userId)` action deletes the
+  `profiles` row (cascades to org/production memberships, mentions,
+  reports, documents, announcements, notes, notifications, pins) and
+  then the Supabase auth user via the admin API. "Not found" errors
+  from the admin API are swallowed so a half-cleaned user (already
+  removed from the dashboard) still gets the profile side cleared.
+  New **Delete account** button in the person drawer next to **Remove
+  from org**, gated by a `window.confirm` that warns the cascade also
+  deletes any rehearsal reports / documents / announcements they
+  authored. (Long-term, switching those FKs to `ON DELETE SET NULL`
+  + rendering "Deleted user" would be safer for non-test accounts —
+  schema migration, deferred.)
+- **Revalidation fix.** Existing `removeMember` (the "Remove from org"
+  action) only revalidated `/settings/members`, so `/people` stayed
+  stale until a hard refresh. Added `/people` to its revalidation set.
+
+**P3 status update:** invite flow is verified end-to-end. Add-to-Home-
+Screen verified on iPhone the same day. Supabase password requirements
+also set in the dashboard the same day (closes the last open P0 item).
+Still pending in P3: `/forgot-password` flow verification, a real
+rehearsal-report email verification in Gmail/Outlook/iOS Mail, D5 org
+model confirmation, tester onboarding docs, feedback channel.
 
 ## Scaffolded only (not implemented)
 
