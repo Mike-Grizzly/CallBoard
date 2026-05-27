@@ -865,7 +865,23 @@ export function BlockingCanvas({
       if (cancelled) return;
       setNumPdfPages(pdf.numPages);
       const page = await pdf.getPage(currentPdfPage);
-      const viewport = page.getViewport({ scale: 1.5 });
+      // Phones get a smaller render scale + skip the offscreen double-buffer
+      // and the ImageBitmap cache — iOS Safari's per-tab memory budget on
+      // iPhone can't hold three copies of a large ground-plan bitmap and
+      // kills the tab ("can't open this page") after the PDF finishes
+      // rendering. Tablets and desktop keep the 1.5× crisp render + cache.
+      const scale = isPhone ? 0.9 : 1.5;
+      const viewport = page.getViewport({ scale });
+
+      if (isPhone) {
+        // Render directly to the visible canvas — no offscreen copy.
+        mainCanvas.width = viewport.width;
+        mainCanvas.height = viewport.height;
+        await page.render({ canvas: mainCanvas, viewport }).promise;
+        if (cancelled) return;
+        if (!cancelled) setPdfLoaded(true);
+        return;
+      }
 
       // Render to an offscreen canvas so the visible canvas stays intact
       // until the new frame is fully ready — no blank flash during render.
@@ -890,7 +906,7 @@ export function BlockingCanvas({
     }
     render().catch(() => setPdfLoaded(false));
     return () => { cancelled = true; };
-  }, [pdfUrl, currentPdfPage]);
+  }, [pdfUrl, currentPdfPage, isPhone]);
 
   function pushHistory(prev: PositionMap) {
     setHistory((h) => [...h.slice(-49), prev]);
