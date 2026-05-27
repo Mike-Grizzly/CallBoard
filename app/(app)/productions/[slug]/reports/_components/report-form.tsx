@@ -1,12 +1,19 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   createReport,
   updateReport,
   type ReportActionResult,
 } from "@/features/reports/actions";
+import {
+  requestReportAttachmentUpload,
+  finalizeReportAttachmentUpload,
+  deleteReportAttachment,
+} from "@/features/reports/attachments";
+import { uploadFileToSignedUrl } from "@/lib/storage-upload";
 import { DEPARTMENTS } from "@/features/reports/constants";
 import type { ReportDetail } from "@/features/reports/queries";
 import { RichTextEditor } from "@/components/ui/rich-text-editor-lazy";
@@ -14,6 +21,10 @@ import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import type { MentionMember } from "@/components/ui/mention-textarea";
 import { Icon } from "@/components/ui/icon";
 import { DeptNoteModal } from "./dept-note-modal";
+import {
+  AttachmentStaging,
+  type ExistingAttachment,
+} from "./attachment-staging";
 import {
   CallTimesEditor,
   AttendanceEditor,
@@ -52,6 +63,7 @@ export function ReportForm({
   productionTitle,
   slug,
   initial,
+  existingAttachments = [],
   members,
 }: {
   mode: Mode;
@@ -59,13 +71,110 @@ export function ReportForm({
   productionTitle: string;
   slug: string;
   initial?: ReportDetail;
+  existingAttachments?: ExistingAttachment[];
   members?: MentionMember[];
 }) {
+  const router = useRouter();
   const action = mode === "edit" ? updateReport : createReport;
   const [state, formAction, pending] = useActionState<
     ReportActionResult | undefined,
     FormData
   >(action, undefined);
+
+  // Staged-attachment flow: files are held in client state until the form
+  // submits. Once the server action returns the report id, we upload each
+  // staged file against that id, then navigate. This way the user can pick
+  // attachments on the new-report page without having to save a draft first.
+  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [existing, setExisting] = useState<ExistingAttachment[]>(
+    existingAttachments,
+  );
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const handledRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const id = state?.reportId;
+    if (!id || handledRef.current === id) return;
+    handledRef.current = id;
+
+    const justDistributed = state?.justDistributed ?? false;
+    const targetSlug = state?.slug ?? slug;
+    const dest = `/productions/${targetSlug}/reports/${id}${
+      justDistributed ? "?email=1" : ""
+    }`;
+
+    if (stagedFiles.length === 0) {
+      router.push(dest);
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+    (async () => {
+      for (const file of stagedFiles) {
+        const signed = await requestReportAttachmentUpload(
+          id,
+          file.name,
+          file.type,
+          file.size,
+        );
+        if (signed.error || !signed.path || !signed.token) {
+          setUploadError(
+            `Saved the report, but couldn't upload ${file.name}: ${
+              signed.error ?? "could not start upload"
+            }`,
+          );
+          setUploading(false);
+          router.push(dest);
+          return;
+        }
+        const uploaded = await uploadFileToSignedUrl(
+          signed.path,
+          signed.token,
+          file,
+        );
+        if (uploaded.error) {
+          setUploadError(
+            `Saved the report, but couldn't upload ${file.name}: ${uploaded.error}`,
+          );
+          setUploading(false);
+          router.push(dest);
+          return;
+        }
+        const finalized = await finalizeReportAttachmentUpload({
+          reportId: id,
+          storagePath: signed.path,
+          fileName: file.name,
+          fileSize: file.size,
+          contentType: file.type,
+        });
+        if (finalized.error) {
+          setUploadError(
+            `Saved the report, but couldn't attach ${file.name}: ${finalized.error}`,
+          );
+          setUploading(false);
+          router.push(dest);
+          return;
+        }
+      }
+      setUploading(false);
+      setStagedFiles([]);
+      router.push(dest);
+    })();
+    // We want this to run only when the action result changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
+
+  async function handleRemoveExisting(id: string) {
+    const prev = existing;
+    setExisting((cur) => cur.filter((a) => a.id !== id));
+    const result = await deleteReportAttachment(id);
+    if (result.error) {
+      setExisting(prev);
+      setUploadError(result.error);
+    }
+  }
 
   const today = new Date().toISOString().split("T")[0];
   const [reportDate, setReportDate] = useState(
@@ -219,10 +328,16 @@ export function ReportForm({
                 name="status"
                 value="distributed"
                 className="btn primary"
-                disabled={pending}
+                disabled={pending || uploading}
               >
                 <Icon name="Check" size={14} aria-hidden />
-                <span>{pending ? "Saving…" : "Save changes"}</span>
+                <span>
+                  {uploading
+                    ? "Uploading…"
+                    : pending
+                      ? "Saving…"
+                      : "Save changes"}
+                </span>
               </button>
             ) : (
               <>
@@ -231,20 +346,32 @@ export function ReportForm({
                   name="status"
                   value="draft"
                   className="btn"
-                  disabled={pending}
+                  disabled={pending || uploading}
                 >
                   <Icon name="Check" size={14} aria-hidden />
-                  <span>Save draft</span>
+                  <span>
+                    {uploading
+                      ? "Uploading…"
+                      : pending
+                        ? "Saving…"
+                        : "Save draft"}
+                  </span>
                 </button>
                 <button
                   type="submit"
                   name="status"
                   value="distributed"
                   className="btn primary"
-                  disabled={pending}
+                  disabled={pending || uploading}
                 >
                   <Icon name="Send" size={14} aria-hidden />
-                  <span>Distribute</span>
+                  <span>
+                    {uploading
+                      ? "Uploading…"
+                      : pending
+                        ? "Distributing…"
+                        : "Distribute"}
+                  </span>
                 </button>
               </>
             )}
@@ -492,6 +619,33 @@ export function ReportForm({
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="card card-pad">
+        <div className="h-eyebrow" style={{ marginBottom: 10 }}>
+          Attachments
+        </div>
+        <AttachmentStaging
+          staged={stagedFiles}
+          onStagedChange={setStagedFiles}
+          existing={existing}
+          onRemoveExisting={handleRemoveExisting}
+          disabled={pending || uploading}
+        />
+        {uploadError && (
+          <div
+            style={{
+              marginTop: 10,
+              fontSize: 13,
+              color: "var(--accent-ink)",
+              background: "var(--accent-soft)",
+              borderRadius: 6,
+              padding: "8px 12px",
+            }}
+          >
+            {uploadError}
+          </div>
+        )}
       </div>
 
       {editingDeptDef && (

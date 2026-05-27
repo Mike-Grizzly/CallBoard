@@ -49,9 +49,9 @@ function statTile(label: string, value: number | string, color: string): string 
 function deptBlock(label: string, value: string | null): string {
   const hasValue = !!value && !!value.trim();
   return `
-    <div style="margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;">${label}</div>
-      <div style="font-size:14px;color:${hasValue ? "#111827" : "#9ca3af"};line-height:1.5;">${
+    <div style="margin-bottom:16px;padding:10px 12px;border-left:3px solid #1e293b;background:#f8fafc;border-radius:0 6px 6px 0;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#1e293b;margin-bottom:6px;">${label}</div>
+      <div style="font-size:14px;color:${hasValue ? "#111827" : "#9ca3af"};line-height:1.55;">${
         hasValue ? value!.trim().replace(/\n/g, "<br>") : "—"
       }</div>
     </div>`;

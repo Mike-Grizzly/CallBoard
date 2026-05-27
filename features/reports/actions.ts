@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { rehearsalReports, productions } from "@/db/schema";
@@ -17,6 +16,13 @@ import { writeMentions } from "@/features/mentions/write";
 export type ReportActionResult = {
   errors?: ReportFormErrors;
   error?: string;
+  // On success, the client uses these to (1) upload staged attachments to
+  // the new/updated report and (2) navigate to the detail page. The server
+  // can't redirect on its own because that runs before the client has a
+  // chance to upload the files.
+  reportId?: string;
+  slug?: string;
+  justDistributed?: boolean;
 };
 
 export type CreateReportResult = ReportActionResult;
@@ -114,11 +120,11 @@ export async function createReport(
     });
   }
 
-  redirect(
-    `/productions/${production[0].slug}/reports/${inserted[0].id}${
-      data!.status === "distributed" ? "?email=1" : ""
-    }`,
-  );
+  return {
+    reportId: inserted[0].id,
+    slug: production[0].slug,
+    justDistributed: data!.status === "distributed",
+  };
 }
 
 export async function updateReport(
@@ -236,11 +242,11 @@ export async function updateReport(
   // report don't re-prompt.
   const justDistributed =
     nextStatus === "distributed" && previousStatus === "draft";
-  redirect(
-    `/productions/${production[0].slug}/reports/${reportId}${
-      justDistributed ? "?email=1" : ""
-    }`,
-  );
+  return {
+    reportId,
+    slug: production[0].slug,
+    justDistributed,
+  };
 }
 
 export type DeleteReportResult = { error?: string; success?: boolean };
