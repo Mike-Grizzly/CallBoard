@@ -130,9 +130,9 @@ don't waste time reporting them.
 
 ## How to give feedback
 
-**The fastest path:** in the app, tap **More → Send feedback** (mobile)
-or use the corresponding link in the rail (desktop). It opens an email
-to `feedback@proscene.app`.
+**The fastest path:** in the app, open **Settings → Send feedback**
+(reachable from the gear icon on the desktop rail, or **More →
+Settings** on mobile). It opens an email to `feedback@proscene.app`.
 
 Bug reports help most when they include:
 

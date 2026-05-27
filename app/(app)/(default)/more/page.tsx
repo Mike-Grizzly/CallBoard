@@ -21,7 +21,7 @@ const ITEMS: MoreItem[] = [
   { label: "Announcements", href: "/announcements", icon: "Megaphone", capability: "announcements:view" },
   { label: "Activity", href: "/activity", icon: "Activity", capability: "activity:view" },
   { label: "People", href: "/people", icon: "Users", capability: "settings:manage" },
-  { label: "Settings", href: "/settings", icon: "Settings", capability: "settings:manage" },
+  { label: "Settings", href: "/settings", icon: "Settings" },
 ];
 
 function initialsFor(firstName: string, lastName: string, email: string) {
@@ -66,18 +66,6 @@ export default async function MorePage() {
             </Link>
           </li>
         ))}
-        <li>
-          <a
-            href="mailto:feedback@proscene.app?subject=Proscene%20feedback"
-            className="more-item"
-          >
-            <span className="more-item-ico">
-              <Icon name="Mail" aria-hidden />
-            </span>
-            <span className="more-item-label">Send feedback</span>
-            <Icon name="ChevronRight" className="more-item-chev" aria-hidden />
-          </a>
-        </li>
       </ul>
 
       <form action={logout} className="more-logout">
