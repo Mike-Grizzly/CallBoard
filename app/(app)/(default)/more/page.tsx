@@ -21,7 +21,7 @@ const ITEMS: MoreItem[] = [
   { label: "Announcements", href: "/announcements", icon: "Megaphone", capability: "announcements:view" },
   { label: "Activity", href: "/activity", icon: "Activity", capability: "activity:view" },
   { label: "People", href: "/people", icon: "Users", capability: "settings:manage" },
-  { label: "Settings", href: "/settings", icon: "Settings", capability: "settings:manage" },
+  { label: "Settings", href: "/settings", icon: "Settings" },
 ];
 
 function initialsFor(firstName: string, lastName: string, email: string) {

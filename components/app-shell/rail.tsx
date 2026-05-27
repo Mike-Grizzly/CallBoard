@@ -125,11 +125,9 @@ export async function Rail() {
                 {user.role}
               </span>
             </div>
-            {can(role, "settings:manage") && (
-              <Link href="/settings" title="Settings" aria-label="Settings">
-                <Icon name="Settings" className="ico" aria-hidden />
-              </Link>
-            )}
+            <Link href="/settings" title="Settings" aria-label="Settings">
+              <Icon name="Settings" className="ico" aria-hidden />
+            </Link>
             <LogoutButton />
           </>
         ) : (
