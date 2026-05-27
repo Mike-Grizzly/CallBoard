@@ -135,3 +135,42 @@ export async function getReportAttachments(reportId: string) {
     .from(reportAttachments)
     .where(eq(reportAttachments.reportId, reportId));
 }
+
+export async function deleteReportAttachment(
+  attachmentId: string,
+): Promise<UploadResult> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "reports:create")) {
+    return { error: "You don't have permission to remove attachments." };
+  }
+
+  const [row] = await db
+    .select({
+      storagePath: reportAttachments.storagePath,
+      productionId: rehearsalReports.productionId,
+    })
+    .from(reportAttachments)
+    .innerJoin(
+      rehearsalReports,
+      eq(reportAttachments.reportId, rehearsalReports.id),
+    )
+    .where(eq(reportAttachments.id, attachmentId))
+    .limit(1);
+
+  if (!row) return { error: "Attachment not found." };
+  if (!(await userCanAccessProduction(user, row.productionId))) {
+    return { error: "You don't have access to this report." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  // Best-effort storage cleanup — DB delete is the source of truth.
+  await supabase.storage.from("attachments").remove([row.storagePath]);
+
+  await db
+    .delete(reportAttachments)
+    .where(eq(reportAttachments.id, attachmentId));
+
+  revalidatePath("/productions");
+  return { success: true };
+}

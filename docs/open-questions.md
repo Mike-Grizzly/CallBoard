@@ -76,6 +76,29 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 - **No duplicate detection:** Users can upload the same file multiple times. Is this acceptable or should duplicates be detected?
 - **No virus/malware scanning:** Uploaded files are served back to users via signed URLs. Should files be scanned before serving?
 - **Orphaned files:** If a database insert fails after a successful storage upload, the file remains in storage with no DB record. Should there be cleanup logic?
+- **Bidirectional link between report attachments and the Documents
+  directory (post-beta).** Two paired behaviors that promote keeping
+  every production's files in one place:
+  1. *Picking from Documents:* in the rehearsal report attachment UI,
+     let the user pick a file that already lives in the production's
+     Documents directory instead of (or in addition to) uploading a
+     new one. Avoids re-uploading the same script revision / floor
+     plan / costume sheet for every report.
+  2. *Auto-promoting report attachments into Documents:* when a user
+     uploads a file directly inside the rehearsal report, also add
+     it to the Documents directory by default — with an opt-out
+     checkbox ("don't add to Documents") for one-off files where
+     storage savings matter. Files that *do* get added need a target
+     folder (Documents has 6 categories), so the upload flow needs
+     a folder picker at attach time. Decision needed on whether the
+     report-attachment row should reference the Documents row by FK
+     (shared underlying storage object) or stay a separate row that
+     just *also* writes a Documents entry (two refs to the same
+     file). The FK approach is more efficient but harder to reason
+     about for deletion semantics.
+
+  Queued for post-beta because both flows touch the report-builder,
+  Documents picker, and Storage layout — bigger than a beta fix.
 
 _Resolved in P0 (2026-05-21): signed-URL actions now verify production access; uploads enforce a MIME allowlist; storage-path filenames are sanitized. See `decision-log.md`._
 
@@ -119,6 +142,27 @@ _Resolved in P0 (2026-05-21): signed-URL actions now verify production access; u
 - **Real-time live status:** The dashboard header badge reflects state at page load, not in real time. Should the header auto-update (e.g. via Supabase Realtime or a client-side interval revalidation) so it flips to "Live" or advances to the next call without a manual refresh?
 - **Recurring calls:** There is no support for repeating calls (e.g. "Tuesday/Thursday 7–10pm for 8 weeks"). Should a recurrence system be built, or is bulk-creation sufficient?
 - **Cancel vs. delete:** Currently calls can only be deleted. Should there be a "cancel" status that keeps the call visible on the calendar (greyed out) to preserve the history for the production record?
+- **Rehearsal report "Next Rehearsal" ↔ calendar bidirectional link
+  (post-beta).** Right now the Next Rehearsal block on a rehearsal
+  report (date / time / location / notes) is plain text fields and
+  doesn't talk to the production calendar at all — SMs end up
+  double-entering the same information. Two paired behaviors:
+  1. *Pull from calendar:* button in the Next Rehearsal block that
+     looks up the next scheduled call on this production's calendar
+     after `report.reportDate` and pre-fills date / time / location.
+     Edit-friendly afterward in case the SM wants to override.
+  2. *Push to calendar:* if the SM types Next Rehearsal info directly
+     into the report and there is no existing calendar entry for
+     that date/time, create one automatically on save so the calendar
+     stays the source of truth. If a call already exists at that
+     date+time, don't duplicate — link instead.
+
+  Edge cases to think through: what counts as a "match" when pushing
+  (same date + start time, or any call on that date?); whether
+  cast/crew should be able to push-create calendar entries from a
+  report or only `reports:create` holders; and whether editing the
+  Next Rehearsal fields on an already-distributed report should
+  edit the linked calendar entry. Queued for post-beta.
 
 ## People directory questions (Step 16)
 

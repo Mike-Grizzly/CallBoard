@@ -5,6 +5,7 @@ import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembers } from "@/features/members/queries";
 import { getReportById } from "@/features/reports/queries";
+import { getReportAttachments } from "@/features/reports/attachments";
 import { ReportForm } from "../../_components/report-form";
 
 export default async function EditReportPage({
@@ -26,9 +27,10 @@ export default async function EditReportPage({
     notFound();
   }
 
-  const [report, members] = await Promise.all([
+  const [report, members, attachmentRows] = await Promise.all([
     getReportById(reportId),
     getProductionMembers(production.id),
+    getReportAttachments(reportId),
   ]);
 
   if (!report || report.productionId !== production.id) {
@@ -43,6 +45,13 @@ export default async function EditReportPage({
     role: m.role,
   }));
 
+  const existingAttachments = attachmentRows.map((a) => ({
+    id: a.id,
+    fileName: a.fileName,
+    fileSize: a.fileSize,
+    contentType: a.contentType,
+  }));
+
   return (
     <ReportForm
       mode="edit"
@@ -50,6 +59,7 @@ export default async function EditReportPage({
       productionTitle={production.title}
       slug={slug}
       initial={report}
+      existingAttachments={existingAttachments}
       members={mentionMembers}
     />
   );

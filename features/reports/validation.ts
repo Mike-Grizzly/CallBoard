@@ -146,10 +146,6 @@ export function validateReportForm(formData: FormData): {
     errors.report_date = "Report date is required.";
   }
 
-  if (status === "distributed" && !generalNotes) {
-    errors.general_notes = "General notes are required to distribute.";
-  }
-
   if (Object.keys(errors).length > 0) {
     return { errors };
   }
