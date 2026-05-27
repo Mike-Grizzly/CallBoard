@@ -4669,6 +4669,30 @@ select.pp-field {
 }
 
 @media (max-width: 720px) {
+  /* Tighter side padding so content has room to breathe on small phones
+     (iPhone 17 standard is ~393pt — 28px × 2 of padding leaves only ~337
+     usable px). Override every density so the value wins regardless. */
+  body,
+  body[data-density="compact"],
+  body[data-density="comfy"] {
+    --pad-x: 16px;
+  }
+
+  /* Safety net against page-level horizontal scroll. Any overflowing
+     child (a long title, a wide grid row, a measured component) would
+     otherwise push the body sideways and create that "I can scroll
+     horizontally" feel. `overflow-x: clip` doesn't create a scroll
+     container (so position:sticky / fixed inside still works correctly)
+     and is supported on iOS 16+. */
+  html,
+  body {
+    overflow-x: clip;
+  }
+  .main {
+    overflow-x: clip;
+    max-width: 100%;
+  }
+
   .app {
     grid-template-columns: 1fr;
   }
@@ -4683,6 +4707,36 @@ select.pp-field {
      home-indicator safe area. */
   .main {
     padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Production header — let the title/actions row wrap on narrow phones
+     and shrink the display-font title so a long show name doesn't push
+     the page wide. */
+  .topbar {
+    padding-top: 12px;
+  }
+  .topbar-row {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: 12px;
+    align-items: flex-start;
+  }
+  .show-title {
+    font-size: 22px;
+    line-height: 1.15;
+    word-break: break-word;
+  }
+  .show-sub {
+    font-size: 12px;
+    gap: 8px;
+  }
+  .topbar-actions {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .crumbs {
+    font-size: 11.5px;
+    margin-bottom: 8px;
   }
 
   /* Bottom tab bar — fixed across the viewport bottom. */
