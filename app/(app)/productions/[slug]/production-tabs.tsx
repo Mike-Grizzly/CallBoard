@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import {
   Bell,
   FileText,
@@ -41,6 +42,16 @@ export type ProductionTab = {
 export function ProductionTabsNav({ tabs }: { tabs: ProductionTab[] }) {
   const pathname = usePathname();
   const overviewHref = tabs[0]?.href;
+  const activeTabRef = useRef<HTMLAnchorElement>(null);
+
+  // On phones the tab strip is a horizontal scroller — keep the active
+  // tab in view when the route changes so it isn't stranded off-screen.
+  useEffect(() => {
+    activeTabRef.current?.scrollIntoView({
+      block: "nearest",
+      inline: "center",
+    });
+  }, [pathname]);
 
   return (
     <nav className="tabs" aria-label="Production sections">
@@ -53,6 +64,7 @@ export function ProductionTabsNav({ tabs }: { tabs: ProductionTab[] }) {
         return (
           <Link
             key={tab.href}
+            ref={active ? activeTabRef : undefined}
             href={tab.href}
             className="tab"
             data-active={active ? "1" : "0"}

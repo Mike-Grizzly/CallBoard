@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { useIsPhone } from "@/lib/use-is-phone";
 import {
   type CalendarView,
   type CalEvent,
@@ -10,6 +11,7 @@ import {
   parseDateParam,
   parseView,
   startOfWeek,
+  ymd,
 } from "./utils";
 import { CalSidebar } from "./calendar-sidebar";
 import { WeekView } from "./week-view";
@@ -17,6 +19,7 @@ import { MonthView } from "./month-view";
 import { DayView } from "./day-view";
 import { AgendaView } from "./agenda-view";
 import { EventDrawer } from "./event-drawer";
+import { DaySheet } from "./day-sheet";
 
 export type Production = {
   id: string;
@@ -52,11 +55,21 @@ export function CalendarClient({
     () => new Set(productions.map((p) => p.id)),
   );
   const [selected, setSelected] = useState<CalEvent | null>(null);
+  // Phone widths use a bottom day-detail sheet for month-view taps
+  // instead of jumping the whole view to "day".
+  const isPhone = useIsPhone();
+  const [openDay, setOpenDay] = useState<Date | null>(null);
 
   const visibleEvents = useMemo(
     () => events.filter((e) => prodFilter.has(e.productionId)),
     [events, prodFilter],
   );
+
+  const dayEvents = useMemo(() => {
+    if (!openDay) return [] as CalEvent[];
+    const key = ymd(openDay);
+    return visibleEvents.filter((e) => e.date === key);
+  }, [openDay, visibleEvents]);
 
   const goPrev = () => {
     if (view === "month") setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1));
@@ -92,13 +105,17 @@ export function CalendarClient({
   })();
 
   const jumpDay = (d: Date) => {
+    if (isPhone) {
+      setOpenDay(d);
+      return;
+    }
     setCursor(d);
     setView("day");
   };
 
   return (
-    <div className="page cal-page">
-      <div className="cal anim-in">
+    <div className="cal-page anim-in">
+      <div className="cal">
         <CalSidebar
           cursor={cursor}
           setCursor={setCursor}
@@ -192,6 +209,18 @@ export function CalendarClient({
             event={selected}
             canEdit={canEdit}
             onClose={() => setSelected(null)}
+          />
+        )}
+
+        {openDay && (
+          <DaySheet
+            day={openDay}
+            events={dayEvents}
+            onClose={() => setOpenDay(null)}
+            onSelectEvent={(e) => {
+              setOpenDay(null);
+              setSelected(e);
+            }}
           />
         )}
       </div>

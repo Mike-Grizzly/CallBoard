@@ -9,10 +9,15 @@ import { NotesPanel } from "./notes-panel";
 
 export default async function NotesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ id?: string }>;
 }) {
-  const { slug } = await params;
+  const [{ slug }, { id: initialSelectedId }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const user = await requireCurrentUser();
   const org = await getOrCreateDefaultOrganization();
   const production = await getProductionBySlug(org.id, slug);
@@ -55,6 +60,7 @@ export default async function NotesPage({
       canCreate={canCreate}
       canManageTags={canManageTags}
       organizationId={org.id}
+      initialSelectedId={initialSelectedId}
     />
   );
 }

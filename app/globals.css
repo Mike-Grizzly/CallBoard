@@ -598,16 +598,22 @@ select {
   padding: 1px 6px;
 }
 
-/* Page wrapper inside the main column */
+/* Page wrapper inside the main column. Flex column so a calendar (or
+   any future full-height child) can `flex: 1` to fill the available
+   height when nested under this wrapper. Block-flow children still
+   stack top-to-bottom inside it. */
 .page {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding: 24px var(--pad-x);
+  display: flex;
+  flex-direction: column;
 }
 .page-narrow {
   max-width: 1180px;
   margin: 0 auto;
+  width: 100%;
 }
 
 /* ─── Card / surface helpers ─────────────────────────────────────────── */
@@ -1125,8 +1131,10 @@ textarea.field {
   font-size: 12px;
 }
 
-/* responsive: collapse rail under 1100 */
-@media (max-width: 1100px) {
+/* responsive: collapse rail to an icon strip on tablet widths.
+   Phones (<=720px) get the slide-in drawer instead — see the mobile
+   navigation block at the end of this file. */
+@media (min-width: 721px) and (max-width: 1100px) {
   .app {
     grid-template-columns: 64px 1fr;
   }
@@ -1960,11 +1968,19 @@ div.mention:hover {
 
 /* ─── Calendar page — full-height treatment ──────────────────────────── */
 .cal-page {
-  padding: 18px var(--pad-x) 18px !important;
-  overflow: hidden !important;
+  flex: 1;
+  min-height: 0;
+  padding: 18px var(--pad-x);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+}
+/* When a calendar is nested directly inside a `.page` wrapper (only
+   the production layout does this today), strip the outer padding /
+   scrolling so the calendar's own padding doesn't double up. */
+.page:has(> .cal-page) {
+  padding: 0;
+  overflow: hidden;
 }
 
 .cal {
@@ -2166,6 +2182,7 @@ div.mention:hover {
 .cal-canvas {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: var(--radius-l);
@@ -2184,7 +2201,7 @@ div.mention:hover {
 }
 .week-head {
   display: grid;
-  grid-template-columns: 60px repeat(7, 1fr);
+  grid-template-columns: 60px repeat(7, minmax(0, 1fr));
   border-bottom: 1px solid var(--border);
   background: var(--bg-elev);
 }
@@ -2224,7 +2241,7 @@ div.mention:hover {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 60px repeat(7, 1fr);
+  grid-template-columns: 60px repeat(7, minmax(0, 1fr));
   overflow-y: auto;
   position: relative;
 }
@@ -2523,7 +2540,7 @@ div.mention:hover {
 }
 .day-track {
   display: grid;
-  grid-template-columns: 60px 1fr;
+  grid-template-columns: 60px minmax(0, 1fr);
   overflow-y: auto;
   position: relative;
   border-right: 1px solid var(--border);
@@ -2746,6 +2763,165 @@ div.mention:hover {
     transform: translateX(0);
     opacity: 1;
   }
+}
+@keyframes cal-sheet-in {
+  from {
+    transform: translateY(20%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Day-detail bottom sheet (phone-only). CalendarClient only opens this
+   when `useIsPhone()` is true, so no @media gate needed. */
+.cal-day-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-elev);
+  border-top: 1px solid var(--border);
+  border-radius: 22px 22px 0 0;
+  z-index: 100;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.18);
+  animation: cal-sheet-in 0.22s ease-out both;
+  padding: 6px 0 calc(20px + env(safe-area-inset-bottom, 0px));
+}
+.cal-day-sheet-grip {
+  width: 36px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--border-strong);
+  margin: 4px auto 6px;
+}
+.cal-day-sheet-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.cal-day-sheet-h h2 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.cal-day-sheet-empty {
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 13.5px;
+}
+.cal-day-sheet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px 0;
+  overflow-y: auto;
+}
+.cal-day-sheet-event {
+  display: grid;
+  grid-template-columns: 4px 1fr;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-sunken);
+  border-radius: 10px;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  font: inherit;
+  color: inherit;
+}
+.cal-day-event-spine {
+  border-radius: 2px;
+  align-self: stretch;
+}
+.cal-day-event-body {
+  min-width: 0;
+}
+.cal-day-event-time {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.cal-day-event-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-day-event-loc {
+  font-size: 11.5px;
+  color: var(--ink-4);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Month-grid cell as a single tap-target button (phone only). The
+   button shares `.month-cell` for grid layout but adds button reset
+   + reformats the cell into "date in top-right, pip dots below". */
+button.month-cell {
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+.month-cell-phone {
+  position: relative;
+  padding: 4px 5px;
+  gap: 4px;
+}
+.month-cell-num-m {
+  align-self: flex-end;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-2);
+  padding: 1px 5px;
+  min-width: 18px;
+  text-align: center;
+  border-radius: 4px;
+}
+.month-cell-phone[data-today="1"] .month-cell-num-m {
+  background: var(--accent);
+  color: white;
+}
+.month-cell-phone[data-mute="1"] .month-cell-num-m {
+  color: var(--ink-4);
+}
+.month-pips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: auto;
+  align-items: center;
+}
+.month-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.month-pip-more {
+  font-size: 9.5px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  line-height: 1;
 }
 .cal-drawer-h {
   display: flex;
@@ -4274,5 +4450,1284 @@ select.pp-field {
   .pp-form-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ─── Mobile navigation (bottom tab bar) ──────────────────────────────────
+ * Primary nav on phones is a 5-tab bottom bar (Today / Calendar / Reports
+ * / Notes / More), matching the mobile demo. The desktop rail is hidden
+ * at this width — the rail stays in flow on tablet/desktop only. */
+.mob-tabbar {
+  display: none;
+}
+
+/* Mobile-only Today/Dashboard hero — hidden on desktop. Phone widths
+   reveal it (and hide the desktop hero + upcoming-rehearsals grid) in
+   the @media block below. */
+.mt-today {
+  display: none;
+}
+
+/* Mobile-only reports list + detail — hidden on desktop. Phone widths
+   reveal them and hide the desktop table / multi-card layout. */
+.reports-mobile {
+  display: none;
+}
+.report-detail-mobile {
+  display: none;
+}
+
+/* Floating bookmarks button — phone-only quick-access to the script's
+   bookmarks panel. The @media block below promotes it to `display:
+   grid`. */
+.sv-mobile-bookmarks-btn {
+  display: none;
+}
+
+/* Workspace notes feed — `app/(app)/(default)/notes` */
+.nf-page {
+  display: flex;
+  flex-direction: column;
+}
+.nf-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.nf-filters::-webkit-scrollbar {
+  display: none;
+}
+.nf-filter {
+  appearance: none;
+  border: 1px solid transparent;
+  background: var(--bg-sunken);
+  color: var(--ink-2);
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font: 500 12px var(--font-ui);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.nf-filter[data-active="1"] {
+  background: var(--ink);
+  color: var(--bg);
+}
+.nf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nf-card {
+  display: grid;
+  grid-template-columns: 4px 28px 1fr;
+  gap: 10px;
+  padding: 12px 14px 12px 0;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(40, 30, 15, 0.04);
+  text-decoration: none;
+  color: var(--ink);
+  overflow: hidden;
+}
+.nf-card[data-done="1"] {
+  opacity: 0.6;
+}
+.nf-rail {
+  align-self: stretch;
+}
+.nf-icon {
+  padding-top: 10px;
+  padding-left: 4px;
+  display: flex;
+  justify-content: center;
+  color: var(--ink-4);
+}
+.nf-card[data-done="1"] .nf-icon {
+  color: var(--c-sage);
+}
+.nf-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.nf-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-4);
+  min-width: 0;
+}
+.nf-prod {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.nf-prod-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.nf-pin {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.nf-time {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-4);
+  flex-shrink: 0;
+}
+.nf-title {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.nf-card[data-done="1"] .nf-title {
+  text-decoration: line-through;
+  color: var(--ink-3);
+}
+.nf-excerpt {
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.nf-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.nf-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 500;
+  background: var(--bg-sunken);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.nf-due {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--ink-4);
+}
+.nf-empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--ink-3);
+}
+.nf-empty-h {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.nf-empty-sub {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+/* Notes panel — two columns (list + editor) on desktop. On phones the
+   grid collapses to a single column and `data-editor-open` toggles
+   which column is visible: open = editor only, closed = list only.
+   The `.mn-back-btn` shows up only at phone widths inside the editor. */
+.notes-panel {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.mn-back-btn {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+
+  /* Hide the desktop rail entirely at phone widths — the bottom tab bar
+     is the nav surface here. */
+  .rail {
+    display: none;
+  }
+
+  /* Leave room below page content for the fixed bottom tab bar plus iOS
+     home-indicator safe area. */
+  .main {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Bottom tab bar — fixed across the viewport bottom. */
+  .mob-tabbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    background: var(--bg-elev);
+    border-top: 1px solid var(--border);
+    padding-top: 6px;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -2px 12px -4px rgba(40, 30, 15, 0.08);
+  }
+  .mob-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 0 6px;
+    color: var(--ink-4);
+    text-decoration: none;
+    position: relative;
+    transition: transform 0.08s;
+  }
+  .mob-tab[data-active="1"] {
+    color: var(--accent);
+  }
+  .mob-tab:active {
+    transform: scale(0.96);
+  }
+  .mob-tab .ico {
+    width: 22px;
+    height: 22px;
+    stroke-width: 1.6;
+  }
+  .mob-tab[data-active="1"] .ico {
+    stroke-width: 2;
+  }
+  .mob-tab .lbl {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+
+  /* Mobile Today/Dashboard hero — replaces the desktop `.home-hero` and
+     the "Upcoming rehearsals & calls" grid at phone widths. The desktop
+     versions are hidden by the `.dashboard-desktop-only` and the
+     `.home-hero` rules below. */
+  .page-narrow.home > .home-hero,
+  .page-narrow.home > .dashboard-desktop-only {
+    display: none;
+  }
+  .mt-today {
+    display: block;
+    padding: 4px 14px 4px;
+  }
+  .mt-greeting {
+    padding: 4px 4px 14px;
+  }
+  .mt-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin-bottom: 4px;
+  }
+  .mt-greeting-title {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.018em;
+    line-height: 1.1;
+    margin: 0;
+  }
+  .mt-greeting-title em {
+    font-style: italic;
+    color: var(--accent);
+  }
+  .mt-greeting-sub {
+    font-size: 13px;
+    color: var(--ink-3);
+    margin: 6px 0 0;
+    line-height: 1.5;
+  }
+  .mt-greeting-sub b {
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .mt-call-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 14px;
+    box-shadow:
+      0 4px 20px -6px rgba(40, 20, 10, 0.12),
+      0 1px 2px rgba(40, 20, 10, 0.04);
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .mt-call-body {
+    padding: 14px 16px 16px;
+  }
+  .mt-call-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+  .mt-call-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .mt-call-time {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .mt-call-time-big {
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .mt-call-time-end {
+    font-size: 13px;
+    color: var(--ink-3);
+  }
+  .mt-call-focus {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink-2);
+    margin-top: 8px;
+  }
+  .mt-call-pills {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .mt-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    height: 22px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 500;
+    background: var(--bg-sunken);
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .mt-pill[data-c="accent"] {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+  .mt-call-foot {
+    border-top: 1px solid var(--border);
+    background: var(--bg-sunken);
+  }
+  .mt-call-foot-btn {
+    display: flex;
+    width: 100%;
+    padding: 12px 0;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    text-decoration: none;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .mt-call-foot-btn:active {
+    background: var(--bg-muted);
+  }
+  .mt-call-empty {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--ink-3);
+    font-size: 13px;
+  }
+  .mt-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .mt-stat {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 2px rgba(40, 30, 15, 0.04);
+    min-width: 0;
+  }
+  .mt-stat-h {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin-bottom: 5px;
+  }
+  .mt-stat-big {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 26px;
+    letter-spacing: -0.015em;
+    line-height: 1;
+  }
+  .mt-stat-sub {
+    font-size: 11.5px;
+    color: var(--ink-4);
+    margin-top: 3px;
+  }
+
+  /* Calendar week view — compact the day-of-week header so the date
+     number and weekday don't collide in narrow phone columns. Stack
+     them vertically with smaller type and shrink the time gutter so
+     the seven day columns have more room. */
+  .week-head,
+  .week-body {
+    grid-template-columns: 38px repeat(7, minmax(0, 1fr));
+  }
+  .week-gutter {
+    width: 38px;
+  }
+  .week-day-h {
+    padding: 6px 2px 5px;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    text-align: center;
+    min-width: 0;
+  }
+  .week-day-wd {
+    font-size: 9px;
+    line-height: 1;
+  }
+  .week-day-num {
+    font-size: 16px;
+    line-height: 1.1;
+  }
+  .hour-label {
+    font-size: 9.5px;
+    padding-right: 4px;
+  }
+  .cal-page {
+    padding: 12px 14px;
+  }
+
+  /* Reports — show the mobile card list, hide the desktop table. */
+  .reports-mobile {
+    display: block;
+  }
+  .reports-desktop {
+    display: none;
+  }
+  .mr-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .mr-card {
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(40, 30, 15, 0.04);
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .mr-date {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-right: 12px;
+    border-right: 1px solid var(--border);
+    min-width: 0;
+  }
+  .mr-date-wd {
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+  }
+  .mr-date-num {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    margin-top: 2px;
+  }
+  .mr-body {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .mr-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .mr-num {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--ink-3);
+  }
+  .mr-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 7px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 500;
+    background: var(--bg-sunken);
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .mr-pill[data-c="sage"] {
+    background: var(--c-sage-soft);
+    color: color-mix(in oklch, var(--c-sage) 55%, var(--ink));
+  }
+  .mr-pill[data-c="amber"] {
+    background: var(--c-amber-soft);
+    color: color-mix(in oklch, var(--c-amber) 45%, var(--ink));
+  }
+  .mr-pill[data-c="dusk"] {
+    background: var(--c-dusk-soft);
+    color: color-mix(in oklch, var(--c-dusk) 55%, var(--ink));
+  }
+  .mr-pill[data-c="clay"] {
+    background: var(--c-clay-soft);
+    color: color-mix(in oklch, var(--c-clay) 50%, var(--ink));
+  }
+  .mr-pill[data-c="sand"] {
+    background: var(--c-sand-soft);
+    color: color-mix(in oklch, var(--c-sand) 35%, var(--ink));
+  }
+  .mr-pill[data-c="plum"] {
+    background: var(--c-plum-soft);
+    color: color-mix(in oklch, var(--c-plum) 50%, var(--ink));
+  }
+  .mr-pill[data-c="accent"] {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+  .mr-summary {
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.35;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .mr-summary-empty {
+    color: var(--ink-4);
+    font-style: italic;
+  }
+  .mr-foot {
+    font-size: 11.5px;
+    color: var(--ink-4);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mr-chev {
+    width: 14px;
+    height: 14px;
+    color: var(--ink-4);
+  }
+
+  /* Report detail — show mobile stack, hide desktop multi-card. */
+  .report-detail-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .report-detail-desktop {
+    display: none !important;
+  }
+  .rd-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .rd-head-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .rd-head-num {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--ink-3);
+  }
+  .rd-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .rd-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -0.018em;
+    line-height: 1.15;
+    margin: 0;
+  }
+  .rd-sub {
+    font-size: 12.5px;
+    color: var(--ink-3);
+    margin-top: -8px;
+  }
+  .rd-hero {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 2px rgba(40, 30, 15, 0.04);
+  }
+  .rd-hero-times {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .rd-hero-time {
+    text-align: left;
+  }
+  .rd-hero-h {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin-bottom: 3px;
+  }
+  .rd-hero-val {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .rd-hero-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding-top: 12px;
+  }
+  .rd-stat {
+    text-align: center;
+    padding: 10px 4px;
+    background: var(--bg-sunken);
+    border-radius: 8px;
+  }
+  .rd-stat[data-c="sage"] {
+    background: var(--c-sage-soft);
+  }
+  .rd-stat[data-c="amber"] {
+    background: var(--c-amber-soft);
+  }
+  .rd-stat-n {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .rd-stat-l {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin-top: 4px;
+  }
+  .rd-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--accent);
+    color: white;
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 500;
+    border: 1px solid var(--accent);
+  }
+  .rd-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .rd-section-h {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin: 0;
+    padding: 0 2px;
+  }
+  .rd-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13.5px;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+  .rd-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .rd-scene {
+    padding: 10px 12px;
+    background: var(--bg-sunken);
+    border-radius: 8px;
+  }
+  .rd-scene-label {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+  .rd-scene-meta {
+    display: flex;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--ink-3);
+  }
+  .rd-sep {
+    color: var(--ink-4);
+  }
+  .rd-mono {
+    font-family: var(--font-mono);
+  }
+  .rd-next-line {
+    font-size: 13.5px;
+    color: var(--ink);
+  }
+  .rd-next-notes {
+    font-size: 12.5px;
+    color: var(--ink-3);
+    margin-top: 6px;
+    white-space: pre-wrap;
+  }
+  .rd-dept {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .rd-dept-h {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .rd-dept-ico {
+    width: 24px;
+    height: 24px;
+  }
+  .rd-dept-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .rd-dept-empty {
+    font-size: 12.5px;
+    color: var(--ink-4);
+    font-style: italic;
+  }
+  .rd-dept-body {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .rd-change {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg-sunken);
+    border-radius: 8px;
+  }
+  .rd-change-what {
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .rd-line {
+    padding: 10px 12px;
+    background: var(--bg-sunken);
+    border-radius: 8px;
+  }
+  .rd-line-who {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .rd-line-cue {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--ink-3);
+    margin-top: 2px;
+  }
+  .rd-line-issue {
+    font-size: 13px;
+    color: var(--ink-2);
+    margin-top: 4px;
+  }
+  .rd-injury {
+    padding: 12px 14px;
+    background: var(--c-amber-soft);
+    border-radius: 8px;
+  }
+  .rd-injury-h {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .rd-injury-who {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .rd-injury-time {
+    font-size: 11.5px;
+    color: var(--ink-3);
+    margin-left: auto;
+  }
+  .rd-injury-text {
+    font-size: 13px;
+    color: var(--ink-2);
+    margin-top: 6px;
+    padding-left: 22px;
+    white-space: pre-wrap;
+  }
+  .rd-attach {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg-sunken);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--ink);
+    font-size: 13px;
+  }
+  .rd-attach-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+  .rd-attach-size {
+    font-size: 11.5px;
+    color: var(--ink-4);
+  }
+  .rd-empty {
+    font-size: 13px;
+    color: var(--ink-3);
+  }
+
+  /* Documents — the 220px folder rail + 1fr docs grid doesn't fit on
+     a phone. Collapse to a single column, turn the folder rail into a
+     horizontally-scrollable pill strip at the top, and let the main
+     docs list / grid fill the screen width. */
+  .docs-shell {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .docs-folders > div:last-child {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    overflow-x: auto !important;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .docs-folders > div:last-child::-webkit-scrollbar {
+    display: none;
+  }
+  .docs-folders > div:last-child > * {
+    flex-shrink: 0;
+  }
+
+  /* People — the directory uses a real <table> with many columns. On a
+     phone, allow the wrapper to scroll horizontally so the columns stay
+     intact rather than collapsing into an illegible squish. */
+  .pp-table-wrap {
+    overflow-x: auto !important;
+  }
+  .pp-table {
+    min-width: 600px;
+  }
+
+  /* Blocking — collapse the 3-column editor layout to a single column
+     (portrait phones). The PDF ground plan + tokens stay visible
+     (positions are stored as percentages so they scale with the canvas
+     width). Scenes/Beats and Comments/Notes panels stack below the
+     canvas. The fullscreen edge case still uses the desktop grid;
+     mobile users won't hit it. */
+  .bk-shell {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+  .bk-center {
+    height: auto !important;
+    min-height: 56vh;
+    padding: 8px 12px !important;
+    border-bottom: 1px solid var(--border);
+  }
+  .bk-side-left {
+    height: auto !important;
+    max-height: 50vh;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--border);
+    overflow-y: auto !important;
+  }
+  .bk-side-right {
+    height: auto !important;
+    max-height: 50vh;
+    padding: 14px 12px !important;
+    overflow-y: auto !important;
+  }
+
+  /* Script viewer — collapse to a single column on phone. The tool
+     sidebar is hidden (view-only mode already disables editing), the
+     right panel (bookmarks + annotations) stacks under the canvas, and
+     inline-style flex direction is forced to column via !important
+     since the original styles are inline. The PDF canvas itself is
+     CSS-scaled to the viewport width (it renders at high DPI then the
+     browser scales it down — the SVG annotation overlay already uses
+     `viewBox` so it scales correctly). A floating bookmarks button
+     gives quick access without scrolling past the whole PDF. */
+  .script-viewer-shell {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .sv-tools {
+    display: none !important;
+  }
+  .sv-canvas {
+    width: 100%;
+    min-width: 0;
+  }
+  .sv-side {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+  .sv-workspace {
+    padding: 0 !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+  }
+  .sv-page {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+  .sv-page canvas {
+    width: 100% !important;
+    height: auto !important;
+    display: block;
+  }
+
+  .sv-mobile-bookmarks-btn {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    right: 14px;
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--bg);
+    border: 0;
+    box-shadow: 0 8px 24px -4px rgba(40, 20, 10, 0.28);
+    z-index: 45;
+    cursor: pointer;
+  }
+  .sv-mobile-bookmarks-btn:active {
+    transform: scale(0.96);
+  }
+  .sv-sheet-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px 0;
+  }
+
+  /* Notes — collapse to a single column and swap list/editor based on
+     whether a note is selected. Tap a list row → editor takes over;
+     tap the back button → list returns. */
+  .notes-panel {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .notes-panel[data-editor-open="1"] .notes-list-col {
+    display: none;
+  }
+  .notes-panel[data-editor-open="0"] .notes-editor-col {
+    display: none;
+  }
+  .notes-editor-col {
+    min-height: 0;
+  }
+  .mn-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    margin: 10px 12px 0;
+    padding: 6px 10px 6px 6px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .mn-back-btn:active {
+    background: var(--bg-muted);
+  }
+
+  /* Calendar event drawer slides up from the bottom as a sheet (matches
+     the demo's pattern) instead of as a side drawer. */
+  .cal-drawer {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-width: none;
+    max-height: 82vh;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 22px 22px 0 0;
+    padding: 14px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+    animation: cal-sheet-in 0.22s ease-out both;
+  }
+
+  /* Toolbar compaction — smaller period label, tighter view-switcher. */
+  .cal-toolbar {
+    gap: 8px;
+  }
+  .cal-period {
+    font-size: 16px;
+    margin: 0 4px;
+  }
+  .cal-toolbar .seg button,
+  .cal-toolbar .seg a {
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  .cal-page {
+    padding: 8px 14px 12px;
+  }
+
+  /* Production tab strip becomes a contained horizontal scroller, so a
+     long tab list scrolls within itself instead of widening the page.
+     The active tab is scrolled into view by production-tabs.tsx. The
+     negative margins let it scroll edge-to-edge while the padding keeps
+     the first tab aligned with the header content above it. */
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    margin-left: calc(-1 * var(--pad-x));
+    margin-right: calc(-1 * var(--pad-x));
+    padding-left: var(--pad-x);
+    padding-right: var(--pad-x);
+    padding-bottom: 1px;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .tab {
+    flex-shrink: 0;
+    white-space: nowrap;
+    scroll-snap-align: start;
+  }
+}
+
+/* ─── Phone landscape (short viewport) — give the blocking PDF more
+       room by hiding the scenes/beats and comments side panels. Most
+       phones in landscape are 700-960px wide (so the standard ≤720px
+       mobile block doesn't apply) and ~380-430px tall. We key off
+       `max-height` to catch landscape phones without disturbing tablets
+       or short-laptop windows. ───────────────────────────────────────── */
+@media (orientation: landscape) and (max-height: 500px) {
+  .bk-shell {
+    grid-template-columns: 1fr !important;
+  }
+  .bk-side-left,
+  .bk-side-right {
+    display: none !important;
+  }
+  .bk-center {
+    padding: 6px 12px !important;
+  }
+}
+
+/* ─── /more page (catch-all destinations behind the "More" tab) ────────── */
+.more-page {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 24px var(--pad-x) 32px;
+}
+.more-h {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.018em;
+  margin: 0 0 18px;
+}
+.more-user-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-1);
+  margin-bottom: 18px;
+}
+.more-user-card .avatar {
+  width: 44px;
+  height: 44px;
+  font-size: 14px;
+}
+.more-user-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.more-user-meta b {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.more-user-meta span {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.more-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  overflow: hidden;
+  box-shadow: var(--shadow-1);
+}
+.more-list li + li {
+  border-top: 1px solid var(--border);
+}
+.more-item {
+  display: grid;
+  grid-template-columns: 32px 1fr auto 14px;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  color: var(--ink);
+  text-decoration: none;
+  transition: background 0.12s;
+}
+.more-item:hover {
+  background: var(--bg-muted);
+}
+.more-item-ico {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-s);
+  background: var(--bg-sunken);
+  color: var(--ink-2);
+}
+.more-item-ico svg {
+  width: 16px;
+  height: 16px;
+}
+.more-item-label {
+  font-size: 14px;
+}
+.more-item-trail {
+  font-size: 11.5px;
+  color: var(--ink-4);
+}
+.more-item-chev {
+  width: 14px;
+  height: 14px;
+  color: var(--ink-4);
+}
+.more-logout {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
 }
 

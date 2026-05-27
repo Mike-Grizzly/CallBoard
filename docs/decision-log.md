@@ -578,3 +578,153 @@ Underline, TextAlign, TextStyle/Color, Highlight, Mention), and preserves
 - `sanitizeHtml(html)` keeps the same signature — `RichTextDisplay` and the
   notes panel are unchanged.
 - Supersedes the D1 decision (which chose `isomorphic-dompurify`).
+
+---
+
+## 2026-05-22 — P2 mobile navigation: slide-in drawer (not a bottom tab bar)
+
+**Decision:** At phone widths (≤720px) the rail becomes a left slide-in
+drawer opened from a hamburger button in a sticky top bar, rather than a
+bottom tab bar. Tablet widths (721–1100px) keep the existing 64px icon
+rail; the icon-collapse media query was rescoped from `max-width: 1100px`
+to `min-width: 721px and max-width: 1100px`.
+
+**Reason:** CallBoard's navigation has two variable-length sections —
+Workspace links (capability-gated) and the user's full Productions list.
+A bottom tab bar fits only 4–5 fixed destinations and would have needed a
+separate "More" sheet for everything else, splitting navigation across two
+patterns. A drawer presents the entire existing rail unchanged, so there is
+one nav surface and no per-item triage. It is also the smaller change: the
+rail markup and capability filtering are reused as-is.
+
+**Impact:**
+- New client component `components/app-shell/app-frame.tsx` wraps the
+  `(app)` layout and owns the drawer open/close state. The `Rail` server
+  component is passed to it as a prop, so data fetching stays on the server.
+- Drawer "open" is derived state (`openedOnPath === pathname`) — navigating
+  closes it without a state-syncing effect, which also satisfies the
+  `react-hooks/set-state-in-effect` lint rule.
+- The closed drawer uses `visibility: hidden` (not only a transform) so it
+  leaves the tab order and accessibility tree on mobile.
+- If a bottom bar is wanted later it can be added alongside the drawer
+  (roadmap P2 listed "drawer + bottom bar" as an option) without rework.
+
+---
+
+## 2026-05-22 — PWA icons: SVG manifest icons + generated PNG apple-touch-icon
+
+**Decision:** The installable-PWA icons are SVG (`public/icon.svg` and a
+maskable variant) referenced by `app/manifest.ts` with `sizes: "any"`. The
+iOS `apple-touch-icon` is generated as a PNG at build time by
+`app/apple-icon.tsx` using `next/og`'s `ImageResponse`. No raster icon
+files are committed and no image-processing dependency was added.
+
+**Reason:** This environment has no image tooling (`sharp`, ImageMagick,
+`rsvg-convert` all absent), so hand-authored PNG icon sets were not an
+option. Modern Android Chrome accepts SVG manifest icons, so a single
+scalable SVG covers Android install and the favicon. iOS does **not**
+support SVG touch icons, so that one icon must be a PNG —
+`ImageResponse` renders the same "C" mark to a 180×180 PNG during the
+build, which is the documented Next.js way to produce a generated icon
+without a binary asset.
+
+**Impact:**
+- If pixel-tuned PNG icon sets are wanted later (e.g. for older Android or
+  app-store assets in P5), they can be added to the manifest's `icons`
+  array; the SVGs do not need to be removed.
+- `next/og` is built into Next 16 — no dependency change.
+
+---
+
+## 2026-05-22 — Blocking + script tools are view-only on phones (interim)
+
+**Decision:** On phone widths (≤720px) the blocking canvas and the script
+editor are presented **view-only** — all editing is disabled, not just
+left broken. Tablet and desktop keep full editing. This is an interim
+state: the eventual goal is real touch editing, at least tablet parity for
+the blocking tool (tracked under P2 "Touch interactions").
+
+**Reason:** Both tools are mouse-built — the blocking canvas is @dnd-kit
+drag-and-drop with a pointer-capture rotation handle; the script editor
+creates annotations by click-drag drawing. On a touchscreen these
+interactions are unusable, so a phone user who could "edit" would only
+produce a frustrating, broken experience. Disabling editing lets them
+still *view* blocking and scripts (the common phone use case — checking
+staging or reading the script) cleanly.
+
+**Implementation:**
+- New `lib/use-is-phone.ts` — `useIsPhone()` via `useSyncExternalStore`
+  over a `matchMedia("(max-width: 720px)")` query (SSR-safe, no
+  setState-in-effect, matches the CSS mobile breakpoint).
+- Blocking: `BlockingCanvas` already threaded a single `canEdit` prop
+  through every edit affordance. The component now derives
+  `canEdit = canEditProp && !isPhone`, so phone view-only needed no
+  per-control changes.
+- Script: `activeTool` is derived as `isPhone ? "pointer" : activeToolState`
+  (locks the canvas to panning, no drawing); the drawing tool buttons and
+  colour/cue options are hidden; `PanelAnnotationItem` gained a `readOnly`
+  prop that hides its edit/delete controls.
+- Script **bookmarks** were deliberately left usable on phones — they are a
+  navigation aid (jump to a page), not annotation editing, and work fine by
+  tap.
+
+**Impact:**
+- An editor-role user on a phone sees the same view-only experience that
+  Cast/Crew already get for blocking — a tested code path.
+- When touch editing is built, the `!isPhone` guards are the single place
+  to relax (e.g. allow editing on tablet-sized touch devices).
+
+---
+
+## 2026-05-22 — Mobile primary nav: 5-tab bottom bar (supersedes the drawer)
+
+**Decision:** At phone widths (≤720px) primary navigation is a 5-tab
+**bottom bar** — Today / Calendar / Reports / Notes / More — rendered by
+`components/app-shell/mobile-tab-bar.tsx`. The desktop rail is hidden at
+this width. Tabs are **context-aware**: inside `/productions/[slug]/...`
+they route to that production's sub-pages (overview / calls / reports /
+notes); outside they route to the workspace equivalents (`/dashboard`,
+`/calendar`, `/reports`). This supersedes the same-day slide-in drawer
+decision earlier in the session.
+
+**Reason:** After porting a Claude-design mobile demo (`design-reference/`
+incoming files), bottom tabs were clearly the modern mobile pattern and
+unlocked all the other mobile screen designs (Today, Reports list, Notes,
+etc.), which the demo built around them. A drawer would have required
+duplicating that screen work for a less familiar pattern. Context-aware
+routing matches how the demo is laid out (production-scoped) without
+forcing a global "current production" concept into our data layer.
+
+**Impact:**
+- New `app/(app)/(default)/more/page.tsx` hosts the destinations that fall
+  off the tab bar: Productions, Documents, Announcements, Activity,
+  People, Settings, Sign out (capability-gated like the desktop rail).
+- The previous drawer code path is removed (`mobile-topbar`,
+  `rail-backdrop`, `rail-close`, the off-canvas `.rail` rules); `AppFrame`
+  is now a server component again — no client state needed for nav.
+- `.main` gets bottom padding (tab-bar height + iOS safe area) so fixed
+  content isn't covered.
+- `Icon` gained `Sun` (used for the Today tab).
+- The tab-strip-contained-scroller fix from earlier still applies.
+
+---
+
+## 2026-05-22 — Production tab strip is a contained scroller on phones
+
+**Decision:** On phones the production header's tab strip (`.tabs`, up to 8
+tabs) becomes a contained horizontal scroller rather than a dropdown or a
+wrapped multi-row layout. `production-tabs.tsx` scrolls the active tab into
+view on route change.
+
+**Reason:** The flex row had no overflow handling, so a long tab list
+widened the page and forced a sideways scroll of the whole screen. A
+contained scroller (`overflow-x: auto` on `.tabs`, `flex-shrink: 0` tabs)
+keeps every section reachable with one familiar pattern and is the
+smallest, lowest-risk change — the existing tab markup and active-state
+logic are untouched. A dropdown would hide the at-a-glance row; wrapping to
+multiple rows is visually noisier and eats vertical space.
+
+**Impact:**
+- Scoped to ≤720px so desktop/tablet are unchanged.
+- If the strip ever overflows at narrow tablet widths too, the same rules
+  can be widened to that range.

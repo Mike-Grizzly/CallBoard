@@ -21,6 +21,7 @@ import { PinButton } from "@/features/pins/pin-button";
 import { AttachmentUpload } from "./attachment-upload";
 import { EmailReportButton } from "./email-report-button";
 import { DetailTabs } from "./detail-tabs";
+import { MobileReportDetail } from "./mobile-report-detail";
 
 function formatDate(dateStr: string): string {
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString("en-US", {
@@ -144,6 +145,20 @@ export default async function ReportDetailPage({
 
   return (
     <div className="page-narrow anim-in" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <MobileReportDetail
+        report={report}
+        productionTitle={production.title}
+        authorName={authorName}
+        reportNumLabel={reportNumLabel}
+        attachments={attachmentUrls}
+        productionMembers={productionMembers}
+        isPinned={isPinned}
+        canEdit={canEdit}
+        canUpload={canUpload}
+        slug={slug}
+        reportId={reportId}
+      />
+      <div className="report-detail-desktop" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div className="card card-pad">
         <div className="row" style={{ gap: 8, marginBottom: 8 }}>
           <Link
@@ -534,6 +549,7 @@ export default async function ReportDetailPage({
           )
         )}
         {canUpload && <AttachmentUpload reportId={reportId} />}
+      </div>
       </div>
     </div>
   );

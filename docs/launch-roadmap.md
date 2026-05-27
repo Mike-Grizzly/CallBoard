@@ -158,20 +158,71 @@ app must be *good on a phone browser* before either a PWA or a native
 wrapper is worth shipping. See the **Mobile app feasibility** section
 below for the full picture.
 
-- [ ] **Mobile navigation.** The sidebar rail is simply hidden on mobile
-  with no replacement — there is currently no way to navigate on a phone.
-  Add a mobile drawer / bottom nav. — **M**
-- [ ] **Responsive audit.** Walk every screen at phone widths. The
-  blocking canvas and script editor need the most attention. — **L**
+- [x] **Mobile navigation — done 2026-05-22 (revised to bottom tabs).** The
+  rail used to collapse to a cramped 64px icon strip at all widths below
+  1100px. A slide-in drawer landed first (2026-05-22 morning), then was
+  superseded the same day after reviewing the Claude-design mobile demo:
+  primary nav at ≤720px is now a **5-tab bottom bar** (Today / Calendar /
+  Reports / Notes / More) — `components/app-shell/mobile-tab-bar.tsx`,
+  context-aware (inside `/productions/[slug]/...` the tabs scope to that
+  production's sub-routes; outside they go to the workspace equivalents).
+  The desktop rail is hidden at phone widths and a new `/more` page hosts
+  the destinations that fall off the tab bar (Productions, People,
+  Documents, Announcements, Activity, Settings, Sign out). The 64px icon
+  strip is retained for tablet widths (721–1100px). — **M**
+- [x] **Responsive audit — done 2026-05-24.** Eight slices walked the
+  per-screen mobile pass, each guided by the Claude-design mobile demo
+  in `design-reference/`. All landed as new mobile-only renders or
+  CSS-only column collapses, gated at ≤720px; desktop layouts are
+  untouched. Highlights:
+  - Production tab strip is a contained horizontal scroller.
+  - Today/Dashboard: new `mobile-today-hero.tsx` (greeting + next-call
+    card + 2×2 stats).
+  - Reports list + detail: new `mobile-reports-list.tsx` +
+    `mobile-report-detail.tsx` (date strip + status pill + stacked
+    sections, no tabs on phone).
+  - Calendar: bottom-sheet event drawer, month view shows pip dots
+    instead of chips, new `day-sheet.tsx`, toolbar compaction.
+  - Workspace `/notes` feed across all productions plus list↔editor
+    swap in the per-production panel.
+  - Script viewer: tool sidebar hidden, right panel stacks below the
+    PDF, PDF is CSS-scaled to viewport width, floating bookmarks
+    button opens a bottom sheet.
+  - Blocking: 3-column editor stacks vertically; landscape rule hides
+    side panels so the PDF fills the viewport.
+  - Documents folder rail collapses to a horizontal pill strip;
+    `/people` table now scrolls horizontally inside its wrapper.
+  - Production calendar unified with `/calendar` so production and
+    workspace use the same calendar UI (just data-filtered).
+  - Workspace dashboard/calendar/notes routes for the bottom-tab
+    targets.
 - [ ] **Touch interactions.** @dnd-kit drag, PDF annotation drawing, and
   the set-piece rotation handle are mouse-built — test and fix for
   touch. — **M**
-- [ ] **PWA manifest.** Add `manifest.webmanifest`, app icons, an
-  `apple-touch-icon`, and theme-color meta. A basic installable PWA needs
-  **no new dependency**. — **M**
+  - *Interim 2026-05-22:* the blocking canvas and the script editor are
+    now **view-only on phones** (≤720px) — editing is disabled rather than
+    broken. Full touch editing (the goal is at least tablet parity for
+    blocking) is still the open work here.
+- [x] **PWA manifest — done 2026-05-22.** Added `app/manifest.ts`
+  (standalone display, `/dashboard` start URL, theatre-cream theme color),
+  SVG app icons (`public/icon.svg` + a maskable variant), a generated PNG
+  `apple-touch-icon` via `app/apple-icon.tsx` (`next/og` `ImageResponse`),
+  and `themeColor` / `appleWebApp` metadata in the root layout. No new
+  dependency. — **M**
 - [ ] **PWA offline support (optional).** A service worker for offline /
   caching would need a library — see **Decision D7**. — **M**
 - [ ] Verify "Add to Home Screen" on iOS Safari and Android Chrome. — **S**
+
+**Done so far (2026-05-22 → 05-24):** bottom-tab mobile nav, PWA
+manifest, all 8 slices of the per-screen responsive audit, view-only
+phone mode for the blocking canvas + script editor, and the Today-tab
+fix to always return to the workspace dashboard. **Still open before
+P3:** real touch-editing support (blocking/script — the goal is at
+least tablet parity for blocking), live device verification including
+"Add to Home Screen", and the deferred polish items noted in
+`current-status.md` (production-view chrome cleanup, formal
+`/notifications` inbox, broader production-context nav review). User
+testing in P3 will surface the next round of styling/UX adjustments.
 
 Result: testers can install CallBoard to their home screen and use it
 like an app — the free interim "app" while the native wrapper waits for

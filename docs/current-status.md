@@ -1,10 +1,10 @@
 # Current Status
 
-**Last updated:** 2026-05-21
+**Last updated:** 2026-05-24
 
-**Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15) + People Directory (Step 16). Latest: org-wide people directory at `/people` with invite-based mass upload (manual / CSV / bulk paste) and multi-production assignment.
+**Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15) + People Directory (Step 16) + full mobile/PWA pass (P2). Branch `claude/bold-einstein-hHMHD` carries the mobile work and is ready for merge into the production branch.
 
-**Launch planning:** the path from feature-complete MVP to a soft launch (testing site + invited testers) and on to public launch is tracked in `docs/launch-roadmap.md`. Phase 0 (security hardening) and Phase 1 (Vercel deployment) are complete — the app is live at `call-board.vercel.app` on the `CallBoard` Supabase project, smoke test passed. Next: P2 (mobile/PWA) and P3 (beta testers). See `decision-log.md` (2026-05-21 / 05-22).
+**Launch planning:** the path from feature-complete MVP to a soft launch (testing site + invited testers) and on to public launch is tracked in `docs/launch-roadmap.md`. Phases P0 (security hardening) and P1 (Vercel deployment) shipped. **P2 (mobile/PWA) is functionally complete**: bottom-tab mobile nav, PWA manifest, all 8 slices of the per-screen responsive audit, view-only mode for the blocking canvas and script editor, and a landscape-phone rule for blocking. Remaining P2 items before P3: real touch-editing support (currently view-only on phones), live device verification including "Add to Home Screen", and the deferred polish items below. User testing in **P3 (beta)** will surface the next round of styling/UX adjustments. See `decision-log.md` (2026-05-21 / 05-22).
 
 ## Feature status
 
@@ -15,7 +15,16 @@
 - Local UI primitives (Button, Card, Separator)
 - Root redirect to /dashboard
 - Sidebar nav items with icons and capability-based filtering
-- **Not fully verified:** Mobile responsive behavior (sidebar hidden, no mobile drawer)
+- **Mobile navigation (2026-05-22, P2):** at phone widths (≤720px) primary
+  nav is a 5-tab bottom bar (Today / Calendar / Reports / Notes / More) —
+  context-aware: inside a production the tabs scope to that production's
+  sub-routes (`mobile-tab-bar.tsx`). A new `/more` page hosts the
+  workspace destinations that fall off the tab bar. The 64px icon-rail is
+  kept for tablet widths (721–1100px). The earlier slide-in drawer
+  (same day) was superseded after reviewing the mobile demo files. See
+  `docs/launch-roadmap.md` P2.
+- **Not fully verified:** mobile drawer behavior on real devices (built and
+  type-checked only); broader responsive layout of inner pages
 
 ### Step 2: Auth — IMPLEMENTED
 - Supabase email/password auth (signup, login, logout)
@@ -268,6 +277,194 @@ Branch `claude/people-mass-upload-feature-PkU2l` — new Step 16. Full spec in
   Supabase project — needs `SUPABASE_SERVICE_ROLE_KEY` set, the callback URL in
   the Auth "Redirect URLs" allowlist, and (for bulk invites) custom SMTP.
 
+## Mobile navigation & PWA (2026-05-22)
+
+Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
+
+- **Mobile drawer navigation.** New client shell
+  `components/app-shell/app-frame.tsx` wraps the `(app)` layout. On desktop
+  it is a passive wrapper (the rail stays in the CSS grid). At ≤720px it
+  renders a sticky top bar (hamburger + brand) and turns the rail into an
+  off-canvas slide-in drawer: dimmed backdrop, close (X) button,
+  Escape-to-close, background scroll lock, focus moved into the drawer, and
+  auto-close on navigation (drawer state is derived from the route, so no
+  state-syncing effect). `globals.css` gained a mobile-navigation block; the
+  existing icon-collapse media query was rescoped to
+  `min-width: 721px and max-width: 1100px` so phones get the drawer and
+  tablets keep the 64px icon rail. `Rail`'s `<aside>` got `id="app-rail"`
+  for `aria-controls`.
+- **Installable PWA.** `app/manifest.ts` (`MetadataRoute.Manifest`:
+  standalone display, `/dashboard` start URL, `#fbf8f3` theme/background).
+  Icons: `public/icon.svg` + `public/icon-maskable.svg` (the CallBoard "C"
+  mark), and `app/apple-icon.tsx` which generates a 180×180 PNG
+  `apple-touch-icon` via `next/og` `ImageResponse` (iOS does not accept SVG
+  touch icons). Root layout gained `icons` / `appleWebApp` metadata and a
+  `viewport` export with `themeColor`. No new dependency.
+- **Production tab strip.** The production header has up to 8 tabs in a
+  flex row with no overflow handling, so on a phone it forced a sideways
+  scroll of the whole page. At ≤720px `.tabs` is now a contained
+  horizontal scroller (edge-to-edge, snap, hidden scrollbar);
+  `production-tabs.tsx` scrolls the active tab into view on route change.
+- **View-only phone mode for mouse-built tools.** The blocking canvas and
+  the script editor are drag-and-drop / draw-built and unusable by touch.
+  New `lib/use-is-phone.ts` hook (`useSyncExternalStore` over a
+  `matchMedia` query). At ≤720px the blocking canvas derives
+  `canEdit = canEditProp && !isPhone` (its single edit gate, so all edit
+  affordances drop out); the script editor locks the tool to `pointer`,
+  hides the drawing tools, and hides the annotation panel's edit/delete
+  controls. Script bookmarks stay usable (navigation aid). Touch *editing*
+  remains future P2 work — the goal is at least tablet parity for blocking.
+- **Bottom-tab nav replaces the drawer (slice 1 of demo port, 2026-05-24).**
+  Following review of the new Claude-design mobile demo, the slide-in drawer
+  was retired in favour of a 5-tab bottom bar (Today / Calendar / Reports /
+  Notes / More). `components/app-shell/mobile-tab-bar.tsx` is the new client
+  shell; tabs are context-aware — inside `/productions/[slug]/*` they scope
+  to that production, otherwise they fall back to workspace routes. The
+  `app/(app)/layout.tsx` `AppFrame` is now a passive wrapper that just
+  renders the rail + main + `<MobileTabBar />`; the desktop rail is hidden
+  at ≤720px via `.rail { display: none }` in the mobile block. `.main` gains
+  bottom padding for the fixed bar plus the iOS home-indicator safe area.
+- **Mobile Today / Dashboard (slice 2, 2026-05-24).** New server component
+  `app/(app)/(default)/dashboard/mobile-today-hero.tsx` renders inside the
+  existing `/dashboard` page and is CSS-gated to phone widths. Layout
+  mirrors the demo's "Promptbook" variant: greeting + next-call hero card
+  (production, time range, focus, location pill, "Open production" footer)
+  + 2×2 stat grid (Productions / Mentions / Pinned / Next call). The
+  desktop `.home-hero` and the "Upcoming rehearsals & calls" grid (now
+  marked `.dashboard-desktop-only`) are hidden at ≤720px so they don't
+  double up. Existing announcements / productions browser / mentions /
+  pinned sections still render below — they'll get mobile passes in later
+  slices.
+- **Calendar week-view overflow fix (2026-05-24).** The week and day grids
+  used `repeat(N, 1fr)` (= `minmax(auto, 1fr)`) so event titles forced
+  columns wider than the viewport, pushing the page sideways on phones.
+  Switched to `minmax(0, 1fr)` so columns can shrink below content and
+  events truncate inside them. `.cal-canvas` also gained `min-width: 0`.
+- **Week-view header on phones (2026-05-24).** The day-of-week header
+  was still bleeding into adjacent columns at ≤720px (weekday + date in
+  a flex row, too wide for ~43px columns). At phone widths `.week-day-h`
+  now stacks vertically (column, centered) with smaller fonts and the
+  hour gutter shrinks from 60px → 38px to give days more room.
+- **Mobile notes list ↔ editor swap (slice 5, 2026-05-24).** The two-column
+  notes panel (360px list + editor) collapses to a single column at
+  ≤720px and CSS-swaps between views based on selection: with no note
+  selected the list fills the screen; tapping a note swaps to the
+  editor with a "← Notes" back button at the top to return. The outer
+  wrapper now has class `.notes-panel` and `data-editor-open` attribute;
+  `.notes-list-col` / `.notes-editor-col` mark the two columns. No
+  state-management changes — the existing `selectedId` drives the toggle.
+- **Workspace notes feed at `/notes` (2026-05-24).** The bottom-tab
+  "Notes" used to fall back to `/dashboard` when not in a production
+  (because notes were per-production), so tapping it from anywhere
+  outside a show did nothing visible. New `app/(app)/(default)/notes/`
+  route lists *every* note the caller has authored across every
+  production they belong to (admin/producer sees the org), newest-first
+  by `createdAt`. Cards match the mobile demo: colored production rail,
+  todo circle / pencil icon, title (strikethrough when complete), 2-line
+  excerpt, tag pill + due-date + relative-time footer. New query
+  `getAllNotesForUser` joins `production_notes` to `productions` for
+  title/slug/color. Tapping a card deep-links into the production-scoped
+  editor via `?id=` — `NotesPanel` accepts an `initialSelectedId` prop
+  and pre-selects when the id matches. Mobile tab bar now points Notes
+  at `/notes` unconditionally; production-scoped notes are still reached
+  via the production tab strip.
+- **Script viewer mobile chrome (slice 6, 2026-05-24).** At ≤720px the
+  layout collapses to a single column, the 52px tool sidebar is hidden
+  (view-only mode disables editing anyway), and the 248px right panel
+  stacks beneath the PDF.
+- **Documents + People mobile layout (slice 8, 2026-05-24).** Documents
+  used a 220px folder rail + 1fr docs grid that didn't fit on a phone.
+  Outer + folder rail + main got marker classes (`.docs-shell`,
+  `.docs-folders`, `.docs-main`); at ≤720px the grid collapses to a
+  single column and the folder rail becomes a horizontally-scrollable
+  pill strip at the top of the page. People uses a real `<table>` with
+  many columns; the wrapper (`.pp-table-wrap`) now scrolls horizontally
+  on phone and the table keeps a `min-width: 600px` so columns stay
+  legible. Notifications: the existing notification bell in the
+  production topbar and the dashboard mentions section already cover
+  the in-app cases — a formal `/notifications` inbox is deferred.
+- **Blocking mobile layout (slice 7, 2026-05-24).** The blocking canvas
+  uses a 3-column editor layout (220px scenes/beats · canvas · 240px
+  set-pieces/comments). On a phone that left no room for the canvas.
+  Outer wrapper, left panel, center canvas, and right panel got marker
+  classes (`.bk-shell`, `.bk-side-left`, `.bk-center`, `.bk-side-right`).
+  At ≤720px the grid collapses to a single column and stacks: canvas
+  first (full width, ≥56vh tall — actor tokens stay aligned because
+  positions are stored as canvas percentages), then the scenes/beats
+  panel below (max 50vh, scrollable), then the comments/notes panel
+  (max 50vh, scrollable). The fullscreen edge case still uses the
+  desktop grid — mobile users don't hit it. Editing remains disabled
+  on phone (existing view-only mode).
+- **Script viewer compact PDF + quick bookmarks (2026-05-24).** Slice 6
+  still required panning to read the PDF on a phone — the canvas
+  rendered at its high-DPI scale (~1300px wide) overflowed the
+  viewport. The PDF canvas is now CSS-scaled to fit the viewport
+  width on phone (`canvas { width: 100% !important; height: auto }`);
+  the SVG annotation overlay already uses `viewBox` so it scales
+  correctly with the canvas. Workspace padding and page shadow are
+  zeroed on phone so the script fills edge-to-edge. A new floating
+  bookmarks button (`.sv-mobile-bookmarks-btn`, fixed above the tab
+  bar) opens a bottom sheet that reuses the existing `BookmarksPanel`
+  — users no longer have to scroll past the entire PDF to reach
+  bookmarks. The right-panel bookmarks below the canvas are still
+  available as a second route.
+- **Today tab always returns to workspace dashboard (2026-05-24).** The
+  bottom-tab "Today" used to scope itself to the current production when
+  inside a show (per the demo's single-production mental model), which
+  felt confusing — "Today" implied "home". It now always routes to
+  `/dashboard` and `isActive` only on `/dashboard`.
+- **Deferred polish** (noted 2026-05-24, fix later): the production-view
+  visuals feel a little forced once we drop into a show — a follow-up
+  pass should clean up the per-production mobile chrome (production
+  header, tab strip density, etc.) together. The broader review of
+  production-context mobile navigation also remains open.
+- **Calendar mobile polish (slice 4, 2026-05-24).** Four demo-pattern
+  changes to the calendar at phone widths: (a) the `EventDrawer` slides
+  up from the bottom as a sheet instead of from the right as a side
+  drawer (CSS-only at ≤720px, reuses the existing animation primitives);
+  (b) the month view renders each cell as a single tap-target `<button>`
+  with the date in the top-right and up to 5 colored pip dots — chips
+  with titles only appear on desktop (branched in `month-view.tsx` via
+  `useIsPhone`); (c) tapping a day in the month view opens a new
+  `DaySheet` bottom sheet listing that day's events instead of jumping
+  the whole view to "day" — selecting an event there dismisses the day
+  sheet and opens the full `EventDrawer`; (d) the toolbar (prev/next,
+  period label, view switcher) is compacted on phone — smaller period
+  label, tighter view-switcher buttons.
+- **Mobile reports list + detail (slice 3, 2026-05-24).** Two new server
+  components — `mobile-reports-list.tsx` and `mobile-report-detail.tsx` —
+  render alongside the existing desktop layouts in `/productions/[slug]/reports`
+  and `/.../reports/[reportId]`. At ≤720px the desktop table / multi-card
+  layout is hidden (`.reports-desktop`, `.report-detail-desktop`) and the
+  mobile views appear (`.reports-mobile`, `.report-detail-mobile`). List
+  cards match the demo: date strip + report number + status pill + summary
+  + chevron. Detail stacks date + status + Pin/Email/Edit actions, a hero
+  card with call/start/end times and Present/Absent/Late stat tiles, then
+  General notes, Scenes worked, Next rehearsal, all 12 Department notes
+  as small cards, Schedule changes / Line notes / Injuries, and
+  Attachments — no tabbed panels on phone, everything stacks. PinButton /
+  EmailReportButton / AttachmentUpload client components are reused as-is.
+- **Production calendar unified with workspace `/calendar` (2026-05-24).**
+  Per user direction, the per-production calls page (`/productions/[slug]/calls`)
+  now renders the same `<CalendarClient />` as the workspace `/calendar`,
+  filtered to just that production. Same 4 views, same sidebar, same
+  event drawer — no UX divergence. The old standalone month grid is
+  gone. `CalendarClient` dropped `.page` from its outer div so the
+  component is portable; `.cal-page` is now self-sufficient (own padding,
+  `flex: 1; min-height: 0`). `.page` itself became a flex column to
+  allow children to flex-fill. A `.page:has(> .cal-page)` rule strips
+  outer padding when the calendar is nested inside the production
+  layout's `.page` wrapper, so padding doesn't double up. Trade-off: the
+  old page's inline "Schedule call" button is gone (matches the
+  dashboard, which never had one); editing existing calls still works
+  via the calendar drawer's "Edit" link.
+- **Verified:** `next build` compiles, `tsc --noEmit` passes. No new
+  `eslint` errors (two pre-existing `set-state-in-effect` errors in
+  `blocking-canvas.tsx` are unrelated and untouched).
+  **Not verified:** live device behavior — there is no `.env.local` in this
+  environment so the build cannot collect page data (`DATABASE_URL` unset).
+  "Add to Home Screen" on real iOS/Android still needs checking.
+
 ## Scaffolded only (not implemented)
 
 - **Activity log** — placeholder page exists, capability defined, feature directory has only .gitkeep
@@ -281,7 +478,7 @@ Branch `claude/people-mass-upload-feature-PkU2l` — new Step 16. Full spec in
 - Dark mode
 - Email notifications
 - Real-time updates
-- Mobile navigation drawer
+- PWA offline support / service worker (basic installable PWA shipped 2026-05-22; offline caching deferred — roadmap D7)
 
 ## Known limitations
 

@@ -14,6 +14,7 @@ import {
 } from "./dashboard-announcements";
 import { MentionsSection, type SerializedMention } from "./mentions-section";
 import { PinnedSection } from "./pinned-section";
+import { MobileTodayHero, type NextCallSummary } from "./mobile-today-hero";
 
 // Deterministic color per production — same palette as the left rail
 const PROD_COLORS = [
@@ -140,6 +141,31 @@ export default async function DashboardPage() {
   const pinnedCount = announcements.filter((a) => a.pinned).length;
   const unreadMentionCount = mentionRows.filter((m) => !m.readAt).length;
 
+  // Mobile Today hero — pre-format the next call summary for the phone
+  // layout. Rendered inside the same `.page-narrow.home` container and
+  // CSS-gated to phone widths.
+  const earliestCallProduction = earliestCall
+    ? myProductions.find((p) => p.id === earliestCall.productionId)
+    : null;
+  const nextCallSummary: NextCallSummary | null =
+    earliestCall && earliestCallProduction
+      ? {
+          productionTitle: earliestCallProduction.title,
+          productionSlug: earliestCallProduction.slug,
+          dateLabel: formatCallDate(earliestCall.callDate, today, tomorrow),
+          isToday: earliestCall.callDate === today,
+          isTomorrow: earliestCall.callDate === tomorrow,
+          callTime: earliestCall.callTime
+            ? formatCallTime(earliestCall.callTime)
+            : null,
+          endTime: earliestCall.endTime
+            ? formatCallTime(earliestCall.endTime)
+            : null,
+          location: earliestCall.location,
+          focus: earliestCall.focus,
+        }
+      : null;
+
   // Serialize announcements for client component (Date → string)
   const serializedAnnouncements: SerializedAnnouncement[] = announcements
     .slice(0, 10)
@@ -203,7 +229,18 @@ export default async function DashboardPage() {
 
   return (
     <div className="page-narrow home">
-      {/* ── Hero ─────────────────────────────────────────────────────── */}
+      {/* ── Mobile Today hero (phone widths only) ────────────────────── */}
+      <MobileTodayHero
+        greeting={greeting}
+        firstName={firstName}
+        todayLabel={todayLabel}
+        productionsCount={myProductions.length}
+        unreadMentionCount={unreadMentionCount}
+        pinnedCount={pinnedCount}
+        nextCall={nextCallSummary}
+      />
+
+      {/* ── Desktop hero (hidden at phone widths) ────────────────────── */}
       <section className="home-hero">
         <div className="home-hero-meta">
           <span className="home-hero-eyebrow">
@@ -270,9 +307,9 @@ export default async function DashboardPage() {
         </p>
       </section>
 
-      {/* ── Right Now ────────────────────────────────────────────────── */}
+      {/* ── Right Now (desktop-only — mobile shows the call card above) ── */}
       {myProductions.length > 0 && (
-        <section className="home-section">
+        <section className="home-section dashboard-desktop-only">
           <header className="home-section-head">
             <div>
               <div className="h-eyebrow">Schedule</div>
