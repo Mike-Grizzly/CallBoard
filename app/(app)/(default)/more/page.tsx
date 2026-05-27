@@ -66,6 +66,18 @@ export default async function MorePage() {
             </Link>
           </li>
         ))}
+        <li>
+          <a
+            href="mailto:feedback@proscene.app?subject=Proscene%20feedback"
+            className="more-item"
+          >
+            <span className="more-item-ico">
+              <Icon name="Mail" aria-hidden />
+            </span>
+            <span className="more-item-label">Send feedback</span>
+            <Icon name="ChevronRight" className="more-item-chev" aria-hidden />
+          </a>
+        </li>
       </ul>
 
       <form action={logout} className="more-logout">
