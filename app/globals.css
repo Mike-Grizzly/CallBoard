@@ -542,6 +542,14 @@ select {
   width: 14px;
   height: 14px;
 }
+/* SVGs inside flex buttons default to flex-shrink: 1 — when a toolbar
+   grows past its container (e.g. when the Undo button appears after the
+   first drag), every button shrinks and the icon collapses against the
+   label text. Pin icons at their intrinsic size so the label gets
+   clipped or the row wraps before the icon distorts. */
+.btn > svg {
+  flex-shrink: 0;
+}
 .btn-icon {
   width: 32px;
   height: 32px;

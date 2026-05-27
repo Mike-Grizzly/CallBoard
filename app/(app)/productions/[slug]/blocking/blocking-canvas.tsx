@@ -1881,12 +1881,19 @@ export function BlockingCanvas({
                 <Pencil className="h-3.5 w-3.5" /><span>{drawMode ? (arrowStart ? "Finish…" : "Drawing") : "Draw Arrow"}</span>
               </button>
             )}
-            {canEdit && history.length > 0 && (
+            {canEdit && (
               <button
                 onClick={handleUndo}
+                disabled={history.length === 0}
                 className="btn ghost"
-                style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-                title="Undo last move"
+                style={{
+                  height: 28,
+                  padding: "0 10px",
+                  fontSize: 12,
+                  opacity: history.length === 0 ? 0.4 : 1,
+                  cursor: history.length === 0 ? "default" : "pointer",
+                }}
+                title={history.length === 0 ? "Nothing to undo" : "Undo last move"}
               >
                 <RotateCcw className="h-3.5 w-3.5" /><span>Undo</span>
               </button>
