@@ -1766,7 +1766,7 @@ export function BlockingCanvas({
                     color={color}
                     ini={ini}
                     isOnCanvas={isOnCanvas}
-                    isDisabled={!canEdit || !currentBeatId || activeLayer !== "actors"}
+                    isDisabled={!canEdit || !currentBeatId}
                     onClickPlace={() => placeOnCanvas("actor", member.userId)}
                   />
                 );
@@ -2395,7 +2395,7 @@ export function BlockingCanvas({
                       key={piece.key}
                       piece={piece}
                       isOnCanvas={isOnCanvas}
-                      isDisabled={!canEdit || !currentBeatId || activeLayer !== "set_pieces"}
+                      isDisabled={!canEdit || !currentBeatId}
                       onClickPlace={() => placeOnCanvas("set_piece", piece.key)}
                     />
                   );
@@ -2413,7 +2413,7 @@ export function BlockingCanvas({
                           key={piece.id}
                           piece={{ key: piece.id, label: piece.name, imageUrl: piece.imageUrl }}
                           isOnCanvas={isOnCanvas}
-                          isDisabled={!canEdit || !currentBeatId || activeLayer !== "set_pieces"}
+                          isDisabled={!canEdit || !currentBeatId}
                           onClickPlace={() => placeOnCanvas("set_piece", piece.id)}
                           canDelete={canEdit}
                           onDelete={() => handleDeleteCustomPiece(piece.id)}

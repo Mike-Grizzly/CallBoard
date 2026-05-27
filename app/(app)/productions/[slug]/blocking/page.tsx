@@ -52,9 +52,13 @@ export default async function BlockingPage({
   // scenes/beats yet should land on a canvas they can drag onto
   // immediately, not on an empty state that silently swallows drops. Seed
   // a default Scene 1 / Beat 1 so the rest of the page renders ready to
-  // edit. Viewers don't trigger this; they'll see the empty state.
+  // edit. Also covers the case where a scene exists but has no beats
+  // under it (e.g. created earlier then beats deleted) — we'd otherwise
+  // leave the user staring at a canvas with no active beat. Viewers
+  // don't trigger this; they'll see the empty state.
   let scenesWithBeats = scenesWithBeatsInitial;
-  if (scenesWithBeats.length === 0 && can(user.role, "blocking:edit")) {
+  const noBeats = scenesWithBeats.every((s) => s.beats.length === 0);
+  if (noBeats && can(user.role, "blocking:edit")) {
     await ensureFirstSceneAndBeat(production.id);
     scenesWithBeats = await getScenesWithBeats(production.id);
   }
@@ -76,7 +80,11 @@ export default async function BlockingPage({
     imageUrl: signedUrls[p.storagePath] ?? "",
   }));
 
-  const firstBeatId = scenesWithBeats[0]?.beats[0]?.id ?? null;
+  // Pick the first beat across all scenes — `scenesWithBeats[0].beats[0]`
+  // returns null when the first scene happens to be empty but a later
+  // scene has beats, which left the canvas with no active beat selected.
+  const firstBeatId =
+    scenesWithBeats.flatMap((s) => s.beats)[0]?.id ?? null;
   const [initialPositions, initialArrows] = firstBeatId
     ? await Promise.all([
         getBlockingPositionsForBeat(firstBeatId),
