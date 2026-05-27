@@ -844,6 +844,17 @@ export function BlockingCanvas({
 
   useEffect(() => {
     if (!pdfUrl || !pdfCanvasRef.current) return;
+    // iPhone Safari kills the tab ("Can't open this page") when pdf.js
+    // parses a real ground-plan PDF — architectural drawings are
+    // vector-heavy and the parser holds the whole tree in memory before
+    // we even rasterize. Lowering render scale didn't help; the OOM was
+    // upstream of the canvas. On phone we skip pdf.js entirely (it's
+    // dynamic-imported only inside loadPdfDocument, so this also keeps
+    // pdf.js itself off the bundle for that load) and let the canvas
+    // render without the floor-plan background. The blocking dots and
+    // set pieces still show, and a "View floor plan" link opens the PDF
+    // in the system viewer where memory isn't constrained.
+    if (isPhone) return;
     let cancelled = false;
     const cacheKey = pdfCacheKey(pdfUrl, currentPdfPage);
 
@@ -865,25 +876,7 @@ export function BlockingCanvas({
       if (cancelled) return;
       setNumPdfPages(pdf.numPages);
       const page = await pdf.getPage(currentPdfPage);
-      // Phones get a smaller render scale + skip the offscreen double-buffer
-      // and the ImageBitmap cache — iOS Safari's per-tab memory budget on
-      // iPhone can't hold three copies of a large ground-plan bitmap and
-      // kills the tab ("can't open this page") after the PDF finishes
-      // rendering. 0.5× is enough sharpness once CSS scales the canvas
-      // down to viewport width (~393px). Tablets and desktop keep the 1.5×
-      // crisp render + cache.
-      const scale = isPhone ? 0.5 : 1.5;
-      const viewport = page.getViewport({ scale });
-
-      if (isPhone) {
-        // Render directly to the visible canvas — no offscreen copy.
-        mainCanvas.width = viewport.width;
-        mainCanvas.height = viewport.height;
-        await page.render({ canvas: mainCanvas, viewport }).promise;
-        if (cancelled) return;
-        if (!cancelled) setPdfLoaded(true);
-        return;
-      }
+      const viewport = page.getViewport({ scale: 1.5 });
 
       // Render to an offscreen canvas so the visible canvas stays intact
       // until the new frame is fully ready — no blank flash during render.
@@ -1987,7 +1980,7 @@ export function BlockingCanvas({
                 </div>
               )}
 
-              {pdfUrl && !pdfLoaded && (
+              {pdfUrl && !pdfLoaded && !isPhone && (
                 <div
                   style={{
                     position: "absolute",
@@ -2001,6 +1994,31 @@ export function BlockingCanvas({
                 >
                   <div className="pdf-spinner" aria-hidden />
                 </div>
+              )}
+
+              {pdfUrl && isPhone && (
+                <a
+                  href={pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    position: "absolute",
+                    top: 8,
+                    right: 8,
+                    zIndex: 30,
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    background: "var(--bg-elev)",
+                    border: "1px solid var(--border)",
+                    color: "var(--ink-2)",
+                    fontSize: 11.5,
+                    fontWeight: 500,
+                    textDecoration: "none",
+                    boxShadow: "var(--shadow-1)",
+                  }}
+                >
+                  View floor plan
+                </a>
               )}
 
               {stageConfig && (
