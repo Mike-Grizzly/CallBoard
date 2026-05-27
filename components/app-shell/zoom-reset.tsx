@@ -5,24 +5,27 @@ import { useEffect } from "react";
 /**
  * On iOS WebKit (Safari and Chrome both — Chrome iOS uses the same
  * engine), focusing an `<input>` whose font-size is under 16px
- * auto-zooms the page, and the zoom level persists across the
+ * auto-zooms the page, and that zoom level persists across the
  * subsequent navigation. So after typing into the sign-in form (where
  * smaller fonts are intentional — they're easier to read when zoomed)
- * the user lands inside the app still zoomed at ~1.4×, which makes the
- * whole UI feel "stuck in."
+ * the user lands inside the app still zoomed in, with no way to get
+ * back to 1× short of pinching out manually.
  *
- * This component runs once when the authenticated app layout mounts.
- * If `visualViewport.scale` is meaningfully above 1, we briefly set
- * `maximum-scale=1` on the viewport meta to force the browser to
- * clamp back to 1×, then revert so manual pinch-zoom still works.
- * The check is gated on > 1.05 so an intentional user pinch isn't
- * fought.
+ * Important: iOS's input auto-zoom is a *layout* zoom, not a pinch
+ * zoom. `visualViewport.scale` only reflects pinch zoom, so it reports
+ * 1 even while the page is clearly layout-zoomed — checking it to
+ * decide whether to reset is a dead end. We just always run the
+ * reset on first mount of the authenticated layout (which doesn't
+ * remount between in-app navigations, so a deliberate pinch the user
+ * applies once inside the app is preserved).
+ *
+ * Technique: clamp the viewport with `maximum-scale=1, user-scalable=no`
+ * to force WebKit to re-layout at 1×, give it two animation frames to
+ * actually apply, then revert so pinch-zoom still works after the
+ * reset.
  */
 export function ZoomReset() {
   useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv || vv.scale <= 1.05) return;
-
     const meta = document.querySelector<HTMLMetaElement>(
       'meta[name="viewport"]',
     );
@@ -30,16 +33,25 @@ export function ZoomReset() {
 
     const original =
       meta.getAttribute("content") ?? "width=device-width, initial-scale=1";
+
     meta.setAttribute(
       "content",
-      "width=device-width, initial-scale=1, maximum-scale=1",
+      "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
     );
 
-    const timer = window.setTimeout(() => {
-      meta.setAttribute("content", original);
-    }, 200);
+    // Two rAFs so WebKit actually applies the clamp before we lift it
+    // — a single rAF can fire before the layout pass completes.
+    let raf2 = 0;
+    const raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(() => {
+        meta.setAttribute("content", original);
+      });
+    });
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      if (raf2) window.cancelAnimationFrame(raf2);
+    };
   }, []);
 
   return null;
