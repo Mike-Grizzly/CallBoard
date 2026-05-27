@@ -169,7 +169,7 @@ function ActorToken({
           </button>
         )}
         <div
-          className="avatar"
+          className="avatar bk-actor-circle"
           style={{
             width: 38,
             height: 38,
@@ -191,6 +191,7 @@ function ActorToken({
         </div>
         {label && (
           <div
+            className="bk-actor-label"
             style={{
               marginTop: 2,
               whiteSpace: "nowrap",
@@ -330,7 +331,7 @@ function SetPieceToken({
         <div style={{ transform: `rotate(${rotation}deg)` }}>
           {imageUrl ? (
             <div
-              className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm"
+              className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm bk-set-piece-token"
               style={{ width: 64, height: 48, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}
             >
               <img
@@ -344,7 +345,7 @@ function SetPieceToken({
               viewBox="0 0 80 60"
               width={64}
               height={48}
-              className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm"
+              className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm bk-set-piece-token"
             >
               <path
                 d={svgPath}
@@ -1905,11 +1906,17 @@ export function BlockingCanvas({
             phone; the mobile beat nav above replaces the title block
             and edit controls aren't relevant to view-only users. */}
         <div className="row-between bk-mobile-hide">
-          <div>
+          {/* min-width: 0 + truncate keeps the subtitle on a single line
+              even when the scene/beat text gets long. Without this, a
+              long subtitle wraps to 2 lines, the title block grows
+              taller, and `align-items: center` shifts the right-side
+              button row down — the "padding shift on new beat" the
+              user was seeing. */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--ink)" }}>
               Stage Blocking
             </div>
-            <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>
+            <div className="muted truncate" style={{ fontSize: 12.5, marginTop: 2 }}>
               {currentScene && currentBeat
                 ? `${currentScene.title} · ${currentBeat.label} — drag actors to set positions`
                 : scenesWithBeats.length === 0
@@ -1917,7 +1924,7 @@ export function BlockingCanvas({
                   : "Select a beat to start blocking"}
             </div>
           </div>
-          <div className="row" style={{ gap: 6 }}>
+          <div className="row" style={{ gap: 6, flexShrink: 0 }}>
             {selectedActorIds.size > 1 && (
               <div style={{ fontSize: 11.5, color: "var(--accent)", fontWeight: 600, padding: "0 8px", height: 28, display: "flex", alignItems: "center", background: "var(--bg-sunken)", borderRadius: 6, border: "1px solid var(--accent-muted, color-mix(in oklch, var(--accent), transparent 60%))" }}>
                 {selectedActorIds.size} actors selected
@@ -2017,7 +2024,12 @@ export function BlockingCanvas({
               <button
                 onClick={handleCaptureBeat}
                 className="btn primary"
-                style={{ height: 28, padding: "0 12px", fontSize: 12 }}
+                style={{
+                  height: 28,
+                  padding: "0 14px",
+                  fontSize: 12,
+                  gap: 8,
+                }}
                 title="Save current positions as a beat and advance to the next one"
               >
                 <Aperture className="h-3.5 w-3.5" /><span>Capture Beat</span>

@@ -178,6 +178,20 @@ select {
   font-family: inherit;
   color: inherit;
 }
+
+/* iOS Safari auto-zooms the page when the user focuses any form control
+   whose computed font-size is below 16px — and once zoomed it stays
+   zoomed until the user pinches back out, which is the "I sign in and
+   then the whole app is zoomed" report. Floor the font-size at 16px on
+   phone-sized viewports for every interactive control so the focus
+   gesture never triggers the zoom. Desktop styling is unchanged. */
+@media (max-width: 720px) {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
+}
 ::selection {
   background: var(--accent-soft);
   color: var(--accent-ink);
@@ -5543,6 +5557,27 @@ select.pp-field {
     padding: 6px 4px 10px;
     border-bottom: 1px solid var(--border);
     margin-bottom: 6px;
+  }
+
+  /* Shrink actor circles, name pills, and set-piece tokens on the
+     blocking canvas at phone widths. The desktop sizes (38px avatars,
+     64x48 set pieces) are correct for a 800-1200px canvas; on a
+     ~390px-wide mobile floor plan they take 10%+ of the width each
+     and crowd quickly once several actors are placed. */
+  .bk-actor-circle {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 10px !important;
+    border-width: 1.5px !important;
+  }
+  .bk-actor-label {
+    font-size: 9.5px !important;
+    padding: 1px 4px !important;
+    max-width: 64px !important;
+  }
+  .bk-set-piece-token {
+    width: 44px !important;
+    height: 33px !important;
   }
 
   /* Script viewer — collapse to a single column on phone. The tool
