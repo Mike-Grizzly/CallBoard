@@ -38,6 +38,45 @@ export async function fetchBeatPositions(
 
 // ─── Stage Configuration ────────────────────────────────────────────
 
+// Server-issued signed upload URL for the rasterized ground-plan image
+// that the setup wizard generates client-side from the chosen PDF page.
+// We rasterize once at setup so the blocking canvas can render an <img>
+// instead of running pdf.js on every load — fixes iOS Safari OOM and
+// makes desktop loads faster too.
+export async function requestGroundPlanImageUpload(
+  productionId: string,
+): Promise<{ error?: string; path?: string; token?: string }> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "blocking:edit")) {
+    return { error: "You don't have permission to configure the stage." };
+  }
+  if (!productionId) return { error: "Production ID is required." };
+
+  const storagePath = `ground-plans/${productionId}/${Date.now()}.jpg`;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.storage
+    .from("attachments")
+    .createSignedUploadUrl(storagePath);
+
+  if (error || !data) {
+    return { error: error?.message ?? "Could not start upload." };
+  }
+  return { path: data.path, token: data.token };
+}
+
+// Returns a 1-hour signed URL for the rasterized ground plan, used by
+// the blocking page to render the floor plan as a static <img>.
+export async function getGroundPlanImageUrl(
+  storagePath: string,
+): Promise<string> {
+  if (!storagePath) return "";
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.storage
+    .from("attachments")
+    .createSignedUrl(storagePath, 3600);
+  return data?.signedUrl ?? "";
+}
+
 export async function saveStageConfiguration(
   _prev: BlockingActionResult | undefined,
   formData: FormData,
@@ -73,6 +112,8 @@ export async function saveStageConfiguration(
     (formData.get("ground_plan_page") as string) || "1",
     10,
   );
+  const groundPlanImagePath =
+    (formData.get("ground_plan_image_path") as string) || null;
 
   if (!productionId) return { error: "Missing production ID." };
   if (isNaN(prosceniumWidthFt) || prosceniumWidthFt <= 0)
@@ -97,6 +138,7 @@ export async function saveStageConfiguration(
     calibrationY2: isNaN(calibrationY2) ? null : calibrationY2,
     pixelsPerFoot: isNaN(pixelsPerFoot) ? null : pixelsPerFoot,
     groundPlanPage: isNaN(groundPlanPage) || groundPlanPage < 1 ? 1 : groundPlanPage,
+    groundPlanImagePath,
     updatedAt: new Date(),
   };
 

@@ -86,6 +86,7 @@ type Props = {
   castMembers: CastMember[];
   productionMembers: ProductionMember[];
   pdfUrl: string | null;
+  groundPlanImageUrl: string | null;
   canEdit: boolean;
   currentUserId: string;
   initialBeatId: string | null;
@@ -691,6 +692,7 @@ export function BlockingCanvas({
   castMembers,
   productionMembers,
   pdfUrl,
+  groundPlanImageUrl,
   canEdit: canEditProp,
   currentUserId,
   initialBeatId,
@@ -844,6 +846,9 @@ export function BlockingCanvas({
 
   useEffect(() => {
     if (!pdfUrl || !pdfCanvasRef.current) return;
+    // If we already have a rasterized image from the setup wizard, the
+    // canvas is replaced by an <img> and pdf.js never needs to run.
+    if (groundPlanImageUrl) return;
     // iPhone Safari kills the tab ("Can't open this page") when pdf.js
     // parses a real ground-plan PDF — architectural drawings are
     // vector-heavy and the parser holds the whole tree in memory before
@@ -901,7 +906,7 @@ export function BlockingCanvas({
     }
     render().catch(() => setPdfLoaded(false));
     return () => { cancelled = true; };
-  }, [pdfUrl, currentPdfPage, isPhone]);
+  }, [pdfUrl, currentPdfPage, isPhone, groundPlanImageUrl]);
 
   function pushHistory(prev: PositionMap) {
     setHistory((h) => [...h.slice(-49), prev]);
@@ -1935,7 +1940,7 @@ export function BlockingCanvas({
               padding: 0,
               position: "relative",
               overflow: "hidden",
-              background: pdfUrl ? "rgb(23,23,23)" : undefined,
+              background: (pdfUrl || groundPlanImageUrl) ? "rgb(23,23,23)" : undefined,
             }}
           >
             <div
@@ -1946,7 +1951,25 @@ export function BlockingCanvas({
               onPointerMove={handleCanvasPointerMove}
               onPointerUp={handleCanvasPointerUp}
             >
-              {pdfUrl ? (
+              {groundPlanImageUrl ? (
+                // Rasterized at setup — works on phone, no pdf.js needed.
+                // Stretch to fill the container exactly the way the canvas
+                // did; the position dots are percent-of-container, so any
+                // letterboxing would offset them from the floor plan.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={groundPlanImageUrl}
+                  alt="Ground plan"
+                  className="absolute inset-0 h-full w-full"
+                  style={{
+                    zIndex: 1,
+                    objectFit: "fill",
+                    pointerEvents: "none",
+                    userSelect: "none",
+                  }}
+                  draggable={false}
+                />
+              ) : pdfUrl ? (
                 <canvas
                   ref={pdfCanvasRef}
                   className="absolute inset-0 h-full w-full"
@@ -1980,7 +2003,7 @@ export function BlockingCanvas({
                 </div>
               )}
 
-              {pdfUrl && !pdfLoaded && !isPhone && (
+              {pdfUrl && !pdfLoaded && !isPhone && !groundPlanImageUrl && (
                 <div
                   style={{
                     position: "absolute",
@@ -1996,7 +2019,7 @@ export function BlockingCanvas({
                 </div>
               )}
 
-              {pdfUrl && isPhone && (
+              {pdfUrl && isPhone && !groundPlanImageUrl && (
                 <a
                   href={pdfUrl}
                   target="_blank"
@@ -2313,8 +2336,9 @@ export function BlockingCanvas({
               )}
             </div>
           </div>
-        {/* PDF multi-page controls */}
-        {pdfUrl && numPdfPages > 1 && (
+        {/* PDF multi-page controls (live PDF render path only — the
+            rasterized image is a single chosen page) */}
+        {pdfUrl && !groundPlanImageUrl && numPdfPages > 1 && (
           <div className="row justify-center" style={{ gap: 8, fontSize: 12, color: "var(--ink-2)" }}>
             <button
               onClick={() => setCurrentPdfPage((p) => Math.max(1, p - 1))}

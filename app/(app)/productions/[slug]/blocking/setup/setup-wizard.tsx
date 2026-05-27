@@ -4,7 +4,11 @@ import { useRef, useState, useCallback, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { saveStageConfiguration } from "@/features/blocking/actions";
+import {
+  saveStageConfiguration,
+  requestGroundPlanImageUpload,
+} from "@/features/blocking/actions";
+import { uploadFileToSignedUrl } from "@/lib/storage-upload";
 import { getDocumentUrl } from "@/features/documents/actions";
 import type { DocumentWithUploader } from "@/features/documents/queries";
 import type { StageConfiguration } from "@/db/schema";
@@ -162,27 +166,57 @@ export function SetupWizard({
     return pixelDist / parseFloat(widthFt);
   }
 
+  // Snapshot the calibration canvas to a JPEG and upload it to storage.
+  // The blocking page later renders this <img> as the floor-plan background
+  // instead of re-parsing the PDF with pdf.js on every load. Returns the
+  // storage path on success, null on failure (caller proceeds without an
+  // image — the blocking page falls back to live PDF render).
+  async function uploadRasterizedGroundPlan(): Promise<string | null> {
+    const canvas = canvasRef.current;
+    if (!canvas || canvas.width === 0) return null;
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.85),
+    );
+    if (!blob) return null;
+
+    const reqRes = await requestGroundPlanImageUpload(productionId);
+    if (reqRes.error || !reqRes.path || !reqRes.token) return null;
+
+    const file = new File([blob], "ground-plan.jpg", { type: "image/jpeg" });
+    const upRes = await uploadFileToSignedUrl(reqRes.path, reqRes.token, file);
+    if (upRes.error) return null;
+
+    return reqRes.path;
+  }
+
   function handleSave() {
     setError(null);
     const pixelsPerFoot = computePixelsPerFoot();
 
-    const formData = new FormData();
-    formData.set("production_id", productionId);
-    formData.set("proscenium_width_ft", widthFt);
-    formData.set("stage_depth_ft", depthFt);
-    if (selectedDocId) formData.set("ground_plan_document_id", selectedDocId);
-    formData.set("ground_plan_page", selectedPage.toString());
-    if (calibPoints.length === 2) {
-      formData.set("calibration_x1", calibPoints[0].xPercent.toString());
-      formData.set("calibration_y1", calibPoints[0].yPercent.toString());
-      formData.set("calibration_x2", calibPoints[1].xPercent.toString());
-      formData.set("calibration_y2", calibPoints[1].yPercent.toString());
-    }
-    if (pixelsPerFoot !== null) {
-      formData.set("pixels_per_foot", pixelsPerFoot.toString());
-    }
-
     startTransition(async () => {
+      // Rasterize before saving. Only if a PDF is selected — otherwise
+      // there's nothing to capture and the user is proceeding without
+      // a floor plan.
+      const imagePath = selectedDocId ? await uploadRasterizedGroundPlan() : null;
+
+      const formData = new FormData();
+      formData.set("production_id", productionId);
+      formData.set("proscenium_width_ft", widthFt);
+      formData.set("stage_depth_ft", depthFt);
+      if (selectedDocId) formData.set("ground_plan_document_id", selectedDocId);
+      formData.set("ground_plan_page", selectedPage.toString());
+      if (imagePath) formData.set("ground_plan_image_path", imagePath);
+      if (calibPoints.length === 2) {
+        formData.set("calibration_x1", calibPoints[0].xPercent.toString());
+        formData.set("calibration_y1", calibPoints[0].yPercent.toString());
+        formData.set("calibration_x2", calibPoints[1].xPercent.toString());
+        formData.set("calibration_y2", calibPoints[1].yPercent.toString());
+      }
+      if (pixelsPerFoot !== null) {
+        formData.set("pixels_per_foot", pixelsPerFoot.toString());
+      }
+
       const result = await saveStageConfiguration(undefined, formData);
       if (result.error) {
         setError(result.error);

@@ -9,7 +9,7 @@ import { getScenesWithBeats } from "@/features/scenes/queries";
 import { ensureFirstSceneAndBeat } from "@/features/scenes/actions";
 import { getDocumentById } from "@/features/documents/queries";
 import { getDocumentUrl } from "@/features/documents/actions";
-import { getCustomSetPieceUrls } from "@/features/blocking/actions";
+import { getCustomSetPieceUrls, getGroundPlanImageUrl } from "@/features/blocking/actions";
 import { BlockingCanvas } from "./blocking-canvas";
 
 export default async function BlockingPage({
@@ -63,7 +63,15 @@ export default async function BlockingPage({
     scenesWithBeats = await getScenesWithBeats(production.id);
   }
 
+  // Prefer the rasterized ground-plan image (cheap <img>, works on phone).
+  // Fall back to the source PDF for legacy stage configs that don't have an
+  // image saved yet — those will still go through pdf.js on desktop and
+  // the "View floor plan" link on phone.
+  let groundPlanImageUrl: string | null = null;
   let pdfUrl: string | null = null;
+  if (stageConfig?.groundPlanImagePath) {
+    groundPlanImageUrl = await getGroundPlanImageUrl(stageConfig.groundPlanImagePath);
+  }
   if (stageConfig?.groundPlanDocumentId) {
     const doc = await getDocumentById(stageConfig.groundPlanDocumentId);
     if (doc) {
@@ -100,6 +108,7 @@ export default async function BlockingPage({
       castMembers={castMembers}
       productionMembers={productionMembers}
       pdfUrl={pdfUrl}
+      groundPlanImageUrl={groundPlanImageUrl}
       canEdit={can(user.role, "blocking:edit")}
       currentUserId={user.id}
       initialBeatId={firstBeatId}
