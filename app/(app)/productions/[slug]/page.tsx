@@ -394,7 +394,7 @@ export default async function ProductionDetailPage({
       )}
 
       {/* ── Supporting row ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
+      <div className="prod-overview-supporting" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
         {/* Recent activity */}
         <div className="card">
           <div className="card-pad row-between" style={{ paddingBottom: 8 }}>

@@ -27,6 +27,12 @@ export const stageConfigurations = pgTable("stage_configurations", {
   calibrationY2: real("calibration_y2"),
   // Which page of the ground plan PDF to render (1-indexed)
   groundPlanPage: integer("ground_plan_page").notNull().default(1),
+  // Storage path to a JPEG rasterized from the chosen PDF page during setup.
+  // When present, the blocking canvas renders this <img> instead of running
+  // pdf.js — keeps iOS Safari from OOM'ing on vector-heavy ground plans and
+  // skips PDF parsing on every page load. Falls back to live PDF render when
+  // null (legacy stage configs).
+  groundPlanImagePath: text("ground_plan_image_path"),
   // Derived: pixels per foot at reference render size (used for grid overlay)
   pixelsPerFoot: real("pixels_per_foot"),
   createdAt: timestamp("created_at", { withTimezone: true })

@@ -465,6 +465,69 @@ Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
   environment so the build cannot collect page data (`DATABASE_URL` unset).
   "Add to Home Screen" on real iOS/Android still needs checking.
 
+## Blocking tool mobile polish + ground-plan rasterization (2026-05-27)
+
+Branch `claude/vibrant-tesla-5kjsA` — follow-up P2 work after the
+2026-05-24 responsive audit, driven by on-device testing on iPhone.
+
+- **Ground plan rasterized at setup time.** Replaces live pdf.js
+  rendering on every blocking-page load with a one-time client-side
+  JPEG capture during the stage setup wizard. New
+  `ground_plan_image_path` column on `stage_configurations` (migration
+  applied via Supabase MCP). The setup wizard's calibration canvas
+  is captured with `canvas.toBlob` (q=0.85) and uploaded to
+  `attachments/ground-plans/<productionId>/<ts>.jpg`; the blocking
+  page prefers this `<img>` background and only falls back to pdf.js
+  for legacy stage configs without an image. Fixes iOS Safari OOM
+  ("Can't open this page") on vector-heavy architectural ground plans
+  — the OOM was upstream of rasterization in pdf.js's parser, so
+  lowering render scale couldn't fix it. Side effect: faster blocking
+  loads on every device (no PDF parsing per visit).
+- **Auto-seed first scene + beat.** A new editor opening blocking on
+  a fresh production no longer hits an empty canvas that silently
+  swallows drag/drops. `ensureFirstSceneAndBeat` (idempotent) creates
+  Scene 1 / Beat 1 in `page.tsx` whenever the editor has edit
+  permission and the production has no beats yet. Also fixed
+  `firstBeatId` selection to flatMap across scenes so an empty first
+  scene doesn't strand `currentBeatId` at null when later scenes have
+  beats.
+- **Mobile view-only beat navigator.** On phone (≤720px) the editor
+  sidebars (off-stage cast picker, set-pieces picker), the layer
+  toggle, and the desktop edit toolbar are hidden. A new compact
+  `bk-beat-nav` bar above the canvas shows the current scene + beat
+  label + `N / M` counter with prev/next chevron buttons; horizontal
+  pointer swipes across the canvas (touch-only, >50px, predominantly
+  horizontal, <600ms) advance/retreat one beat. Scenes/beats list,
+  beat comments, and beat notes are still visible.
+- **Mobile token sizes.** Actor circles drop 38→26px, labels
+  10.5→9.5px, set-piece tokens 64×48→44×33 via `.bk-actor-circle`,
+  `.bk-actor-label`, `.bk-set-piece-token` class hooks overridden in
+  the ≤720px media query. Desktop sizing is unchanged.
+- **Toolbar shift fix.** Undo button always renders (disabled +
+  dimmed when history is empty) so the first drag no longer pops it
+  into existence and shifts the row. `.btn > svg { flex-shrink: 0 }`
+  added globally so toolbar icons don't compress against their labels
+  when the row tightens. Subtitle pinned to a single line via
+  `.truncate` + `min-width: 0` on the title block + `flex-shrink: 0`
+  on the button row so a longer subtitle can't grow the title block
+  vertically and re-center the buttons. Capture Beat padding bumped
+  to `0 14px` with `gap: 8` so the icon + label have breathing room.
+- **iOS auto-zoom after sign-in — PARKED.** Two fix attempts in
+  `components/app-shell/zoom-reset.tsx` did not resolve the
+  zoomed-in-after-auth behavior. Tracked in
+  `docs/open-questions.md → Mobile / iOS questions` with next steps
+  to try. Component stays in the tree; it's harmless.
+
+**Other fixes in this branch:**
+- Mobile horizontal-overflow guard via `overflow-wrap: anywhere` on
+  body and `overflow-x: hidden` on `.page` at ≤720px (without
+  breaking the fixed bottom tab bar, which was the failure mode of
+  earlier `overflow-x: clip` attempts on `body`).
+- Form inputs floored to `font-size: max(16px, 1em)` at ≤720px to
+  prevent iOS input auto-zoom on most app forms (sign-in's `.field`
+  class overrides this with higher specificity — intentional, the
+  user prefers zoom-in there).
+
 ## Scaffolded only (not implemented)
 
 - **Activity log** — placeholder page exists, capability defined, feature directory has only .gitkeep

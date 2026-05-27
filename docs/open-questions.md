@@ -4,6 +4,26 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
+## Mobile / iOS questions
+
+- **iOS auto-zoom persists into the app after sign-in (PARKED 2026-05-27).**
+  On iOS WebKit (Safari and Chrome — both use WebKit), typing into the
+  sign-in inputs auto-zooms the page (font-size below 16px triggers it)
+  and the zoom level carries over into the authenticated app, so the
+  whole UI feels stuck zoomed-in until the user manually pinches back
+  out. Two attempts at a fix were made in `components/app-shell/zoom-reset.tsx`:
+  (1) detect via `visualViewport.scale` then clamp via `maximum-scale=1`
+  — failed because the auto-zoom is a *layout* zoom, not a pinch zoom,
+  so `visualViewport.scale` reads 1; (2) always run on mount + double-rAF
+  + `maximum-scale=1, user-scalable=no` — reported as still not
+  resetting. The component is kept in tree for now since it's harmless.
+  Next ideas to try when revisiting: hard-reload navigation after the
+  auth server action instead of the Next.js client redirect; force a
+  layout via `document.body.style.zoom = 1`; remove + re-insert the
+  viewport meta tag entirely; or accept the trade-off and floor the
+  login form's `.field` to 16px so auto-zoom never triggers in the
+  first place.
+
 ## Script editor questions
 
 - **Page number overrides UI:** The `pageOverrides` JSONB column is stored and loaded but there is no UI to set overrides. Intended use: let users remap PDF page numbers to match the printed page numbers in the script (e.g. PDF page 1 = script page 5). Should this be added as an inline editable label per page?

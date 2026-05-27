@@ -178,6 +178,20 @@ select {
   font-family: inherit;
   color: inherit;
 }
+
+/* iOS Safari auto-zooms the page when the user focuses any form control
+   whose computed font-size is below 16px — and once zoomed it stays
+   zoomed until the user pinches back out, which is the "I sign in and
+   then the whole app is zoomed" report. Floor the font-size at 16px on
+   phone-sized viewports for every interactive control so the focus
+   gesture never triggers the zoom. Desktop styling is unchanged. */
+@media (max-width: 720px) {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
+}
 ::selection {
   background: var(--accent-soft);
   color: var(--accent-ink);
@@ -541,6 +555,14 @@ select {
 .btn .ico {
   width: 14px;
   height: 14px;
+}
+/* SVGs inside flex buttons default to flex-shrink: 1 — when a toolbar
+   grows past its container (e.g. when the Undo button appears after the
+   first drag), every button shrinks and the icon collapses against the
+   label text. Pin icons at their intrinsic size so the label gets
+   clipped or the row wraps before the icon distorts. */
+.btn > svg {
+  flex-shrink: 0;
 }
 .btn-icon {
   width: 32px;
@@ -4669,6 +4691,42 @@ select.pp-field {
 }
 
 @media (max-width: 720px) {
+  /* Compromise side padding: more generous than the 16px overcorrection
+     so cards don't run edge-to-edge, less than the 28px desktop value
+     so a 393pt-wide iPhone still has reasonable content width.
+     Override every density mode so the value wins regardless. */
+  body,
+  body[data-density="compact"],
+  body[data-density="comfy"] {
+    --pad-x: 22px;
+  }
+
+  /* Break long words / unbroken strings (URLs, IDs, long show names)
+     so they wrap inside their container instead of pushing the page
+     sideways. This is the real defense — `overflow-x: clip` on body
+     was breaking iOS Safari's position:fixed handling on the bottom
+     tab bar (both edges of the bar got cut off). */
+  body {
+    overflow-wrap: anywhere;
+    word-wrap: break-word;
+  }
+  .main {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Hard horizontal-overflow guard on the scrollable page container.
+     Anything wider than viewport that slipped past `overflow-wrap`
+     (intrinsic-width children, fixed grids, etc.) is clipped here
+     rather than triggering iOS Safari's "page is wider than viewport
+     so show it zoomed-out / horizontally scrollable" behavior. Safe
+     to clip on `.page` because it lives inside `.main` — the fixed
+     bottom tab bar is `.main`'s sibling, not inside it. */
+  .page {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
   .app {
     grid-template-columns: 1fr;
   }
@@ -4685,6 +4743,36 @@ select.pp-field {
     padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   }
 
+  /* Production header — let the title/actions row wrap on narrow phones
+     and shrink the display-font title so a long show name doesn't push
+     the page wide. */
+  .topbar {
+    padding-top: 12px;
+  }
+  .topbar-row {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: 12px;
+    align-items: flex-start;
+  }
+  .show-title {
+    font-size: 22px;
+    line-height: 1.15;
+    word-break: break-word;
+  }
+  .show-sub {
+    font-size: 12px;
+    gap: 8px;
+  }
+  .topbar-actions {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .crumbs {
+    font-size: 11.5px;
+    margin-bottom: 8px;
+  }
+
   /* Bottom tab bar — fixed across the viewport bottom. */
   .mob-tabbar {
     position: fixed;
@@ -4693,12 +4781,15 @@ select.pp-field {
     right: 0;
     z-index: 50;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     background: var(--bg-elev);
     border-top: 1px solid var(--border);
     padding-top: 6px;
     padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
     box-shadow: 0 -2px 12px -4px rgba(40, 30, 15, 0.08);
+    box-sizing: border-box;
+    max-width: 100vw;
+    overflow: hidden;
   }
   .mob-tab {
     display: flex;
@@ -4710,6 +4801,8 @@ select.pp-field {
     text-decoration: none;
     position: relative;
     transition: transform 0.08s;
+    min-width: 0;
+    overflow: hidden;
   }
   .mob-tab[data-active="1"] {
     color: var(--accent);
@@ -5436,7 +5529,7 @@ select.pp-field {
   }
   .bk-side-left {
     height: auto !important;
-    max-height: 50vh;
+    max-height: 40vh;
     border-right: 0 !important;
     border-bottom: 1px solid var(--border);
     overflow-y: auto !important;
@@ -5446,6 +5539,45 @@ select.pp-field {
     max-height: 50vh;
     padding: 14px 12px !important;
     overflow-y: auto !important;
+  }
+  /* Phone-only: hide the editor sidebars' off-stage cast + set-pieces
+     pickers (drag/drop doesn't work on touch — they're noise), hide
+     the desktop title block / edit toolbar, and reveal the compact
+     prev/next beat nav above the canvas. Scenes + beats list (left)
+     and beat comments + notes (right) stay visible. */
+  .bk-mobile-hide {
+    display: none !important;
+  }
+  .bk-mobile-only {
+    display: flex !important;
+  }
+  .bk-beat-nav {
+    align-items: center;
+    gap: 6px;
+    padding: 6px 4px 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+  }
+
+  /* Shrink actor circles, name pills, and set-piece tokens on the
+     blocking canvas at phone widths. The desktop sizes (38px avatars,
+     64x48 set pieces) are correct for a 800-1200px canvas; on a
+     ~390px-wide mobile floor plan they take 10%+ of the width each
+     and crowd quickly once several actors are placed. */
+  .bk-actor-circle {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 10px !important;
+    border-width: 1.5px !important;
+  }
+  .bk-actor-label {
+    font-size: 9.5px !important;
+    padding: 1px 4px !important;
+    max-width: 64px !important;
+  }
+  .bk-set-piece-token {
+    width: 44px !important;
+    height: 33px !important;
   }
 
   /* Script viewer — collapse to a single column on phone. The tool
@@ -5512,6 +5644,44 @@ select.pp-field {
     flex: 1;
     overflow-y: auto;
     padding: 12px 16px 0;
+  }
+
+  /* Production overview supporting row — desktop is 2fr / 1fr (Recent
+     activity + Principals side-by-side). On a phone that squeezes both
+     columns into too-narrow strips; stack them vertically instead. */
+  .prod-overview-supporting {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Let any space-between control bar wrap on phone so toolbars with
+     several buttons (notes editor header, etc.) don't push their cards
+     off-screen. Used widely across the app for header rows. */
+  .row-between {
+    flex-wrap: wrap;
+  }
+
+  /* Script viewer page-nav row — prev/next + zoom + Bookmark/Download
+     buttons combined are wider than a phone viewport. Allow wrap. */
+  .sv-pagenav {
+    flex-wrap: wrap;
+  }
+
+  /* Belt-and-suspenders on the script viewer shell so the PDF and
+     side panel can't push the page sideways. The shell + canvas
+     column both clamp to 100% and zero their min-width so a wide
+     intrinsic child (PDF canvas drawing buffer) can shrink to fit. */
+  .script-viewer-shell {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .sv-canvas {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .sv-side {
+    max-width: 100% !important;
+    min-width: 0 !important;
   }
 
   /* Notes — collapse to a single column and swap list/editor based on
@@ -5608,6 +5778,14 @@ select.pp-field {
     white-space: nowrap;
     scroll-snap-align: start;
   }
+}
+
+/* On tablet+ the mobile-only beat nav is suppressed; the desktop
+   title/toolbar block carries the same info and the user can click
+   any beat in the left list directly. The mobile media query above
+   flips this back to `display: flex !important`. */
+.bk-mobile-only {
+  display: none;
 }
 
 /* ─── Phone landscape (short viewport) — give the blocking PDF more

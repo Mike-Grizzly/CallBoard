@@ -213,16 +213,23 @@ below for the full picture.
   caching would need a library — see **Decision D7**. — **M**
 - [ ] Verify "Add to Home Screen" on iOS Safari and Android Chrome. — **S**
 
-**Done so far (2026-05-22 → 05-24):** bottom-tab mobile nav, PWA
+**Done so far (2026-05-22 → 05-27):** bottom-tab mobile nav, PWA
 manifest, all 8 slices of the per-screen responsive audit, view-only
-phone mode for the blocking canvas + script editor, and the Today-tab
-fix to always return to the workspace dashboard. **Still open before
+phone mode for the blocking canvas + script editor, the Today-tab
+fix to always return to the workspace dashboard, and the 2026-05-27
+blocking-mobile follow-up (ground plan rasterized at setup so the
+blocking canvas renders an `<img>` instead of pdf.js — fixes iOS
+Safari OOM and speeds desktop loads; mobile beat nav with swipe;
+smaller on-canvas tokens; toolbar layout-shift fix; auto-seed first
+scene/beat so editors land on a usable canvas). **Still open before
 P3:** real touch-editing support (blocking/script — the goal is at
 least tablet parity for blocking), live device verification including
-"Add to Home Screen", and the deferred polish items noted in
-`current-status.md` (production-view chrome cleanup, formal
-`/notifications` inbox, broader production-context nav review). User
-testing in P3 will surface the next round of styling/UX adjustments.
+"Add to Home Screen", the iOS post-auth zoom reset (parked — see
+`open-questions.md → Mobile / iOS questions`), and the deferred
+polish items noted in `current-status.md` (production-view chrome
+cleanup, formal `/notifications` inbox, broader production-context
+nav review). User testing in P3 will surface the next round of
+styling/UX adjustments.
 
 Result: testers can install CallBoard to their home screen and use it
 like an app — the free interim "app" while the native wrapper waits for

@@ -86,6 +86,7 @@ type Props = {
   castMembers: CastMember[];
   productionMembers: ProductionMember[];
   pdfUrl: string | null;
+  groundPlanImageUrl: string | null;
   canEdit: boolean;
   currentUserId: string;
   initialBeatId: string | null;
@@ -168,7 +169,7 @@ function ActorToken({
           </button>
         )}
         <div
-          className="avatar"
+          className="avatar bk-actor-circle"
           style={{
             width: 38,
             height: 38,
@@ -190,6 +191,7 @@ function ActorToken({
         </div>
         {label && (
           <div
+            className="bk-actor-label"
             style={{
               marginTop: 2,
               whiteSpace: "nowrap",
@@ -329,7 +331,7 @@ function SetPieceToken({
         <div style={{ transform: `rotate(${rotation}deg)` }}>
           {imageUrl ? (
             <div
-              className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm"
+              className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm bk-set-piece-token"
               style={{ width: 64, height: 48, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}
             >
               <img
@@ -343,7 +345,7 @@ function SetPieceToken({
               viewBox="0 0 80 60"
               width={64}
               height={48}
-              className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm"
+              className="rounded border border-[color:var(--border)] bg-white/90 shadow-sm bk-set-piece-token"
             >
               <path
                 d={svgPath}
@@ -691,6 +693,7 @@ export function BlockingCanvas({
   castMembers,
   productionMembers,
   pdfUrl,
+  groundPlanImageUrl,
   canEdit: canEditProp,
   currentUserId,
   initialBeatId,
@@ -710,6 +713,10 @@ export function BlockingCanvas({
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Phone swipe-to-change-beat state. Populated on pointerdown when
+  // pointerType === "touch", consumed on pointerup. Lives outside React
+  // state since a partial drag doesn't need to trigger a re-render.
+  const swipeStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
 
   const [currentBeatId, setCurrentBeatId] = useState<string | null>(initialBeatId);
   const [currentSceneId, setCurrentSceneId] = useState<string | null>(
@@ -844,6 +851,20 @@ export function BlockingCanvas({
 
   useEffect(() => {
     if (!pdfUrl || !pdfCanvasRef.current) return;
+    // If we already have a rasterized image from the setup wizard, the
+    // canvas is replaced by an <img> and pdf.js never needs to run.
+    if (groundPlanImageUrl) return;
+    // iPhone Safari kills the tab ("Can't open this page") when pdf.js
+    // parses a real ground-plan PDF — architectural drawings are
+    // vector-heavy and the parser holds the whole tree in memory before
+    // we even rasterize. Lowering render scale didn't help; the OOM was
+    // upstream of the canvas. On phone we skip pdf.js entirely (it's
+    // dynamic-imported only inside loadPdfDocument, so this also keeps
+    // pdf.js itself off the bundle for that load) and let the canvas
+    // render without the floor-plan background. The blocking dots and
+    // set pieces still show, and a "View floor plan" link opens the PDF
+    // in the system viewer where memory isn't constrained.
+    if (isPhone) return;
     let cancelled = false;
     const cacheKey = pdfCacheKey(pdfUrl, currentPdfPage);
 
@@ -890,7 +911,7 @@ export function BlockingCanvas({
     }
     render().catch(() => setPdfLoaded(false));
     return () => { cancelled = true; };
-  }, [pdfUrl, currentPdfPage]);
+  }, [pdfUrl, currentPdfPage, isPhone, groundPlanImageUrl]);
 
   function pushHistory(prev: PositionMap) {
     setHistory((h) => [...h.slice(-49), prev]);
@@ -1095,6 +1116,12 @@ export function BlockingCanvas({
 
   function handleCanvasPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (!canvasContainerRef.current) return;
+    // On phone we treat horizontal pointer drags across the canvas as
+    // prev/next-beat swipes. canEdit is false on phone so the drag/draw
+    // paths below are no-ops anyway, leaving the gesture surface free.
+    if (isPhone && e.pointerType === "touch") {
+      swipeStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+    }
     const { x, y } = canvasCoords(e);
 
     if (drawMode) {
@@ -1144,6 +1171,26 @@ export function BlockingCanvas({
   }
 
   function handleCanvasPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    // Swipe-to-change-beat (phone only). Fires before the lasso path
+    // returns out. ~50px horizontal, predominantly horizontal motion,
+    // under ~600ms — tuned to be deliberate without competing with
+    // vertical page scrolls. The canvas itself isn't scrollable.
+    if (isPhone && swipeStartRef.current) {
+      const start = swipeStartRef.current;
+      swipeStartRef.current = null;
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      const dt = Date.now() - start.t;
+      if (
+        Math.abs(dx) > 50 &&
+        Math.abs(dx) > Math.abs(dy) * 1.5 &&
+        dt < 600
+      ) {
+        if (dx < 0) goToNextBeat();
+        else goToPrevBeat();
+        return;
+      }
+    }
     if (drawMode) return;
     if (!lassoStart || !lassoEnd) return;
     const minX = Math.min(lassoStart.x, lassoEnd.x);
@@ -1378,6 +1425,32 @@ export function BlockingCanvas({
   async function handleSaveBeatNotes(beatId: string, html: string) {
     setBeatNotesMap((prev) => ({ ...prev, [beatId]: html }));
     await saveBeatNotes(beatId, html);
+  }
+
+  // Flat list of every beat with its parent scene — backs the mobile
+  // prev/next beat navigation and swipe gestures. Beats are already
+  // ordered by scene.orderIndex then beat.orderIndex in scenesWithBeats.
+  const allBeatsFlat = scenesWithBeats.flatMap((s) =>
+    s.beats.map((b) => ({ beat: b, scene: s })),
+  );
+  const currentBeatIdx = currentBeatId
+    ? allBeatsFlat.findIndex((x) => x.beat.id === currentBeatId)
+    : -1;
+  const hasPrevBeat = currentBeatIdx > 0;
+  const hasNextBeat =
+    currentBeatIdx >= 0 && currentBeatIdx < allBeatsFlat.length - 1;
+
+  function goToPrevBeat() {
+    if (!hasPrevBeat) return;
+    const target = allBeatsFlat[currentBeatIdx - 1];
+    setCurrentSceneId(target.scene.id);
+    setCurrentBeatId(target.beat.id);
+  }
+  function goToNextBeat() {
+    if (!hasNextBeat) return;
+    const target = allBeatsFlat[currentBeatIdx + 1];
+    setCurrentSceneId(target.scene.id);
+    setCurrentBeatId(target.beat.id);
   }
 
   const actorColors: Record<string, string> = {};
@@ -1716,8 +1789,8 @@ export function BlockingCanvas({
           )}
         </div>
 
-        {/* Off-stage cast section */}
-        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        {/* Off-stage cast section — hidden on phone (view-only there) */}
+        <div className="bk-mobile-hide" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
           <div className="row-between" style={{ marginBottom: 8, flexShrink: 0 }}>
             <div className="h-eyebrow">Off stage · {offStageCount}</div>
             <span className="muted" style={{ fontSize: 10.5 }}>click to place</span>
@@ -1748,7 +1821,7 @@ export function BlockingCanvas({
                     color={color}
                     ini={ini}
                     isOnCanvas={isOnCanvas}
-                    isDisabled={!canEdit || !currentBeatId || activeLayer !== "actors"}
+                    isDisabled={!canEdit || !currentBeatId}
                     onClickPlace={() => placeOnCanvas("actor", member.userId)}
                   />
                 );
@@ -1772,13 +1845,78 @@ export function BlockingCanvas({
         }}
       >
 
-        {/* Toolbar above canvas */}
-        <div className="row-between">
-          <div>
+        {/* Compact prev/next beat nav — phone-only. Lets the view-only
+            mobile user move through beats with a tap (or a swipe on the
+            canvas). Hidden on tablet+. */}
+        <div className="bk-mobile-only bk-beat-nav">
+          <button
+            onClick={goToPrevBeat}
+            disabled={!hasPrevBeat}
+            className="btn ghost"
+            style={{
+              height: 36,
+              padding: "0 10px",
+              opacity: hasPrevBeat ? 1 : 0.35,
+              cursor: hasPrevBeat ? "pointer" : "default",
+            }}
+            aria-label="Previous beat"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
+            {currentScene && currentBeat ? (
+              <>
+                <div className="muted truncate" style={{ fontSize: 11 }}>
+                  {currentScene.title}
+                </div>
+                <div className="truncate" style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
+                  {currentBeat.label}
+                  {allBeatsFlat.length > 0 && currentBeatIdx >= 0 && (
+                    <span className="muted" style={{ fontWeight: 400, fontSize: 11.5, marginLeft: 6 }}>
+                      {currentBeatIdx + 1} / {allBeatsFlat.length}
+                    </span>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="muted" style={{ fontSize: 12.5 }}>
+                {scenesWithBeats.length === 0
+                  ? "No scenes yet"
+                  : "Select a beat"}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={goToNextBeat}
+            disabled={!hasNextBeat}
+            className="btn ghost"
+            style={{
+              height: 36,
+              padding: "0 10px",
+              opacity: hasNextBeat ? 1 : 0.35,
+              cursor: hasNextBeat ? "pointer" : "default",
+            }}
+            aria-label="Next beat"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Toolbar above canvas — title + edit controls. Hidden on
+            phone; the mobile beat nav above replaces the title block
+            and edit controls aren't relevant to view-only users. */}
+        <div className="row-between bk-mobile-hide">
+          {/* min-width: 0 + truncate keeps the subtitle on a single line
+              even when the scene/beat text gets long. Without this, a
+              long subtitle wraps to 2 lines, the title block grows
+              taller, and `align-items: center` shifts the right-side
+              button row down — the "padding shift on new beat" the
+              user was seeing. */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--ink)" }}>
               Stage Blocking
             </div>
-            <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>
+            <div className="muted truncate" style={{ fontSize: 12.5, marginTop: 2 }}>
               {currentScene && currentBeat
                 ? `${currentScene.title} · ${currentBeat.label} — drag actors to set positions`
                 : scenesWithBeats.length === 0
@@ -1786,7 +1924,7 @@ export function BlockingCanvas({
                   : "Select a beat to start blocking"}
             </div>
           </div>
-          <div className="row" style={{ gap: 6 }}>
+          <div className="row" style={{ gap: 6, flexShrink: 0 }}>
             {selectedActorIds.size > 1 && (
               <div style={{ fontSize: 11.5, color: "var(--accent)", fontWeight: 600, padding: "0 8px", height: 28, display: "flex", alignItems: "center", background: "var(--bg-sunken)", borderRadius: 6, border: "1px solid var(--accent-muted, color-mix(in oklch, var(--accent), transparent 60%))" }}>
                 {selectedActorIds.size} actors selected
@@ -1865,12 +2003,19 @@ export function BlockingCanvas({
                 <Pencil className="h-3.5 w-3.5" /><span>{drawMode ? (arrowStart ? "Finish…" : "Drawing") : "Draw Arrow"}</span>
               </button>
             )}
-            {canEdit && history.length > 0 && (
+            {canEdit && (
               <button
                 onClick={handleUndo}
+                disabled={history.length === 0}
                 className="btn ghost"
-                style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-                title="Undo last move"
+                style={{
+                  height: 28,
+                  padding: "0 10px",
+                  fontSize: 12,
+                  opacity: history.length === 0 ? 0.4 : 1,
+                  cursor: history.length === 0 ? "default" : "pointer",
+                }}
+                title={history.length === 0 ? "Nothing to undo" : "Undo last move"}
               >
                 <RotateCcw className="h-3.5 w-3.5" /><span>Undo</span>
               </button>
@@ -1879,7 +2024,12 @@ export function BlockingCanvas({
               <button
                 onClick={handleCaptureBeat}
                 className="btn primary"
-                style={{ height: 28, padding: "0 12px", fontSize: 12 }}
+                style={{
+                  height: 28,
+                  padding: "0 14px",
+                  fontSize: 12,
+                  gap: 8,
+                }}
                 title="Save current positions as a beat and advance to the next one"
               >
                 <Aperture className="h-3.5 w-3.5" /><span>Capture Beat</span>
@@ -1924,7 +2074,7 @@ export function BlockingCanvas({
               padding: 0,
               position: "relative",
               overflow: "hidden",
-              background: pdfUrl ? "rgb(23,23,23)" : undefined,
+              background: (pdfUrl || groundPlanImageUrl) ? "rgb(23,23,23)" : undefined,
             }}
           >
             <div
@@ -1935,7 +2085,25 @@ export function BlockingCanvas({
               onPointerMove={handleCanvasPointerMove}
               onPointerUp={handleCanvasPointerUp}
             >
-              {pdfUrl ? (
+              {groundPlanImageUrl ? (
+                // Rasterized at setup — works on phone, no pdf.js needed.
+                // Stretch to fill the container exactly the way the canvas
+                // did; the position dots are percent-of-container, so any
+                // letterboxing would offset them from the floor plan.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={groundPlanImageUrl}
+                  alt="Ground plan"
+                  className="absolute inset-0 h-full w-full"
+                  style={{
+                    zIndex: 1,
+                    objectFit: "fill",
+                    pointerEvents: "none",
+                    userSelect: "none",
+                  }}
+                  draggable={false}
+                />
+              ) : pdfUrl ? (
                 <canvas
                   ref={pdfCanvasRef}
                   className="absolute inset-0 h-full w-full"
@@ -1969,7 +2137,7 @@ export function BlockingCanvas({
                 </div>
               )}
 
-              {pdfUrl && !pdfLoaded && (
+              {pdfUrl && !pdfLoaded && !isPhone && !groundPlanImageUrl && (
                 <div
                   style={{
                     position: "absolute",
@@ -1983,6 +2151,31 @@ export function BlockingCanvas({
                 >
                   <div className="pdf-spinner" aria-hidden />
                 </div>
+              )}
+
+              {pdfUrl && isPhone && !groundPlanImageUrl && (
+                <a
+                  href={pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    position: "absolute",
+                    top: 8,
+                    right: 8,
+                    zIndex: 30,
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    background: "var(--bg-elev)",
+                    border: "1px solid var(--border)",
+                    color: "var(--ink-2)",
+                    fontSize: 11.5,
+                    fontWeight: 500,
+                    textDecoration: "none",
+                    boxShadow: "var(--shadow-1)",
+                  }}
+                >
+                  View floor plan
+                </a>
               )}
 
               {stageConfig && (
@@ -2277,8 +2470,9 @@ export function BlockingCanvas({
               )}
             </div>
           </div>
-        {/* PDF multi-page controls */}
-        {pdfUrl && numPdfPages > 1 && (
+        {/* PDF multi-page controls (live PDF render path only — the
+            rasterized image is a single chosen page) */}
+        {pdfUrl && !groundPlanImageUrl && numPdfPages > 1 && (
           <div className="row justify-center" style={{ gap: 8, fontSize: 12, color: "var(--ink-2)" }}>
             <button
               onClick={() => setCurrentPdfPage((p) => Math.max(1, p - 1))}
@@ -2337,8 +2531,8 @@ export function BlockingCanvas({
           minHeight: 0,
         }}
       >
-        {/* Set Pieces — collapsible */}
-        <div style={{ borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+        {/* Set Pieces — collapsible; hidden on phone (view-only there) */}
+        <div className="bk-mobile-hide" style={{ borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
           <button
             type="button"
             onClick={() => setSetPiecesOpen((v) => !v)}
@@ -2377,7 +2571,7 @@ export function BlockingCanvas({
                       key={piece.key}
                       piece={piece}
                       isOnCanvas={isOnCanvas}
-                      isDisabled={!canEdit || !currentBeatId || activeLayer !== "set_pieces"}
+                      isDisabled={!canEdit || !currentBeatId}
                       onClickPlace={() => placeOnCanvas("set_piece", piece.key)}
                     />
                   );
@@ -2395,7 +2589,7 @@ export function BlockingCanvas({
                           key={piece.id}
                           piece={{ key: piece.id, label: piece.name, imageUrl: piece.imageUrl }}
                           isOnCanvas={isOnCanvas}
-                          isDisabled={!canEdit || !currentBeatId || activeLayer !== "set_pieces"}
+                          isDisabled={!canEdit || !currentBeatId}
                           onClickPlace={() => placeOnCanvas("set_piece", piece.id)}
                           canDelete={canEdit}
                           onDelete={() => handleDeleteCustomPiece(piece.id)}

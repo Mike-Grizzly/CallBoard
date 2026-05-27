@@ -779,6 +779,7 @@ export function ScriptViewer({
 
         {/* Page navigation + save status */}
         <div
+          className="sv-pagenav"
           style={{
             display: "flex",
             alignItems: "center",
