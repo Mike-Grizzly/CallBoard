@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { MobileTabBar } from "./mobile-tab-bar";
+import { ZoomReset } from "./zoom-reset";
 
 /**
  * Outer app shell. The desktop rail is rendered by the parent layout
@@ -17,6 +18,7 @@ export function AppFrame({
 }) {
   return (
     <div className="app">
+      <ZoomReset />
       {rail}
       <main className="main">{children}</main>
       <MobileTabBar />
