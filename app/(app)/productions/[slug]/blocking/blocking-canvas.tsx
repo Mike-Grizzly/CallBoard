@@ -712,6 +712,10 @@ export function BlockingCanvas({
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Phone swipe-to-change-beat state. Populated on pointerdown when
+  // pointerType === "touch", consumed on pointerup. Lives outside React
+  // state since a partial drag doesn't need to trigger a re-render.
+  const swipeStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
 
   const [currentBeatId, setCurrentBeatId] = useState<string | null>(initialBeatId);
   const [currentSceneId, setCurrentSceneId] = useState<string | null>(
@@ -1111,6 +1115,12 @@ export function BlockingCanvas({
 
   function handleCanvasPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (!canvasContainerRef.current) return;
+    // On phone we treat horizontal pointer drags across the canvas as
+    // prev/next-beat swipes. canEdit is false on phone so the drag/draw
+    // paths below are no-ops anyway, leaving the gesture surface free.
+    if (isPhone && e.pointerType === "touch") {
+      swipeStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+    }
     const { x, y } = canvasCoords(e);
 
     if (drawMode) {
@@ -1160,6 +1170,26 @@ export function BlockingCanvas({
   }
 
   function handleCanvasPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    // Swipe-to-change-beat (phone only). Fires before the lasso path
+    // returns out. ~50px horizontal, predominantly horizontal motion,
+    // under ~600ms — tuned to be deliberate without competing with
+    // vertical page scrolls. The canvas itself isn't scrollable.
+    if (isPhone && swipeStartRef.current) {
+      const start = swipeStartRef.current;
+      swipeStartRef.current = null;
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      const dt = Date.now() - start.t;
+      if (
+        Math.abs(dx) > 50 &&
+        Math.abs(dx) > Math.abs(dy) * 1.5 &&
+        dt < 600
+      ) {
+        if (dx < 0) goToNextBeat();
+        else goToPrevBeat();
+        return;
+      }
+    }
     if (drawMode) return;
     if (!lassoStart || !lassoEnd) return;
     const minX = Math.min(lassoStart.x, lassoEnd.x);
@@ -1394,6 +1424,32 @@ export function BlockingCanvas({
   async function handleSaveBeatNotes(beatId: string, html: string) {
     setBeatNotesMap((prev) => ({ ...prev, [beatId]: html }));
     await saveBeatNotes(beatId, html);
+  }
+
+  // Flat list of every beat with its parent scene — backs the mobile
+  // prev/next beat navigation and swipe gestures. Beats are already
+  // ordered by scene.orderIndex then beat.orderIndex in scenesWithBeats.
+  const allBeatsFlat = scenesWithBeats.flatMap((s) =>
+    s.beats.map((b) => ({ beat: b, scene: s })),
+  );
+  const currentBeatIdx = currentBeatId
+    ? allBeatsFlat.findIndex((x) => x.beat.id === currentBeatId)
+    : -1;
+  const hasPrevBeat = currentBeatIdx > 0;
+  const hasNextBeat =
+    currentBeatIdx >= 0 && currentBeatIdx < allBeatsFlat.length - 1;
+
+  function goToPrevBeat() {
+    if (!hasPrevBeat) return;
+    const target = allBeatsFlat[currentBeatIdx - 1];
+    setCurrentSceneId(target.scene.id);
+    setCurrentBeatId(target.beat.id);
+  }
+  function goToNextBeat() {
+    if (!hasNextBeat) return;
+    const target = allBeatsFlat[currentBeatIdx + 1];
+    setCurrentSceneId(target.scene.id);
+    setCurrentBeatId(target.beat.id);
   }
 
   const actorColors: Record<string, string> = {};
@@ -1732,8 +1788,8 @@ export function BlockingCanvas({
           )}
         </div>
 
-        {/* Off-stage cast section */}
-        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        {/* Off-stage cast section — hidden on phone (view-only there) */}
+        <div className="bk-mobile-hide" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
           <div className="row-between" style={{ marginBottom: 8, flexShrink: 0 }}>
             <div className="h-eyebrow">Off stage · {offStageCount}</div>
             <span className="muted" style={{ fontSize: 10.5 }}>click to place</span>
@@ -1788,8 +1844,67 @@ export function BlockingCanvas({
         }}
       >
 
-        {/* Toolbar above canvas */}
-        <div className="row-between">
+        {/* Compact prev/next beat nav — phone-only. Lets the view-only
+            mobile user move through beats with a tap (or a swipe on the
+            canvas). Hidden on tablet+. */}
+        <div className="bk-mobile-only bk-beat-nav">
+          <button
+            onClick={goToPrevBeat}
+            disabled={!hasPrevBeat}
+            className="btn ghost"
+            style={{
+              height: 36,
+              padding: "0 10px",
+              opacity: hasPrevBeat ? 1 : 0.35,
+              cursor: hasPrevBeat ? "pointer" : "default",
+            }}
+            aria-label="Previous beat"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
+            {currentScene && currentBeat ? (
+              <>
+                <div className="muted truncate" style={{ fontSize: 11 }}>
+                  {currentScene.title}
+                </div>
+                <div className="truncate" style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
+                  {currentBeat.label}
+                  {allBeatsFlat.length > 0 && currentBeatIdx >= 0 && (
+                    <span className="muted" style={{ fontWeight: 400, fontSize: 11.5, marginLeft: 6 }}>
+                      {currentBeatIdx + 1} / {allBeatsFlat.length}
+                    </span>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="muted" style={{ fontSize: 12.5 }}>
+                {scenesWithBeats.length === 0
+                  ? "No scenes yet"
+                  : "Select a beat"}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={goToNextBeat}
+            disabled={!hasNextBeat}
+            className="btn ghost"
+            style={{
+              height: 36,
+              padding: "0 10px",
+              opacity: hasNextBeat ? 1 : 0.35,
+              cursor: hasNextBeat ? "pointer" : "default",
+            }}
+            aria-label="Next beat"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Toolbar above canvas — title + edit controls. Hidden on
+            phone; the mobile beat nav above replaces the title block
+            and edit controls aren't relevant to view-only users. */}
+        <div className="row-between bk-mobile-hide">
           <div>
             <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--ink)" }}>
               Stage Blocking
@@ -2404,8 +2519,8 @@ export function BlockingCanvas({
           minHeight: 0,
         }}
       >
-        {/* Set Pieces — collapsible */}
-        <div style={{ borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+        {/* Set Pieces — collapsible; hidden on phone (view-only there) */}
+        <div className="bk-mobile-hide" style={{ borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
           <button
             type="button"
             onClick={() => setSetPiecesOpen((v) => !v)}

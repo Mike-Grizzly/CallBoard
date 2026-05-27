@@ -5515,7 +5515,7 @@ select.pp-field {
   }
   .bk-side-left {
     height: auto !important;
-    max-height: 50vh;
+    max-height: 40vh;
     border-right: 0 !important;
     border-bottom: 1px solid var(--border);
     overflow-y: auto !important;
@@ -5526,6 +5526,32 @@ select.pp-field {
     padding: 14px 12px !important;
     overflow-y: auto !important;
   }
+  /* Phone-only: hide the editor sidebars' off-stage cast + set-pieces
+     pickers (drag/drop doesn't work on touch — they're noise), hide
+     the desktop title block / edit toolbar, and reveal the compact
+     prev/next beat nav above the canvas. Scenes + beats list (left)
+     and beat comments + notes (right) stay visible. */
+  .bk-mobile-hide {
+    display: none !important;
+  }
+  .bk-mobile-only {
+    display: flex !important;
+  }
+  .bk-beat-nav {
+    align-items: center;
+    gap: 6px;
+    padding: 6px 4px 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+  }
+}
+
+/* On tablet+ the mobile-only beat nav is suppressed; the desktop
+   title/toolbar block carries the same info and the user can click
+   any beat in the left list directly. */
+.bk-mobile-only {
+  display: none;
+}
 
   /* Script viewer — collapse to a single column on phone. The tool
      sidebar is hidden (view-only mode already disables editing), the
