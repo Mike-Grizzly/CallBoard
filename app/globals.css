@@ -5544,14 +5544,6 @@ select.pp-field {
     border-bottom: 1px solid var(--border);
     margin-bottom: 6px;
   }
-}
-
-/* On tablet+ the mobile-only beat nav is suppressed; the desktop
-   title/toolbar block carries the same info and the user can click
-   any beat in the left list directly. */
-.bk-mobile-only {
-  display: none;
-}
 
   /* Script viewer — collapse to a single column on phone. The tool
      sidebar is hidden (view-only mode already disables editing), the
@@ -5751,6 +5743,14 @@ select.pp-field {
     white-space: nowrap;
     scroll-snap-align: start;
   }
+}
+
+/* On tablet+ the mobile-only beat nav is suppressed; the desktop
+   title/toolbar block carries the same info and the user can click
+   any beat in the left list directly. The mobile media query above
+   flips this back to `display: flex !important`. */
+.bk-mobile-only {
+  display: none;
 }
 
 /* ─── Phone landscape (short viewport) — give the blocking PDF more
