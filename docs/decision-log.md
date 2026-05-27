@@ -774,3 +774,96 @@ domain; "Proscene" was the chosen alternative. The wordmark split
 `Pro<em>scene</em>` mirrors the original `Call<em>Board</em>` italic
 treatment, so the rail keeps the same visual weight without any CSS
 changes.
+
+---
+
+## 2026-05-27 — Email pipeline + custom domain wired end-to-end
+
+**Decision:** `proscene.app` (registered at Namecheap, same day as the
+rename) is wired to both Vercel (as the app's custom domain) and Resend
+(as a verified sending domain), and Supabase Auth uses Resend as its
+custom SMTP provider. This resolves **D2** (email deliverability) fully —
+the P3 application-flow checks were previously blocked on real email
+delivery.
+
+**The wiring, end to end:**
+
+- **Namecheap DNS (Advanced DNS tab):**
+  - For Resend (sending): Mail Settings switched to **Custom MX** so the
+    MX type becomes available; MX on `send` →
+    `feedback-smtp.us-east-1.amazonses.com` priority 10; TXT (SPF) on
+    `send` → `v=spf1 include:amazonses.com ~all`; TXT (DKIM) on
+    `resend._domainkey` → Resend's `p=...` value; TXT (DMARC) on `_dmarc`
+    → `v=DMARC1; p=none;`.
+  - For Vercel (app traffic): A record on `@` → `76.76.21.21`; CNAME on
+    `www` → `cname.vercel-dns.com`. The default Namecheap parking
+    CNAME/URL Redirect on `@` was deleted first to avoid the conflict.
+  - The Resend `send.` MX and Vercel apex A coexist because they're on
+    different hosts.
+- **Resend:** domain `proscene.app` verified; API key created with
+  *Sending access* (least privilege) scoped to `proscene.app` and used as
+  the SMTP password (Resend's SMTP gateway accepts any API key as the
+  password — no separate SMTP credential).
+- **Supabase → Project Settings → Authentication → SMTP Settings:**
+  Custom SMTP enabled, host `smtp.resend.com`, port `465` (implicit
+  TLS), user `resend`, password is the Resend API key, sender
+  `noreply@proscene.app`, sender name `Proscene`.
+- **Supabase → Authentication → URL Configuration:** Site URL set to
+  `https://proscene.app`; redirect-URL allowlist covers
+  `http://localhost:3000/**`, `https://call-board.vercel.app/**`,
+  `https://proscene.app/**` (the `/**` glob keeps future routes
+  reachable without re-allowlisting).
+- **Vercel → Settings → Domains:** `proscene.app` added as a domain
+  alongside the auto-assigned `call-board.vercel.app`, then promoted to
+  Primary; `www.proscene.app` added with redirect to apex. Let's Encrypt
+  certs auto-provisioned within ~1 min of DNS verification.
+- **Vercel → Settings → Environment Variables (Production / Preview /
+  Development):** `NEXT_PUBLIC_SITE_URL=https://proscene.app`,
+  `RESEND_FROM_EMAIL=noreply@proscene.app`.
+- **`.env.example`** updated to default `RESEND_FROM_EMAIL` to
+  `noreply@proscene.app` so a fresh clone matches production. Local
+  developers using a different sender for testing should override in
+  `.env.local`.
+
+**What's verified:** Supabase Dashboard → Authentication → Users → Send
+Magic Link delivered an email from `noreply@proscene.app`; the link in
+the email points to `https://proscene.app/...` (proves both SMTP and
+Supabase Site URL config are correct); after the Vercel DNS hookup the
+link resolves to the live app.
+
+**Not yet verified — these belong to P3:** the app's `/forgot-password`
+flow (different code path — uses `NEXT_PUBLIC_SITE_URL` for `redirectTo`
+rather than Supabase's Site URL); the member-invite flow end-to-end
+(needs a non-self test email); a rehearsal-report email from
+`features/reports/send-report.ts`.
+
+**Intentionally NOT done in this pass:**
+
+- **Inbox at `proscene.app`** (e.g. `feedback@proscene.app` →
+  personal Gmail). Recommended path is ImprovMX (free) when wanted —
+  separate MX records on the apex coexist fine with the Resend `send.`
+  MX. Skipped for now because nothing on the app side needs a
+  receiving inbox; sender addresses don't require a mailbox to exist.
+- **Rename the Supabase project from `CallBoard` to `Proscene` in the
+  Supabase dashboard.** Cosmetic only — connection strings and keys
+  are tied to the project ref, not the display name. Deferred so
+  backticked `` `CallBoard` `` references in the docs stay accurate
+  until renamed.
+- **Rename the Vercel project from `call-board` to `proscene`.** Would
+  change the auto-assigned `*.vercel.app` URL and break bookmarks for
+  the old one; deferred until after beta.
+
+**Reason:** The whole P3 beta plan depends on reaching external testers
+by email — Supabase's built-in SMTP is rate-limited to 2/hr in sandbox
+mode, which silently breaks signup confirmation and password reset for
+real recruits. Wiring a verified sending domain end-to-end was the
+single biggest unlock left for the soft launch.
+
+**Impact:**
+- Email deliverability is no longer a blocker for any P3 work.
+- `proscene.app` is the canonical public URL; auth emails, password
+  resets, member invites, and rehearsal-report emails all originate
+  from `noreply@proscene.app` and link back to `proscene.app`.
+- HSTS preload for the `.app` TLD means there's no HTTP fallback;
+  Vercel cert provisioning is now part of the critical path for any
+  future domain change.
