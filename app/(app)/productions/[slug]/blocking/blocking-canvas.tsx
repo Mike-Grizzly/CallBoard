@@ -701,11 +701,16 @@ export function BlockingCanvas({
   const router = useRouter();
   const [, startTransition] = useTransition();
 
-  // The blocking canvas is drag-and-drop and mouse-built — on phones it is
-  // presented view-only until touch support lands. Editors keep full edit
-  // access on tablet and desktop.
   const isPhone = useIsPhone();
-  const canEdit = canEditProp && !isPhone;
+  // Edit access tracks the role permission only. We previously also gated
+  // it on `!isPhone` to make the mouse-built canvas view-only on touch
+  // devices — but the viewport-width signal can misfire (browser zoom,
+  // hydration mismatch, narrow window) and silently strip an editor's
+  // edit access on real desktops, with no visible reason why. Touch users
+  // get a slightly broken-feeling drag instead of being blocked outright;
+  // we can re-introduce a proper touch-only gate (pointer:coarse +
+  // user override) when we land actual touch support.
+  const canEdit = canEditProp;
 
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
