@@ -195,7 +195,7 @@ For every screen, the same recipe applies:
 
 - [x] login / signup / signup-confirm / forgot-password / reset-password
       restyled on a new `.auth-*` CSS block (warm radial-spotlight
-      background, `.card` form, `.field` inputs, `CallBoard` wordmark)
+      background, `.card` form, `.field` inputs, `Proscene` wordmark)
 - [x] Replaced `<Button>` shadcn primitive and raw `lucide-react` imports
 - [x] Corrected the stale "Show Portal" brand to "CallBoard" (the rail +
       metadata already use "CallBoard")

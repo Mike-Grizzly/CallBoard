@@ -1,6 +1,8 @@
 # Current Status
 
-**Last updated:** 2026-05-24
+**Last updated:** 2026-05-27
+
+**App name:** **Proscene** (renamed from "CallBoard" on 2026-05-27 — the `callboard` domain could not be secured). The product URL will be **`proscene.app`**. The rebrand updates the rail wordmark (`Pro<em>scene</em>`), the rail/icon mark glyph (`C` → `P`), the four auth-screen brand headers (login, signup, forgot-password, reset-password), the PWA manifest, root metadata (`title` / `applicationName` / `appleWebApp.title`), `apple-icon.tsx`, `public/icon.svg` + `public/icon-maskable.svg`, the rehearsal-report email footer ("Sent via Proscene"), and `package.json` / `package-lock.json` `name`. The Supabase project is still literally named `CallBoard` in the Supabase dashboard — backticked `CallBoard` references in these docs point to that project identifier and are intentionally unchanged. Colors and design tokens are unchanged. `launch-roadmap.md` P4 has been updated to point at `proscene.app`; whether marketing lives on the same domain or a separate one is still TBD.
 
 **Current milestone:** Steps 1-13 complete + Script Editor (Step 14) + Personal Calendar (Step 15) + People Directory (Step 16) + full mobile/PWA pass (P2). Branch `claude/bold-einstein-hHMHD` carries the mobile work and is ready for merge into the production branch.
 
@@ -295,7 +297,7 @@ Branch `claude/bold-einstein-hHMHD` — first slice of launch-roadmap **P2**.
   for `aria-controls`.
 - **Installable PWA.** `app/manifest.ts` (`MetadataRoute.Manifest`:
   standalone display, `/dashboard` start URL, `#fbf8f3` theme/background).
-  Icons: `public/icon.svg` + `public/icon-maskable.svg` (the CallBoard "C"
+  Icons: `public/icon.svg` + `public/icon-maskable.svg` (the Proscene "P"
   mark), and `app/apple-icon.tsx` which generates a 180×180 PNG
   `apple-touch-icon` via `next/og` `ImageResponse` (iOS does not accept SVG
   touch icons). Root layout gained `icons` / `appleWebApp` metadata and a

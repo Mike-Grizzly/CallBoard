@@ -23,16 +23,16 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "CallBoard — Production Hub",
+  title: "Proscene — Production Hub",
   description:
     "A lightweight production portal for small theatre companies.",
-  applicationName: "CallBoard",
+  applicationName: "Proscene",
   icons: {
     icon: "/icon.svg",
   },
   appleWebApp: {
     capable: true,
-    title: "CallBoard",
+    title: "Proscene",
     statusBarStyle: "default",
   },
 };

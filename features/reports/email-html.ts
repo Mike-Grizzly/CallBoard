@@ -96,7 +96,7 @@ export function formatReportAsHtml(
         <!-- Footer -->
         <tr>
           <td style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:16px 32px;">
-            <div style="font-size:12px;color:#9ca3af;text-align:center;">Sent via CallBoard</div>
+            <div style="font-size:12px;color:#9ca3af;text-align:center;">Sent via Proscene</div>
           </td>
         </tr>
 

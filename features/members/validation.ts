@@ -19,7 +19,7 @@ export function splitName(full: string): {
   return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
 }
 
-/** Best-effort match of a free-text role string to a CallBoard role. */
+/** Best-effort match of a free-text role string to a Proscene role. */
 export function matchRole(raw: string | undefined): Role {
   const value = (raw ?? "").trim().toLowerCase();
   if (!value) return "cast";

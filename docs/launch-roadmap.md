@@ -1,13 +1,13 @@
-# Launch Roadmap — CallBoard
+# Launch Roadmap — Proscene
 
 **Created:** 2026-05-21
-**Status:** Active — this is the working plan to take CallBoard from a
+**Status:** Active — this is the working plan to take Proscene from a
 feature-complete MVP to a soft launch with invited testers, and on to a
 public launch.
 
 ## How to read this
 
-CallBoard is feature-rich — 16 build steps are implemented (see
+Proscene is feature-rich — 16 build steps are implemented (see
 `current-status.md`) — but it has **never been deployed or used by anyone
 outside development**. This roadmap covers that gap: security hardening,
 deployment, the mobile experience, a beta-tester program, the marketing /
@@ -231,7 +231,7 @@ cleanup, formal `/notifications` inbox, broader production-context
 nav review). User testing in P3 will surface the next round of
 styling/UX adjustments.
 
-Result: testers can install CallBoard to their home screen and use it
+Result: testers can install Proscene to their home screen and use it
 like an app — the free interim "app" while the native wrapper waits for
 P5.
 
@@ -259,7 +259,7 @@ P5.
 ## P4 — Marketing / landing site + auth wiring
 
 You build the marketing/landing site (pricing, product info). It stays
-**separate** from the app — auth lives entirely in the CallBoard app.
+**separate** from the app — auth lives entirely in the Proscene app.
 
 **Connection model (recommended, lowest-risk):** the marketing site's
 CTAs ("Get started", "Sign up", "Log in") are plain links to the app —
@@ -270,12 +270,15 @@ auth forms, no Supabase keys on the marketing site.
   separate small Next project — your call). — You
 - [ ] Point its CTAs at the app's `/signup` and `/login` routes. During
   beta that is the `*.vercel.app` URL; post-domain it becomes
-  `app.callboard.com`. — You
+  `proscene.app` (e.g. `https://proscene.app/signup`). — You
 - [ ] Claude wires the app side: confirm `NEXT_PUBLIC_SITE_URL`, the
   Supabase redirect-URL allowlist, and an optional post-signup redirect
   back to a chosen page. — **S**, Claude
-- [ ] Subdomain plan (once a domain exists, P6): `callboard.com` =
-  marketing, `app.callboard.com` = the product.
+- [ ] Domain plan (P6): the product lives at `proscene.app`. If a
+  separate marketing site is wanted, decide whether it lives on a
+  different domain or on a path of `proscene.app` (e.g. `/` for marketing
+  and `/app` or a subdomain `app.proscene.app` for the product). The
+  earlier `callboard.com` / `app.callboard.com` split is obsolete.
 
 **Pricing.** A pricing *page* is just content and you can build it now.
 **Paid plans / plan gating need a billing integration (e.g. Stripe)** —

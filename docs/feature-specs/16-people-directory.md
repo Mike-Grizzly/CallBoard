@@ -69,7 +69,7 @@ Feature module `features/members/`:
 The People page and all invite/edit/status actions require `settings:manage`
 (admin only). Production assignment uses the existing `assignProductionMember`
 action gated on `productions:manage`. The demo's separate "permission level"
-concept is collapsed into CallBoard's single role model — the Permission column
+concept is collapsed into Proscene's single role model — the Permission column
 shows a role-derived tier (Admin / Editor / Viewer) and is read-only.
 
 ## Edge cases
