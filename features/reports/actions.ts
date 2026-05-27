@@ -114,7 +114,11 @@ export async function createReport(
     });
   }
 
-  redirect(`/productions/${production[0].slug}/reports/${inserted[0].id}`);
+  redirect(
+    `/productions/${production[0].slug}/reports/${inserted[0].id}${
+      data!.status === "distributed" ? "?email=1" : ""
+    }`,
+  );
 }
 
 export async function updateReport(
@@ -227,7 +231,16 @@ export async function updateReport(
     });
   }
 
-  redirect(`/productions/${production[0].slug}/reports/${reportId}`);
+  // Open the email picker after the report transitions draft → distributed
+  // so the user can send it in one flow. Re-saves of an already-distributed
+  // report don't re-prompt.
+  const justDistributed =
+    nextStatus === "distributed" && previousStatus === "draft";
+  redirect(
+    `/productions/${production[0].slug}/reports/${reportId}${
+      justDistributed ? "?email=1" : ""
+    }`,
+  );
 }
 
 export type DeleteReportResult = { error?: string; success?: boolean };

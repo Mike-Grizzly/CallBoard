@@ -36,12 +36,28 @@ export default async function NewReportPage({
   }));
 
   return (
-    <ReportForm
-      mode="create"
-      productionId={production.id}
-      productionTitle={production.title}
-      slug={slug}
-      members={mentionMembers}
-    />
+    <>
+      <div
+        className="card card-pad"
+        style={{
+          background: "var(--c-amber-soft)",
+          border: "1px solid color-mix(in oklch, var(--c-amber) 30%, transparent)",
+          color: "var(--ink)",
+          fontSize: 13,
+          lineHeight: 1.5,
+          marginBottom: 12,
+        }}
+      >
+        <strong>Tip:</strong> save the report as a draft first to attach files
+        — the attachments panel appears once the report exists.
+      </div>
+      <ReportForm
+        mode="create"
+        productionId={production.id}
+        productionTitle={production.title}
+        slug={slug}
+        members={mentionMembers}
+      />
+    </>
   );
 }

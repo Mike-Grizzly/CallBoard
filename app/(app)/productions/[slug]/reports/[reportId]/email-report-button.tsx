@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { sendReport } from "@/features/reports/send-report";
 
@@ -37,12 +38,14 @@ export function EmailReportButton({
   reportId,
   slug,
   members,
+  autoOpen = false,
 }: {
   reportId: string;
   slug: string;
   members: Member[];
+  autoOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen);
   const [selected, setSelected] = useState<Set<string>>(
     new Set(members.map((m) => m.userId)),
   );
@@ -51,6 +54,18 @@ export function EmailReportButton({
   );
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Strip the ?email=1 flag once the modal has opened so a page refresh
+  // doesn't keep re-popping it.
+  useEffect(() => {
+    if (autoOpen) {
+      router.replace(pathname);
+    }
+    // Run once per mount — the autoOpen value is captured at first render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!open) return;
