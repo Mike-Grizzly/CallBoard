@@ -532,6 +532,128 @@ Branch `claude/vibrant-tesla-5kjsA` — follow-up P2 work after the
   class overrides this with higher specificity — intentional, the
   user prefers zoom-in there).
 
+## Beta-prep session (2026-05-27)
+
+The work that takes P3 from "infrastructure-only" to a real soft-launch
+state. All merged to `main` via PRs
+[#13](https://github.com/Mike-Grizzly/CallBoard/pull/13),
+[#14](https://github.com/Mike-Grizzly/CallBoard/pull/14),
+[#15](https://github.com/Mike-Grizzly/CallBoard/pull/15),
+[#16](https://github.com/Mike-Grizzly/CallBoard/pull/16), and
+[#17](https://github.com/Mike-Grizzly/CallBoard/pull/17). Each item
+verified end-to-end against the live `proscene.app` deploy unless
+flagged otherwise.
+
+**Invite flow** — works end-to-end.
+- `/invite/accept` welcome page shows inviter + organization name
+  (PR #13). `inviteMembers` + `resendInvite` pass `invited_by_name`
+  and `organization_name` in the Supabase invite metadata; the email
+  template (custom HTML in Supabase Auth → Emails → Templates → "Invite
+  user") reads `{{ .Data.invited_by_name }}` / `{{ .Data.organization_name }}`.
+- `/auth/confirm` two-step OTP page fixes Gmail's link-scanner burning
+  the single-use invite OTP before the human could click (PR #14). The
+  page renders a "Continue" button on GET (safe for scanners to
+  pre-fetch — token untouched); only the form POST calls `verifyOtp`
+  and redirects to `?next=`. Handles all four OTP types: `invite`,
+  `recovery`, `signup`, `email`.
+
+**Password reset flow** — verified end-to-end (2026-05-27). The
+"Reset Password" template in Supabase Auth was rewritten to match
+the Proscene-branded invite design and to route through `/auth/confirm`
+(`type=recovery&next=/reset-password`) rather than the default
+`{{ .ConfirmationURL }}` magic link, so the scanner-burn fix
+applies there too. The earlier "if the button doesn't work, paste
+this URL" fallback row was removed at user direction — felt
+phishy / sketchy in the email body.
+
+**Delete person on `/people`** — `removeMember` (the existing
+"Remove from org" action) was only deleting org membership and only
+revalidating `/settings/members`, so dashboard-deleted users still
+appeared on the People page. New `deletePerson(userId)` action
+(PR #13) deletes the `profiles` row (cascades to memberships,
+mentions, reports, documents, announcements, notes, notifications,
+pins) and then the Supabase auth user via the admin API. "Not
+found" errors from the admin API are swallowed so a half-cleaned
+user (already removed from the dashboard) still gets the profile
+side cleared. New "Delete account" button in the person drawer with
+a `window.confirm` warning that the cascade also deletes content
+the person authored. Also added `/people` to `removeMember`'s
+revalidation set.
+
+**Rehearsal report email overhaul** (PRs #15 + #16) — five fixes
+surfaced when sending a real report through Gmail:
+- Attachments now actually attach. `send-report.ts` fetches each
+  attachment from Supabase Storage as a Buffer and passes them to
+  Resend's `attachments: [{ filename, content }]` field. Capped at
+  35 MB total payload (Resend hard limit is 40 MB); anything over
+  the budget is skipped with a soft warning so the email still
+  sends.
+- Email body now includes Attendance (Present/Absent/Late stat
+  tiles + per-person attendance notes), Scenes Worked, Breaks,
+  Schedule Changes, Line Notes, Injuries / Incidents, and an
+  Attachments list. Each section is hidden when its underlying
+  JSONB array is empty so short reports stay compact.
+- Department notes layout switched from a fixed-width 2-column
+  table to stacked label-above-value cards with a 3px left accent
+  bar, light slate background, and uppercase eyebrow label —
+  long values no longer squash inside a narrow column. Email-safe,
+  no media queries.
+- "Distribute" button was silently no-oping if General Notes was
+  empty (validation required it). Validation rule dropped — many
+  reports legitimately only have department notes. Distribute now
+  saves status as `distributed`, redirects to `?email=1`, and the
+  `EmailReportButton` auto-opens the recipient picker so the user
+  can send in one flow. `useEffect` strips the `?email=1` flag so
+  refreshes don't keep popping the modal.
+- Inline attachments — replaces the "save draft first to attach"
+  tip card with a real `AttachmentStaging` section in the report
+  form. Files are picked client-side, held as `File` objects with
+  a "pending" pill, and uploaded after the server action returns a
+  `reportId`. Works on both `/new` and `/edit`; edit mode also
+  lists existing attachments with remove buttons backed by a new
+  `deleteReportAttachment` server action. `createReport` /
+  `updateReport` now return `{ reportId, slug, justDistributed }`
+  instead of redirecting; the form orchestrates uploads + navigation
+  client-side.
+- Bonus: every user-supplied string in the email is now
+  HTML-escaped before injection.
+
+**Settings landing page + Send feedback link** (PR #17). `/settings`
+was a redirect to `/settings/members`; converted into a real
+landing page with an account header card and a list of
+destinations. **Send feedback** (mailto to `feedback@proscene.app`)
+is visible to every role; **Organization members** only renders for
+`settings:manage`. Dropped the capability gate on the Settings
+entry in the rail and the mobile More page so cast/crew can reach
+it.
+
+**Tester onboarding guide** at `docs/tester-guide.md`. Single page
+covering: getting in (invite flow + Add-to-Home-Screen), what
+features to try (workspace + per-production), known rough edges,
+how to give feedback, and a tiered post-beta roadmap. Multi-org is
+flagged as **week-1 of beta** work, not long-term, per the D5
+direction below.
+
+**Feedback channel** — `feedback@proscene.app` set up as an
+ImprovMX free alias forwarding to `mikegrigsby2010@gmail.com`.
+Apex-domain SPF record (`v=spf1 include:spf.improvmx.com ~all` on
+`@`) coexists fine with the Resend SPF on `send.proscene.app`
+(different host name). Verified end-to-end (2026-05-27).
+
+**P0 password requirements** — set in Supabase Auth →
+Sign In/Providers → Email on 2026-05-27. Closes the last P0 item.
+Leaked-password protection still deferred to P6 (Pro-plan feature).
+
+**Add-to-Home-Screen** — verified on iPhone 2026-05-27. Manifest
++ apple-touch-icon + Proscene branding all render correctly.
+
+**Decision locked — D5 (org model).** Single-org launch with one
+non-profit theatre company for week 0; multi-org refactor opens
+that up within week 1 of beta so additional companies can join in
+walled-off workspaces. Multi-org therefore moves out of long-term
+into the during-beta Tier 1 roadmap. See `decision-log.md`
+(2026-05-27 — multi-org during beta week 1).
+
 ## Scaffolded only (not implemented)
 
 - **Activity log** — placeholder page exists, capability defined, feature directory has only .gitkeep
@@ -541,7 +663,8 @@ Branch `claude/vibrant-tesla-5kjsA` — follow-up P2 work after the
 ## Not implemented
 
 - Tests (zero test files in repo)
-- Multi-organization support (hardcoded "default" org)
+- Multi-organization support (hardcoded "default" org) — **queued for
+  beta week 1**, see `decision-log.md` 2026-05-27 entry
 - Dark mode
 - Email notifications
 - Real-time updates

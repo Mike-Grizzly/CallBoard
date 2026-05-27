@@ -32,8 +32,8 @@ Effort sizing: **S** = a few hours · **M** = roughly one work session ·
 
 ### Decisions — see the Decisions section
 
-Still open: D3 beta Supabase project · D5 beta org model · D6
-scaffolded-feature scope · D7 PWA offline support.
+Still open: D3 beta Supabase project · D6 scaffolded-feature scope ·
+D7 PWA offline support.
 
 Resolved 2026-05-21: **D1** (added `isomorphic-dompurify`) · **D4**
 (uploads go client-direct to Supabase Storage).
@@ -254,28 +254,44 @@ P5.
   resolving to `https://proscene.app/...`. The Vercel auto-URL
   `call-board.vercel.app` is kept as a fallback. See `current-status.md`
   and `decision-log.md` (2026-05-27).
-- [ ] Confirm the beta org model — see **Decision D5**. The MVP is
-  single-org: the first signup becomes admin, everyone else joins the
-  same workspace as `cast`. This shapes who you can recruit.
-- [ ] Write short tester onboarding instructions (how to sign up, what to
-  try, known limitations).
-- [ ] Set up a feedback channel (a form, an email alias, or GitHub
-  issues). Quickest path now that the sending domain is verified:
-  forward `feedback@proscene.app` to a personal inbox via ImprovMX (free,
-  ~5 min, coexists with the Resend `send.` MX record because the hosts
-  differ).
-- [ ] **Verify invite flow end-to-end against the live deploy** —
-  infrastructure (D2) is done; this is the application-flow check:
-  invite from Settings → Members → email arrives from
-  `noreply@proscene.app` → `/auth/callback` → `/reset-password` →
-  `invited` promoted to `active`.
-- [ ] **Verify the app's `/forgot-password` flow end-to-end** — the
-  Supabase Dashboard magic link works, but `/forgot-password` uses a
-  different code path (the app reads `NEXT_PUBLIC_SITE_URL` for the
-  `redirectTo`). Confirm against the live deploy.
-- [ ] **Verify a rehearsal-report email** sends from
-  `noreply@proscene.app` and renders correctly in Gmail / Outlook / iOS
-  Mail.
+- [x] **D5 — beta org model (2026-05-27).** Launch with a single
+  shared org (one non-profit theatre company); ship the multi-org
+  refactor within beta week 1 so additional companies can be invited
+  into walled-off workspaces. See `decision-log.md` 2026-05-27 entry.
+- [x] **Tester onboarding doc (2026-05-27).** Shipped at
+  `docs/tester-guide.md` — covers getting in, what to try, known
+  rough edges, how to give feedback, and a tiered post-beta roadmap.
+- [x] **Feedback channel (2026-05-27).** `feedback@proscene.app`
+  forwards to `mikegrigsby2010@gmail.com` via ImprovMX (free).
+  Apex SPF + ImprovMX MX records coexist with the Resend records
+  on `send.proscene.app`. In-app entry point: **Settings → Send
+  feedback** (visible to every role, mailto link).
+- [x] **Verify invite flow end-to-end (2026-05-27).** Verified against
+  the live deploy. Invite from `/people` → Proscene-branded email →
+  `/auth/confirm` → `/invite/accept` (welcome with inviter + org
+  name, set password) → signed in at `/dashboard`, profile promoted
+  from `invited` to `active`. Required two PRs: #13 (dedicated
+  `/invite/accept` + invite metadata) and #14 (`/auth/confirm` to
+  fix Gmail's link-scanner burning the OTP).
+- [x] **Verify `/forgot-password` end-to-end (2026-05-27).** Verified
+  against the live deploy with the custom-branded "Reset Password"
+  template + the `/auth/confirm` routing.
+- [x] **Verify rehearsal-report email (2026-05-27).** Verified in
+  Gmail. Required PRs #15 + #16 to land: attachments included via
+  Resend `attachments` field, expanded body (attendance / scenes /
+  breaks / schedule changes / line notes / injuries / attachments),
+  stacked department-notes layout with left accent bars, inline
+  attachment staging on the report builder, and the Distribute →
+  email picker flow plus the validation-rule fix that was silently
+  blocking status changes. Renders cleanly in Gmail; Outlook / iOS
+  Mail not yet verified but the email is plain-table HTML so should
+  render fine.
+- [ ] **Multi-org refactor (during beta — week 1).** Make
+  `getCurrentUser` use the caller's actual org membership; have
+  self-signup create a new org with the user as admin; thread the
+  real org name through everywhere "Default Organization" is
+  currently hardcoded. Scope and rationale in `decision-log.md`
+  2026-05-27 entry.
 - [ ] Establish a bug-triage cadence; feed fixes back through P0-style
   hardening and normal feature work.
 
@@ -370,7 +386,7 @@ $25), plus Xcode (macOS) and Android Studio for builds.
 | **D2** | Email deliverability during beta. Sandbox email won't reach external testers. | **Fully resolved 2026-05-27** — `proscene.app` registered at Namecheap, Resend sending domain verified (SPF + DKIM + `send` MX), Supabase custom SMTP wired (`smtp.resend.com:465`, sender `noreply@proscene.app`), Supabase Site URL + redirect allowlist updated, Vercel env vars set. Smoke test (Supabase Dashboard magic link) delivered. P3 application-flow tests are unblocked. |
 | **D3** | Which Supabase project is the beta environment. | Reuse the current `CallBoard` project as the beta environment; cut a fresh production project at P6 if a clean slate is wanted. |
 | **D4** | File uploads on Vercel. Server-action uploads fail above ~4.5 MB on every Vercel plan. | **Resolved 2026-05-21** — switch to client-direct Supabase Storage uploads via server-issued signed upload URLs; the file never touches Vercel. Raise the bucket limit to 50 MB (free-plan max); files beyond 50 MB require Supabase Pro. |
-| **D5** | Beta org model. Single-org MVP: all testers share one workspace. | For beta, recruit a single theatre company (one shared workspace). Multi-org is a larger project — defer. |
+| **D5** | Beta org model. Single-org MVP: all testers share one workspace. | **Resolved 2026-05-27** — launch with a single shared org (one non-profit theatre company), then ship a multi-org refactor within beta week 1 so additional companies can be invited into walled-off workspaces. See `decision-log.md` 2026-05-27 entry. |
 | **D6** | Scaffolded features (Activity log, document comments, AI script analysis). | Cut from v1 — ship as "coming soon" or remove the placeholders. |
 | **D7** | PWA offline support. | Ship a basic installable PWA now (no library); revisit a service worker only if testers ask for offline. |
 
