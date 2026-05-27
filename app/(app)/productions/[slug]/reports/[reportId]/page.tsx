@@ -77,10 +77,14 @@ function StatBlock({
 
 export default async function ReportDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; reportId: string }>;
+  searchParams: Promise<{ email?: string }>;
 }) {
   const { slug, reportId } = await params;
+  const { email: emailParam } = await searchParams;
+  const autoOpenEmail = emailParam === "1";
   const user = await requireCurrentUser();
   const org = await getOrCreateDefaultOrganization();
   const production = await getProductionBySlug(org.id, slug);
@@ -157,6 +161,7 @@ export default async function ReportDetailPage({
         canUpload={canUpload}
         slug={slug}
         reportId={reportId}
+        autoOpenEmail={autoOpenEmail}
       />
       <div className="report-detail-desktop" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div className="card card-pad">
@@ -188,7 +193,12 @@ export default async function ReportDetailPage({
           </div>
           <div className="row" style={{ gap: 8 }}>
             <PinButton itemType="report" itemId={reportId} initialPinned={isPinned} />
-            <EmailReportButton reportId={reportId} slug={slug} members={productionMembers} />
+            <EmailReportButton
+              reportId={reportId}
+              slug={slug}
+              members={productionMembers}
+              autoOpen={autoOpenEmail}
+            />
             {canEdit && (
               <Link href={`/productions/${slug}/reports/${reportId}/edit`} prefetch>
                 <button className="btn primary">

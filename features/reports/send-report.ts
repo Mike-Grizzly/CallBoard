@@ -4,13 +4,19 @@ import { Resend } from "resend";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getReportById } from "./queries";
+import { getReportAttachments } from "./attachments";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getOrCreateDefaultOrganization } from "@/lib/organization";
-import { formatReportAsHtml } from "./email-html";
+import { formatReportAsHtml, type EmailAttachmentMeta } from "./email-html";
 import { formatReportAsEmail } from "./email-format";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+
+// Resend rejects emails whose total attachment payload exceeds 40 MB.
+// Stay well under to leave headroom for the email body itself.
+const TOTAL_ATTACHMENT_BUDGET_BYTES = 35 * 1024 * 1024;
 
 export type SendReportResult = {
   success?: boolean;
@@ -54,9 +60,38 @@ export async function sendReport(
     ? `Rehearsal Report #${report.reportNumber}`
     : "Rehearsal Report";
 
+  // Pull attachments and fetch their bytes from Storage so Resend can
+  // attach them inline. Drop anything that pushes us over the budget so
+  // the email still goes through with a partial attachment list.
+  const attachmentRows = await getReportAttachments(reportId);
+  const supabase = await createSupabaseServerClient();
+
+  const resendAttachments: { filename: string; content: Buffer }[] = [];
+  const includedMeta: EmailAttachmentMeta[] = [];
+  const skipped: EmailAttachmentMeta[] = [];
+  let totalBytes = 0;
+
+  for (const row of attachmentRows) {
+    if (totalBytes + row.fileSize > TOTAL_ATTACHMENT_BUDGET_BYTES) {
+      skipped.push({ fileName: row.fileName, fileSize: row.fileSize });
+      continue;
+    }
+    const { data, error } = await supabase.storage
+      .from("attachments")
+      .download(row.storagePath);
+    if (error || !data) {
+      skipped.push({ fileName: row.fileName, fileSize: row.fileSize });
+      continue;
+    }
+    const buf = Buffer.from(await data.arrayBuffer());
+    resendAttachments.push({ filename: row.fileName, content: buf });
+    includedMeta.push({ fileName: row.fileName, fileSize: row.fileSize });
+    totalBytes += row.fileSize;
+  }
+
   const subject = `${production.title} — ${reportLabel}`;
-  const html = formatReportAsHtml(report, production.title, authorName);
-  const text = formatReportAsEmail(report, production.title, authorName);
+  const html = formatReportAsHtml(report, production.title, authorName, includedMeta);
+  const text = formatReportAsEmail(report, production.title, authorName, includedMeta);
 
   const { error } = await resend.emails.send({
     from: FROM,
@@ -64,10 +99,20 @@ export async function sendReport(
     subject,
     html,
     text,
+    attachments: resendAttachments.length > 0 ? resendAttachments : undefined,
   });
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (skipped.length > 0) {
+    // Surface a soft warning the UI can show even after success — the email
+    // went out, but some attachments didn't fit.
+    return {
+      success: true,
+      error: `Sent, but ${skipped.length} attachment${skipped.length === 1 ? "" : "s"} couldn't be included (too large): ${skipped.map((s) => s.fileName).join(", ")}`,
+    };
   }
 
   return { success: true };

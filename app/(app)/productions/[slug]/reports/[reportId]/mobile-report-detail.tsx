@@ -53,6 +53,7 @@ export function MobileReportDetail({
   canUpload,
   slug,
   reportId,
+  autoOpenEmail = false,
 }: {
   report: ReportDetail;
   productionTitle: string;
@@ -65,6 +66,7 @@ export function MobileReportDetail({
   canUpload: boolean;
   slug: string;
   reportId: string;
+  autoOpenEmail?: boolean;
 }) {
   const isDraft = report.status === "draft";
   const hasNext =
@@ -95,6 +97,7 @@ export function MobileReportDetail({
             reportId={reportId}
             slug={slug}
             members={productionMembers}
+            autoOpen={autoOpenEmail}
           />
         </div>
       </div>
