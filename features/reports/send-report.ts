@@ -6,7 +6,6 @@ import { can } from "@/lib/permissions";
 import { getReportById } from "./queries";
 import { getReportAttachments } from "./attachments";
 import { getProductionBySlug } from "@/features/productions/queries";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { formatReportAsHtml, type EmailAttachmentMeta } from "./email-html";
 import { formatReportAsEmail } from "./email-format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -38,8 +37,7 @@ export async function sendReport(
     return { error: "No recipients selected." };
   }
 
-  const org = await getOrCreateDefaultOrganization();
-  const production = await getProductionBySlug(org.id, slug);
+  const production = await getProductionBySlug(user.organizationId, slug);
 
   if (!production) {
     return { error: "Production not found." };

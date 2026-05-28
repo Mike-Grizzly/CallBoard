@@ -5,7 +5,6 @@ import { Icon } from "@/components/ui/icon";
 import type { ReactNode } from "react";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import {
   getProductionMembers,
@@ -69,8 +68,7 @@ export default async function ProductionLayout({
 }) {
   const { slug } = await params;
   const user = await requireCurrentUser();
-  const org = await getOrCreateDefaultOrganization();
-  const production = await getProductionBySlug(org.id, slug);
+  const production = await getProductionBySlug(user.organizationId, slug);
 
   if (!production) notFound();
 
@@ -96,7 +94,7 @@ export default async function ProductionLayout({
     getProductionMembers(production.id),
     getReportCountByProduction(production.id),
     getDocumentCountByProduction(production.id),
-    getAnnouncementCountByProduction(production.id, org.id),
+    getAnnouncementCountByProduction(production.id, user.organizationId),
     getUnreadNotificationCount(),
     getDeletedDocumentCountByProduction(production.id),
     getDeletedReportCountByProduction(production.id),

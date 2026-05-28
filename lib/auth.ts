@@ -8,7 +8,7 @@ import {
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
+import { createOrganization } from "@/lib/organization";
 import { can } from "@/lib/permissions";
 import type { Role } from "@/types/roles";
 
@@ -21,12 +21,23 @@ export type CurrentUser = {
   organizationId: string;
 };
 
+function fallbackOrgName(firstName: string, lastName: string, email: string) {
+  const personal = [firstName, lastName].filter(Boolean).join(" ").trim();
+  const label = personal || email.split("@")[0] || "New";
+  return `${label}'s organization`;
+}
+
 /**
  * Resolves the signed-in user, their org, and their role.
  *
  * Wrapped in `cache()`: the layout and the page of one request each call
  * `requireCurrentUser()`, and without dedup this whole chain — an auth
  * network call plus several DB queries — would run twice per navigation.
+ *
+ * Multi-org: a user's org is determined by their `organization_memberships`
+ * row. Invited users get a profile + membership at invite time (see
+ * `features/members/actions.ts`). Self-signup lands here without either,
+ * and we create a fresh org with this user as admin.
  */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const supabase = await createSupabaseServerClient();
@@ -36,42 +47,44 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 
   if (!authUser) return null;
 
-  const [org, existing] = await Promise.all([
-    getOrCreateDefaultOrganization(),
-    db.select().from(profiles).where(eq(profiles.id, authUser.id)).limit(1),
-  ]);
+  const existing = await db
+    .select()
+    .from(profiles)
+    .where(eq(profiles.id, authUser.id))
+    .limit(1);
 
   if (existing.length === 0) {
+    // Self-signup: no profile yet. Create a new org with this user as admin.
     const meta = authUser.user_metadata ?? {};
+    const firstName = (meta.first_name as string) || "";
+    const lastName = (meta.last_name as string) || "";
+    const email = authUser.email ?? "";
+    const requestedOrgName = ((meta.organization_name as string) || "").trim();
+    const orgName =
+      requestedOrgName || fallbackOrgName(firstName, lastName, email);
+
+    const org = await createOrganization(orgName);
+
     await db.insert(profiles).values({
       id: authUser.id,
-      email: authUser.email ?? "",
-      firstName: (meta.first_name as string) || "",
-      lastName: (meta.last_name as string) || "",
+      email,
+      firstName,
+      lastName,
       requestedRole: (meta.requested_role as string) || null,
     });
-
-    const memberCount = await db
-      .select()
-      .from(organizationMemberships)
-      .where(eq(organizationMemberships.organizationId, org.id))
-      .limit(1);
-
-    // First user in the org becomes admin
-    const role: Role = memberCount.length === 0 ? "admin" : "cast";
 
     await db.insert(organizationMemberships).values({
       userId: authUser.id,
       organizationId: org.id,
-      role,
+      role: "admin",
     });
 
     return {
       id: authUser.id,
-      email: authUser.email ?? "",
-      firstName: (meta.first_name as string) || "",
-      lastName: (meta.last_name as string) || "",
-      role,
+      email,
+      firstName,
+      lastName,
+      role: "admin",
       organizationId: org.id,
     };
   }
@@ -88,27 +101,25 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const membership = await db
     .select()
     .from(organizationMemberships)
-    .where(
-      and(
-        eq(organizationMemberships.userId, authUser.id),
-        eq(organizationMemberships.organizationId, org.id),
-      ),
-    )
+    .where(eq(organizationMemberships.userId, authUser.id))
     .limit(1);
 
   if (membership.length === 0) {
-    const memberCount = await db
-      .select()
-      .from(organizationMemberships)
-      .where(eq(organizationMemberships.organizationId, org.id))
-      .limit(1);
-
-    const role: Role = memberCount.length === 0 ? "admin" : "cast";
+    // Profile exists but no org membership — shouldn't normally happen
+    // (invites create both atomically). Recover by giving them a fresh org
+    // as admin so they aren't stuck in a broken state.
+    const org = await createOrganization(
+      fallbackOrgName(
+        existing[0].firstName,
+        existing[0].lastName,
+        existing[0].email,
+      ),
+    );
 
     await db.insert(organizationMemberships).values({
       userId: authUser.id,
       organizationId: org.id,
-      role,
+      role: "admin",
     });
 
     return {
@@ -116,7 +127,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       email: existing[0].email,
       firstName: existing[0].firstName,
       lastName: existing[0].lastName,
-      role,
+      role: "admin",
       organizationId: org.id,
     };
   }
@@ -127,7 +138,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     firstName: existing[0].firstName,
     lastName: existing[0].lastName,
     role: membership[0].role as Role,
-    organizationId: org.id,
+    organizationId: membership[0].organizationId,
   };
 });
 

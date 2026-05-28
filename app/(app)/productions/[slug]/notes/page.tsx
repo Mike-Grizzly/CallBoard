@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership, getProductionMembers } from "@/features/members/queries";
 import { getNotesByProduction, getNoteTagsByOrg } from "@/features/notes/queries";
@@ -19,8 +18,7 @@ export default async function NotesPage({
     searchParams,
   ]);
   const user = await requireCurrentUser();
-  const org = await getOrCreateDefaultOrganization();
-  const production = await getProductionBySlug(org.id, slug);
+  const production = await getProductionBySlug(user.organizationId, slug);
 
   if (!production) notFound();
 
@@ -34,7 +32,7 @@ export default async function NotesPage({
 
   const [notes, tags, members] = await Promise.all([
     getNotesByProduction(production.id, user.id),
-    getNoteTagsByOrg(org.id, user.id),
+    getNoteTagsByOrg(user.organizationId, user.id),
     getProductionMembers(production.id),
   ]);
 
@@ -59,7 +57,7 @@ export default async function NotesPage({
       currentUserId={user.id}
       canCreate={canCreate}
       canManageTags={canManageTags}
-      organizationId={org.id}
+      organizationId={user.organizationId}
       initialSelectedId={initialSelectedId}
     />
   );

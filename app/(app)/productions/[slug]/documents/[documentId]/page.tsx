@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Download } from "lucide-react";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
 import { getDocumentById } from "@/features/documents/queries";
@@ -34,8 +33,7 @@ export default async function DocumentDetailPage({
 }) {
   const { slug, documentId } = await params;
   const user = await requireCurrentUser();
-  const org = await getOrCreateDefaultOrganization();
-  const production = await getProductionBySlug(org.id, slug);
+  const production = await getProductionBySlug(user.organizationId, slug);
 
   if (!production) {
     notFound();

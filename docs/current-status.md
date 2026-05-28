@@ -1,6 +1,6 @@
 # Current Status
 
-**Last updated:** 2026-05-27
+**Last updated:** 2026-05-28
 
 **App name:** **Proscene** (renamed from "CallBoard" on 2026-05-27 — the `callboard` domain could not be secured). The product is **live at [https://proscene.app](https://proscene.app)** with a verified email sending domain. The rebrand updates the rail wordmark (`Pro<em>scene</em>`), the rail/icon mark glyph (`C` → `P`), the four auth-screen brand headers (login, signup, forgot-password, reset-password), the PWA manifest, root metadata (`title` / `applicationName` / `appleWebApp.title`), `apple-icon.tsx`, `public/icon.svg` + `public/icon-maskable.svg`, the rehearsal-report email footer ("Sent via Proscene"), and `package.json` / `package-lock.json` `name`. The Supabase project is still literally named `CallBoard` in the Supabase dashboard — backticked `CallBoard` references in these docs point to that project identifier and are intentionally unchanged. Colors and design tokens are unchanged. PR [#10](https://github.com/Mike-Grizzly/CallBoard/pull/10) merged to `main` 2026-05-27.
 
@@ -654,6 +654,56 @@ walled-off workspaces. Multi-org therefore moves out of long-term
 into the during-beta Tier 1 roadmap. See `decision-log.md`
 (2026-05-27 — multi-org during beta week 1).
 
+## Multi-org refactor (2026-05-28)
+
+**Multi-organization support** — closing the D5 week-1 deliverable.
+`getCurrentUser` no longer routes everyone through
+`getOrCreateDefaultOrganization`; instead it reads the caller's
+actual `organization_memberships` row and returns that org. Two
+runtime paths:
+
+- **Self-signup.** A new auth user with no profile lands in
+  `lib/auth.ts`, which calls `createOrganization()` (in
+  `lib/organization.ts`) with the name they typed on the signup
+  form and inserts a membership with role `admin`. They are the
+  sole member of a fresh, walled-off workspace.
+- **Invited user.** `features/members/actions.ts` already created
+  their `profiles` row and `organization_memberships` row at invite
+  time, scoped to `currentUser.organizationId`. First login finds
+  both rows, promotes profile status `invited → active`, and
+  returns the inviter's org. No code change needed there — it was
+  already multi-org correct, only the runtime helper was wrong.
+
+**Signup form** now has a required **Organization name** field
+(autocomplete `organization`). The value rides on
+`auth.signUp()` user_metadata as `organization_name`; the auth
+helper pulls it back out on first login and falls back to
+"{First Last}'s organization" if blank.
+
+**Org slug.** `createOrganization` slugifies the name and retries
+with a 2-byte hex suffix on collision (`uniqueSlugFor`). Slugs are
+not user-facing today — they exist because the schema marks
+`organizations.slug` `unique` — but the deterministic-first-try
+behavior keeps them human-readable when we eventually surface them.
+
+**Callsite sweep.** All ~25 pages and feature actions that did
+`const org = await getOrCreateDefaultOrganization()` now read
+`user.organizationId` directly. The helper is deleted from
+`lib/organization.ts`. Verified callers were only ever reading
+`org.id`, never `org.name` or `org.slug` — the refactor is a pure
+substitution.
+
+**Existing data.** The "Default Organization" row in production is
+left as-is per the 2026-05-28 product decision; existing testers
+keep their workspace and can rename it later (Settings UI for org
+rename is not yet built). New self-signups create their own orgs
+immediately.
+
+**Explicitly not in this round** — Settings UI to rename the
+current org, org switcher (deferred from D5 week 1; ships when a
+user actually ends up in multiple orgs). Org-membership status
+flow (pending/approved) is unchanged.
+
 ## Scaffolded only (not implemented)
 
 - **Activity log** — placeholder page exists, capability defined, feature directory has only .gitkeep
@@ -663,8 +713,6 @@ into the during-beta Tier 1 roadmap. See `decision-log.md`
 ## Not implemented
 
 - Tests (zero test files in repo)
-- Multi-organization support (hardcoded "default" org) — **queued for
-  beta week 1**, see `decision-log.md` 2026-05-27 entry
 - Dark mode
 - Email notifications
 - Real-time updates

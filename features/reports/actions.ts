@@ -10,7 +10,6 @@ import {
   validateReportForm,
   type ReportFormErrors,
 } from "./validation";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { writeMentions } from "@/features/mentions/write";
 
 export type ReportActionResult = {
@@ -109,9 +108,8 @@ export async function createReport(
     .returning({ id: rehearsalReports.id });
 
   if (data!.generalNotes) {
-    const org = await getOrCreateDefaultOrganization();
     await writeMentions(data!.generalNotes, {
-      organizationId: org.id,
+      organizationId: user.organizationId,
       productionId,
       mentionedById: user.id,
       contextType: "report",
@@ -226,9 +224,8 @@ export async function updateReport(
     .where(eq(rehearsalReports.id, reportId));
 
   if (data!.generalNotes) {
-    const org = await getOrCreateDefaultOrganization();
     await writeMentions(data!.generalNotes, {
-      organizationId: org.id,
+      organizationId: user.organizationId,
       productionId,
       mentionedById: user.id,
       contextType: "report",

@@ -7,7 +7,6 @@ import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { writeMentions } from "@/features/mentions/write";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 
 type ActionResult = { error?: string; success?: boolean; id?: string };
 
@@ -79,7 +78,6 @@ export async function updateNote(
     .where(eq(productionNotes.id, noteId));
 
   if (fields.content) {
-    const org = await getOrCreateDefaultOrganization();
     const noteRow = await db
       .select({ productionId: productionNotes.productionId, title: productionNotes.title })
       .from(productionNotes)
@@ -87,7 +85,7 @@ export async function updateNote(
       .limit(1);
     if (noteRow.length > 0) {
       await writeMentions(fields.content, {
-        organizationId: org.id,
+        organizationId: user.organizationId,
         productionId: noteRow[0].productionId,
         mentionedById: user.id,
         contextType: "note",

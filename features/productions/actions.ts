@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { productions } from "@/db/schema";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
@@ -33,12 +32,10 @@ export async function createProduction(
     return { errors };
   }
 
-  const org = await getOrCreateDefaultOrganization();
-
   const [newProduction] = await db
     .insert(productions)
     .values({
-      organizationId: org.id,
+      organizationId: user.organizationId,
       title: data!.title,
       slug: data!.slug,
       status: data!.status,

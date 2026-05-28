@@ -954,3 +954,60 @@ Options weighed:
 - Reflected in `current-status.md` ("Not implemented" section
   flags it as "queued for beta week 1") and `docs/tester-guide.md`
   (under the "During beta — week 1" tier).
+
+---
+
+## 2026-05-28 — Multi-org refactor shipped (D5 week-1 work)
+
+**Decision:** Implemented the multi-org refactor scoped in the
+2026-05-27 D5 entry. New self-signups create a fresh organization
+with the new user as admin; invited users continue to land in the
+inviter's org; the global "Default Organization" singleton is
+gone from runtime (the existing prod row is left in place, will
+be renamed via Supabase or a future Settings UI).
+
+**Implementation:**
+1. `lib/organization.ts` — `getOrCreateDefaultOrganization()`
+   deleted, replaced with `createOrganization(name)` that slugifies
+   the name and retries with a short hex suffix on collision.
+2. `lib/auth.ts` — `getCurrentUser` reads the user's actual
+   `organization_memberships` row. Profile-missing path (self-signup)
+   creates a new org from `auth.user_metadata.organization_name` and
+   makes the user admin. Profile-present-but-no-membership path
+   recovers by creating a fresh admin-of-one org so the user is
+   never stuck.
+3. `app/actions/auth.ts` — signup action requires
+   `organization_name` (form field) and writes it to
+   `auth.signUp().options.data` so the auth helper can read it back
+   on first login.
+4. `app/signup/signup-form.tsx` — added a required Organization name
+   field with hint copy "You can rename this later."
+5. Callsite sweep — all `const org = await
+   getOrCreateDefaultOrganization()` calls (~25 pages and feature
+   actions) now use `user.organizationId` directly. Verified
+   callers were only reading `org.id`, never `org.name`/`org.slug`.
+
+**Product calls made on the way:**
+- Existing "Default Organization" row in production: **left as is,
+  rename later** (via Supabase or future Settings UI). Existing
+  testers keep all their data; new self-signups branch off.
+- Org name source on signup: **required field on the signup form**,
+  not auto-derived from the user's first name. Reasoning: the org
+  is the workspace label other members will see — picking it
+  consciously beats `Jane's organization` showing up to invitees.
+
+**Explicitly NOT shipped in this round:**
+- Settings UI to rename the current org (admin can rename via
+  Supabase Studio for now; SQL one-liner).
+- Org switcher in the rail / Settings. Deferred per the 2026-05-27
+  entry — comes online when a user actually ends up in multiple
+  orgs, which can't happen yet through the UI.
+- Promote-to-org-creator flow for existing testers in the default
+  org (they stay where they are).
+
+**Impact:**
+- Closes the D5 week-1 deliverable on the launch roadmap.
+- Beta can now invite a second theatre company; they get a fully
+  walled-off workspace.
+- Multi-org marker removed from `current-status.md` "Not
+  implemented"; new "Multi-org refactor (2026-05-28)" section added.

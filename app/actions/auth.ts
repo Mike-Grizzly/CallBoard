@@ -41,9 +41,16 @@ export async function signup(
   const firstName = formData.get("first_name") as string;
   const lastName = formData.get("last_name") as string;
   const position = formData.get("position") as string;
+  const organizationName = (
+    (formData.get("organization_name") as string) || ""
+  ).trim();
 
   if (!email || !password) {
     return { error: "Email and password are required." };
+  }
+
+  if (!organizationName) {
+    return { error: "Organization name is required." };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -56,6 +63,7 @@ export async function signup(
         first_name: firstName || "",
         last_name: lastName || "",
         requested_role: position || "",
+        organization_name: organizationName,
       },
     },
   });

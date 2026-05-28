@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getProductionsByOrganization } from "@/features/productions/queries";
@@ -9,11 +8,10 @@ import { ProductionList } from "./production-list";
 
 export default async function ProductionsPage() {
   const user = await requireCurrentUser();
-  const org = await getOrCreateDefaultOrganization();
   const canManage = can(user.role, "productions:manage");
 
   const [productionsList, assignedIds] = await Promise.all([
-    getProductionsByOrganization(org.id),
+    getProductionsByOrganization(user.organizationId),
     canManage ? Promise.resolve(null) : getUserProductionIds(user.id),
   ]);
 

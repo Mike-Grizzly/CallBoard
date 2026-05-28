@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getAllNotesForUser, getNoteTagsByOrg } from "@/features/notes/queries";
 import {
   resolveProductionColorToken,
@@ -19,12 +18,11 @@ export default async function NotesFeedPage() {
   const user = await requireCurrentUser();
   if (!can(user.role, "notes:view")) redirect("/dashboard");
 
-  const org = await getOrCreateDefaultOrganization();
   const manageAll = can(user.role, "productions:manage");
 
   const [notesRaw, tags] = await Promise.all([
-    getAllNotesForUser(user.id, org.id, { manageAll }),
-    getNoteTagsByOrg(org.id, user.id),
+    getAllNotesForUser(user.id, user.organizationId, { manageAll }),
+    getNoteTagsByOrg(user.organizationId, user.id),
   ]);
 
   // Sort newest-first by createdAt (user's intent: "in the order the

@@ -3,7 +3,6 @@ import { ChevronRight, Plus } from "lucide-react";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getUserProductions } from "@/features/productions/queries";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getAnnouncementsForUser } from "@/features/announcements/queries";
 import { getNextCallsForProductions } from "@/features/calls/queries";
 import { getMentionsForUser } from "@/features/mentions/queries";
@@ -101,14 +100,13 @@ function stripHtml(html: string | null): string {
 
 export default async function DashboardPage() {
   const user = await requireCurrentUser();
-  const org = await getOrCreateDefaultOrganization();
   const canManage = can(user.role, "productions:manage");
 
   const myProductions = await getUserProductions(user.id);
   const prodIds = myProductions.map((p) => p.id);
 
   const [announcements, nextCallMap, mentionRows, pins] = await Promise.all([
-    getAnnouncementsForUser(user.id, org.id, canManage),
+    getAnnouncementsForUser(user.id, user.organizationId, canManage),
     getNextCallsForProductions(prodIds),
     getMentionsForUser(user.id),
     getPinsForUser(user.id),

@@ -60,7 +60,7 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 - Should `drizzle-kit push` be fixed or should the project fully adopt SQL Editor for schema changes?
 - When should the project move from `push` workflow to proper migrations?
-- Is the single-org design sufficient for launch, or will multi-org be needed before v1?
+- ~~Is the single-org design sufficient for launch, or will multi-org be needed before v1?~~ **Resolved 2026-05-28** — multi-org refactor shipped; see `decision-log.md` 2026-05-28 entry.
 - Should an API layer be introduced between the UI and database, or is the current direct-query pattern acceptable long-term?
 
 ## Permissions questions

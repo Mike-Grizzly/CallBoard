@@ -50,6 +50,25 @@ export function SignupForm() {
       </div>
 
       <div className="auth-field">
+        <label htmlFor="organization_name" className="label">
+          Organization name
+        </label>
+        <input
+          id="organization_name"
+          name="organization_name"
+          type="text"
+          required
+          autoComplete="organization"
+          className="field"
+          placeholder="Your theatre company"
+        />
+        <p className="auth-hint">
+          The name of your theatre company or production team. You can rename
+          this later.
+        </p>
+      </div>
+
+      <div className="auth-field">
         <label htmlFor="position" className="label">
           Position
         </label>

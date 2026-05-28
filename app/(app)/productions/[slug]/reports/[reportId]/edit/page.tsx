@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembers } from "@/features/members/queries";
 import { getReportById } from "@/features/reports/queries";
@@ -20,8 +19,7 @@ export default async function EditReportPage({
     redirect(`/productions/${slug}/reports/${reportId}`);
   }
 
-  const org = await getOrCreateDefaultOrganization();
-  const production = await getProductionBySlug(org.id, slug);
+  const production = await getProductionBySlug(user.organizationId, slug);
 
   if (!production) {
     notFound();

@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import {
   getProductionMembers,
@@ -26,8 +25,7 @@ export default async function DocumentsPage({
     searchParams,
   ]);
   const user = await requireCurrentUser();
-  const org = await getOrCreateDefaultOrganization();
-  const production = await getProductionBySlug(org.id, slug);
+  const production = await getProductionBySlug(user.organizationId, slug);
 
   if (!production) {
     notFound();
