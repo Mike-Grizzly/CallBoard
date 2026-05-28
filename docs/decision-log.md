@@ -867,3 +867,90 @@ single biggest unlock left for the soft launch.
 - HSTS preload for the `.app` TLD means there's no HTTP fallback;
   Vercel cert provisioning is now part of the critical path for any
   future domain change.
+
+---
+
+## 2026-05-27 — Two-step OTP confirm page (`/auth/confirm`)
+
+**Decision:** All Supabase email-link OTP flows (invite, password
+reset, signup confirmation, email change) route through a custom
+`/auth/confirm` page rather than the default `{{ .ConfirmationURL }}`
+magic-link path. The page renders a Proscene-branded "Continue"
+button on GET (safe for link scanners to pre-fetch) and only
+consumes the OTP when the form POSTs.
+
+**Why:**
+First real invite to a Gmail address landed on
+`/login?error=auth_callback` with `otp_expired` in the hash.
+Supabase auth logs showed two GET `/verify` hits on the same OTP
+8 seconds apart — first succeeded (`user_signedup` event), second
+failed (`One-time token not found`). A link scanner / pre-fetcher
+(Gmail safe-browsing, antivirus, link unfurler — common with
+Gmail addresses) consumed the OTP before the human clicked.
+Standard Supabase recommendation for this is a two-step page where
+GET doesn't touch the token; only the user's POST does. PR #14.
+
+**Implementation:**
+- New `app/auth/confirm/page.tsx` server component with an inline
+  server action.
+- Email templates use a custom `href` of
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=...&next=...`
+  instead of `{{ .ConfirmationURL }}`. The "Invite user" template
+  already uses this; the "Reset Password" template was updated the
+  same day.
+- Different `type` values get different button copy and title (e.g.
+  "Accept invitation" for invite, "Reset password" for recovery)
+  but share one page implementation.
+
+**Impact:**
+- Invite + password-reset flows are reliable on Gmail (and any
+  inbox with malware scanning / link previewers).
+- Any future OTP-based flow inherits the fix automatically.
+
+---
+
+## 2026-05-27 — D5 locked: single-org launch, multi-org in beta week 1
+
+**Decision:** Beta launches with a single shared organization (one
+non-profit theatre company), and the multi-organization refactor
+ships within the first week so additional companies can be invited
+into walled-off workspaces. This locks **D5** in the launch
+roadmap.
+
+**Background:**
+The schema has supported multi-org from day one
+(`organizations`, `organization_memberships`, `organizationId`
+filters in every query). The runtime is what pins everyone to a
+single org: `getCurrentUser()` in `lib/auth.ts` calls
+`getOrCreateDefaultOrganization()` and always returns that default,
+so every signup lands in the same workspace and every user sees
+every other user's productions / people / announcements. Fine for
+one tester company; a privacy bug for two.
+
+Options weighed:
+- **A — Stay single-org for beta.** Zero engineering work; only one
+  theatre company can be invited. Rejected — user plans to bring on
+  additional companies in week 1.
+- **B — Add real multi-org now.** ~half a day of careful refactor;
+  unblocks the actual beta plan. **Selected.**
+- **C — Separate Supabase + Vercel deploy per org.** Pure ops cost,
+  N copies of the app to keep in sync. Rejected.
+
+**Scope for week-1 multi-org work (Option B):**
+1. `getCurrentUser` looks up the user's actual org membership
+   rather than always returning the default.
+2. Self-signup creates a fresh org with the new user as admin
+   (instead of joining them to the default org as cast).
+3. Invited users still join the inviter's org — `inviteMembers`
+   already does this correctly via `currentUser.organizationId`.
+4. Org name display wired through wherever "Default Organization"
+   is rendered (announcements scope badge, invite email metadata,
+   Settings header, etc.).
+5. An org-switcher in the rail/Settings if a user ever ends up in
+   multiple orgs — likely deferred from week 1, can ship later.
+
+**Impact:**
+- Multi-org moves from long-term roadmap to during-beta Tier 1.
+- Reflected in `current-status.md` ("Not implemented" section
+  flags it as "queued for beta week 1") and `docs/tester-guide.md`
+  (under the "During beta — week 1" tier).
