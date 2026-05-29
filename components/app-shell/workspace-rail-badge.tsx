@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
-import { switchOrganization } from "@/features/workspace/actions";
+import {
+  createWorkspace,
+  switchOrganization,
+} from "@/features/workspace/actions";
 import type { UserMembership } from "@/features/workspace/queries";
 
 type Props = {
@@ -18,10 +21,13 @@ export function WorkspaceRailBadge({
   memberships,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
+  const createInputRef = useRef<HTMLInputElement>(null);
 
   // Click-outside to dismiss the menu without trapping focus.
   useEffect(() => {
@@ -42,6 +48,24 @@ export function WorkspaceRailBadge({
     };
   }, [open]);
 
+  // Reset transient state every time the menu closes so opening it
+  // again starts clean.
+  useEffect(() => {
+    if (!open) {
+      setCreating(false);
+      setNewName("");
+      setError(null);
+    }
+  }, [open]);
+
+  // When the inline create form appears, focus the input so the user can
+  // start typing immediately.
+  useEffect(() => {
+    if (creating) {
+      createInputRef.current?.focus();
+    }
+  }, [creating]);
+
   const onPick = (orgId: string) => {
     if (orgId === currentOrgId) {
       setOpen(false);
@@ -50,6 +74,25 @@ export function WorkspaceRailBadge({
     setError(null);
     startTransition(async () => {
       const result = await switchOrganization(orgId);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setOpen(false);
+      router.refresh();
+    });
+  };
+
+  const onCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const name = newName.trim();
+    if (!name) {
+      setError("Enter a workspace name.");
+      return;
+    }
+    startTransition(async () => {
+      const result = await createWorkspace(name);
       if (result.error) {
         setError(result.error);
         return;
@@ -109,6 +152,62 @@ export function WorkspaceRailBadge({
               No other workspaces yet.
             </div>
           )}
+
+          <div className="workspace-badge-menu-divider" />
+
+          {creating ? (
+            <form
+              onSubmit={onCreate}
+              className="workspace-badge-menu-form"
+              role="none"
+            >
+              <input
+                ref={createInputRef}
+                type="text"
+                className="field"
+                placeholder="New workspace name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                disabled={pending}
+                maxLength={60}
+                aria-label="New workspace name"
+              />
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  type="submit"
+                  className="btn primary"
+                  disabled={pending || !newName.trim()}
+                  style={{ flex: 1, fontSize: 12.5, padding: "6px 10px" }}
+                >
+                  {pending ? "Creating..." : "Create"}
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    setCreating(false);
+                    setNewName("");
+                    setError(null);
+                  }}
+                  disabled={pending}
+                  style={{ fontSize: 12.5, padding: "6px 10px" }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <button
+              type="button"
+              className="workspace-badge-menu-item"
+              onClick={() => setCreating(true)}
+              disabled={pending}
+            >
+              <Icon name="Plus" size={13} aria-hidden />
+              <span>Create workspace</span>
+            </button>
+          )}
+
           {error && <div className="workspace-badge-menu-error">{error}</div>}
         </div>
       )}

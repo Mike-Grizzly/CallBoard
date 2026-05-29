@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useEffect } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   changePassword,
   type AccountActionResult,
@@ -13,15 +13,24 @@ export function ChangePasswordForm() {
   >(changePassword, undefined);
 
   const formRef = useRef<HTMLFormElement>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Clear the password fields after a successful change so they don't
-  // linger in the DOM (and so the user gets a clear visual that the form
-  // is back to empty / ready to use again).
+  // Clear all fields after a successful change so they don't linger in
+  // the DOM and the form visibly resets.
   useEffect(() => {
     if (state?.success) {
       formRef.current?.reset();
+      setNewPassword("");
+      setConfirmPassword("");
     }
   }, [state?.success]);
+
+  // Only warn after the user has typed something in confirm — otherwise
+  // we'd flash a "doesn't match" error before they've had a chance to
+  // type anything.
+  const mismatch =
+    confirmPassword.length > 0 && newPassword !== confirmPassword;
 
   return (
     <form action={formAction} className="card card-pad" ref={formRef}>
@@ -64,6 +73,8 @@ export function ChangePasswordForm() {
           minLength={6}
           autoComplete="new-password"
           className="field"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
         />
         <p className="auth-hint">Must be at least 6 characters.</p>
       </div>
@@ -80,10 +91,30 @@ export function ChangePasswordForm() {
           minLength={6}
           autoComplete="new-password"
           className="field"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          aria-invalid={mismatch}
+          aria-describedby={mismatch ? "confirm_password_error" : undefined}
         />
+        {mismatch && (
+          <p
+            id="confirm_password_error"
+            style={{
+              color: "var(--c-clay)",
+              fontSize: 12.5,
+              marginTop: 4,
+            }}
+          >
+            Passwords don&apos;t match.
+          </p>
+        )}
       </div>
 
-      <button type="submit" className="btn primary" disabled={pending}>
+      <button
+        type="submit"
+        className="btn primary"
+        disabled={pending || mismatch || !newPassword || !confirmPassword}
+      >
         {pending ? "Updating..." : "Update password"}
       </button>
     </form>

@@ -338,6 +338,22 @@ select {
   color: var(--c-clay);
   padding: 6px 8px;
 }
+.workspace-badge-menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px -2px;
+}
+.workspace-badge-menu-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 4px 4px;
+}
+.workspace-badge-menu-form .field {
+  width: 100%;
+  font-size: 12.5px;
+  padding: 6px 8px;
+}
 
 .rail-section {
   padding: 14px 12px 6px;
