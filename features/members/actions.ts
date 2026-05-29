@@ -57,6 +57,27 @@ export async function updateMemberRole(
     return { error: "You cannot change your own role." };
   }
 
+  // Last-admin safeguard: refuse to demote the sole remaining admin so the
+  // workspace can't get into a zero-admin state that would lock everyone
+  // out of settings.
+  if (membership[0].role === "admin" && newRole !== "admin") {
+    const remaining = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(organizationMemberships)
+      .where(
+        and(
+          eq(organizationMemberships.organizationId, currentUser.organizationId),
+          eq(organizationMemberships.role, "admin"),
+        ),
+      );
+    if ((remaining[0]?.count ?? 0) <= 1) {
+      return {
+        error:
+          "Promote another admin first — this workspace needs at least one.",
+      };
+    }
+  }
+
   await db
     .update(organizationMemberships)
     .set({ role: newRole })
@@ -94,6 +115,24 @@ export async function removeMember(
 
   if (membership[0].userId === currentUser.id) {
     return { error: "You cannot remove yourself." };
+  }
+
+  if (membership[0].role === "admin") {
+    const remaining = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(organizationMemberships)
+      .where(
+        and(
+          eq(organizationMemberships.organizationId, currentUser.organizationId),
+          eq(organizationMemberships.role, "admin"),
+        ),
+      );
+    if ((remaining[0]?.count ?? 0) <= 1) {
+      return {
+        error:
+          "Promote another admin first — this workspace needs at least one.",
+      };
+    }
   }
 
   await db

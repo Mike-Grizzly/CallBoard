@@ -246,6 +246,99 @@ select {
   font-weight: 500;
 }
 
+/* Workspace badge — current-org label + switcher menu, just below the
+   brand. Always visible; the menu just says "No other workspaces yet"
+   when the user only belongs to one org. */
+.workspace-badge {
+  position: relative;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.workspace-badge-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-s);
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.workspace-badge-button:hover:not(:disabled) {
+  background: var(--bg-elev);
+  color: var(--ink);
+  border-color: var(--border-strong, var(--border));
+}
+.workspace-badge-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.workspace-badge-button .truncate {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-badge-menu {
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 12px;
+  right: 12px;
+  z-index: 30;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-2, var(--shadow-1));
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.workspace-badge-menu-head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-4);
+  padding: 6px 8px 4px;
+}
+.workspace-badge-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--radius-s);
+  background: none;
+  border: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.workspace-badge-menu-item:hover:not(:disabled) {
+  background: var(--bg-muted);
+  color: var(--ink);
+}
+.workspace-badge-menu-item:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.workspace-badge-menu-empty {
+  font-size: 12.5px;
+  color: var(--ink-4);
+  padding: 6px 8px 8px;
+}
+.workspace-badge-menu-error {
+  font-size: 12px;
+  color: var(--c-clay);
+  padding: 6px 8px;
+}
+
 .rail-section {
   padding: 14px 12px 6px;
 }
