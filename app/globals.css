@@ -2497,13 +2497,14 @@ div.mention:hover {
   letter-spacing: 0.02em;
 }
 
-/* Tablet: show ~5 days, swipe for the rest. */
+/* Tablet: show ~5 days, swipe for the rest. The exact px width is set by
+   week-view.tsx (--week-day-w); these are just no-JS fallbacks. */
 @media (max-width: 1100px) and (min-width: 721px) {
   .week-grid {
-    --week-day-w: calc((100% - var(--week-gutter-w)) / 5);
+    --week-day-w: 150px;
   }
   .week-scroll {
-    scroll-snap-type: x proximity;
+    scroll-snap-type: x mandatory;
     scroll-padding-left: var(--week-gutter-w);
   }
 }
@@ -2512,10 +2513,10 @@ div.mention:hover {
 @media (max-width: 720px) {
   .week-grid {
     --week-gutter-w: 52px;
-    --week-day-w: calc((100% - var(--week-gutter-w)) / 3);
+    --week-day-w: 110px;
   }
   .week-scroll {
-    scroll-snap-type: x proximity;
+    scroll-snap-type: x mandatory;
     scroll-padding-left: var(--week-gutter-w);
   }
   .week-day-h {
@@ -7303,5 +7304,115 @@ textarea.cform-field {
     grid-template-columns: 22px 80px 1fr;
     gap: 10px;
   }
+}
+
+/* ============================================================ *
+ * Calendar "Schedule call" affordances — toolbar button, mobile
+ * FAB, and the multi-production picker sheet.
+ * ============================================================ */
+.cal-new {
+  height: 32px;
+  padding: 0 12px;
+}
+.cal-new .ico {
+  width: 15px;
+  height: 15px;
+}
+/* On phones the toolbar is tight; the FAB handles creation instead. */
+@media (max-width: 720px) {
+  .cal-new {
+    display: none;
+  }
+}
+
+.cal-fab {
+  display: none;
+}
+@media (max-width: 720px) {
+  .cal-fab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    right: 16px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    z-index: 60;
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    box-shadow:
+      0 10px 24px -6px color-mix(in oklch, var(--accent) 55%, transparent),
+      0 2px 6px rgba(40, 30, 15, 0.2);
+    transition: transform 0.08s;
+  }
+  .cal-fab .ico {
+    width: 24px;
+    height: 24px;
+  }
+  .cal-fab:active {
+    transform: scale(0.94);
+  }
+}
+
+.cal-pick-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: oklch(0.2 0.01 60 / 0.45);
+  display: grid;
+  place-items: end center;
+}
+@media (min-width: 721px) {
+  .cal-pick-scrim {
+    place-items: center;
+  }
+}
+.cal-pick {
+  width: 100%;
+  max-width: 520px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 18px 18px 0 0;
+  padding: 8px 10px calc(16px + env(safe-area-inset-bottom, 0px));
+  box-shadow: var(--shadow-3);
+  animation: cal-sheet-in 0.2s ease-out both;
+}
+@media (min-width: 721px) {
+  .cal-pick {
+    border-radius: 16px;
+    margin-bottom: 0;
+  }
+}
+.cal-pick-h {
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 600;
+  padding: 12px 12px 8px;
+}
+.cal-pick-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+.cal-pick-item:hover {
+  background: var(--bg-muted);
+}
+.cal-pick-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
 }
 

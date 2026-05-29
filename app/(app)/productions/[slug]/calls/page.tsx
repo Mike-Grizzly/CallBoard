@@ -73,6 +73,7 @@ export default async function ProductionCallsPage({
       initialView={view}
       initialDate={date}
       canEdit={canEdit}
+      scopedSlug={production.slug}
     />
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { useIsPhone } from "@/lib/use-is-phone";
 import {
@@ -36,13 +38,18 @@ export function CalendarClient({
   initialView,
   initialDate,
   canEdit,
+  scopedSlug,
 }: {
   events: CalEvent[];
   productions: Production[];
   initialView: string | undefined;
   initialDate: string | undefined;
   canEdit: boolean;
+  /** When the calendar is scoped to one production, new calls go straight
+   *  there. On the workspace calendar this is undefined and we pick. */
+  scopedSlug?: string;
 }) {
+  const router = useRouter();
   const today = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -113,6 +120,18 @@ export function CalendarClient({
     setView("day");
   };
 
+  // New-call entry point. Scoped views go straight to that production's form;
+  // a single-production workspace does too; otherwise we pick a production.
+  const [pickOpen, setPickOpen] = useState(false);
+  const directSlug =
+    scopedSlug ?? (productions.length === 1 ? productions[0].slug : null);
+  const newCallHref = (slug: string) =>
+    `/productions/${slug}/calls/new?date=${ymd(cursor)}`;
+  const startNewCall = () => {
+    if (directSlug) router.push(newCallHref(directSlug));
+    else setPickOpen(true);
+  };
+
   return (
     <div className="cal-page anim-in">
       <div className="cal">
@@ -164,6 +183,16 @@ export function CalendarClient({
                   </button>
                 ))}
               </div>
+              {canEdit && (
+                <button
+                  className="btn primary cal-new"
+                  onClick={startNewCall}
+                  title="Schedule a call"
+                >
+                  <Icon name="Plus" className="ico" />
+                  <span className="cal-new-label">Schedule call</span>
+                </button>
+              )}
             </div>
           </header>
 
@@ -203,6 +232,38 @@ export function CalendarClient({
             )}
           </div>
         </main>
+
+        {canEdit && (
+          <button
+            className="cal-fab"
+            onClick={startNewCall}
+            aria-label="Schedule a call"
+          >
+            <Icon name="Plus" className="ico" />
+          </button>
+        )}
+
+        {pickOpen && (
+          <div className="cal-pick-scrim" onClick={() => setPickOpen(false)}>
+            <div className="cal-pick" onClick={(e) => e.stopPropagation()}>
+              <div className="cal-pick-h">New call — choose a production</div>
+              {productions.map((p) => (
+                <Link
+                  key={p.id}
+                  href={newCallHref(p.slug)}
+                  className="cal-pick-item"
+                  onClick={() => setPickOpen(false)}
+                >
+                  <span
+                    className="cal-pick-dot"
+                    style={{ background: p.colorVar }}
+                  />
+                  <span>{p.title}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {selected && (
           <EventDrawer

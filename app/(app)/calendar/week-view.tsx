@@ -35,37 +35,67 @@ export function WeekView({
     (_, i) => DAY_START_HOUR + i,
   );
 
-  // "Today first": when the visible week contains today, scroll the day strip
-  // so today is the first column after the gutter; otherwise centre on the
-  // day the user navigated to. Only matters when the strip overflows (the
-  // 3-day phone / 5-day tablet windows) — on the full-week desktop layout
-  // there's no horizontal overflow so this is a no-op.
+  // "Today first" + exact column sizing. Percentage grid tracks inside a
+  // horizontally-overflowing scroller resolve unreliably (they can size
+  // against the grid's own overflowing width, making columns too wide and
+  // breaking snap). So we measure the scroll port and set an exact px column
+  // width: 3 visible on phone, 5 on tablet, all 7 on desktop. After sizing we
+  // align the target day (today, else the navigated day) to just past the
+  // frozen gutter.
   const hasToday = days.some((d) => sameYMD(d, today));
   const targetDate = hasToday ? today : cursor;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const sc = scrollRef.current;
-    if (!sc) return;
-    if (sc.scrollWidth <= sc.clientWidth) {
-      sc.scrollLeft = 0;
-      return;
-    }
-    const target = sc.querySelector<HTMLElement>('[data-target="1"]');
-    const gutter = sc.querySelector<HTMLElement>(".week-gutter");
-    if (!target) return;
-    const gutterW = gutter ? gutter.offsetWidth : 0;
-    const left =
-      sc.scrollLeft +
-      (target.getBoundingClientRect().left - sc.getBoundingClientRect().left) -
-      gutterW;
-    sc.scrollTo({ left: Math.max(0, left), behavior: "auto" });
+    const grid = gridRef.current;
+    if (!sc || !grid) return;
+
+    const layout = () => {
+      const w = sc.clientWidth;
+      let count = 7;
+      let gutter = 60;
+      if (w <= 720) {
+        count = 3;
+        gutter = 52;
+      } else if (w <= 1100) {
+        count = 5;
+        gutter = 60;
+      }
+      const dayW = Math.max(64, (w - gutter) / count);
+      const gutterStr = `${gutter}px`;
+      const dayStr = `${dayW}px`;
+      if (grid.style.getPropertyValue("--week-gutter-w") !== gutterStr) {
+        grid.style.setProperty("--week-gutter-w", gutterStr);
+      }
+      if (grid.style.getPropertyValue("--week-day-w") !== dayStr) {
+        grid.style.setProperty("--week-day-w", dayStr);
+      }
+
+      const target = sc.querySelector<HTMLElement>('[data-target="1"]');
+      if (target && sc.scrollWidth > sc.clientWidth + 1) {
+        const left =
+          sc.scrollLeft +
+          (target.getBoundingClientRect().left -
+            sc.getBoundingClientRect().left) -
+          gutter;
+        sc.scrollTo({ left: Math.max(0, left), behavior: "auto" });
+      } else {
+        sc.scrollLeft = 0;
+      }
+    };
+
+    layout();
+    const ro = new ResizeObserver(layout);
+    ro.observe(sc);
+    return () => ro.disconnect();
   }, [startKey]);
 
   return (
     <div className="week">
       <div className="week-scroll" ref={scrollRef}>
-        <div className="week-grid">
+        <div className="week-grid" ref={gridRef}>
           <div className="week-corner" />
           {days.map((d, i) => {
             const isToday = sameYMD(d, today);
