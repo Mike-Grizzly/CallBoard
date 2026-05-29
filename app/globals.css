@@ -7571,16 +7571,14 @@ textarea.cform-field {
   --msr-accent: oklch(0.7 0.16 25);
   background: oklch(0.17 0.008 60);
   color: oklch(0.96 0.005 75);
-  animation: msr-in 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: msr-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 @keyframes msr-in {
   from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.992);
+    transform: translateY(100%);
   }
   to {
-    opacity: 1;
-    transform: none;
+    transform: translateY(0);
   }
 }
 
