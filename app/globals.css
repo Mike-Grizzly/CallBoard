@@ -7566,8 +7566,39 @@ textarea.cform-field {
   z-index: 70;
   display: flex;
   flex-direction: column;
-  background: oklch(0.17 0.006 60);
+  /* Warm-dark surface tied to the app's palette + brand accent, so the reader
+     reads as an in-app panel rather than a separate site. */
+  --msr-accent: oklch(0.7 0.16 25);
+  background: oklch(0.17 0.008 60);
   color: oklch(0.96 0.005 75);
+  animation: msr-in 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes msr-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Brand mark in the reader header (matches the app rail glyph). */
+.msr-brand {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent), oklch(0.45 0.18 18));
+  color: #fff;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 15px;
+  margin-left: 2px;
 }
 
 .msr-top {
@@ -7583,8 +7614,10 @@ textarea.cform-field {
 .msr-title {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 16px;
   font-weight: 500;
+  letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -7605,7 +7638,7 @@ textarea.cform-field {
   background: oklch(0.26 0.01 60);
 }
 .msr-icon[data-on="1"] {
-  color: oklch(0.82 0.14 80);
+  color: var(--msr-accent);
 }
 
 .msr-scroll {
@@ -7621,8 +7654,37 @@ textarea.cform-field {
   width: 100%;
   margin: 0 0 8px;
   background: #fff;
+  overflow: hidden;
+  /* Skip painting (and the shimmer animation) for off-screen pages — keeps a
+     200+ page scroll light. Slots carry an explicit height so geometry holds. */
+  content-visibility: auto;
+}
+/* Warm shimmer shows through until the (transparent) canvas is painted. */
+.msr-slot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(
+    100deg,
+    oklch(0.93 0.01 75) 30%,
+    oklch(0.97 0.02 80) 50%,
+    oklch(0.93 0.01 75) 70%
+  );
+  background-size: 220% 100%;
+  animation: msr-shimmer 1.3s ease-in-out infinite;
+}
+@keyframes msr-shimmer {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -80% 0;
+  }
 }
 .msr-canvas {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   height: 100%;
@@ -7647,10 +7709,26 @@ textarea.cform-field {
   pointer-events: none;
 }
 .msr-loading {
-  padding: 80px 0;
-  text-align: center;
-  color: oklch(0.7 0.01 75);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 96px 0;
+  color: oklch(0.72 0.01 75);
   font-size: 13px;
+}
+.msr-spinner {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2.5px solid oklch(0.3 0.01 60);
+  border-top-color: var(--msr-accent, oklch(0.7 0.16 25));
+  animation: msr-spin 0.7s linear infinite;
+}
+@keyframes msr-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Floating page scrubber */
@@ -7699,6 +7777,7 @@ textarea.cform-field {
   font-size: 14px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  color: var(--msr-accent);
 }
 .msr-scrub-num span {
   width: 18px;
@@ -7721,8 +7800,20 @@ textarea.cform-field {
   z-index: 80;
   display: flex;
   flex-direction: column;
-  background: oklch(0.17 0.006 60);
+  --msr-accent: oklch(0.7 0.16 25);
+  background: oklch(0.17 0.008 60);
   color: oklch(0.96 0.005 75);
+  animation: msr-grid-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes msr-grid-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .msr-grid-bar {
   display: flex;
@@ -7768,8 +7859,8 @@ textarea.cform-field {
   cursor: pointer;
 }
 .msr-grid-filter button[data-on="1"] {
-  background: oklch(0.95 0.005 75);
-  color: oklch(0.2 0.01 60);
+  background: var(--msr-accent);
+  color: #fff;
   border-color: transparent;
 }
 .msr-grid {
@@ -7825,7 +7916,8 @@ textarea.cform-field {
   color: #fff;
 }
 .msr-thumb-bm[data-on="1"] {
-  color: oklch(0.82 0.14 80);
+  background: var(--msr-accent);
+  color: #fff;
 }
 .msr-thumb-cap {
   display: flex;
@@ -7849,5 +7941,16 @@ textarea.cform-field {
   color: oklch(0.6 0.01 75);
   font-size: 13px;
   padding: 48px 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msr,
+  .msr-grid-screen {
+    animation: none;
+  }
+  .msr-slot::before {
+    animation: none;
+    background: oklch(0.94 0.01 75);
+  }
 }
 

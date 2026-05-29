@@ -297,6 +297,9 @@ export function MobileScriptReader({
         <button className="msr-icon" onClick={exit} aria-label="Back">
           <ArrowLeft size={20} />
         </button>
+        <span className="msr-brand" aria-hidden="true">
+          P
+        </span>
         <div className="msr-title">{title}</div>
         <button
           className="msr-icon"
@@ -352,7 +355,12 @@ export function MobileScriptReader({
               <span className="msr-slot-num">{n}</span>
             </div>
           ))}
-        {!ready && <div className="msr-loading">Loading script…</div>}
+        {!ready && (
+          <div className="msr-loading">
+            <span className="msr-spinner" />
+            <span>Loading script…</span>
+          </div>
+        )}
       </div>
 
       {ready && (
