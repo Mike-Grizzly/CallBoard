@@ -221,6 +221,7 @@
 - **Stale script banner:** shown when the default script is replaced; dismissible
 - **DB:** `script_annotations` table with `annotations`, `bookmarks`, `pageOverrides`, `hasStalePages` JSONB/boolean columns; `documents.isDefaultScript` + `documents.scriptVersion` fields; "Set as default script" action in document row menu
 - **Known scaffold:** `pageOverrides` data model exists (stored/loaded) but no UI to set overrides yet
+- **Mobile reader — Phase 1 (2026-05-29):** phones now get a dedicated immersive reader (`mobile-script-reader.tsx`) instead of the view-only desktop viewer. `page.tsx` renders `ScriptScreen`, which routes phones → reader, desktop → `ScriptViewer` (via `useIsPhone`). The reader is a full-screen dark surface with **continuous vertical scrolling** (windowed: only current ± 2 pages painted to `<canvas>`, far pages cleared to cap memory), a floating **page scrubber** (current/total, ▲▼, drag-to-scrub), and a full-screen **page-grid** overlay with search (page # or bookmark title), an All-pages/Bookmarks filter, lazy thumbnails, and per-page bookmark ribbons. Bookmarks tapped here persist via the existing `saveAnnotations` action (annotations/overrides passed through untouched); existing highlight annotations render read-only over pages. **Phase 2 (touch annotation: freehand highlighter/pen/eraser) is not built yet.** CSS under `.msr-*` in `globals.css`. The old `.sv-*` phone overrides are now unused on phones.
 
 ### Step 15: Personal Calendar — IMPLEMENTED
 

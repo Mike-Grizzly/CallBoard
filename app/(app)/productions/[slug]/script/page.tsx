@@ -6,7 +6,7 @@ import { getProductionMembership } from "@/features/members/queries";
 import { getDefaultScript, getScriptAnnotations } from "@/features/scripts/queries";
 import { getScriptUrl } from "@/features/scripts/actions";
 import type { Annotation, Bookmark, PageOverrides } from "@/features/scripts/constants";
-import { ScriptViewer } from "./script-viewer";
+import { ScriptScreen } from "./script-screen";
 
 export default async function ScriptPage({
   params,
@@ -77,7 +77,7 @@ export default async function ScriptPage({
   const hasStalePages = annotationRow?.hasStalePages ?? false;
 
   return (
-    <ScriptViewer
+    <ScriptScreen
       script={script}
       productionId={production.id}
       pdfUrl={pdfUrl}
