@@ -18,6 +18,7 @@ import {
   Highlighter,
   LayoutGrid,
   Pen,
+  Pencil,
   Search,
   X,
 } from "lucide-react";
@@ -110,9 +111,15 @@ export function MobileScriptReader({
   const [, startTransition] = useTransition();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Freehand tool state.
+  // Freehand tool state. The palette is hidden until opened; a tool is only
+  // "active" (and page scroll locked) when the palette is open and a tool picked.
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [tool, setTool] = useState<DrawTool>("none");
   const [color, setColor] = useState<string>(ANNOTATION_COLORS[0].value);
+  const closePalette = useCallback(() => {
+    setPaletteOpen(false);
+    setTool("none");
+  }, []);
 
   // Highlight rects (desktop-drawn) shown read-only; freehand ink is editable.
   const highlightsByPage = useMemo(() => {
@@ -329,21 +336,48 @@ export function MobileScriptReader({
     draftPathRef.current?.setAttribute("d", "");
   }, []);
 
+  // Point/segment eraser: drop points within the eraser radius and keep the
+  // surviving runs as separate strokes, so only the touched part disappears.
   const eraseAt = useCallback(
     (page: number, el: HTMLElement, clientX: number, clientY: number) => {
       const rect = el.getBoundingClientRect();
       const rx = (clientX - rect.left) / rect.width;
       const ry = (clientY - rect.top) / rect.height;
       const aspect = rect.height / rect.width;
-      const thr = 0.022;
+      const radius = 0.03; // ~3% of page width
       const prev = annotationsRef.current;
-      const next = prev.filter((a) => {
-        if (a.type !== "ink" || a.page !== page) return true;
-        return !a.points.some(
-          (p) => Math.hypot(p.x - rx, (p.y - ry) * aspect) < thr,
-        );
-      });
-      if (next.length !== prev.length) commitAnnotations(next);
+      const result: Annotation[] = [];
+      let changed = false;
+
+      for (const a of prev) {
+        if (a.type !== "ink" || a.page !== page) {
+          result.push(a);
+          continue;
+        }
+        const runs: InkPoint[][] = [];
+        let run: InkPoint[] = [];
+        for (const p of a.points) {
+          const hit = Math.hypot(p.x - rx, (p.y - ry) * aspect) < radius;
+          if (hit) {
+            if (run.length) runs.push(run);
+            run = [];
+          } else {
+            run.push(p);
+          }
+        }
+        if (run.length) runs.push(run);
+
+        if (runs.length === 1 && runs[0].length === a.points.length) {
+          result.push(a); // untouched
+          continue;
+        }
+        changed = true;
+        for (const r of runs) {
+          if (r.length >= 2) result.push({ ...a, id: newId(), points: r });
+        }
+      }
+
+      if (changed) commitAnnotations(result);
     },
     [commitAnnotations],
   );
@@ -443,9 +477,10 @@ export function MobileScriptReader({
   }, [pageCount, containerWidth, startPage, jumpTo]);
 
   const ready = pageCount > 0 && containerWidth > 0;
+  const drawingActive = allowDrawing && tool !== "none";
 
   return (
-    <div className="msr">
+    <div className="msr" data-drawing={drawingActive ? "1" : "0"}>
       <header className="msr-top">
         <button className="msr-icon" onClick={exit} aria-label="Back">
           <ArrowLeft size={20} />
@@ -507,7 +542,6 @@ export function MobileScriptReader({
               ))}
               {(() => {
                 const ink = inkByPage.get(n);
-                const drawingActive = allowDrawing && tool !== "none";
                 if (!drawingActive && (!ink || ink.length === 0)) return null;
                 return (
                   <svg
@@ -563,7 +597,17 @@ export function MobileScriptReader({
         </svg>
       )}
 
-      {allowDrawing && ready && (
+      {allowDrawing && ready && !paletteOpen && (
+        <button
+          className="msr-annotate-fab"
+          onClick={() => setPaletteOpen(true)}
+          aria-label="Annotate"
+        >
+          <Pencil size={20} />
+        </button>
+      )}
+
+      {allowDrawing && ready && paletteOpen && (
         <div className="msr-palette">
           <button
             className="msr-tool"
@@ -604,6 +648,10 @@ export function MobileScriptReader({
               ))}
             </>
           )}
+          <span className="msr-palette-div" />
+          <button className="msr-tool" onClick={closePalette} aria-label="Close tools">
+            <X size={20} />
+          </button>
         </div>
       )}
 

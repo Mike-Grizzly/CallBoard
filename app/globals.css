@@ -7780,6 +7780,34 @@ textarea.cform-field {
   border-color: #fff;
   box-shadow: 0 0 0 2px oklch(0.23 0.008 60);
 }
+
+/* While a tool is active, lock the page scroll so a finger draws instead of
+   scrolling (navigate via the scrubber, or close/deselect the tool). */
+.msr[data-drawing="1"] .msr-scroll {
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* Toggle to show the drawing palette (hidden when the palette is open). */
+.msr-annotate-fab {
+  position: absolute;
+  left: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 9;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--msr-accent);
+  color: #fff;
+  box-shadow: var(--shadow-3);
+  cursor: pointer;
+}
+.msr-annotate-fab:active {
+  transform: scale(0.94);
+}
 .msr-loading {
   display: flex;
   flex-direction: column;
