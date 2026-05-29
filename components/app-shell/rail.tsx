@@ -55,9 +55,9 @@ export async function Rail() {
             <span>Productions</span>
             {can(role, "productions:manage") && (
               <Link
-                href="/productions"
-                title="All productions"
-                aria-label="All productions"
+                href="/productions/new"
+                title="New production"
+                aria-label="New production"
               >
                 <svg
                   className="ico"

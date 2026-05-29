@@ -36,23 +36,45 @@ function ProductionFoot({ production }: { production: Production }) {
 export function ProductionList({
   productions,
   accessibleIds,
+  canManage,
 }: {
   productions: Production[];
   accessibleIds: Set<string> | null;
+  canManage: boolean;
 }) {
   if (productions.length === 0) {
     return (
-      <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
+      <div
+        className="card card-pad"
+        style={{ textAlign: "center", padding: "48px 24px" }}
+      >
         <Icon
           name="Theater"
-          style={{ width: 32, height: 32, margin: "0 auto 10px", color: "var(--ink-4)" }}
+          style={{
+            width: 32,
+            height: 32,
+            margin: "0 auto 10px",
+            color: "var(--ink-4)",
+          }}
         />
         <p style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-2)" }}>
           No productions yet
         </p>
-        <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-          Create your first production to get started.
+        <p className="muted" style={{ fontSize: 13, marginTop: 4, maxWidth: 360, marginLeft: "auto", marginRight: "auto" }}>
+          {canManage
+            ? "Each show your company is producing lives in its own hub. Create your first one to get going."
+            : "You haven't been assigned to any productions yet."}
         </p>
+        {canManage && (
+          <Link
+            href="/productions/new"
+            className="btn primary"
+            style={{ marginTop: 18 }}
+          >
+            <Icon name="Plus" size={14} />
+            <span>New production</span>
+          </Link>
+        )}
       </div>
     );
   }

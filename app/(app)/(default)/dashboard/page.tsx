@@ -258,7 +258,11 @@ export default async function DashboardPage() {
         </h1>
         <p className="home-hero-sub">
           {myProductions.length === 0 ? (
-            "No productions yet — create one to get started."
+            canManage ? (
+              "Your workspace is ready. Create your first production to start tracking rehearsals, calls, and documents."
+            ) : (
+              "No productions assigned to you yet — sit tight while your team gets set up."
+            )
           ) : (
             <>
               <b>
@@ -378,7 +382,7 @@ export default async function DashboardPage() {
             <div className="h-eyebrow">Productions</div>
             <h2 className="h-section">Your shows</h2>
           </div>
-          {canManage && (
+          {canManage && myProductions.length > 0 && (
             <Link
               href="/productions/new"
               className="btn"
@@ -390,11 +394,69 @@ export default async function DashboardPage() {
         </header>
 
         {myProductions.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--ink-3)" }}>
-            {canManage
-              ? "No productions yet. Create one to get started."
-              : "You haven't been assigned to any productions yet."}
-          </p>
+          canManage ? (
+            <div
+              className="card card-pad"
+              style={{
+                textAlign: "center",
+                padding: "40px 28px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <div
+                aria-hidden
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  background: "var(--bg-muted)",
+                  display: "grid",
+                  placeItems: "center",
+                  color: "var(--ink-3)",
+                  marginBottom: 4,
+                }}
+              >
+                <Plus size={22} strokeWidth={1.75} />
+              </div>
+              <h3
+                style={{
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: "var(--ink-1)",
+                  margin: 0,
+                }}
+              >
+                Create your first production
+              </h3>
+              <p
+                className="muted"
+                style={{
+                  fontSize: 13,
+                  maxWidth: 420,
+                  lineHeight: 1.45,
+                  margin: 0,
+                }}
+              >
+                Every show your company is producing lives in its own hub —
+                rehearsal reports, blocking, script, calls, and documents all
+                in one place. Spin up your first one to get going.
+              </p>
+              <Link
+                href="/productions/new"
+                className="btn primary"
+                style={{ marginTop: 6 }}
+              >
+                <Plus size={14} aria-hidden /> New production
+              </Link>
+            </div>
+          ) : (
+            <p style={{ fontSize: 13, color: "var(--ink-3)" }}>
+              You haven&apos;t been assigned to any productions yet.
+            </p>
+          )
         ) : (
           <div className="prod-cards">
             {myProductions.map((p) => {

@@ -34,7 +34,11 @@ export default async function ProductionsPage() {
           )}
         </div>
 
-        <ProductionList productions={productionsList} accessibleIds={assignedIds} />
+        <ProductionList
+          productions={productionsList}
+          accessibleIds={assignedIds}
+          canManage={canManage}
+        />
       </div>
     </div>
   );
