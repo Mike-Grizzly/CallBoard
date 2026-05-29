@@ -70,4 +70,28 @@ As an admin, I can create productions and assign team members. As a member, I se
 - Production access gating happens at the page level in `page.tsx`, not in queries
 - `getUserProductionIds()` returns a Set for O(1) lookups in the production list
 - Tabs are defined as an array in the production overview `page.tsx` — tabs are not dynamic per feature module
-- Slug generation is in `validation.ts` — keep production creation validation centralized there
+- Slug generation is in `validation.ts` (`slugify`) — keep production creation validation centralized there; `actions.ts#generateUniqueSlug` adds org-uniqueness on top
+
+## New-production builder (2026-05-29)
+Two creation paths, surfaced from the "+" menu on `/productions` (`new-production-trigger.tsx`):
+
+- **Full setup** — 6-step wizard (`new/new-production-wizard.tsx`, a typed client component ported from the design's `new-production.jsx`; styles scoped under `.np-root` in `globals.css`). Steps: Basics → Calendar → Departments → Roles → Team → Review, then a launch screen. Mounts as a full-screen **overlay** in-app (lazy via `next/dynamic`) and also renders as a standalone **page** at `/productions/new` (full-screen, covers the app rail). Submits the whole payload to `createProductionFull(input)`.
+- **Quick add** — small modal (show name + optional opening date) → `quickCreateProduction(input)` creates a `draft` and routes to the hub.
+
+Behavior:
+- Actor autocomplete pulls real org members via `getOrgUsersForWizard(organizationId)`.
+- Team step: existing org members are assigned to the production directly (`productions:manage`); brand-new emails are invited into the org via the Supabase Admin API (mirrors `features/members/actions.ts#inviteMembers`) — this requires `settings:manage`, and any rows that can't be actioned are surfaced in the launch screen's "couldn't be added" list rather than failing the launch.
+- Wizard team-role labels map to the fixed role set via `appRoleForTeamLabel` in `wizard-constants.ts`.
+
+Schema added (additive, applied to the `CallBoard` Supabase project + Drizzle schema):
+- `productions`: `venue`, `season`, `first_rehearsal_date`, `tech_start_date`, `rehearsal_days` (jsonb), `rehearsal_start`, `rehearsal_end`
+- `production_departments` (one row per enabled dept key), `production_roles` (cast list: name/actor/type/sort_order). Uniqueness enforced in app code, not via composite constraints. RLS enabled to match the rest of the schema.
+
+## Manual test checklist (new builder)
+- [ ] "+" on `/productions` opens the Full setup / Quick add menu (manage roles only)
+- [ ] Quick add creates a draft from just a name and lands on the hub
+- [ ] Full setup overlay walks all 6 steps; Continue is gated on a title at step 1
+- [ ] Launch creates the production with dates, departments, and roles persisted
+- [ ] Team: existing org members get a production membership; new emails get an invite email; skips are reported
+- [ ] `/productions/new` opens the wizard full-screen on direct load / refresh
+- [ ] Dark/cool themes render correctly inside the wizard (tokens inherit, not pinned)

@@ -1078,3 +1078,35 @@ page and a last-admin safeguard on the members page.
   Studio required to rename, switch, or recover from stale selection).
 - Users with multiple memberships get a real switcher.
 - Workspaces are protected from accidental zero-admin states.
+
+---
+
+## 2026-05-29 — New-production builder (full-setup wizard + quick add)
+
+**Decision:** Replace the single-form `/productions/new` with a two-path
+creation flow surfaced from the "+" menu on `/productions`: a 6-step **Full
+setup** wizard (ported from the design's `new-production.jsx`) and a small
+**Quick add** modal. The wizard is one component used two ways — a full-screen
+**overlay** in-app (lazy-loaded) and a linkable, refresh-safe **page** at
+`/productions/new` — rather than Next.js intercepting/parallel routes.
+
+**Reason:** The user supplied the wizard design and wanted both an in-app
+overlay and a shareable link. Intercepting routes deliver "both" but are
+fragile on this repo's pinned Next 16 (see `AGENTS.md`); a single component
+rendered full-screen in either context is simpler and loses no progress on
+refresh. Persisting everything (the user's explicit choice) required new
+schema.
+
+**Impact:**
+- Schema (additive): `productions` gains `venue`, `season`,
+  `first_rehearsal_date`, `tech_start_date`, `rehearsal_days` (jsonb),
+  `rehearsal_start`, `rehearsal_end`; new tables `production_departments` and
+  `production_roles`. Applied to the `CallBoard` Supabase project via MCP
+  (matches `drizzle-kit push` output); RLS enabled to match every other table.
+- Team invites reuse the existing Supabase Admin invite path. Inviting
+  *new* people needs `settings:manage`, so producers (who have
+  `productions:manage` but not `settings:manage`) can assign existing org
+  members but cannot create brand-new accounts from the wizard — those rows
+  are reported as skipped on the launch screen instead of failing the launch.
+- Wizard tokens are inherited from `:root` (the duplicate token block from the
+  source CSS was dropped) so the wizard follows the dark/cool theme switch.

@@ -1,26 +1,30 @@
-import Link from "next/link";
-import { Icon } from "@/components/ui/icon";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
   getArchivedProductionsByOrganization,
   getProductionsByOrganization,
+  getOrgUsersForWizard,
 } from "@/features/productions/queries";
 import { getUserProductionIds } from "@/features/members/queries";
 import { ProductionList } from "./production-list";
 import { ArchivedSection } from "./archived-section";
+import { NewProductionTrigger } from "./new-production-trigger";
 
 export default async function ProductionsPage() {
   const user = await requireCurrentUser();
   const canManage = can(user.role, "productions:manage");
 
-  const [productionsList, assignedIds, archivedList] = await Promise.all([
-    getProductionsByOrganization(user.organizationId),
-    canManage ? Promise.resolve(null) : getUserProductionIds(user.id),
-    canManage
-      ? getArchivedProductionsByOrganization(user.organizationId)
-      : Promise.resolve([]),
-  ]);
+  const [productionsList, assignedIds, archivedList, orgUsers] =
+    await Promise.all([
+      getProductionsByOrganization(user.organizationId),
+      canManage ? Promise.resolve(null) : getUserProductionIds(user.id),
+      canManage
+        ? getArchivedProductionsByOrganization(user.organizationId)
+        : Promise.resolve([]),
+      canManage
+        ? getOrgUsersForWizard(user.organizationId)
+        : Promise.resolve([]),
+    ]);
 
   return (
     <div className="page">
@@ -33,12 +37,7 @@ export default async function ProductionsPage() {
               Every show your organization is producing.
             </p>
           </div>
-          {canManage && (
-            <Link href="/productions/new" className="btn primary">
-              <Icon name="Plus" size={14} />
-              <span>New production</span>
-            </Link>
-          )}
+          {canManage && <NewProductionTrigger orgUsers={orgUsers} />}
         </div>
 
         <ProductionList

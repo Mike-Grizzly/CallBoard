@@ -1,7 +1,13 @@
 import { cache } from "react";
 import { db } from "@/db";
-import { productions, productionMemberships } from "@/db/schema";
+import {
+  productions,
+  productionMemberships,
+  organizationMemberships,
+  profiles,
+} from "@/db/schema";
 import { and, eq, desc, isNull, isNotNull } from "drizzle-orm";
+import type { WizardOrgUser } from "./wizard-constants";
 
 /**
  * Active productions in an org (archived excluded). For the "Archived"
@@ -94,3 +100,28 @@ export async function getUserProductions(userId: string) {
 export type UserProduction = Awaited<
   ReturnType<typeof getUserProductions>
 >[number];
+
+/**
+ * Org members formatted for the wizard's actor autocomplete — anyone already
+ * in the organization can be suggested when typing actor / team names.
+ */
+export async function getOrgUsersForWizard(
+  organizationId: string,
+): Promise<WizardOrgUser[]> {
+  const rows = await db
+    .select({
+      email: profiles.email,
+      firstName: profiles.firstName,
+      lastName: profiles.lastName,
+    })
+    .from(organizationMemberships)
+    .innerJoin(profiles, eq(organizationMemberships.userId, profiles.id))
+    .where(eq(organizationMemberships.organizationId, organizationId));
+
+  return rows
+    .map((r) => ({
+      name: `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim() || r.email,
+      email: r.email,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}

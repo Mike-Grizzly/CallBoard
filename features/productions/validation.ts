@@ -1,5 +1,14 @@
 import { isValidProductionColor } from "./constants";
 
+/** Turn a title into a URL slug. Not uniqueness-checked — callers that need
+ *  org-unique slugs should disambiguate (see generateUniqueSlug in actions). */
+export function slugify(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export type ProductionFormErrors = {
   title?: string;
   opening_date?: string;
@@ -42,10 +51,7 @@ export function validateProductionForm(formData: FormData): {
     return { errors };
   }
 
-  const slug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+  const slug = slugify(title);
 
   return {
     data: {

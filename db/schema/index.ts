@@ -1,5 +1,7 @@
 export * from "./organizations";
 export * from "./productions";
+export * from "./production-departments";
+export * from "./production-roles";
 export * from "./users";
 export * from "./organization-memberships";
 export * from "./production-memberships";

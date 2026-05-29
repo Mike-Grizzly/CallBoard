@@ -65,6 +65,10 @@
 - Non-assigned users without `productions:manage` are redirected from production detail
 - Personalized dashboard with stats (admin) and assigned productions list
 - **UI port (2026-05-20):** `/productions` list restyled to the warm `.prod-card` design (status dot, display-font title, Opens/Closes footer, "Open hub" hover CTA); locked non-assigned cards retained. See `docs/ui-port-roadmap.md`.
+- **New-production builder (2026-05-29):** the old single-form `/productions/new` was replaced by a two-path creation flow. The "+" on `/productions` now opens a menu with **Full setup** and **Quick add**:
+  - *Full setup* is a 6-step wizard (Basics → Calendar → Departments → Roles → Team → Review) ported from the design's `new-production.jsx` into a typed client component (`new/new-production-wizard.tsx`, styled under `.np-root` in `globals.css`). Opens as a full-screen **overlay** in-app (lazy-loaded via `next/dynamic`) and also renders as a linkable, refresh-safe **page** at `/productions/new`. The actor autocomplete reads real org members; team members are assigned (existing org users) or invited via the existing `inviteMembers`/Supabase-admin path (new emails require `settings:manage`, skips reported on the launch screen). Persists via `createProductionFull`.
+  - *Quick add* is a small modal (show name + optional opening date) → `quickCreateProduction` creates a `draft` and routes to the hub.
+  - **Schema (applied 2026-05-29):** `productions` gained `venue`, `season`, `first_rehearsal_date`, `tech_start_date`, `rehearsal_days` (jsonb), `rehearsal_start`, `rehearsal_end`; new tables `production_departments` and `production_roles` (RLS enabled to match the rest of the schema). Applied additively to the `CallBoard` Supabase project; equivalent to `npm run db:push` from the updated Drizzle schema.
 
 ### Step 5: Reports — IMPLEMENTED (overhauled 2026-05-06; daily log removed 2026-05-15)
 - Structured rehearsal report: header (date, scheduled call, actual start, end), TipTap general notes, 12 fixed department text fields, next-rehearsal block
