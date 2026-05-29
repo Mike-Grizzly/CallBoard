@@ -19,6 +19,11 @@ export const productions = pgTable("productions", {
   color: text("color"),
   openingDate: date("opening_date"),
   closingDate: date("closing_date"),
+  // Soft-archive. Null = active (shows in workspace lists), non-null =
+  // archived (hidden from default queries but reachable from the
+  // archived view and restorable). We never hard-delete productions —
+  // they carry too much downstream history (reports, calls, blocking).
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

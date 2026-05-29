@@ -12,12 +12,14 @@ import type { UserMembership } from "@/features/workspace/queries";
 type Props = {
   currentOrgId: string;
   currentOrgName: string;
+  currentOrgLogoUrl: string | null;
   memberships: UserMembership[];
 };
 
 export function WorkspaceRailBadge({
   currentOrgId,
   currentOrgName,
+  currentOrgLogoUrl,
   memberships,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -115,7 +117,19 @@ export function WorkspaceRailBadge({
         disabled={pending}
         title={currentOrgName}
       >
-        <Icon name="Building2" size={14} aria-hidden />
+        {currentOrgLogoUrl ? (
+          // Signed URL — `<img>` is fine, see logo-uploader for rationale.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={currentOrgLogoUrl}
+            alt=""
+            width={16}
+            height={16}
+            className="workspace-badge-logo"
+          />
+        ) : (
+          <Icon name="Building2" size={14} aria-hidden />
+        )}
         <span className="truncate">{currentOrgName}</span>
         <Icon
           name="ChevronDown"

@@ -3,6 +3,7 @@
 import {
   Activity,
   AlertTriangle,
+  Archive,
   Bell,
   BookOpen,
   Building2,
@@ -34,6 +35,7 @@ import {
   Phone,
   Pin,
   Plus,
+  RefreshCw,
   Scissors,
   Search,
   Send,
@@ -56,6 +58,7 @@ import type { LucideProps } from "lucide-react";
 const ICONS = {
   Activity,
   AlertTriangle,
+  Archive,
   Bell,
   BookOpen,
   Building2,
@@ -87,6 +90,7 @@ const ICONS = {
   Phone,
   Pin,
   Plus,
+  RefreshCw,
   Scissors,
   Search,
   Send,

@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getUserProductions } from "@/features/productions/queries";
 import { resolveProductionColor } from "@/features/productions/constants";
 import { getUserMemberships } from "@/features/workspace/queries";
+import { getSignedLogoUrl } from "@/lib/workspace-logo";
 import { can } from "@/lib/permissions";
 import { Icon } from "@/components/ui/icon";
 import { NAV_ITEMS } from "./nav-items";
@@ -21,12 +22,13 @@ export async function Rail() {
   const user = await getCurrentUser();
   const role = user?.role ?? "cast";
 
-  const [productions, memberships] = user
+  const [productions, memberships, logoUrl] = user
     ? await Promise.all([
         getUserProductions(user.id),
         getUserMemberships(user.id),
+        getSignedLogoUrl(user.organizationLogoUrl),
       ])
-    : [[], []];
+    : [[], [], null];
 
   // Workspace items follow NAV_ITEMS order, gated by capability.
   // We exclude "Productions" since the productions section below covers it.
@@ -49,6 +51,7 @@ export async function Rail() {
         <WorkspaceRailBadge
           currentOrgId={user.organizationId}
           currentOrgName={user.organizationName}
+          currentOrgLogoUrl={logoUrl}
           memberships={memberships}
         />
       )}

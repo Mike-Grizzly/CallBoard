@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import type { Production } from "@/db/schema";
 import { resolveProductionColor } from "@/features/productions/constants";
+import { ArchiveProductionButton } from "./archive-buttons";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
@@ -111,24 +112,31 @@ export function ProductionList({
         }
 
         return (
-          <Link
-            key={production.id}
-            href={`/productions/${production.slug}`}
-            className="prod-card"
-            data-status={production.status}
-          >
-            <span className="prod-card-cta">
-              Open hub <Icon name="ChevronRight" size={14} />
-            </span>
-            <div className="prod-card-head">
-              <span className="prod-card-status">
-                <span className="prod-card-dot" style={{ background: dotColor }} />
-                {statusLabel}
+          <div key={production.id} className="prod-card-wrap">
+            <Link
+              href={`/productions/${production.slug}`}
+              className="prod-card"
+              data-status={production.status}
+            >
+              <span className="prod-card-cta">
+                Open hub <Icon name="ChevronRight" size={14} />
               </span>
-            </div>
-            <h2 className="prod-card-title">{production.title}</h2>
-            <ProductionFoot production={production} />
-          </Link>
+              <div className="prod-card-head">
+                <span className="prod-card-status">
+                  <span className="prod-card-dot" style={{ background: dotColor }} />
+                  {statusLabel}
+                </span>
+              </div>
+              <h2 className="prod-card-title">{production.title}</h2>
+              <ProductionFoot production={production} />
+            </Link>
+            {canManage && (
+              <ArchiveProductionButton
+                productionId={production.id}
+                productionTitle={production.title}
+              />
+            )}
+          </div>
         );
       })}
     </div>

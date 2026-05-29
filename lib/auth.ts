@@ -21,6 +21,7 @@ export type CurrentUser = {
   role: Role;
   organizationId: string;
   organizationName: string;
+  organizationLogoUrl: string | null;
 };
 
 function fallbackOrgName(firstName: string, lastName: string, email: string) {
@@ -39,6 +40,7 @@ async function resolveActiveMembership(
       organizationId: organizationMemberships.organizationId,
       role: organizationMemberships.role,
       organizationName: organizations.name,
+      organizationLogoUrl: organizations.logoUrl,
     })
     .from(organizationMemberships)
     .innerJoin(
@@ -119,6 +121,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       role: "admin",
       organizationId: org.id,
       organizationName: org.name,
+      organizationLogoUrl: org.logoUrl ?? null,
     };
   }
 
@@ -167,6 +170,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       role: "admin",
       organizationId: org.id,
       organizationName: org.name,
+      organizationLogoUrl: org.logoUrl ?? null,
     };
   }
 
@@ -189,6 +193,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     role: membership.role as Role,
     organizationId: membership.organizationId,
     organizationName: membership.organizationName,
+    organizationLogoUrl: membership.organizationLogoUrl ?? null,
   };
 });
 

@@ -1,10 +1,20 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { db } from "@/db";
+import { organizations } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { getSignedLogoUrl } from "@/lib/workspace-logo";
 import { Icon } from "@/components/ui/icon";
+import { getOrganizationMembers } from "@/features/members/queries";
 import { getWorkspaceOverview } from "@/features/workspace/queries";
 import { RenameWorkspaceForm } from "./rename-workspace-form";
+import { WorkspaceLogoUploader } from "./logo-uploader";
+import {
+  TransferOwnershipForm,
+  type TransferCandidate,
+} from "./transfer-ownership-form";
 
 export default async function WorkspaceSettingsPage() {
   const user = await requireCurrentUser();
@@ -15,6 +25,26 @@ export default async function WorkspaceSettingsPage() {
 
   const overview = await getWorkspaceOverview(user.organizationId);
   if (!overview) redirect("/dashboard");
+
+  const [members, logoRow] = await Promise.all([
+    getOrganizationMembers(user.organizationId),
+    db
+      .select({ logoUrl: organizations.logoUrl })
+      .from(organizations)
+      .where(eq(organizations.id, user.organizationId))
+      .limit(1),
+  ]);
+
+  const logoUrl = await getSignedLogoUrl(logoRow[0]?.logoUrl ?? null);
+
+  const candidates: TransferCandidate[] = members
+    .filter((m) => m.userId !== user.id)
+    .map((m) => ({
+      userId: m.userId,
+      displayName:
+        `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim() || m.email,
+    }))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
   return (
     <div
@@ -41,6 +71,8 @@ export default async function WorkspaceSettingsPage() {
 
       <RenameWorkspaceForm currentName={overview.name} />
 
+      <WorkspaceLogoUploader currentLogoUrl={logoUrl} />
+
       <div className="card card-pad">
         <h3 style={{ fontSize: 14, margin: 0, fontWeight: 600 }}>
           Admins &amp; access
@@ -56,6 +88,8 @@ export default async function WorkspaceSettingsPage() {
           <Icon name="Users" size={14} aria-hidden /> Manage members
         </Link>
       </div>
+
+      <TransferOwnershipForm candidates={candidates} />
     </div>
   );
 }

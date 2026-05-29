@@ -3,6 +3,7 @@ import { Icon } from "@/components/ui/icon";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getUserMemberships } from "@/features/workspace/queries";
+import { getSignedLogoUrl } from "@/lib/workspace-logo";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 
 function roleLabel(role: string): string {
@@ -21,7 +22,10 @@ function roleLabel(role: string): string {
 export default async function SettingsPage() {
   const user = await requireCurrentUser();
   const canManage = can(user.role, "settings:manage");
-  const memberships = await getUserMemberships(user.id);
+  const [memberships, logoUrl] = await Promise.all([
+    getUserMemberships(user.id),
+    getSignedLogoUrl(user.organizationLogoUrl),
+  ]);
 
   return (
     <div
@@ -29,10 +33,52 @@ export default async function SettingsPage() {
       style={{ display: "flex", flexDirection: "column", gap: 16 }}
     >
       <div className="card card-pad">
-        <div className="h-eyebrow" style={{ marginBottom: 4 }}>
-          Workspace
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            marginBottom: 4,
+          }}
+        >
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 10,
+              background: "var(--bg-muted)",
+              border: "1px solid var(--border)",
+              display: "grid",
+              placeItems: "center",
+              overflow: "hidden",
+              flexShrink: 0,
+            }}
+          >
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt=""
+                width={48}
+                height={48}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            ) : (
+              <Icon
+                name="Building2"
+                size={22}
+                aria-hidden
+                style={{ color: "var(--ink-4)" }}
+              />
+            )}
+          </div>
+          <div>
+            <div className="h-eyebrow">Workspace</div>
+            <h1 className="h-section" style={{ marginTop: 2 }}>
+              {user.organizationName}
+            </h1>
+          </div>
         </div>
-        <h1 className="h-section">{user.organizationName}</h1>
         <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
           Signed in as{" "}
           <b>

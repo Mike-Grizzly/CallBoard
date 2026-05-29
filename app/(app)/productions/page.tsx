@@ -2,17 +2,24 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getProductionsByOrganization } from "@/features/productions/queries";
+import {
+  getArchivedProductionsByOrganization,
+  getProductionsByOrganization,
+} from "@/features/productions/queries";
 import { getUserProductionIds } from "@/features/members/queries";
 import { ProductionList } from "./production-list";
+import { ArchivedSection } from "./archived-section";
 
 export default async function ProductionsPage() {
   const user = await requireCurrentUser();
   const canManage = can(user.role, "productions:manage");
 
-  const [productionsList, assignedIds] = await Promise.all([
+  const [productionsList, assignedIds, archivedList] = await Promise.all([
     getProductionsByOrganization(user.organizationId),
     canManage ? Promise.resolve(null) : getUserProductionIds(user.id),
+    canManage
+      ? getArchivedProductionsByOrganization(user.organizationId)
+      : Promise.resolve([]),
   ]);
 
   return (
@@ -39,6 +46,8 @@ export default async function ProductionsPage() {
           accessibleIds={assignedIds}
           canManage={canManage}
         />
+
+        {canManage && <ArchivedSection productions={archivedList} />}
       </div>
     </div>
   );
