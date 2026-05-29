@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import {
   getProductionMembers,
@@ -23,8 +22,7 @@ export default async function ProductionMembersPage({
     redirect("/productions");
   }
 
-  const org = await getOrCreateDefaultOrganization();
-  const production = await getProductionBySlug(org.id, slug);
+  const production = await getProductionBySlug(user.organizationId, slug);
 
   if (!production) {
     notFound();
@@ -32,7 +30,7 @@ export default async function ProductionMembersPage({
 
   const [productionMembers, orgMembers] = await Promise.all([
     getProductionMembers(production.id),
-    getOrganizationMembers(org.id),
+    getOrganizationMembers(user.organizationId),
   ]);
 
   const assignedUserIds = new Set(productionMembers.map((m) => m.userId));

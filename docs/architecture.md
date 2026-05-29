@@ -182,14 +182,35 @@ All tables use UUID primary keys, cascade deletes on foreign keys, and timezone-
 - First user in the organization automatically becomes `admin`
 - Subsequent users default to `cast` (most restrictive role)
 - Signup form includes a "requested role" dropdown — the value is stored on the profile but has no automatic effect; admins see it as a hint in the member management UI
-- `getCurrentUser()` auto-creates a profile and org membership on first access (sync pattern)
+- `getCurrentUser()` auto-creates a profile, a new organization, and
+  an admin membership on first access for self-signups (sync pattern);
+  for invited users the profile + membership already exist from invite time
 - `requireCurrentUser()` redirects to `/login` if not authenticated
 
 ## Multi-tenancy
 
-- MVP supports a single organization with slug "default", lazy-created on first access
-- All productions belong to this organization
-- Multi-org support (org creation, switching) is intentionally deferred
+- Each user belongs to exactly one organization via
+  `organization_memberships`; that row's `organizationId` is the
+  tenant boundary for every query
+- `getCurrentUser()` returns the caller's actual org membership;
+  there is no global "current org" — it's per-request, per-user
+- **Self-signup** creates a new org via `createOrganization()`
+  (`lib/organization.ts`) with the new user as `admin`. Org name
+  comes from the required signup-form field
+  (`organization_name`, carried on `auth.user_metadata`)
+- **Invites** (`features/members/actions.ts`) write the profile +
+  membership rows at invite time, scoped to
+  `currentUser.organizationId`, so invited users land in the
+  inviter's org on first login
+- Org switcher / Settings rename UI are not built yet — a user
+  can only ever be in one org through the UI today. The schema
+  already supports multiple memberships per user; when the
+  switcher ships, `getCurrentUser` will need to pick one
+  (probably via a `selected_organization_id` on `profiles` or a
+  cookie)
+- "Default Organization" (slug `default`) still exists in
+  production as a legacy workspace from the single-org beta;
+  not special-cased in code anymore — just a row like any other
 
 ## What is intentionally not implemented yet
 
@@ -202,7 +223,7 @@ All tables use UUID primary keys, cascade deletes on foreign keys, and timezone-
 - Mobile navigation drawer
 - Email notifications
 - Real-time updates
-- Multi-organization support
+- Org switcher / Settings UI to rename the current org
 
 ## Patterns to preserve
 
@@ -223,7 +244,9 @@ All tables use UUID primary keys, cascade deletes on foreign keys, and timezone-
 2. Do not replace Drizzle with another ORM
 3. Do not replace TipTap with another editor
 4. Do not introduce an API layer between server components and the database
-5. Do not add multi-org support without explicit product decision
+5. Do not collapse the per-user `organization_memberships` lookup
+   in `getCurrentUser` back to a singleton helper — the multi-org
+   refactor (2026-05-28) deliberately removed that pattern
 6. Do not change the role/capability architecture without explicit approval
 7. Do not move from local UI primitives to a component library without approval
 8. Do not change the proxy.ts routing approach

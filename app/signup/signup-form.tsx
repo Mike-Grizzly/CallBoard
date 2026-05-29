@@ -50,27 +50,21 @@ export function SignupForm() {
       </div>
 
       <div className="auth-field">
-        <label htmlFor="position" className="label">
-          Position
+        <label htmlFor="organization_name" className="label">
+          Workspace name
         </label>
-        <select
-          id="position"
-          name="position"
-          defaultValue=""
+        <input
+          id="organization_name"
+          name="organization_name"
+          type="text"
           required
+          autoComplete="organization"
           className="field"
-        >
-          <option value="" disabled>
-            Select your role...
-          </option>
-          <option value="producer">Producer</option>
-          <option value="director">Director</option>
-          <option value="stage_manager">Stage Manager</option>
-          <option value="cast">Cast</option>
-          <option value="crew">Crew</option>
-        </select>
+          placeholder="Your theatre company"
+        />
         <p className="auth-hint">
-          Your admin will confirm your permissions after signup.
+          The name your collaborators will see. Usually your theatre company
+          or production team. You can rename it later.
         </p>
       </div>
 

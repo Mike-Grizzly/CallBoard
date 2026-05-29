@@ -286,12 +286,17 @@ P5.
   blocking status changes. Renders cleanly in Gmail; Outlook / iOS
   Mail not yet verified but the email is plain-table HTML so should
   render fine.
-- [ ] **Multi-org refactor (during beta — week 1).** Make
-  `getCurrentUser` use the caller's actual org membership; have
-  self-signup create a new org with the user as admin; thread the
-  real org name through everywhere "Default Organization" is
-  currently hardcoded. Scope and rationale in `decision-log.md`
-  2026-05-27 entry.
+- [x] **Multi-org refactor (2026-05-28).** `getCurrentUser` reads
+  the caller's actual `organization_memberships` row; self-signup
+  creates a fresh org with the user as admin (org name captured on
+  the signup form); invited users continue to land in the inviter's
+  org (that path was already correct, only the runtime helper was
+  singleton). All ~25 callsites of `getOrCreateDefaultOrganization`
+  swept to use `user.organizationId`; the helper itself is replaced
+  with `createOrganization()`. Existing "Default Organization" row
+  left in place per product call — testers keep their workspace,
+  can be renamed later. Org-switcher and Settings rename UI
+  deferred. See `decision-log.md` (2026-05-28).
 - [ ] Establish a bug-triage cadence; feed fixes back through P0-style
   hardening and normal feature work.
 

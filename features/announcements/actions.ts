@@ -6,7 +6,6 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { writeMentions } from "@/features/mentions/write";
 
 export type AnnouncementResult = {
@@ -31,12 +30,10 @@ export async function createAnnouncement(
     return { error: "Title is required." };
   }
 
-  const org = await getOrCreateDefaultOrganization();
-
   const [row] = await db
     .insert(announcements)
     .values({
-      organizationId: org.id,
+      organizationId: user.organizationId,
       productionId,
       createdBy: user.id,
       title,
@@ -46,7 +43,7 @@ export async function createAnnouncement(
 
   if (body) {
     await writeMentions(body, {
-      organizationId: org.id,
+      organizationId: user.organizationId,
       productionId,
       mentionedById: user.id,
       contextType: "announcement",

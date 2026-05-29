@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership, getProductionMembers } from "@/features/members/queries";
 import { CallForm } from "./call-form";
@@ -21,8 +20,7 @@ export default async function NewCallPage({
     redirect(`/productions/${slug}/calls`);
   }
 
-  const org = await getOrCreateDefaultOrganization();
-  const production = await getProductionBySlug(org.id, slug);
+  const production = await getProductionBySlug(user.organizationId, slug);
   if (!production) notFound();
 
   const canManage = can(user.role, "productions:manage");

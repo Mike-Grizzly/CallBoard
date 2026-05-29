@@ -3,7 +3,6 @@ import { Icon } from "@/components/ui/icon";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import {
   getProductionMembership,
@@ -47,8 +46,7 @@ export default async function ProductionAnnouncementsPage({
 }) {
   const { slug } = await params;
   const user = await requireCurrentUser();
-  const org = await getOrCreateDefaultOrganization();
-  const production = await getProductionBySlug(org.id, slug);
+  const production = await getProductionBySlug(user.organizationId, slug);
 
   if (!production) {
     notFound();
@@ -63,7 +61,7 @@ export default async function ProductionAnnouncementsPage({
   }
 
   const [items, members] = await Promise.all([
-    getAnnouncementsByProduction(production.id, org.id),
+    getAnnouncementsByProduction(production.id, user.organizationId),
     getProductionMembers(production.id),
   ]);
   const canCreate = can(user.role, "announcements:create");

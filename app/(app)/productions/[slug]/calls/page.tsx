@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
 import { getCallsForUserInRange } from "@/features/calls/queries";
@@ -29,8 +28,7 @@ export default async function ProductionCallsPage({
   const [{ slug }, { view, date }] = await Promise.all([params, searchParams]);
 
   const user = await requireCurrentUser();
-  const org = await getOrCreateDefaultOrganization();
-  const production = await getProductionBySlug(org.id, slug);
+  const production = await getProductionBySlug(user.organizationId, slug);
   if (!production) notFound();
 
   const canManage = can(user.role, "productions:manage");
@@ -46,7 +44,7 @@ export default async function ProductionCallsPage({
 
   const allCalls = await getCallsForUserInRange({
     userId: user.id,
-    organizationId: org.id,
+    organizationId: user.organizationId,
     startDate: ymd(rangeStart),
     endDate: ymd(rangeEnd),
     manageAll: canManage,

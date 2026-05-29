@@ -2,7 +2,6 @@ import { Icon } from "@/components/ui/icon";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getAnnouncementsForUser } from "@/features/announcements/queries";
 import { OrgAnnouncementForm } from "./announcement-form";
 import { AnnouncementDeleteButton } from "./announcement-delete-button";
@@ -36,11 +35,10 @@ function formatDate(date: Date): string {
 
 export default async function AnnouncementsPage() {
   const user = await requireCurrentUser();
-  const org = await getOrCreateDefaultOrganization();
   const canManage = can(user.role, "productions:manage");
   const canCreate = can(user.role, "announcements:create");
 
-  const items = await getAnnouncementsForUser(user.id, org.id, canManage);
+  const items = await getAnnouncementsForUser(user.id, user.organizationId, canManage);
 
   return (
     <div

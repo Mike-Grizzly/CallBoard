@@ -40,28 +40,46 @@ export async function signup(
   const password = formData.get("password") as string;
   const firstName = formData.get("first_name") as string;
   const lastName = formData.get("last_name") as string;
-  const position = formData.get("position") as string;
+  const organizationName = (
+    (formData.get("organization_name") as string) || ""
+  ).trim();
 
   if (!email || !password) {
     return { error: "Email and password are required." };
   }
 
+  if (!organizationName) {
+    return { error: "Workspace name is required." };
+  }
+
   const supabase = await createSupabaseServerClient();
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
         first_name: firstName || "",
         last_name: lastName || "",
-        requested_role: position || "",
+        organization_name: organizationName,
       },
     },
   });
 
   if (error) {
     return { error: error.message };
+  }
+
+  // Supabase's anti-enumeration behavior: when an email is already
+  // registered, signUp returns success but with an empty `identities`
+  // array and never sends a confirmation email. Detect that and surface
+  // a real error instead of stranding the user on the "check your email"
+  // screen waiting for mail that will never arrive.
+  if (data.user && (data.user.identities?.length ?? 0) === 0) {
+    return {
+      error:
+        "An account with this email already exists. Sign in, or use Forgot password if you've lost access.",
+    };
   }
 
   // Encode the email so the confirm page can display it

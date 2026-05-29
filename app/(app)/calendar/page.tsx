@@ -1,6 +1,5 @@
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getOrCreateDefaultOrganization } from "@/lib/organization";
 import { getUserProductions } from "@/features/productions/queries";
 import { getCallsForUserInRange } from "@/features/calls/queries";
 import {
@@ -19,7 +18,6 @@ export default async function CalendarPage({
 }) {
   const params = await searchParams;
   const user = await requireCurrentUser();
-  const org = await getOrCreateDefaultOrganization();
   const manageAll = can(user.role, "productions:manage");
   // Same gate as the per-production call edit page — admin, producer,
   // director, choreographer, stage_manager.
@@ -38,7 +36,7 @@ export default async function CalendarPage({
 
   const calls = await getCallsForUserInRange({
     userId: user.id,
-    organizationId: org.id,
+    organizationId: user.organizationId,
     startDate: ymd(rangeStart),
     endDate: ymd(rangeEnd),
     manageAll,
