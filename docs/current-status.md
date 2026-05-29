@@ -240,6 +240,9 @@
 - New query: `getCallsForUserInRange({ userId, organizationId, startDate, endDate, manageAll })` in `features/calls/queries.ts`
 - All calendar styles live in `app/globals.css` under `.cal-*`, `.week-*`, `.month-*`, `.day-*`, `.agenda-*`, `.mini-*`, plus utility helpers `.seg`, `.row`, `.gap-sm`, `.mono`, `.truncate`, `.anim-in`
 - **DB migration** was applied directly via Supabase MCP (`add_production_color`) — no `pnpm db:push` needed
+- **Scheduler UX pass (2026-05-29):**
+  - *Swipeable week view.* `week-view.tsx` was rebuilt as a single scroll container with a frozen time-gutter (`position: sticky; left`) and frozen day headers (`sticky; top`). The day strip is responsive via `--week-day-w`: **3 days on phone (≤720px), 5 on tablet (≤1100px), full 7 on desktop**, with `scroll-snap-type: x proximity` so days snap as you swipe. On mount / week change it auto-scrolls so **today is the first visible column** (falls back to the navigated day when the week doesn't contain today). The old ≤720px rule that squeezed 7 columns into a 38px gutter was removed.
+  - *Outlook-style call form.* The rehearsal call create/edit form (`calls/new/call-form.tsx`) was restyled from stacked sections into grouped "cards" with icon · label · control rows (date/time/location inline, focus/scenes/cast/schedule/notes stacked). New `.cform-*` CSS block in `globals.css`. Server action and fields unchanged. (Pattern is a candidate to extend to other forms once validated.)
 
 ## Performance pass (2026-05-20)
 

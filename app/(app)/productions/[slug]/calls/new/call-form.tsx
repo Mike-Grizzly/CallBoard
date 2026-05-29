@@ -3,6 +3,7 @@
 import { useActionState, useState, useMemo } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { CountedTextarea } from "@/components/ui/counted-textarea";
 import {
@@ -28,9 +29,6 @@ function toInputTime(stored: string | null | undefined): string {
   return "";
 }
 
-const inputCls =
-  "w-full rounded-md border border-[color:var(--border)] bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)] placeholder:text-[color:var(--muted-foreground)]";
-const labelCls = "mb-1.5 block text-sm font-medium";
 const hintCls = "mt-1 text-xs text-[color:var(--muted-foreground)]";
 
 export type CastMember = {
@@ -295,164 +293,168 @@ export function CallForm({
   const isEdit = !!existingCall;
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} className="cform">
       <input type="hidden" name="production_id" value={productionId} />
       {isEdit && (
         <input type="hidden" name="call_id" value={existingCall.id} />
       )}
 
       {state?.error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-          {state.error}
+        <div className="cform-err">
+          <Icon name="AlertTriangle" width={16} height={16} />
+          <span>{state.error}</span>
         </div>
       )}
 
-      {/* Date + Time + Location */}
-      <section className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-          When &amp; Where
-        </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <label htmlFor="call_date" className={labelCls}>
-              Date <span className="text-red-500">*</span>
-            </label>
+      {/* When & where */}
+      <div className="cform-card">
+        <div className="cform-card-h">When &amp; where</div>
+
+        <label className="cform-row" htmlFor="call_date">
+          <Icon name="Calendar" className="cform-ico" width={18} height={18} />
+          <span className="cform-row-label">
+            Date<em>*</em>
+          </span>
+          <input
+            id="call_date"
+            name="call_date"
+            type="date"
+            required
+            defaultValue={existingCall?.callDate ?? prefillDate ?? ""}
+            className="cform-control"
+          />
+        </label>
+
+        <div className="cform-row">
+          <Icon name="Clock" className="cform-ico" width={18} height={18} />
+          <span className="cform-row-label">Time</span>
+          <div className="cform-timepair">
             <input
-              id="call_date"
-              name="call_date"
-              type="date"
-              required
-              defaultValue={existingCall?.callDate ?? prefillDate ?? ""}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label htmlFor="call_time" className={labelCls}>
-              Call time
-            </label>
-            <input
-              id="call_time"
               name="call_time"
               type="time"
+              aria-label="Call time"
               defaultValue={toInputTime(existingCall?.callTime)}
-              className={inputCls}
+              className="cform-control"
             />
-          </div>
-          <div>
-            <label htmlFor="end_time" className={labelCls}>
-              End time
-            </label>
+            <Icon name="ChevronRight" className="cform-arrow" width={15} height={15} />
             <input
-              id="end_time"
               name="end_time"
               type="time"
+              aria-label="End time"
               defaultValue={toInputTime(existingCall?.endTime)}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label htmlFor="location" className={labelCls}>
-              Location
-            </label>
-            <input
-              id="location"
-              name="location"
-              type="text"
-              maxLength={150}
-              defaultValue={existingCall?.location ?? ""}
-              placeholder="Studio A"
-              className={inputCls}
+              className="cform-control"
             />
           </div>
         </div>
-      </section>
+
+        <label className="cform-row" htmlFor="location">
+          <Icon name="MapPin" className="cform-ico" width={18} height={18} />
+          <span className="cform-row-label">Location</span>
+          <input
+            id="location"
+            name="location"
+            type="text"
+            maxLength={150}
+            defaultValue={existingCall?.location ?? ""}
+            placeholder="Studio A"
+            className="cform-control grow"
+          />
+        </label>
+      </div>
 
       {/* What's being worked */}
-      <section className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-6 shadow-sm">
-        <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-          What&apos;s Being Worked
-        </h2>
-        <p className="mb-4 text-xs text-[color:var(--muted-foreground)]">
+      <div className="cform-card">
+        <div className="cform-card-h">What&apos;s being worked</div>
+        <p className="cform-card-sub">
           Start with the general focus — you can fill in specific scenes and
           cast closer to the call.
         </p>
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="focus" className={labelCls}>
-              Focus
-            </label>
-            <input
-              id="focus"
-              name="focus"
-              type="text"
-              maxLength={200}
-              defaultValue={existingCall?.focus ?? ""}
-              placeholder="Act II — choreography, music review"
-              className={inputCls}
-            />
-            <p className={hintCls}>General work area (known a week out)</p>
+
+        <div className="cform-row col">
+          <div className="cform-row-head">
+            <Icon name="PenLine" className="cform-ico" width={18} height={18} />
+            <label htmlFor="focus">Focus</label>
           </div>
-          <div>
-            <label htmlFor="scenes" className={labelCls}>
-              Scenes / numbers
-            </label>
-            <CountedTextarea
-              id="scenes"
-              name="scenes"
-              rows={3}
-              maxLength={500}
-              defaultValue={existingCall?.scenes ?? ""}
-              placeholder="e.g. pp. 42–72, I Am the Very Model, A Modern Major-General"
-            />
-            <p className={hintCls}>
-              Specific scenes or numbers (fill in 1–2 days out)
-            </p>
-          </div>
-          <div>
-            <p className={labelCls}>Cast called</p>
-            <CastSelector
-              castMembers={castMembers}
-              initialValue={existingCall?.castCalled}
-            />
-            <p className={cn(hintCls, "mt-2")}>
-              Who&apos;s needed (fill in 1–2 days out)
-            </p>
-          </div>
-          <div>
-            <label htmlFor="schedule" className={labelCls}>
-              Schedule breakdown
-            </label>
-            <CountedTextarea
-              id="schedule"
-              name="schedule"
-              rows={5}
-              maxLength={1500}
-              defaultValue={existingCall?.schedule ?? ""}
-              placeholder={
-                "6:00 – 6:30  work projections\n6:30 – 6:45  vocal warmups\n6:45 – 7:00  prep Act I"
-              }
-            />
-            <p className={hintCls}>One item per line — any format works</p>
-          </div>
+          <input
+            id="focus"
+            name="focus"
+            type="text"
+            maxLength={200}
+            defaultValue={existingCall?.focus ?? ""}
+            placeholder="Act II — choreography, music review"
+            className="cform-field"
+          />
+          <p className="cform-hint">General work area (known a week out)</p>
         </div>
-      </section>
+
+        <div className="cform-row col">
+          <div className="cform-row-head">
+            <Icon name="FileText" className="cform-ico" width={18} height={18} />
+            <label htmlFor="scenes">Scenes / numbers</label>
+          </div>
+          <CountedTextarea
+            id="scenes"
+            name="scenes"
+            rows={3}
+            maxLength={500}
+            defaultValue={existingCall?.scenes ?? ""}
+            placeholder="e.g. pp. 42–72, I Am the Very Model, A Modern Major-General"
+            className="cform-field"
+          />
+          <p className="cform-hint">
+            Specific scenes or numbers (fill in 1–2 days out)
+          </p>
+        </div>
+
+        <div className="cform-row col">
+          <div className="cform-row-head">
+            <Icon name="Users" className="cform-ico" width={18} height={18} />
+            <span>Cast called</span>
+          </div>
+          <CastSelector
+            castMembers={castMembers}
+            initialValue={existingCall?.castCalled}
+          />
+          <p className="cform-hint">Who&apos;s needed (fill in 1–2 days out)</p>
+        </div>
+
+        <div className="cform-row col">
+          <div className="cform-row-head">
+            <Icon name="CalendarDays" className="cform-ico" width={18} height={18} />
+            <label htmlFor="schedule">Schedule breakdown</label>
+          </div>
+          <CountedTextarea
+            id="schedule"
+            name="schedule"
+            rows={5}
+            maxLength={1500}
+            defaultValue={existingCall?.schedule ?? ""}
+            placeholder={
+              "6:00 – 6:30  work projections\n6:30 – 6:45  vocal warmups\n6:45 – 7:00  prep Act I"
+            }
+            className="cform-field"
+          />
+          <p className="cform-hint">One item per line — any format works</p>
+        </div>
+      </div>
 
       {/* Notes */}
-      <section className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[color:var(--muted-foreground)]">
-          Additional Notes
-        </h2>
-        <CountedTextarea
-          id="notes"
-          name="notes"
-          rows={3}
-          maxLength={1000}
-          defaultValue={existingCall?.notes ?? ""}
-          placeholder="Anything else the company should know..."
-        />
-      </section>
+      <div className="cform-card">
+        <div className="cform-card-h">Notes</div>
+        <div className="cform-row col">
+          <CountedTextarea
+            id="notes"
+            name="notes"
+            rows={3}
+            maxLength={1000}
+            defaultValue={existingCall?.notes ?? ""}
+            placeholder="Anything else the company should know..."
+            className="cform-field"
+          />
+        </div>
+      </div>
 
-      <div className="flex items-center justify-between">
+      <div className="cform-actions">
         <Link href={`/productions/${slug}/calls`}>
           <Button type="button" variant="outline">
             Cancel

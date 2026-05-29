@@ -2360,27 +2360,52 @@ div.mention:hover {
   flex-direction: column;
 }
 
-/* ─── Week view ───────────────────────────────────────────────────── */
+/* ─── Week view (frozen gutter + headers, horizontally swipeable) ──── */
 .week {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
 }
-.week-head {
+
+/* One scroll container handles both axes: vertical for the hour grid,
+   horizontal for the day strip. The time gutter is frozen (sticky left) and
+   the day headers are frozen (sticky top); the corner pins to both. On phone
+   (3 days) and tablet (5 days) the strip overflows and snaps as you swipe;
+   on desktop all 7 days fit so there's no horizontal scroll. */
+.week-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+  -webkit-overflow-scrolling: touch;
+}
+.week-grid {
+  --week-gutter-w: 60px;
+  --week-day-w: minmax(0, 1fr);
   display: grid;
-  grid-template-columns: 60px repeat(7, minmax(0, 1fr));
-  border-bottom: 1px solid var(--border);
+  grid-template-columns: var(--week-gutter-w) repeat(7, var(--week-day-w));
+}
+
+.week-corner {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 8;
   background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
 }
-.week-gutter {
-  width: 60px;
-  flex-shrink: 0;
-}
+
 .week-day-h {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: var(--bg-elev);
   padding: 12px 10px 10px;
   text-align: left;
   border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: baseline;
   gap: 8px;
@@ -2405,19 +2430,12 @@ div.mention:hover {
   color: var(--accent-ink);
 }
 
-.week-body {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 60px repeat(7, minmax(0, 1fr));
-  overflow-y: auto;
-  position: relative;
-}
-.week-body .week-gutter {
+.week-gutter {
   position: sticky;
   left: 0;
+  z-index: 5;
   background: var(--bg-elev);
-  z-index: 2;
+  border-right: 1px solid var(--border);
 }
 .hour-label {
   font-size: 10.5px;
@@ -2435,6 +2453,7 @@ div.mention:hover {
 .week-col {
   position: relative;
   border-left: 1px solid var(--border);
+  scroll-snap-align: start;
 }
 .hour-line {
   border-top: 1px solid var(--border);
@@ -2448,7 +2467,7 @@ div.mention:hover {
 
 .now-line {
   position: absolute;
-  left: -4px;
+  left: 0;
   right: 0;
   height: 0;
   border-top: 1.5px solid var(--accent);
@@ -2457,7 +2476,7 @@ div.mention:hover {
 }
 .now-dot {
   position: absolute;
-  left: -5px;
+  left: -4px;
   top: -5px;
   width: 9px;
   height: 9px;
@@ -2467,8 +2486,8 @@ div.mention:hover {
 }
 .now-time {
   position: absolute;
-  left: -52px;
-  top: -7px;
+  left: 4px;
+  top: -8px;
   font-size: 9.5px;
   font-weight: 600;
   background: var(--accent);
@@ -2476,6 +2495,35 @@ div.mention:hover {
   padding: 1px 5px;
   border-radius: 3px;
   letter-spacing: 0.02em;
+}
+
+/* Tablet: show ~5 days, swipe for the rest. */
+@media (max-width: 1100px) and (min-width: 721px) {
+  .week-grid {
+    --week-day-w: calc((100% - var(--week-gutter-w)) / 5);
+  }
+  .week-scroll {
+    scroll-snap-type: x proximity;
+    scroll-padding-left: var(--week-gutter-w);
+  }
+}
+
+/* Phone: show 3 days, swipe for the rest. */
+@media (max-width: 720px) {
+  .week-grid {
+    --week-gutter-w: 52px;
+    --week-day-w: calc((100% - var(--week-gutter-w)) / 3);
+  }
+  .week-scroll {
+    scroll-snap-type: x proximity;
+    scroll-padding-left: var(--week-gutter-w);
+  }
+  .week-day-h {
+    padding: 10px 8px 8px;
+  }
+  .week-day-num {
+    font-size: 17px;
+  }
 }
 
 .week-event {
@@ -5151,37 +5199,9 @@ select.pp-field {
     margin-top: 3px;
   }
 
-  /* Calendar week view — compact the day-of-week header so the date
-     number and weekday don't collide in narrow phone columns. Stack
-     them vertically with smaller type and shrink the time gutter so
-     the seven day columns have more room. */
-  .week-head,
-  .week-body {
-    grid-template-columns: 38px repeat(7, minmax(0, 1fr));
-  }
-  .week-gutter {
-    width: 38px;
-  }
-  .week-day-h {
-    padding: 6px 2px 5px;
-    flex-direction: column;
-    align-items: center;
-    gap: 0;
-    text-align: center;
-    min-width: 0;
-  }
-  .week-day-wd {
-    font-size: 9px;
-    line-height: 1;
-  }
-  .week-day-num {
-    font-size: 16px;
-    line-height: 1.1;
-  }
-  .hour-label {
-    font-size: 9.5px;
-    padding-right: 4px;
-  }
+  /* Calendar: tighten page padding on phones. The week view now shows a
+     3-day swipeable strip (5 on tablet) handled by the .week-grid media
+     queries in the week-view block — no per-column squeezing needed. */
   .cal-page {
     padding: 12px 14px;
   }
@@ -7124,5 +7144,164 @@ select.pp-field {
   font-size: 22px;
   margin: 0;
   letter-spacing: -0.01em;
+}
+
+/* ============================================================ *
+ * Call / rehearsal scheduler form — Outlook-style grouped cards
+ * Used by app/(app)/productions/[slug]/calls/{new,[callId]/edit}.
+ * ============================================================ */
+.cform {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.cform-err {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
+  color: var(--accent-ink);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.cform-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+.cform-card-h {
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 600;
+  padding: 15px 16px 9px;
+}
+.cform-card-sub {
+  padding: 0 16px 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-4);
+  line-height: 1.45;
+}
+
+/* Inline row: icon · label · control (control right-aligned, Outlook style) */
+.cform-row {
+  display: grid;
+  grid-template-columns: 22px 96px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+.cform-ico {
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+.cform-row-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.cform-row-label em {
+  color: var(--accent);
+  font-style: normal;
+  margin-left: 2px;
+}
+
+/* Stacked row: header (icon + label) above a full-width control */
+.cform-row.col {
+  display: block;
+}
+.cform-row-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.cform-row-head label,
+.cform-row-head span {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.cform-hint {
+  margin: 7px 0 0;
+  font-size: 12px;
+  color: var(--ink-4);
+}
+
+/* Compact inline control (date / time / location) */
+.cform-control {
+  justify-self: end;
+  appearance: none;
+  border: 1px solid transparent;
+  background: var(--bg-sunken);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: 14px var(--font-ui);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
+}
+.cform-control:focus {
+  border-color: var(--accent);
+  background: var(--bg-elev);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.cform-control.grow {
+  justify-self: stretch;
+  width: 100%;
+}
+.cform-timepair {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cform-arrow {
+  color: var(--ink-4);
+  flex-shrink: 0;
+}
+
+/* Full-width control (focus, textareas) — also applied to CountedTextarea */
+.cform-field {
+  width: 100%;
+  appearance: none;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font: 14px var(--font-ui);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.cform-field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+textarea.cform-field {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.cform-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .cform-row {
+    grid-template-columns: 22px 80px 1fr;
+    gap: 10px;
+  }
 }
 
