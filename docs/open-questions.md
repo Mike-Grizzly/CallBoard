@@ -200,3 +200,22 @@ default in place today.
   inviting brand-new email addresses requires `settings:manage`; rows that
   can't be actioned are reported as skipped on the launch screen. Optionally
   let producers invite new people, or guide them to ask an admin.
+
+## Settings — deferred from PR #20 (2026-05-29)
+
+- **Email change (a.k.a. "email linking" / rebinding).** Deferred on
+  purpose. The `/settings/account` email field renders disabled with
+  a hint. Building it correctly needs Supabase's
+  `updateUser({ email })` + the magic-link confirmation on the new
+  address. If a fresh session reads the codebase and asks "is email
+  change implemented?" the answer is **no, and that's intentional** —
+  don't treat it as missing work and rebuild it. We'll revisit if
+  beta testers actually ask for it.
+- **Delete workspace / delete account.** Out of scope; needs cascade
+  semantics + confirmation UX we don't want to get wrong.
+- **Transfer ownership to a non-member.** Current flow requires the
+  target be an existing workspace member. Invite-then-transfer is
+  the supported path. Decide later whether a one-step
+  "invite + make them admin and step down" is worth shipping.
+- **Account-level avatar upload.** Workspace logo shipped; personal
+  avatars deferred.

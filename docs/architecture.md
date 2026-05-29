@@ -117,11 +117,18 @@ next.config.ts              Next.js config (serverActions body size limit)
 
 ### Storage
 - Single bucket: `attachments` (private)
-- Used for both report attachments and production documents
-- Storage paths: `reports/{reportId}/{timestamp}-{filename}` and `documents/{productionId}/{timestamp}-{filename}`
-- Access via signed URLs with 1-hour expiry, generated server-side
+- Used for report attachments, production documents, and workspace logos
+- Storage paths:
+  - `reports/{reportId}/{timestamp}-{filename}`
+  - `documents/{productionId}/{timestamp}-{filename}`
+  - `org-logos/{orgId}/{timestamp}.{ext}` — workspace logo (SVG/PNG/JPG)
+- Access via signed URLs with 1-hour expiry, generated server-side.
+  `getSignedLogoUrl` (cached per request in `lib/workspace-logo.ts`)
+  signs the logo path for the rail badge + settings headers without
+  issuing duplicate signs across layout + page.
 - RLS policies on `storage.objects`: authenticated users can INSERT, SELECT, DELETE on the `attachments` bucket
-- File size limits: 25MB for documents, 10MB for report attachments
+- File size limits: 25MB for documents, 10MB for report attachments,
+  2MB for workspace logos
 
 ## Database schema
 
@@ -129,10 +136,10 @@ next.config.ts              Next.js config (serverActions body size limit)
 
 | Table | Purpose | Key relations |
 |-------|---------|---------------|
-| `organizations` | Top-level tenant (single "default" org in MVP) | — |
-| `profiles` | User profiles (extends Supabase auth) | — |
+| `organizations` | Top-level tenant. `logo_url` (nullable) holds an `attachments` bucket path. | — |
+| `profiles` | User profiles (extends Supabase auth). `selected_organization_id` (nullable) drives the workspace switcher. | organizations (selected) |
 | `organization_memberships` | Users to orgs with role | profiles, organizations |
-| `productions` | Shows/workspaces | organizations |
+| `productions` | Shows/workspaces. `archived_at` (nullable) soft-archives a production — hidden from default lists, never hard-deleted. | organizations |
 | `production_memberships` | Users to productions with role | profiles, productions |
 | `rehearsal_reports` | Daily rehearsal reports | productions, profiles |
 | `production_logs` | Personal daily notes per user per production | productions, profiles |
@@ -196,8 +203,9 @@ All tables use UUID primary keys, cascade deletes on foreign keys, and timezone-
   first membership when the selection is stale (org deleted, user
   removed from it, never set). The resolver writes the fallback
   back to the column so subsequent reads are deterministic.
-- `CurrentUser` carries `organizationId`, `organizationName`, and
-  `role` — derived per-request, never cached cross-request.
+- `CurrentUser` carries `organizationId`, `organizationName`,
+  `organizationLogoUrl`, and `role` — derived per-request, never
+  cached cross-request.
 - **Self-signup** creates a new org via `createOrganization()`
   (`lib/organization.ts`) with the new user as `admin`. Org name
   comes from the required signup-form field
@@ -211,15 +219,46 @@ All tables use UUID primary keys, cascade deletes on foreign keys, and timezone-
   switcher in Settings. `switchOrganization` (in
   `features/workspace/actions.ts`) verifies the caller is actually a
   member of the target org, then writes `selected_organization_id`.
+- **Create new workspace:** `createWorkspace` (any signed-in user)
+  spins up a fresh org, makes the caller its first admin, and
+  auto-switches them into it. Available inline from the rail badge
+  menu and the settings switcher.
 - **Workspace rename:** `renameWorkspace` (admin-gated) updates
   `organizations.name`. The slug stays stable — slugs aren't
   user-facing.
+- **Workspace logo:** `organizations.logo_url` holds a path inside the
+  `attachments` bucket. Two-step upload (`requestWorkspaceLogoUpload`
+  → browser → Storage → `finalizeWorkspaceLogoUpload`) so heavy
+  bytes skip the Next.js server. Server validates admin role, MIME
+  (SVG/PNG/JPG), 2MB cap, and that the path lives under
+  `org-logos/{currentOrgId}/`. Client also enforces ≈square shape
+  (5% tolerance, skipped for SVG).
+- **Transfer workspace ownership:**
+  `transferWorkspaceOwnership(targetUserId, newSelfRole)` runs in
+  one DB transaction — promote target to admin first, then demote
+  caller to a chosen non-admin role. Refuses self-targeting and
+  refuses `admin` as the new self-role. Target must already be a
+  workspace member.
 - **Last-admin protection:** `updateMemberRole` and `removeMember`
   refuse to demote/remove the sole remaining admin so the workspace
   can't end up admin-less.
 - "Default Organization" (slug `default`) still exists in
   production as a legacy workspace from the single-org beta;
   not special-cased in code anymore — just a row like any other.
+
+## Production lifecycle
+
+- Productions are **never hard-deleted**. `archiveProduction` /
+  `unarchiveProduction` (in `features/productions/actions.ts`,
+  gated by `productions:manage` and org-scoped) flip the
+  `productions.archived_at` timestamp.
+- Active list queries (`getProductionsByOrganization`,
+  `getUserProductions`, the rail) filter out archived rows.
+  `getArchivedProductionsByOrganization` is the explicit list for
+  the "Archived productions" disclosure on `/productions`.
+- `getProductionBySlug` does NOT filter archived rows — admins can
+  still navigate to an archived production's pages to view history
+  or restore it from the list view.
 
 ## What is intentionally not implemented yet
 
