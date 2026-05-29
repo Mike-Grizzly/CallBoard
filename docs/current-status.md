@@ -742,15 +742,75 @@ sole remaining admin in an org. Surfaces a clear error so the
 operator knows to promote another admin first. Stacks with the
 existing "can't change/remove yourself" rules.
 
-**Settings landing reframed** around the workspace: org name as the
-headline, signed-in user + role below, switcher inline, then a list
-of destinations (Account, Workspace, Members, Send feedback).
+**Settings landing reframed** around the workspace: org name + logo
+(when set) as the headline, signed-in user + role below, switcher
+inline, then a list of destinations (Account, Workspace, Members,
+Send feedback).
 
-**Explicitly NOT shipped in this round:**
-- Email change with re-verification.
-- Delete workspace / delete account.
-- Transfer-workspace flows.
-- Account-level avatar upload / workspace logo.
+### Follow-up pass — same day (PR #20, merged 2026-05-29)
+
+Round-two additions that landed on top of the initial settings
+overhaul before PR #20 merged:
+
+- **Create new workspace from the switcher.** New `createWorkspace`
+  server action — any signed-in user can spin up a fresh workspace,
+  becomes its first admin, and gets auto-switched into it. Inline
+  "Create workspace" form lives in both the rail badge menu and the
+  settings landing switcher.
+
+- **Inline password-match check.** The "Confirm new password" field
+  on `/settings/account` warns as the user types, sets
+  `aria-invalid` + `aria-describedby`, and disables the submit
+  button until both fields match.
+
+- **Archive productions (soft delete only).** New
+  `productions.archived_at TIMESTAMPTZ` column + index on
+  `(organization_id, archived_at)`. `archiveProduction` /
+  `unarchiveProduction` server actions (admin/producer via
+  `productions:manage`, org-scoped). Active list and rail hide
+  archived rows; managers see a collapsible "Archived productions"
+  disclosure at the bottom of `/productions` with restore buttons.
+  Hover-revealed archive icon on each card. **Hard delete is
+  intentionally not implemented** — too much downstream history
+  (reports, calls, blocking) to throw away; archive is the right
+  primitive.
+
+- **Transfer workspace ownership.**
+  `transferWorkspaceOwnership(targetUserId, newSelfRole)` runs in
+  one transaction: promote the target to admin first, then demote
+  the caller to a chosen non-admin role. Refuses self-targeting and
+  refuses `admin` as the new self-role. Form lives on
+  `/settings/workspace`; empty state when the caller is the only
+  member.
+
+- **Workspace logo.** New `organizations.logo_url TEXT` column —
+  stores a Supabase Storage path inside the existing `attachments`
+  bucket. Upload flow: `requestWorkspaceLogoUpload` returns a signed
+  upload URL → browser uploads straight to Storage (bypasses the
+  25MB action body cap) → `finalizeWorkspaceLogoUpload` writes the
+  column and cleans up the previous file. `removeWorkspaceLogo`
+  clears + deletes. Server-side: admin-only, MIME allow-list
+  (SVG/PNG/JPG), 2MB cap, storage path locked to the caller's
+  workspace. Client-side: same MIME allow-list, 2MB cap, square
+  shape (5% tolerance; skipped for SVG since it can ship without
+  intrinsic dimensions). `getSignedLogoUrl` (per-request `cache()`)
+  signs the path for display in the rail badge (replaces the
+  building icon when set) and on settings page headers.
+- `CurrentUser` now also carries `organizationLogoUrl` so rail +
+  settings headers don't need an extra query.
+
+**Explicitly NOT in scope (per product decision, 2026-05-29):**
+- **Email change with re-verification.** A user's email is
+  permanently read-only on `/settings/account` for now — the field
+  renders disabled with a hint. No "verify new email" / magic-link
+  rebinding flow exists. (If a fresh session asks "is email linking
+  done?" — the answer is no, and it's deferred on purpose, not
+  missing.)
+- **Delete workspace / delete account.** Out of scope.
+- **Transfer workspace to a person who isn't already a member** —
+  transfer only works among current members. Add the new owner via
+  invite first.
+- **Account-level avatar upload.** Out of scope this round.
 
 ## Scaffolded only (not implemented)
 

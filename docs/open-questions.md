@@ -171,3 +171,22 @@ _Resolved in P0 (2026-05-21): signed-URL actions now verify production access; u
 - **`/settings/members` overlap:** the older Step 3 org-member page still exists alongside the new `/people` page. Should `/settings/members` redirect to `/people`, or stay as a lighter settings-scoped view?
 - **`last_active_at` precision:** only set when an invited user is promoted to active on first sign-in — it is not a true per-request "last seen" (per-request DB writes were deliberately avoided). Is a more accurate last-seen worth a throttled write later?
 - **Invite acceptance landing:** invite links route through `/auth/callback` to `/reset-password` so the user sets a password. This reuses the existing reset-password page and should be verified end-to-end against a live project.
+
+## Settings — deferred from PR #20 (2026-05-29)
+
+- **Email change (a.k.a. "email linking" / rebinding).** Deferred on
+  purpose. The `/settings/account` email field renders disabled with
+  a hint. Building it correctly needs Supabase's
+  `updateUser({ email })` + the magic-link confirmation on the new
+  address. If a fresh session reads the codebase and asks "is email
+  change implemented?" the answer is **no, and that's intentional** —
+  don't treat it as missing work and rebuild it. We'll revisit if
+  beta testers actually ask for it.
+- **Delete workspace / delete account.** Out of scope; needs cascade
+  semantics + confirmation UX we don't want to get wrong.
+- **Transfer ownership to a non-member.** Current flow requires the
+  target be an existing workspace member. Invite-then-transfer is
+  the supported path. Decide later whether a one-step
+  "invite + make them admin and step down" is worth shipping.
+- **Account-level avatar upload.** Workspace logo shipped; personal
+  avatars deferred.
