@@ -63,7 +63,12 @@ export function CallTray({
 
   const onGripDown = (y: number) => {
     dragStart.current = y;
-    if (panelRef.current) panelRef.current.style.transition = "none";
+    if (panelRef.current) {
+      // The entrance animation uses fill:both, which keeps overriding the
+      // inline transform — clear it so the panel can follow the thumb.
+      panelRef.current.style.animation = "none";
+      panelRef.current.style.transition = "none";
+    }
   };
   const onGripMove = (y: number) => {
     if (dragStart.current == null || !panelRef.current) return;

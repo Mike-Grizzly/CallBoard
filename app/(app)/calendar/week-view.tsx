@@ -72,6 +72,12 @@ export function WeekView({
       if (grid.style.getPropertyValue("--week-day-w") !== dayStr) {
         grid.style.setProperty("--week-day-w", dayStr);
       }
+      // Size the grid box to its columns so the sticky time-gutter's
+      // containing block spans the whole strip and stays pinned all the way
+      // to the last day (otherwise it detaches at the far right).
+      if (grid.style.width !== "max-content") {
+        grid.style.width = "max-content";
+      }
 
       const target = sc.querySelector<HTMLElement>('[data-target="1"]');
       if (target && sc.scrollWidth > sc.clientWidth + 1) {
