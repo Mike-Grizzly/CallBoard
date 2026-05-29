@@ -7,10 +7,63 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { getProductionBySlug } from "@/features/productions/queries";
+import {
+  getProductionMembership,
+  getProductionMembers,
+} from "@/features/members/queries";
 
 export type CallResult = {
   error?: string;
+  success?: boolean;
+  slug?: string;
 };
+
+export type CallTrayMember = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  characterName: string | null;
+  email: string;
+};
+
+export type CallTrayData = {
+  error?: string;
+  productionId?: string;
+  cast?: CallTrayMember[];
+};
+
+/**
+ * Data the slide-in call tray needs for a given production: the production id
+ * (for the form's hidden field) and its cast list (for the cast selector).
+ * Mirrors the access checks on the full-page new-call route.
+ */
+export async function getCallTrayData(slug: string): Promise<CallTrayData> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "reports:create")) {
+    return { error: "You don't have permission to schedule calls." };
+  }
+  const production = await getProductionBySlug(user.organizationId, slug);
+  if (!production) return { error: "Production not found." };
+
+  if (!can(user.role, "productions:manage")) {
+    const membership = await getProductionMembership(user.id, production.id);
+    if (!membership) return { error: "You're not on this production." };
+  }
+
+  const members = await getProductionMembers(production.id);
+  const cast: CallTrayMember[] = members
+    .filter((m) => m.role === "cast")
+    .map((m) => ({
+      id: m.userId,
+      firstName: m.firstName,
+      lastName: m.lastName,
+      characterName: m.characterName,
+      email: m.email,
+    }));
+
+  return { productionId: production.id, cast };
+}
 
 function trim(v: FormDataEntryValue | null): string | null {
   const s = (v as string | null)?.trim();
@@ -58,7 +111,8 @@ export async function createCall(
   const slug = await getSlug(productionId);
   revalidatePath(`/productions/${slug}`);
   revalidatePath(`/productions/${slug}/calls`);
-  redirect(`/productions/${slug}/calls`);
+  revalidatePath("/calendar");
+  return { success: true, slug: slug ?? undefined };
 }
 
 export async function updateCall(
@@ -96,7 +150,8 @@ export async function updateCall(
   const slug = await getSlug(productionId);
   revalidatePath(`/productions/${slug}`);
   revalidatePath(`/productions/${slug}/calls`);
-  redirect(`/productions/${slug}/calls`);
+  revalidatePath("/calendar");
+  return { success: true, slug: slug ?? undefined };
 }
 
 export async function deleteCall(formData: FormData): Promise<void> {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState, useMemo } from "react";
+import { useActionState, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,27 @@ import {
   type CallResult,
 } from "@/features/calls/actions";
 import type { Call } from "@/db/schema";
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** The top of the next hour in local time, as "HH:MM" — a sensible default
+ *  start so a new call doesn't inherit the odd minute the SM happened to open
+ *  the form at. */
+function nextHourHHMM(): string {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 1);
+  return `${pad2(d.getHours())}:00`;
+}
+
+/** Add whole hours to an "HH:MM" string, wrapping past midnight. */
+function addHoursHHMM(hhmm: string, hours: number): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  d.setHours(d.getHours() + hours);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
 
 /** Convert stored time string to "HH:MM" for <input type="time"> defaultValue. */
 function toInputTime(stored: string | null | undefined): string {
@@ -277,13 +299,22 @@ export function CallForm({
   existingCall,
   castMembers = [],
   prefillDate,
+  mode = "page",
+  onClose,
+  onCreated,
 }: {
   productionId: string;
   slug: string;
   existingCall?: Call;
   castMembers?: CastMember[];
   prefillDate?: string;
+  /** "tray" renders inside the slide-in scheduler and reports success via
+   *  callbacks instead of navigating. */
+  mode?: "page" | "tray";
+  onClose?: () => void;
+  onCreated?: () => void;
 }) {
+  const router = useRouter();
   const action = existingCall ? updateCall : createCall;
   const [state, formAction, pending] = useActionState<
     CallResult | undefined,
@@ -291,6 +322,42 @@ export function CallForm({
   >(action, undefined);
 
   const isEdit = !!existingCall;
+
+  // Times are controlled so the end can track the start (start + 2h) and a
+  // new call can default to the next whole hour.
+  const [callTime, setCallTime] = useState(() =>
+    toInputTime(existingCall?.callTime),
+  );
+  const [endTime, setEndTime] = useState(() =>
+    toInputTime(existingCall?.endTime),
+  );
+
+  // Default a brand-new call to "next hour → +2h". Done in an effect (not the
+  // initializer) so the server-rendered markup and first client render agree.
+  useEffect(() => {
+    if (existingCall) return;
+    const start = nextHourHHMM();
+    setCallTime(start);
+    setEndTime(addHoursHHMM(start, 2));
+  }, [existingCall]);
+
+  const onStartChange = (v: string) => {
+    setCallTime(v);
+    if (v) setEndTime(addHoursHHMM(v, 2));
+  };
+
+  // After a successful save, leave the form: a tray closes + refreshes the
+  // calendar in place; a full page navigates back to the schedule.
+  useEffect(() => {
+    if (!state?.success) return;
+    if (mode === "tray") {
+      onCreated?.();
+    } else {
+      router.push(`/productions/${slug}/calls`);
+      router.refresh();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   return (
     <form action={formAction} className="cform">
@@ -333,7 +400,8 @@ export function CallForm({
               name="call_time"
               type="time"
               aria-label="Call time"
-              defaultValue={toInputTime(existingCall?.callTime)}
+              value={callTime}
+              onChange={(e) => onStartChange(e.target.value)}
               className="cform-control"
             />
             <Icon name="ChevronRight" className="cform-arrow" width={15} height={15} />
@@ -341,7 +409,8 @@ export function CallForm({
               name="end_time"
               type="time"
               aria-label="End time"
-              defaultValue={toInputTime(existingCall?.endTime)}
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
               className="cform-control"
             />
           </div>
@@ -455,11 +524,17 @@ export function CallForm({
       </div>
 
       <div className="cform-actions">
-        <Link href={`/productions/${slug}/calls`}>
-          <Button type="button" variant="outline">
+        {mode === "tray" ? (
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-        </Link>
+        ) : (
+          <Link href={`/productions/${slug}/calls`}>
+            <Button type="button" variant="outline">
+              Cancel
+            </Button>
+          </Link>
+        )}
         <Button type="submit" disabled={pending}>
           {pending
             ? isEdit

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { useIsPhone } from "@/lib/use-is-phone";
@@ -22,6 +21,7 @@ import { DayView } from "./day-view";
 import { AgendaView } from "./agenda-view";
 import { EventDrawer } from "./event-drawer";
 import { DaySheet } from "./day-sheet";
+import { CallTray } from "./call-tray";
 
 export type Production = {
   id: string;
@@ -120,15 +120,21 @@ export function CalendarClient({
     setView("day");
   };
 
-  // New-call entry point. Scoped views go straight to that production's form;
-  // a single-production workspace does too; otherwise we pick a production.
+  // New-call entry point opens a slide-in tray over the calendar. Scoped views
+  // (and single-production workspaces) go straight to that production; the
+  // multi-production workspace picks one first.
   const [pickOpen, setPickOpen] = useState(false);
+  const [tray, setTray] = useState<{ slug: string; title?: string } | null>(
+    null,
+  );
   const directSlug =
     scopedSlug ?? (productions.length === 1 ? productions[0].slug : null);
-  const newCallHref = (slug: string) =>
-    `/productions/${slug}/calls/new?date=${ymd(cursor)}`;
+  const openTray = (slug: string) => {
+    setPickOpen(false);
+    setTray({ slug, title: productions.find((p) => p.slug === slug)?.title });
+  };
   const startNewCall = () => {
-    if (directSlug) router.push(newCallHref(directSlug));
+    if (directSlug) openTray(directSlug);
     else setPickOpen(true);
   };
 
@@ -248,18 +254,18 @@ export function CalendarClient({
             <div className="cal-pick" onClick={(e) => e.stopPropagation()}>
               <div className="cal-pick-h">New call — choose a production</div>
               {productions.map((p) => (
-                <Link
+                <button
                   key={p.id}
-                  href={newCallHref(p.slug)}
+                  type="button"
                   className="cal-pick-item"
-                  onClick={() => setPickOpen(false)}
+                  onClick={() => openTray(p.slug)}
                 >
                   <span
                     className="cal-pick-dot"
                     style={{ background: p.colorVar }}
                   />
                   <span>{p.title}</span>
-                </Link>
+                </button>
               ))}
             </div>
           </div>
@@ -281,6 +287,19 @@ export function CalendarClient({
             onSelectEvent={(e) => {
               setOpenDay(null);
               setSelected(e);
+            }}
+          />
+        )}
+
+        {tray && (
+          <CallTray
+            slug={tray.slug}
+            productionTitle={tray.title}
+            date={ymd(cursor)}
+            onClose={() => setTray(null)}
+            onCreated={() => {
+              setTray(null);
+              router.refresh();
             }}
           />
         )}
