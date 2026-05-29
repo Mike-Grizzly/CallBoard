@@ -27,6 +27,8 @@ import {
   ZoomIn,
   ZoomOut,
   Pencil,
+  BookOpen,
+  Maximize2,
 } from "lucide-react";
 import { saveAnnotations, dismissStaleBanner } from "@/features/scripts/actions";
 import {
@@ -42,6 +44,7 @@ import {
 import type { DefaultScript } from "@/features/scripts/queries";
 import { loadPdfDocument } from "@/lib/pdf";
 import { useIsPhone } from "@/lib/use-is-phone";
+import { MobileScriptReader } from "./mobile-script-reader";
 
 // Module-level cache so re-renders don't re-decode the same page
 const pdfBitmapCache = new Map<string, ImageBitmap>();
@@ -97,8 +100,22 @@ export function ScriptViewer({
 
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [zoomIndex, setZoomIndex] = useState(1); // index into ZOOM_STEPS; 1 = 100%
+  const [zoomMode, setZoomMode] = useState<"step" | "fit">("step");
+  const [readMode, setReadMode] = useState(false);
 
-  const renderScale = BASE_RENDER_SCALE * ZOOM_STEPS[zoomIndex];
+  // Page-jump input (the "n / total" becomes editable on focus).
+  const [pageInput, setPageInput] = useState("");
+  const [pageInputFocused, setPageInputFocused] = useState(false);
+
+  // Intrinsic page width (points) + workspace width drive "fit width".
+  const [pageWidthPts, setPageWidthPts] = useState(0);
+  const [workspaceW, setWorkspaceW] = useState(0);
+
+  const fitScale =
+    zoomMode === "fit" && pageWidthPts > 0 && workspaceW > 0
+      ? Math.min(4, Math.max(0.4, (workspaceW - 48) / pageWidthPts))
+      : null;
+  const renderScale = fitScale ?? BASE_RENDER_SCALE * ZOOM_STEPS[zoomIndex];
 
   // The annotation tools are mouse-built (drag to draw) — on phones the
   // script is presented view-only: the tool is locked to "pointer" so the
@@ -234,6 +251,109 @@ export function ScriptViewer({
       cancelled = true;
     };
   }, [pdfUrl, currentPage, renderScale]);
+
+  // ── Intrinsic page width (for "fit width") ──────────────────────────────────
+  useEffect(() => {
+    let active = true;
+    loadPdfDocument(pdfUrl)
+      .then(async (pdf) => {
+        const page = await pdf.getPage(1);
+        if (active) setPageWidthPts(page.getViewport({ scale: 1 }).width);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [pdfUrl]);
+
+  // ── Track workspace width (drives fit-width scale) ──────────────────────────
+  useEffect(() => {
+    const el = workspaceRef.current;
+    if (!el) return;
+    const measure = () => setWorkspaceW(el.clientWidth);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // ── Prefetch adjacent pages so next/prev is instant ─────────────────────────
+  useEffect(() => {
+    if (!pdfUrl || !totalPages) return;
+    let cancelled = false;
+    const targets = [currentPage - 1, currentPage + 1].filter(
+      (p) => p >= 1 && p <= totalPages,
+    );
+    (async () => {
+      for (const p of targets) {
+        const key = `${pdfUrl}::${p}::${renderScale}`;
+        if (pdfBitmapCache.has(key)) continue;
+        try {
+          const pdf = await loadPdfDocument(pdfUrl);
+          if (cancelled) return;
+          const page = await pdf.getPage(p);
+          const viewport = page.getViewport({ scale: renderScale });
+          const off = document.createElement("canvas");
+          off.width = viewport.width;
+          off.height = viewport.height;
+          await page.render({ canvas: off, viewport }).promise;
+          if (cancelled) return;
+          const bmp = await createImageBitmap(off);
+          if (!cancelled) pdfBitmapCache.set(key, bmp);
+        } catch {
+          /* best-effort warm-up */
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfUrl, currentPage, renderScale, totalPages]);
+
+  // ── Keyboard navigation (desktop) ───────────────────────────────────────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (readMode) return; // the reader handles its own keys
+      const t = e.target as HTMLElement | null;
+      if (
+        t &&
+        (t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "ArrowRight" || e.key === "PageDown") {
+        e.preventDefault();
+        setCurrentPage((p) => Math.min(totalPages || 1, p + 1));
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        e.preventDefault();
+        setCurrentPage((p) => Math.max(1, p - 1));
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        setCurrentPage(1);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        setCurrentPage(totalPages || 1);
+      } else if (e.key === "+" || e.key === "=") {
+        setZoomMode("step");
+        setZoomIndex((i) => Math.min(ZOOM_STEPS.length - 1, i + 1));
+      } else if (e.key === "-") {
+        setZoomMode("step");
+        setZoomIndex((i) => Math.max(0, i - 1));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [totalPages, readMode]);
+
+  const commitPageInput = () => {
+    const n = parseInt(pageInput, 10);
+    if (!Number.isNaN(n)) {
+      setCurrentPage(Math.min(totalPages || 1, Math.max(1, n)));
+    }
+    setPageInputFocused(false);
+  };
 
   // ── Auto-save ──────────────────────────────────────────────────────────────
 
@@ -588,6 +708,23 @@ export function ScriptViewer({
 
   return (
     <>
+    {readMode && (
+      <MobileScriptReader
+        scriptId={script.id}
+        productionId={productionId}
+        pdfUrl={pdfUrl}
+        title={script.title}
+        initialAnnotations={annotations}
+        initialBookmarks={bookmarks}
+        initialPageOverrides={pageOverrides}
+        startPage={currentPage}
+        onExit={() => setReadMode(false)}
+        onBookmarksChange={(b) => {
+          setBookmarks(b);
+          latestBookmarksRef.current = b;
+        }}
+      />
+    )}
     <div
       className="anim-in script-viewer-shell"
       style={{ display: "flex", gap: 0, minHeight: 0, maxWidth: 1440, margin: "0 auto" }}
@@ -797,9 +934,50 @@ export function ScriptViewer({
             >
               <ChevronLeft size={16} />
             </button>
-            <span style={{ fontSize: 13, color: "var(--ink-3)", minWidth: 70, textAlign: "center" }}>
-              {totalPages > 0 ? `${currentPage} / ${totalPages}` : "—"}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 13, color: "var(--ink-3)" }}>
+              <input
+                aria-label="Go to page"
+                inputMode="numeric"
+                value={
+                  pageInputFocused
+                    ? pageInput
+                    : totalPages > 0
+                      ? String(currentPage)
+                      : ""
+                }
+                disabled={totalPages === 0}
+                onFocus={(e) => {
+                  setPageInput(String(currentPage));
+                  setPageInputFocused(true);
+                  e.currentTarget.select();
+                }}
+                onChange={(e) =>
+                  setPageInput(e.target.value.replace(/[^0-9]/g, ""))
+                }
+                onBlur={commitPageInput}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                  if (e.key === "Escape") {
+                    setPageInputFocused(false);
+                    e.currentTarget.blur();
+                  }
+                }}
+                style={{
+                  width: 34,
+                  textAlign: "center",
+                  fontSize: 13,
+                  padding: "3px 2px",
+                  border: "1px solid var(--border)",
+                  borderRadius: 5,
+                  background: "var(--bg)",
+                  color: "var(--ink)",
+                  fontFamily: "inherit",
+                  outline: "none",
+                }}
+                title="Type a page number to jump"
+              />
+              <span>/ {totalPages > 0 ? totalPages : "—"}</span>
+            </div>
             <button
               className="btn ghost btn-icon"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
@@ -811,28 +989,50 @@ export function ScriptViewer({
             </button>
           </div>
           {/* Zoom controls */}
-          <div style={{ display: "flex", alignItems: "center", gap: 0, border: "1px solid var(--border)", borderRadius: 5, overflow: "hidden" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <button
               className="btn ghost btn-icon"
-              onClick={() => setZoomIndex((i) => Math.max(0, i - 1))}
-              disabled={zoomIndex === 0}
-              title="Zoom out"
-              style={{ width: 28, height: 28, borderRadius: 0, borderRight: "1px solid var(--border)" }}
+              onClick={() => setZoomMode((m) => (m === "fit" ? "step" : "fit"))}
+              title="Fit page width"
+              aria-pressed={zoomMode === "fit"}
+              style={{
+                width: 28,
+                height: 28,
+                color: zoomMode === "fit" ? "var(--accent)" : undefined,
+                background: zoomMode === "fit" ? "var(--accent-soft)" : undefined,
+              }}
             >
-              <ZoomOut size={13} />
+              <Maximize2 size={13} />
             </button>
-            <span style={{ fontSize: 12, color: "var(--ink-3)", minWidth: 38, textAlign: "center", padding: "0 4px" }}>
-              {ZOOM_LABELS[zoomIndex]}
-            </span>
-            <button
-              className="btn ghost btn-icon"
-              onClick={() => setZoomIndex((i) => Math.min(ZOOM_STEPS.length - 1, i + 1))}
-              disabled={zoomIndex === ZOOM_STEPS.length - 1}
-              title="Zoom in"
-              style={{ width: 28, height: 28, borderRadius: 0, borderLeft: "1px solid var(--border)" }}
-            >
-              <ZoomIn size={13} />
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 0, border: "1px solid var(--border)", borderRadius: 5, overflow: "hidden" }}>
+              <button
+                className="btn ghost btn-icon"
+                onClick={() => {
+                  setZoomMode("step");
+                  setZoomIndex((i) => Math.max(0, i - 1));
+                }}
+                disabled={zoomMode === "step" && zoomIndex === 0}
+                title="Zoom out"
+                style={{ width: 28, height: 28, borderRadius: 0, borderRight: "1px solid var(--border)" }}
+              >
+                <ZoomOut size={13} />
+              </button>
+              <span style={{ fontSize: 12, color: "var(--ink-3)", minWidth: 38, textAlign: "center", padding: "0 4px" }}>
+                {zoomMode === "fit" ? "Fit" : ZOOM_LABELS[zoomIndex]}
+              </span>
+              <button
+                className="btn ghost btn-icon"
+                onClick={() => {
+                  setZoomMode("step");
+                  setZoomIndex((i) => Math.min(ZOOM_STEPS.length - 1, i + 1));
+                }}
+                disabled={zoomMode === "step" && zoomIndex === ZOOM_STEPS.length - 1}
+                title="Zoom in"
+                style={{ width: 28, height: 28, borderRadius: 0, borderLeft: "1px solid var(--border)" }}
+              >
+                <ZoomIn size={13} />
+              </button>
+            </div>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -847,6 +1047,15 @@ export function ScriptViewer({
             >
               <BookmarkIcon size={13} />
               <span>Bookmark</span>
+            </button>
+            <button
+              className="btn ghost"
+              onClick={() => setReadMode(true)}
+              style={{ fontSize: 12, height: 28, gap: 5 }}
+              title="Distraction-free reading"
+            >
+              <BookOpen size={13} />
+              <span>Read mode</span>
             </button>
             <button
               className="btn ghost"
@@ -1765,6 +1974,15 @@ function BookmarksPanel({
   onDelete: (id: string) => void;
 }) {
   const sorted = [...bookmarks].sort((a, b) => a.page - b.page);
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? sorted.filter((b) =>
+        /^\d+$/.test(q)
+          ? String(b.page).includes(q)
+          : b.title.toLowerCase().includes(q),
+      )
+    : sorted;
 
   return (
     <div style={{ marginBottom: 16 }}>
@@ -1798,13 +2016,38 @@ function BookmarksPanel({
         )}
       </div>
 
+      {bookmarks.length > 3 && (
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search bookmarks or page #"
+          aria-label="Search bookmarks"
+          style={{
+            width: "100%",
+            fontSize: 12,
+            padding: "5px 8px",
+            marginBottom: 6,
+            border: "1px solid var(--border)",
+            borderRadius: 6,
+            background: "var(--bg-sunken)",
+            color: "var(--ink)",
+            fontFamily: "inherit",
+            outline: "none",
+          }}
+        />
+      )}
+
       {sorted.length === 0 ? (
         <p style={{ fontSize: 12, color: "var(--ink-4)", padding: "4px 2px 12px" }}>
           No bookmarks yet.
         </p>
+      ) : filtered.length === 0 ? (
+        <p style={{ fontSize: 12, color: "var(--ink-4)", padding: "4px 2px 12px" }}>
+          No matching bookmarks.
+        </p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 1, marginBottom: 8 }}>
-          {sorted.map((bm) => (
+          {filtered.map((bm) => (
             <div
               key={bm.id}
               onClick={() => onNavigate(bm.page)}

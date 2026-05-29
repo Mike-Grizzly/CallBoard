@@ -45,6 +45,12 @@ type Props = {
   initialAnnotations: Annotation[];
   initialBookmarks: Bookmark[];
   initialPageOverrides: PageOverrides;
+  /** When used as a desktop "Read mode" overlay: close instead of navigating. */
+  onExit?: () => void;
+  /** Bubble bookmark changes up so a host (desktop viewer) stays in sync. */
+  onBookmarksChange?: (bookmarks: Bookmark[]) => void;
+  /** Open scrolled to this page (e.g. the desktop viewer's current page). */
+  startPage?: number;
 };
 
 export function MobileScriptReader({
@@ -55,8 +61,15 @@ export function MobileScriptReader({
   initialAnnotations,
   initialBookmarks,
   initialPageOverrides,
+  onExit,
+  onBookmarksChange,
+  startPage,
 }: Props) {
   const router = useRouter();
+  const exit = useCallback(() => {
+    if (onExit) onExit();
+    else router.back();
+  }, [onExit, router]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const canvases = useRef<Map<number, HTMLCanvasElement>>(new Map());
@@ -228,10 +241,11 @@ export function MobileScriptReader({
               },
             ];
         persist(next);
+        onBookmarksChange?.(next);
         return next;
       });
     },
-    [persist],
+    [persist, onBookmarksChange],
   );
 
   const isBookmarked = useCallback(
@@ -256,16 +270,31 @@ export function MobileScriptReader({
     scrubDrag.current = null;
   };
 
+  // Esc exits (used by the desktop Read-mode overlay).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") exit();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [exit]);
+
+  // Jump to the requested start page once the layout is measured.
+  const didInitialJump = useRef(false);
+  useEffect(() => {
+    if (didInitialJump.current) return;
+    if (pageCount > 0 && containerWidth > 0 && pitchRef.current > 0) {
+      didInitialJump.current = true;
+      if (startPage && startPage > 1) jumpTo(startPage, false);
+    }
+  }, [pageCount, containerWidth, startPage, jumpTo]);
+
   const ready = pageCount > 0 && containerWidth > 0;
 
   return (
     <div className="msr">
       <header className="msr-top">
-        <button
-          className="msr-icon"
-          onClick={() => router.back()}
-          aria-label="Back"
-        >
+        <button className="msr-icon" onClick={exit} aria-label="Back">
           <ArrowLeft size={20} />
         </button>
         <div className="msr-title">{title}</div>
