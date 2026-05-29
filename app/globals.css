@@ -2331,6 +2331,7 @@ div.mention:hover {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   gap: 14px;
 }
 .cal-toolbar {
@@ -2366,6 +2367,7 @@ div.mention:hover {
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  min-width: 0;
 }
 
 /* One scroll container handles both axes: vertical for the hour grid,
@@ -2376,6 +2378,7 @@ div.mention:hover {
 .week-scroll {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow: auto;
   position: relative;
   -webkit-overflow-scrolling: touch;
@@ -7428,6 +7431,7 @@ textarea.cform-field {
   background: oklch(0.2 0.01 60 / 0.4);
   display: flex;
   justify-content: flex-end;
+  animation: call-tray-scrim-in 0.2s ease both;
 }
 .call-tray {
   display: flex;
@@ -7438,7 +7442,39 @@ textarea.cform-field {
   background: var(--bg-elev);
   border-left: 1px solid var(--border);
   box-shadow: var(--shadow-3);
-  animation: cal-drawer-in 0.2s ease-out both;
+  /* Slide fully in from the right; a stable height means the async cast load
+     fills the body without resizing the panel mid-animation. */
+  animation: call-tray-in-right 0.26s cubic-bezier(0.22, 0.8, 0.2, 1) both;
+  will-change: transform;
+}
+@keyframes call-tray-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes call-tray-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes call-tray-in-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Mobile grab bar — drag down or tap to dismiss. Hidden on desktop. */
+.call-tray-grip-wrap {
+  display: none;
 }
 .call-tray-head {
   display: flex;
@@ -7484,12 +7520,30 @@ textarea.cform-field {
   .call-tray {
     width: 100%;
     max-width: 100%;
-    height: auto;
-    max-height: 90vh;
+    /* Fixed height so the panel doesn't jump when the form finishes loading. */
+    height: 88vh;
     border-left: 0;
     border-top: 1px solid var(--border);
     border-radius: 20px 20px 0 0;
-    animation: cal-sheet-in 0.22s ease-out both;
+    animation: call-tray-in-up 0.28s cubic-bezier(0.22, 0.8, 0.2, 1) both;
+  }
+  .call-tray-grip-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0 2px;
+    flex-shrink: 0;
+    cursor: grab;
+    touch-action: none;
+  }
+  .call-tray-grip {
+    width: 40px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--border-strong);
+  }
+  /* The grip is the primary dismiss on phones; keep the header tidy. */
+  .call-tray-head {
+    padding-top: 6px;
   }
 }
 
