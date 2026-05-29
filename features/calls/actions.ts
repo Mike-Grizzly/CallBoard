@@ -2,8 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { calls, productions } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { calls, productions, callConfirmations } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -168,4 +168,53 @@ export async function deleteCall(formData: FormData): Promise<void> {
   revalidatePath(`/productions/${slug}`);
   revalidatePath(`/productions/${slug}/calls`);
   redirect(`/productions/${slug}/calls`);
+}
+
+/**
+ * Toggle the current user's RSVP to a call. Any member of the call's
+ * production (or a manager) may respond. Idempotent per (call, user):
+ * confirming again clears the response, so the dashboard button doubles as
+ * "Confirmed ✓ — tap to undo".
+ */
+export async function confirmCall(callId: string): Promise<CallResult> {
+  const user = await requireCurrentUser();
+
+  const call = await db
+    .select({ id: calls.id, productionId: calls.productionId })
+    .from(calls)
+    .where(eq(calls.id, callId))
+    .limit(1);
+  if (call.length === 0) return { error: "Call not found." };
+
+  const productionId = call[0].productionId;
+  if (!can(user.role, "productions:manage")) {
+    const membership = await getProductionMembership(user.id, productionId);
+    if (!membership) return { error: "You're not on this production." };
+  }
+
+  const existing = await db
+    .select({ id: callConfirmations.id })
+    .from(callConfirmations)
+    .where(
+      and(
+        eq(callConfirmations.callId, callId),
+        eq(callConfirmations.userId, user.id),
+      ),
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db
+      .delete(callConfirmations)
+      .where(eq(callConfirmations.id, existing[0].id));
+  } else {
+    await db.insert(callConfirmations).values({
+      callId,
+      userId: user.id,
+      status: "confirmed",
+    });
+  }
+
+  revalidatePath("/dashboard");
+  return { success: true };
 }

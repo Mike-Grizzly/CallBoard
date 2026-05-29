@@ -1,5 +1,12 @@
 import { db } from "@/db";
-import { announcements, profiles, productions, productionMemberships } from "@/db/schema";
+import {
+  announcements,
+  profiles,
+  productions,
+  productionMemberships,
+  organizationMemberships,
+  announcementAcks,
+} from "@/db/schema";
 import { eq, desc, and, or, isNull, inArray, count } from "drizzle-orm";
 
 const announcementFields = {
@@ -98,3 +105,87 @@ export async function getAnnouncementsForUser(
 export type AnnouncementWithMeta = Awaited<
   ReturnType<typeof getAnnouncementsByProduction>
 >[number];
+
+export type AnnouncementAckInfo = {
+  /** How many people have acknowledged. */
+  acked: number;
+  /** Audience size: org members (org-wide) or production members (scoped). */
+  total: number;
+  /** Whether the current user has acknowledged. */
+  mine: boolean;
+};
+
+/**
+ * Acknowledgement rollup for a set of announcements: per-announcement acked
+ * count, audience size, and whether the current user has acknowledged. The
+ * audience is the org's members for org-wide announcements (null production)
+ * and the production's members for production-scoped ones.
+ */
+export async function getAckInfoForAnnouncements(
+  announcementIds: string[],
+  userId: string,
+  orgId: string,
+): Promise<Record<string, AnnouncementAckInfo>> {
+  if (announcementIds.length === 0) return {};
+
+  const [scopes, ackCounts, myAcks, [orgRow]] = await Promise.all([
+    db
+      .select({
+        id: announcements.id,
+        productionId: announcements.productionId,
+      })
+      .from(announcements)
+      .where(inArray(announcements.id, announcementIds)),
+    db
+      .select({
+        announcementId: announcementAcks.announcementId,
+        value: count(),
+      })
+      .from(announcementAcks)
+      .where(inArray(announcementAcks.announcementId, announcementIds))
+      .groupBy(announcementAcks.announcementId),
+    db
+      .select({ announcementId: announcementAcks.announcementId })
+      .from(announcementAcks)
+      .where(
+        and(
+          eq(announcementAcks.userId, userId),
+          inArray(announcementAcks.announcementId, announcementIds),
+        ),
+      ),
+    db
+      .select({ value: count() })
+      .from(organizationMemberships)
+      .where(eq(organizationMemberships.organizationId, orgId)),
+  ]);
+
+  const productionIds = [
+    ...new Set(scopes.map((s) => s.productionId).filter((p): p is string => !!p)),
+  ];
+  const prodTotals: Record<string, number> = {};
+  if (productionIds.length > 0) {
+    const rows = await db
+      .select({
+        productionId: productionMemberships.productionId,
+        value: count(),
+      })
+      .from(productionMemberships)
+      .where(inArray(productionMemberships.productionId, productionIds))
+      .groupBy(productionMemberships.productionId);
+    for (const r of rows) prodTotals[r.productionId] = r.value;
+  }
+
+  const orgTotal = orgRow?.value ?? 0;
+  const ackedMap = new Map(ackCounts.map((r) => [r.announcementId, r.value]));
+  const mineSet = new Set(myAcks.map((r) => r.announcementId));
+
+  const out: Record<string, AnnouncementAckInfo> = {};
+  for (const s of scopes) {
+    out[s.id] = {
+      acked: ackedMap.get(s.id) ?? 0,
+      total: s.productionId ? prodTotals[s.productionId] ?? 0 : orgTotal,
+      mine: mineSet.has(s.id),
+    };
+  }
+  return out;
+}
