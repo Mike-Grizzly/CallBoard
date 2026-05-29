@@ -1110,3 +1110,63 @@ schema.
   are reported as skipped on the launch screen instead of failing the launch.
 - Wizard tokens are inherited from `:root` (the duplicate token block from the
   source CSS was dropped) so the wizard follows the dark/cool theme switch.
+
+---
+
+## 2026-05-29 — Rehearsal scheduler UX overhaul
+
+**Decision:** Restyle the call create/edit form into Outlook-style grouped
+cards (`.cform-*`); make the week view a responsive swipeable strip (3 days on
+phone / 5 on tablet / 7 on desktop) with a frozen time-gutter and frozen day
+headers; add an in-calendar create affordance (toolbar button + mobile FAB)
+that opens the call form as a **slide-in tray** (right drawer on desktop,
+bottom sheet on phones) instead of navigating to a page; default a new call's
+start to the next whole hour and its end to start + 2h.
+
+**Reason:** The previous flow felt clunky on mobile (full-page form, crowded
+7-day week, no obvious "create"). Reference was Outlook/Teams mobile.
+
+**Impact / notes:**
+- `createCall`/`updateCall` now return `{ success }` instead of redirecting, so
+  the tray closes + `router.refresh()`es in place while the full-page routes
+  (still used for deep links / edit) navigate themselves.
+- Week columns are sized in JS to exact px (percentage grid tracks resolved
+  unreliably inside a horizontally-overflowing scroller); the grid uses
+  `width: max-content` so the sticky gutter stays pinned across the whole week.
+  `.cal-main` needed `min-width: 0` so the strip overflows internally instead
+  of blowing out the layout.
+- Tray slide uses dedicated keyframes; the mobile sheet has a fixed height +
+  grab bar (drag/tap to dismiss).
+
+---
+
+## 2026-05-29 — Script reader: immersive mobile reader + freehand ink
+
+**Decision:** On phones, route the script tab to a dedicated immersive reader
+(`MobileScriptReader`) instead of the view-only desktop viewer; `ScriptScreen`
+switches by `useIsPhone`. The reader has continuous windowed scrolling, a
+floating page scrubber, a page-grid navigator (search + bookmarks), brand
+styling, and a slide-up entrance. Phase 2 adds **freehand ink** (highlighter /
+pen / eraser + colors) as a new `InkAnnotation` type, **private per user**.
+The desktop viewer also gained additive tweaks (keyboard nav, jump-to-page,
+prefetch, fit-width, a Read-mode overlay that reuses the reader, bookmark
+search) with **no change to its annotation model**.
+
+**Reason:** The reader needed to feel native on mobile (reference: GoodNotes /
+Noteful). Freehand ink is the natural touch annotation; private-per-user
+matches the existing `script_annotations` model.
+
+**Impact / notes:**
+- `InkAnnotation` (normalized `points`, `tool`, `size` as a fraction of page
+  width) added to the annotation union with `INK_SIZES`/`INK_OPACITY`/
+  `inkPathD`. Desktop renders ink **read-only** (SVG + PDF-export compositor)
+  and the annotations side panel ignores it; the desktop Read-mode overlay is
+  `allowDrawing={false}`.
+- Drawing: the active stroke is tracked in a ref and drawn imperatively into a
+  single fixed overlay `<path>` (no per-move React renders), committed once on
+  pointer-up. While a tool is active the page scroll is locked
+  (`overflow:hidden` + `touch-action:none`) so a finger draws cleanly; navigate
+  via the scrubber or close the palette. The eraser is a point/segment eraser
+  (keeps surviving runs as separate strokes).
+- We did NOT mutate the source PDF (it's licensed material) — annotations are
+  an overlay only.

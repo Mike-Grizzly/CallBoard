@@ -171,3 +171,32 @@ _Resolved in P0 (2026-05-21): signed-URL actions now verify production access; u
 - **`/settings/members` overlap:** the older Step 3 org-member page still exists alongside the new `/people` page. Should `/settings/members` redirect to `/people`, or stay as a lighter settings-scoped view?
 - **`last_active_at` precision:** only set when an invited user is promoted to active on first sign-in — it is not a true per-request "last seen" (per-request DB writes were deliberately avoided). Is a more accurate last-seen worth a throttled write later?
 - **Invite acceptance landing:** invite links route through `/auth/callback` to `/reset-password` so the user sets a password. This reuses the existing reset-password page and should be verified end-to-end against a live project.
+
+## 2026-05-29 session — deferred / optional follow-ups
+
+These are nice-to-haves intentionally left for a later day; each has a working
+default in place today.
+
+- **Scheduler — workspace `/calendar` "+" production picker.** When the
+  workspace calendar has multiple productions, the new-call "+" asks which
+  production each time. Optionally remember the last-used production and skip
+  the picker (with a way to change it). Today: always asks.
+- **Scheduler — edit-call as a tray.** Creating a call now opens the slide-in
+  tray over the calendar, but editing an existing call (from the event drawer's
+  "Edit") still navigates to the full-page form. Optionally make edit use the
+  same slide-in tray for consistency. Today: edit is a full page.
+- **Script reader — two-finger scroll while drawing.** With a freehand tool
+  active, the page scroll is locked so one finger draws cleanly; navigation is
+  via the scrubber. Optionally add two-finger pan/scroll so the user can scroll
+  without deselecting the tool (GoodNotes-style). Today: scrubber-only while a
+  tool is active.
+- **Script reader — ink on desktop.** Freehand ink is drawn only on mobile (and
+  the desktop Read-mode overlay is reading-only). Desktop renders ink read-only
+  and exports it in the annotated PDF, but there's no freehand drawing on the
+  desktop annotation viewer (it keeps its rectangle highlight/note/cue tools).
+  Optional if desktop freehand is ever wanted.
+- **New Production wizard — inviting brand-new people.** The wizard's Team step
+  can assign existing org members for any `productions:manage` user, but
+  inviting brand-new email addresses requires `settings:manage`; rows that
+  can't be actioned are reported as skipped on the launch screen. Optionally
+  let producers invite new people, or guide them to ask an admin.
