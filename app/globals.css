@@ -6995,6 +6995,116 @@ select.pp-field {
   background: var(--bg-muted);
 }
 
+/* Phone-only step header + segmented progress (hidden on desktop). */
+.np-root .np-mobile-bar {
+  display: none;
+}
+.np-root .np-mb-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 0 12px;
+}
+.np-root .np-mb-titles {
+  flex: 1;
+  min-width: 0;
+}
+.np-root .np-mb-title {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.np-root .np-mb-step {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin-top: 1px;
+}
+.np-root .np-mb-count {
+  font-size: 13px;
+  color: var(--ink-4);
+}
+.np-root .np-mb-count b {
+  color: var(--accent);
+  font-weight: 600;
+}
+.np-root .np-mb-segs {
+  display: flex;
+  gap: 5px;
+}
+.np-root .np-mb-seg {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  border: 0;
+  padding: 0;
+  transition: background 0.2s;
+}
+.np-root .np-mb-seg[data-state="done"] {
+  background: var(--c-sage);
+}
+.np-root .np-mb-seg[data-state="active"] {
+  background: var(--accent);
+}
+
+/* ── Wizard: phone layout ──────────────────────────────────────────────
+   The desktop rail + grid are cramped on a phone, so at ≤720px we drop the
+   rail, present one step per screen, and pin the action bar to the bottom —
+   matching the mobile new-production builder design. */
+@media (max-width: 720px) {
+  .np-root .body {
+    display: flex;
+    flex-direction: column;
+  }
+  .np-root .rail {
+    display: none;
+  }
+  .np-root .top-crumbs {
+    display: none;
+  }
+  .np-root .crumb {
+    display: none;
+  }
+  .np-root .np-mobile-bar {
+    display: block;
+    padding: 12px 0 6px;
+  }
+  .np-root .main {
+    padding: 0 16px;
+    overflow-y: auto;
+  }
+  .np-root .grid-2,
+  .np-root .grid-3 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .np-root .field {
+    font-size: max(16px, 1em);
+  }
+  /* Sticky bottom action bar */
+  .np-root .actions {
+    position: sticky;
+    bottom: 0;
+    margin: 16px -16px 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: var(--bg-elev);
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .np-root .actions .progress-tag {
+    display: none;
+  }
+  .np-root .actions .spacer {
+    display: none;
+  }
+  .np-root .actions .btn.primary,
+  .np-root .actions .btn.accent {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
 /* "+" entry menu (Full setup / Quick add) */
 .np-menu {
   position: absolute;
