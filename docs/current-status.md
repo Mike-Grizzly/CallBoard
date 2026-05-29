@@ -1,6 +1,6 @@
 # Current Status
 
-**Last updated:** 2026-05-28
+**Last updated:** 2026-05-29
 
 **App name:** **Proscene** (renamed from "CallBoard" on 2026-05-27 — the `callboard` domain could not be secured). The product is **live at [https://proscene.app](https://proscene.app)** with a verified email sending domain. The rebrand updates the rail wordmark (`Pro<em>scene</em>`), the rail/icon mark glyph (`C` → `P`), the four auth-screen brand headers (login, signup, forgot-password, reset-password), the PWA manifest, root metadata (`title` / `applicationName` / `appleWebApp.title`), `apple-icon.tsx`, `public/icon.svg` + `public/icon-maskable.svg`, the rehearsal-report email footer ("Sent via Proscene"), and `package.json` / `package-lock.json` `name`. The Supabase project is still literally named `CallBoard` in the Supabase dashboard — backticked `CallBoard` references in these docs point to that project identifier and are intentionally unchanged. Colors and design tokens are unchanged. PR [#10](https://github.com/Mike-Grizzly/CallBoard/pull/10) merged to `main` 2026-05-27.
 
@@ -703,6 +703,54 @@ immediately.
 current org, org switcher (deferred from D5 week 1; ships when a
 user actually ends up in multiple orgs). Org-membership status
 flow (pending/approved) is unchanged.
+
+## Settings overhaul (2026-05-29)
+
+Closes the deferred items from the 2026-05-28 multi-org entry and
+fills in real account/workspace management.
+
+**Schema:** added `profiles.selected_organization_id` (uuid,
+nullable, FK to `organizations.id` on delete set null). Powers the
+org switcher; `getCurrentUser` reads it with self-healing fallback to
+the user's first membership when stale.
+
+**`CurrentUser` type** now carries `organizationName` so rail/header
+surfaces don't need an extra query.
+
+**Account settings — `/settings/account` (every user).**
+Edit first/last name, phone, pronouns. Change password (verify
+current via `signInWithPassword`, then `updateUser({ password })`).
+Profile edits also sync `auth.user_metadata` so signup/invite emails
+have the latest name. Email change deferred (needs re-verification
+flow).
+
+**Workspace settings — `/settings/workspace` (admin only).**
+Rename current workspace (60-char cap; slug stays stable since
+slugs aren't user-facing). Shows member + admin counts. Deep-links
+to `/settings/members` for role changes.
+
+**Org switcher.** `WorkspaceRailBadge` always shows the current
+workspace name just below the rail brand. Click opens a menu with
+the user's other orgs, or "No other workspaces yet" when they only
+belong to one. Same switcher inline on the settings landing.
+`switchOrganization` server action verifies caller membership, writes
+`selected_organization_id`, revalidates `/` layout; client calls
+`router.refresh()`.
+
+**Members — last-admin safeguard.** Refuses to demote OR remove the
+sole remaining admin in an org. Surfaces a clear error so the
+operator knows to promote another admin first. Stacks with the
+existing "can't change/remove yourself" rules.
+
+**Settings landing reframed** around the workspace: org name as the
+headline, signed-in user + role below, switcher inline, then a list
+of destinations (Account, Workspace, Members, Send feedback).
+
+**Explicitly NOT shipped in this round:**
+- Email change with re-verification.
+- Delete workspace / delete account.
+- Transfer-workspace flows.
+- Account-level avatar upload / workspace logo.
 
 ## Scaffolded only (not implemented)
 

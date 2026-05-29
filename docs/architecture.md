@@ -189,28 +189,37 @@ All tables use UUID primary keys, cascade deletes on foreign keys, and timezone-
 
 ## Multi-tenancy
 
-- Each user belongs to exactly one organization via
-  `organization_memberships`; that row's `organizationId` is the
-  tenant boundary for every query
-- `getCurrentUser()` returns the caller's actual org membership;
-  there is no global "current org" — it's per-request, per-user
+- A user can be a member of multiple organizations via
+  `organization_memberships`; the user's "current org" for a given
+  request is resolved by `getCurrentUser()` from
+  `profiles.selected_organization_id`, falling back to the user's
+  first membership when the selection is stale (org deleted, user
+  removed from it, never set). The resolver writes the fallback
+  back to the column so subsequent reads are deterministic.
+- `CurrentUser` carries `organizationId`, `organizationName`, and
+  `role` — derived per-request, never cached cross-request.
 - **Self-signup** creates a new org via `createOrganization()`
   (`lib/organization.ts`) with the new user as `admin`. Org name
   comes from the required signup-form field
-  (`organization_name`, carried on `auth.user_metadata`)
+  (`organization_name`, carried on `auth.user_metadata`). The new
+  org is set as the user's `selected_organization_id`.
 - **Invites** (`features/members/actions.ts`) write the profile +
   membership rows at invite time, scoped to
   `currentUser.organizationId`, so invited users land in the
-  inviter's org on first login
-- Org switcher / Settings rename UI are not built yet — a user
-  can only ever be in one org through the UI today. The schema
-  already supports multiple memberships per user; when the
-  switcher ships, `getCurrentUser` will need to pick one
-  (probably via a `selected_organization_id` on `profiles` or a
-  cookie)
+  inviter's org on first login.
+- **Org switcher:** `WorkspaceRailBadge` (always visible) + inline
+  switcher in Settings. `switchOrganization` (in
+  `features/workspace/actions.ts`) verifies the caller is actually a
+  member of the target org, then writes `selected_organization_id`.
+- **Workspace rename:** `renameWorkspace` (admin-gated) updates
+  `organizations.name`. The slug stays stable — slugs aren't
+  user-facing.
+- **Last-admin protection:** `updateMemberRole` and `removeMember`
+  refuse to demote/remove the sole remaining admin so the workspace
+  can't end up admin-less.
 - "Default Organization" (slug `default`) still exists in
   production as a legacy workspace from the single-org beta;
-  not special-cased in code anymore — just a row like any other
+  not special-cased in code anymore — just a row like any other.
 
 ## What is intentionally not implemented yet
 
