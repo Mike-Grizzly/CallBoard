@@ -70,7 +70,6 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       email,
       firstName,
       lastName,
-      requestedRole: (meta.requested_role as string) || null,
     });
 
     await db.insert(organizationMemberships).values({

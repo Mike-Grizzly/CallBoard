@@ -12,14 +12,19 @@ export default function SignupPage() {
               Pro<em>scene</em>
             </span>
           </div>
-          <h1 className="auth-title">Create your account</h1>
+          <h1 className="auth-title">Create your workspace</h1>
           <p className="auth-sub">
-            Join your company&apos;s production workspace.
+            Set up a new Proscene workspace for your theatre company or
+            production team. You&apos;ll be the admin.
           </p>
         </div>
         <SignupForm />
         <p className="auth-foot">
           Already have an account? <Link href="/login">Sign in</Link>
+        </p>
+        <p className="auth-foot" style={{ marginTop: 6, opacity: 0.75 }}>
+          Been invited to an existing workspace? Use the link in your invite
+          email instead of signing up here.
         </p>
       </div>
     </div>

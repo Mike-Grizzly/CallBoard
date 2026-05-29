@@ -51,7 +51,7 @@ export function SignupForm() {
 
       <div className="auth-field">
         <label htmlFor="organization_name" className="label">
-          Organization name
+          Workspace name
         </label>
         <input
           id="organization_name"
@@ -63,33 +63,8 @@ export function SignupForm() {
           placeholder="Your theatre company"
         />
         <p className="auth-hint">
-          The name of your theatre company or production team. You can rename
-          this later.
-        </p>
-      </div>
-
-      <div className="auth-field">
-        <label htmlFor="position" className="label">
-          Position
-        </label>
-        <select
-          id="position"
-          name="position"
-          defaultValue=""
-          required
-          className="field"
-        >
-          <option value="" disabled>
-            Select your role...
-          </option>
-          <option value="producer">Producer</option>
-          <option value="director">Director</option>
-          <option value="stage_manager">Stage Manager</option>
-          <option value="cast">Cast</option>
-          <option value="crew">Crew</option>
-        </select>
-        <p className="auth-hint">
-          Your admin will confirm your permissions after signup.
+          The name your collaborators will see. Usually your theatre company
+          or production team. You can rename it later.
         </p>
       </div>
 
