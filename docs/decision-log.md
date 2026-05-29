@@ -1078,3 +1078,95 @@ page and a last-admin safeguard on the members page.
   Studio required to rename, switch, or recover from stale selection).
 - Users with multiple memberships get a real switcher.
 - Workspaces are protected from accidental zero-admin states.
+
+---
+
+## 2026-05-29 — Archive productions, transfer ownership, workspace logo (PR #20 follow-up pass)
+
+**Decision:** Same-day follow-ups that landed on top of the initial
+settings overhaul before PR #20 merged.
+
+**1. Productions are soft-archived, never hard-deleted.**
+
+New column `productions.archived_at TIMESTAMPTZ` + composite index on
+`(organization_id, archived_at)`. Null = active.
+`archiveProduction` / `unarchiveProduction` server actions, gated by
+`productions:manage`, org-scoped (stale ids from another workspace
+are a no-op).
+
+`getProductionsByOrganization` and `getUserProductions` now filter
+archived by default; `getArchivedProductionsByOrganization` is the
+explicit list for the disclosure section on `/productions`.
+`getProductionBySlug` deliberately doesn't filter — admins can still
+deep-link into an archived production's pages.
+
+**Why archive instead of delete:** every production accumulates
+substantial downstream history (rehearsal reports, calls, blocking,
+documents, notes). Hard delete would either cascade-destroy that
+history or fail on FK constraints. Archive preserves everything and
+is reversible. Hard delete remains explicitly out of scope.
+
+**2. Transfer workspace ownership.**
+
+New `transferWorkspaceOwnership(targetUserId, newSelfRole)` server
+action runs in one DB transaction:
+1. If target isn't already admin, promote them.
+2. Demote caller to chosen non-admin role.
+
+Order matters: by promoting first, a mid-transaction failure still
+leaves the workspace with at least one admin. Refuses
+self-targeting, refuses `admin` as the new self-role (stepping down
+"to admin" is meaningless), refuses transfer to a non-member
+(promote-via-invite isn't supported — invite first, then transfer).
+
+Form on `/settings/workspace`. Empty state when caller is the only
+member.
+
+**3. Workspace logo (SVG / PNG / JPG, square, ≤2MB).**
+
+New column `organizations.logo_url TEXT` — stores a Supabase Storage
+path inside the existing `attachments` bucket
+(`org-logos/{orgId}/{ts}.{ext}`). Two-step upload mirrors the report
+attachment pattern: `requestWorkspaceLogoUpload` returns a signed
+upload URL, browser uploads directly to Storage, then
+`finalizeWorkspaceLogoUpload` writes the column and best-effort
+deletes the previous file. `removeWorkspaceLogo` clears + deletes.
+
+Server-side validation: admin role, MIME allow-list (SVG/PNG/JPG),
+2MB cap, storage path locked to the caller's workspace (defends
+against a forged finalize call pointing at another org's prefix).
+
+Client-side validation: same MIME allow-list, 2MB cap, square shape
+check using a 5% tolerance (a 500×501 PNG passes). SVGs skip the
+shape check — they can ship without intrinsic dimensions and we
+trust the uploader.
+
+`lib/workspace-logo.ts` exposes `getSignedLogoUrl(path)` wrapped in
+`cache()` so the rail + page headers share a single signed URL per
+request. `CurrentUser` gained `organizationLogoUrl` so consumers
+don't run an extra org query.
+
+**4. Inline UX polish that came with the round:**
+- "Create new workspace" inline form inside the rail badge menu and
+  the settings switcher (server action `createWorkspace`).
+- Password-confirm-match check fires while typing on
+  `/settings/account`, sets `aria-invalid` + `aria-describedby`,
+  and disables submit until both fields match.
+
+**Explicitly NOT shipped (per product decision this session):**
+- **Email change with re-verification** (a.k.a. "email linking" /
+  "rebind email"). The `/settings/account` email field stays
+  disabled with a hint. A fresh session reading docs should treat
+  this as deferred-on-purpose, not missing work. We'll revisit if
+  beta testers actually ask for it.
+- Delete workspace / delete account.
+- Transfer to a non-member (invite + transfer is the supported path).
+- Account-level avatar.
+
+**Impact:**
+- Workspaces can rebrand themselves end-to-end (name + logo).
+- Admins can hand off a workspace without database edits.
+- Productions can be tidied away without losing history.
+- Multi-org is now genuinely usable from inside the app — no
+  Supabase Studio required for anything in the workspace lifecycle.
+- PR #20 merged to `main` 2026-05-29 (commit 2792a4b).
