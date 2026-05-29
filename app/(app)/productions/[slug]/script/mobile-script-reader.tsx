@@ -14,18 +14,34 @@ import {
   Bookmark as BookmarkIcon,
   ChevronDown,
   ChevronUp,
+  Eraser,
+  Highlighter,
   LayoutGrid,
+  Pen,
   Search,
   X,
 } from "lucide-react";
 import { saveAnnotations } from "@/features/scripts/actions";
 import { loadPdfDocument } from "@/lib/pdf";
-import type {
-  Annotation,
-  Bookmark,
-  HighlightAnnotation,
-  PageOverrides,
+import {
+  ANNOTATION_COLORS,
+  INK_OPACITY,
+  INK_SIZES,
+  inkPathD,
+  type Annotation,
+  type Bookmark,
+  type HighlightAnnotation,
+  type InkAnnotation,
+  type InkPoint,
+  type PageOverrides,
 } from "@/features/scripts/constants";
+
+type DrawTool = "none" | "highlighter" | "pen" | "eraser";
+
+const newId = () =>
+  typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `id-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 // Low-res page thumbnails for the grid; shared across opens of the grid.
 const thumbCache = new Map<string, string>(); // "url::page" -> jpeg dataURL
@@ -51,6 +67,9 @@ type Props = {
   onBookmarksChange?: (bookmarks: Bookmark[]) => void;
   /** Open scrolled to this page (e.g. the desktop viewer's current page). */
   startPage?: number;
+  /** Enable the freehand drawing palette (true on phones; false for the
+   *  desktop Read-mode overlay, which is reading-only). */
+  allowDrawing?: boolean;
 };
 
 export function MobileScriptReader({
@@ -64,6 +83,7 @@ export function MobileScriptReader({
   onExit,
   onBookmarksChange,
   startPage,
+  allowDrawing = true,
 }: Props) {
   const router = useRouter();
   const exit = useCallback(() => {
@@ -83,22 +103,35 @@ export function MobileScriptReader({
   const [currentPage, setCurrentPage] = useState(1);
   const [gridOpen, setGridOpen] = useState(false);
 
+  const [annotations, setAnnotations] = useState<Annotation[]>(initialAnnotations);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks);
+  const annotationsRef = useRef<Annotation[]>(initialAnnotations);
+  const bookmarksRef = useRef<Bookmark[]>(initialBookmarks);
   const [, startTransition] = useTransition();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Existing highlight annotations are shown read-only over each page so a
-  // reader still sees their marks (full editing lands in Phase 2).
+  // Freehand tool state.
+  const [tool, setTool] = useState<DrawTool>("none");
+  const [color, setColor] = useState<string>(ANNOTATION_COLORS[0].value);
+
+  // Highlight rects (desktop-drawn) shown read-only; freehand ink is editable.
   const highlightsByPage = useMemo(() => {
     const map = new Map<number, HighlightAnnotation[]>();
-    for (const a of initialAnnotations) {
+    for (const a of annotations) {
       if (a.type !== "highlight") continue;
-      const list = map.get(a.page) ?? [];
-      list.push(a);
-      map.set(a.page, list);
+      (map.get(a.page) ?? map.set(a.page, []).get(a.page)!).push(a);
     }
     return map;
-  }, [initialAnnotations]);
+  }, [annotations]);
+
+  const inkByPage = useMemo(() => {
+    const map = new Map<number, InkAnnotation[]>();
+    for (const a of annotations) {
+      if (a.type !== "ink") continue;
+      (map.get(a.page) ?? map.set(a.page, []).get(a.page)!).push(a);
+    }
+    return map;
+  }, [annotations]);
 
   // ── Load the document: page count + aspect ratio from page 1 ──────────
   useEffect(() => {
@@ -203,55 +236,175 @@ export function MobileScriptReader({
     [pageCount],
   );
 
-  // ── Bookmarks ─────────────────────────────────────────────────────────
-  const persist = useCallback(
-    (next: Bookmark[]) => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
-        const fd = new FormData();
-        fd.set("script_id", scriptId);
-        fd.set("production_id", productionId);
-        fd.set("annotations", JSON.stringify(initialAnnotations));
-        fd.set("bookmarks", JSON.stringify(next));
-        fd.set("page_overrides", JSON.stringify(initialPageOverrides));
-        startTransition(() => {
-          void saveAnnotations(fd);
-        });
-      }, 600);
+  // ── Persistence (annotations + bookmarks, debounced) ──────────────────
+  const scheduleSave = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const fd = new FormData();
+      fd.set("script_id", scriptId);
+      fd.set("production_id", productionId);
+      fd.set("annotations", JSON.stringify(annotationsRef.current));
+      fd.set("bookmarks", JSON.stringify(bookmarksRef.current));
+      fd.set("page_overrides", JSON.stringify(initialPageOverrides));
+      startTransition(() => {
+        void saveAnnotations(fd);
+      });
+    }, 600);
+  }, [scriptId, productionId, initialPageOverrides]);
+
+  const commitAnnotations = useCallback(
+    (next: Annotation[]) => {
+      annotationsRef.current = next;
+      setAnnotations(next);
+      scheduleSave();
     },
-    [scriptId, productionId, initialAnnotations, initialPageOverrides],
+    [scheduleSave],
+  );
+
+  const commitBookmarks = useCallback(
+    (next: Bookmark[]) => {
+      bookmarksRef.current = next;
+      setBookmarks(next);
+      onBookmarksChange?.(next);
+      scheduleSave();
+    },
+    [scheduleSave, onBookmarksChange],
   );
 
   const toggleBookmark = useCallback(
     (n: number) => {
-      setBookmarks((prev) => {
-        const exists = prev.some((b) => b.page === n);
-        const next = exists
-          ? prev.filter((b) => b.page !== n)
-          : [
-              ...prev,
-              {
-                id:
-                  typeof crypto !== "undefined" && crypto.randomUUID
-                    ? crypto.randomUUID()
-                    : `bm-${Date.now()}`,
-                page: n,
-                title: "",
-                createdAt: new Date().toISOString(),
-              },
-            ];
-        persist(next);
-        onBookmarksChange?.(next);
-        return next;
-      });
+      const prev = bookmarksRef.current;
+      const exists = prev.some((b) => b.page === n);
+      const next = exists
+        ? prev.filter((b) => b.page !== n)
+        : [
+            ...prev,
+            { id: newId(), page: n, title: "", createdAt: new Date().toISOString() },
+          ];
+      commitBookmarks(next);
     },
-    [persist, onBookmarksChange],
+    [commitBookmarks],
   );
 
   const isBookmarked = useCallback(
     (n: number) => bookmarks.some((b) => b.page === n),
     [bookmarks],
   );
+
+  // ── Freehand drawing ──────────────────────────────────────────────────
+  // The active stroke is tracked in a ref and drawn imperatively into one
+  // fixed overlay path (no per-move React renders); it's committed to state
+  // once on pointer-up. Eraser removes whole strokes near the touch point.
+  const draftPathRef = useRef<SVGPathElement>(null);
+  const drawing = useRef<{
+    page: number;
+    el: HTMLElement;
+    pts: { x: number; y: number }[]; // viewport px
+  } | null>(null);
+
+  const strokeWidthPx = useCallback(
+    (t: DrawTool) =>
+      Math.max(
+        1,
+        (t === "pen" ? INK_SIZES.pen : INK_SIZES.highlighter) * containerWidth,
+      ),
+    [containerWidth],
+  );
+
+  const updateDraftPath = useCallback(() => {
+    const path = draftPathRef.current;
+    const d = drawing.current;
+    if (!path || !d) return;
+    path.setAttribute(
+      "d",
+      d.pts.map((p, i) => `${i ? "L" : "M"}${p.x} ${p.y}`).join(" "),
+    );
+    const hi = tool === "highlighter";
+    path.setAttribute("stroke", color);
+    path.setAttribute("stroke-opacity", hi ? String(INK_OPACITY.highlighter) : "1");
+    path.setAttribute("stroke-width", String(strokeWidthPx(tool)));
+  }, [tool, color, strokeWidthPx]);
+
+  const clearDraft = useCallback(() => {
+    draftPathRef.current?.setAttribute("d", "");
+  }, []);
+
+  const eraseAt = useCallback(
+    (page: number, el: HTMLElement, clientX: number, clientY: number) => {
+      const rect = el.getBoundingClientRect();
+      const rx = (clientX - rect.left) / rect.width;
+      const ry = (clientY - rect.top) / rect.height;
+      const aspect = rect.height / rect.width;
+      const thr = 0.022;
+      const prev = annotationsRef.current;
+      const next = prev.filter((a) => {
+        if (a.type !== "ink" || a.page !== page) return true;
+        return !a.points.some(
+          (p) => Math.hypot(p.x - rx, (p.y - ry) * aspect) < thr,
+        );
+      });
+      if (next.length !== prev.length) commitAnnotations(next);
+    },
+    [commitAnnotations],
+  );
+
+  const onDrawDown = useCallback(
+    (page: number, e: React.PointerEvent<SVGSVGElement>) => {
+      if (tool === "none") return;
+      const el = e.currentTarget as unknown as HTMLElement;
+      el.setPointerCapture?.(e.pointerId);
+      if (tool === "eraser") {
+        drawing.current = { page, el, pts: [] };
+        eraseAt(page, el, e.clientX, e.clientY);
+        return;
+      }
+      drawing.current = { page, el, pts: [{ x: e.clientX, y: e.clientY }] };
+      updateDraftPath();
+    },
+    [tool, eraseAt, updateDraftPath],
+  );
+
+  const onDrawMove = useCallback(
+    (e: React.PointerEvent<SVGSVGElement>) => {
+      const d = drawing.current;
+      if (!d) return;
+      if (tool === "eraser") {
+        eraseAt(d.page, d.el, e.clientX, e.clientY);
+        return;
+      }
+      const last = d.pts[d.pts.length - 1];
+      if (last && Math.hypot(e.clientX - last.x, e.clientY - last.y) < 2) return;
+      d.pts.push({ x: e.clientX, y: e.clientY });
+      updateDraftPath();
+    },
+    [tool, eraseAt, updateDraftPath],
+  );
+
+  const onDrawUp = useCallback(() => {
+    const d = drawing.current;
+    drawing.current = null;
+    if (!d) return;
+    if (tool === "eraser" || d.pts.length === 0) {
+      clearDraft();
+      return;
+    }
+    const rect = d.el.getBoundingClientRect();
+    const points: InkPoint[] = d.pts.map((p) => ({
+      x: clamp((p.x - rect.left) / rect.width, 0, 1),
+      y: clamp((p.y - rect.top) / rect.height, 0, 1),
+    }));
+    const ann: InkAnnotation = {
+      id: newId(),
+      page: d.page,
+      type: "ink",
+      tool: tool === "pen" ? "pen" : "highlighter",
+      color,
+      size: tool === "pen" ? INK_SIZES.pen : INK_SIZES.highlighter,
+      points,
+    };
+    commitAnnotations([...annotationsRef.current, ann]);
+    clearDraft();
+  }, [tool, color, commitAnnotations, clearDraft]);
 
   // ── Scrubber drag ─────────────────────────────────────────────────────
   const scrubDrag = useRef<{ y: number; page: number } | null>(null);
@@ -352,6 +505,47 @@ export function MobileScriptReader({
                   }}
                 />
               ))}
+              {(() => {
+                const ink = inkByPage.get(n);
+                const drawingActive = allowDrawing && tool !== "none";
+                if (!drawingActive && (!ink || ink.length === 0)) return null;
+                return (
+                  <svg
+                    className="msr-ink"
+                    viewBox={`0 0 ${containerWidth} ${slotH}`}
+                    preserveAspectRatio="none"
+                    style={{
+                      pointerEvents: drawingActive ? "auto" : "none",
+                      touchAction: drawingActive ? "none" : "auto",
+                      cursor: drawingActive ? "crosshair" : "default",
+                    }}
+                    onPointerDown={(e) => onDrawDown(n, e)}
+                    onPointerMove={onDrawMove}
+                    onPointerUp={onDrawUp}
+                    onPointerCancel={onDrawUp}
+                  >
+                    {ink?.map((a) => (
+                      <path
+                        key={a.id}
+                        d={inkPathD(a.points, containerWidth, slotH)}
+                        fill="none"
+                        stroke={a.color}
+                        strokeOpacity={
+                          a.tool === "highlighter" ? INK_OPACITY.highlighter : 1
+                        }
+                        strokeWidth={Math.max(1, a.size * containerWidth)}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={
+                          a.tool === "highlighter"
+                            ? { mixBlendMode: "multiply" }
+                            : undefined
+                        }
+                      />
+                    ))}
+                  </svg>
+                );
+              })()}
               <span className="msr-slot-num">{n}</span>
             </div>
           ))}
@@ -362,6 +556,56 @@ export function MobileScriptReader({
           </div>
         )}
       </div>
+
+      {allowDrawing && (
+        <svg className="msr-draft" aria-hidden="true">
+          <path ref={draftPathRef} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+
+      {allowDrawing && ready && (
+        <div className="msr-palette">
+          <button
+            className="msr-tool"
+            data-on={tool === "highlighter" ? "1" : "0"}
+            onClick={() => setTool((t) => (t === "highlighter" ? "none" : "highlighter"))}
+            aria-label="Highlighter"
+          >
+            <Highlighter size={20} />
+          </button>
+          <button
+            className="msr-tool"
+            data-on={tool === "pen" ? "1" : "0"}
+            onClick={() => setTool((t) => (t === "pen" ? "none" : "pen"))}
+            aria-label="Pen"
+          >
+            <Pen size={20} />
+          </button>
+          <button
+            className="msr-tool"
+            data-on={tool === "eraser" ? "1" : "0"}
+            onClick={() => setTool((t) => (t === "eraser" ? "none" : "eraser"))}
+            aria-label="Eraser"
+          >
+            <Eraser size={20} />
+          </button>
+          {(tool === "highlighter" || tool === "pen") && (
+            <>
+              <span className="msr-palette-div" />
+              {ANNOTATION_COLORS.map((c) => (
+                <button
+                  key={c.value}
+                  className="msr-swatch"
+                  data-on={color === c.value ? "1" : "0"}
+                  style={{ background: c.value }}
+                  onClick={() => setColor(c.value)}
+                  aria-label={c.label}
+                />
+              ))}
+            </>
+          )}
+        </div>
+      )}
 
       {ready && (
         <div className="msr-scrub">

@@ -35,6 +35,8 @@ import {
   ANNOTATION_COLORS,
   DEFAULT_ANNOTATION_COLOR,
   CUE_STROKE,
+  INK_OPACITY,
+  inkPathD,
   type Tool,
   type Annotation,
   type AnnotationRect,
@@ -718,6 +720,7 @@ export function ScriptViewer({
         initialBookmarks={bookmarks}
         initialPageOverrides={pageOverrides}
         startPage={currentPage}
+        allowDrawing={false}
         onExit={() => setReadMode(false)}
         onBookmarksChange={(b) => {
           setBookmarks(b);
@@ -1289,7 +1292,7 @@ export function ScriptViewer({
           {/* Delete button for selected annotation */}
           {selectedId && (() => {
             const ann = pageAnnotations.find((a) => a.id === selectedId);
-            if (!ann) return null;
+            if (!ann || ann.type === "ink") return null;
             const screenLeft = ann.rect.x * 100;
             const screenTop = (ann.rect.y + ann.rect.height) * 100 + 1;
             return (
@@ -1771,6 +1774,26 @@ function drawAnnotationOnCanvas(
   canvasW: number,
   canvasH: number,
 ) {
+  if (ann.type === "ink") {
+    if (ann.points.length === 0) return;
+    ctx.save();
+    ctx.globalAlpha = ann.tool === "highlighter" ? INK_OPACITY.highlighter : 1;
+    ctx.strokeStyle = ann.color;
+    ctx.lineWidth = Math.max(1, ann.size * canvasW);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ann.points.forEach((p, i) => {
+      const x = p.x * canvasW;
+      const y = p.y * canvasH;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+
   const rx = ann.rect.x * canvasW;
   const ry = ann.rect.y * canvasH;
   const rw = ann.rect.width * canvasW;
@@ -1848,6 +1871,26 @@ function AnnotationShape({
   selected: boolean;
   onClick: () => void;
 }) {
+  if (annotation.type === "ink") {
+    return (
+      <path
+        d={inkPathD(annotation.points, canvasW, canvasH)}
+        fill="none"
+        stroke={annotation.color}
+        strokeOpacity={annotation.tool === "highlighter" ? INK_OPACITY.highlighter : 1}
+        strokeWidth={Math.max(1, annotation.size * canvasW)}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{
+          pointerEvents: "none",
+          ...(annotation.tool === "highlighter"
+            ? { mixBlendMode: "multiply" as const }
+            : {}),
+        }}
+      />
+    );
+  }
+
   const rx = annotation.rect.x * canvasW;
   const ry = annotation.rect.y * canvasH;
   const rw = annotation.rect.width * canvasW;
@@ -2153,11 +2196,17 @@ function AnnotationsPanel({
   onEdit: (id: string, changes: Partial<Annotation>) => void;
   readOnly: boolean;
 }) {
+  // Freehand ink is rendered on the page, not listed/edited in this panel.
+  const listable = annotations.filter((a) => a.type !== "ink");
   const byY = (a: Annotation, b: Annotation) =>
-    a.rect.y !== b.rect.y ? a.rect.y - b.rect.y : a.rect.x - b.rect.x;
+    "rect" in a && "rect" in b
+      ? a.rect.y !== b.rect.y
+        ? a.rect.y - b.rect.y
+        : a.rect.x - b.rect.x
+      : 0;
 
-  const cues = annotations.filter((a) => a.type === "cue").sort(byY);
-  const others = annotations.filter((a) => a.type !== "cue").sort(byY);
+  const cues = listable.filter((a) => a.type === "cue").sort(byY);
+  const others = listable.filter((a) => a.type !== "cue").sort(byY);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
@@ -2175,14 +2224,14 @@ function AnnotationsPanel({
         <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-4)" }}>
           Page {currentPage}
         </span>
-        {annotations.length > 0 && (
+        {listable.length > 0 && (
           <span style={{ fontSize: 10.5, fontWeight: 600, padding: "1px 6px", borderRadius: 999, background: "var(--bg-sunken)", color: "var(--ink-3)" }}>
-            {annotations.length}
+            {listable.length}
           </span>
         )}
       </div>
 
-      {annotations.length === 0 && (
+      {listable.length === 0 && (
         <p style={{ fontSize: 12, color: "var(--ink-4)", padding: "8px 2px" }}>
           No annotations on this page.
         </p>

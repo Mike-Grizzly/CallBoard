@@ -7691,6 +7691,7 @@ textarea.cform-field {
   position: absolute;
   top: 6px;
   right: 8px;
+  z-index: 3;
   font-size: 10px;
   font-variant-numeric: tabular-nums;
   color: rgba(20, 14, 8, 0.45);
@@ -7705,6 +7706,79 @@ textarea.cform-field {
   opacity: 0.5;
   border-radius: 2px;
   pointer-events: none;
+}
+
+/* Freehand ink layer over each page (committed strokes + touch capture). */
+.msr-ink {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+}
+
+/* In-progress stroke overlay — drawn imperatively in viewport coordinates. */
+.msr-draft {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Bottom freehand palette */
+.msr-palette {
+  position: absolute;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: oklch(0.23 0.008 60 / 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid oklch(0.32 0.01 60);
+  box-shadow: var(--shadow-3);
+  max-width: calc(100vw - 24px);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.msr-tool {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: oklch(0.92 0.005 75);
+  cursor: pointer;
+}
+.msr-tool[data-on="1"] {
+  background: var(--msr-accent);
+  color: #fff;
+}
+.msr-palette-div {
+  width: 1px;
+  height: 24px;
+  background: oklch(0.36 0.01 60);
+  margin: 0 2px;
+}
+.msr-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.msr-swatch[data-on="1"] {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px oklch(0.23 0.008 60);
 }
 .msr-loading {
   display: flex;

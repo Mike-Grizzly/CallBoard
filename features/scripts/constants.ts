@@ -45,7 +45,38 @@ export type CueAnnotation = {
   leaderSide: "left" | "right";
 };
 
-export type Annotation = HighlightAnnotation | NoteAnnotation | CueAnnotation;
+/** Point on a page, normalized 0–1 against page width/height. */
+export type InkPoint = { x: number; y: number };
+
+/** Freehand stroke (mobile reader). Drawn with a highlighter or pen. */
+export type InkAnnotation = {
+  id: string;
+  page: number;
+  type: "ink";
+  tool: "highlighter" | "pen";
+  color: string;
+  /** Stroke width as a fraction of page width (scales across devices/zoom). */
+  size: number;
+  points: InkPoint[];
+};
+
+// Ink stroke presets (size = fraction of page width).
+export const INK_SIZES = { highlighter: 0.022, pen: 0.005 } as const;
+export const INK_OPACITY = { highlighter: 0.42, pen: 1 } as const;
+
+/** Build an SVG path `d` from normalized points scaled to a w×h box. */
+export function inkPathD(points: InkPoint[], w: number, h: number): string {
+  if (points.length === 0) return "";
+  return points
+    .map((p, i) => `${i ? "L" : "M"}${(p.x * w).toFixed(2)} ${(p.y * h).toFixed(2)}`)
+    .join(" ");
+}
+
+export type Annotation =
+  | HighlightAnnotation
+  | NoteAnnotation
+  | CueAnnotation
+  | InkAnnotation;
 export type PageOverrides = Record<string, string>;
 
 export type Bookmark = {
