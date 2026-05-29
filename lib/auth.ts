@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import {
   profiles,
+  organizations,
   organizationMemberships,
   productionMemberships,
 } from "@/db/schema";
@@ -19,12 +20,42 @@ export type CurrentUser = {
   lastName: string;
   role: Role;
   organizationId: string;
+  organizationName: string;
+  organizationLogoUrl: string | null;
 };
 
 function fallbackOrgName(firstName: string, lastName: string, email: string) {
   const personal = [firstName, lastName].filter(Boolean).join(" ").trim();
   const label = personal || email.split("@")[0] || "New";
   return `${label}'s organization`;
+}
+
+async function resolveActiveMembership(
+  userId: string,
+  selectedOrgId: string | null,
+) {
+  const memberships = await db
+    .select({
+      id: organizationMemberships.id,
+      organizationId: organizationMemberships.organizationId,
+      role: organizationMemberships.role,
+      organizationName: organizations.name,
+      organizationLogoUrl: organizations.logoUrl,
+    })
+    .from(organizationMemberships)
+    .innerJoin(
+      organizations,
+      eq(organizations.id, organizationMemberships.organizationId),
+    )
+    .where(eq(organizationMemberships.userId, userId));
+
+  if (memberships.length === 0) return null;
+
+  const selected =
+    selectedOrgId &&
+    memberships.find((m) => m.organizationId === selectedOrgId);
+
+  return selected ?? memberships[0];
 }
 
 /**
@@ -34,8 +65,11 @@ function fallbackOrgName(firstName: string, lastName: string, email: string) {
  * `requireCurrentUser()`, and without dedup this whole chain — an auth
  * network call plus several DB queries — would run twice per navigation.
  *
- * Multi-org: a user's org is determined by their `organization_memberships`
- * row. Invited users get a profile + membership at invite time (see
+ * Multi-org: a user's "current org" is `profiles.selected_organization_id`
+ * if it points at one of their active memberships; otherwise it falls back
+ * to their first membership (so a user can be in multiple orgs and switch
+ * between them, but a stale or missing selection is self-healing). Invited
+ * users get a profile + membership at invite time (see
  * `features/members/actions.ts`). Self-signup lands here without either,
  * and we create a fresh org with this user as admin.
  */
@@ -70,6 +104,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       email,
       firstName,
       lastName,
+      selectedOrganizationId: org.id,
     });
 
     await db.insert(organizationMemberships).values({
@@ -85,6 +120,8 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       lastName,
       role: "admin",
       organizationId: org.id,
+      organizationName: org.name,
+      organizationLogoUrl: org.logoUrl ?? null,
     };
   }
 
@@ -97,13 +134,12 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       .where(eq(profiles.id, authUser.id));
   }
 
-  const membership = await db
-    .select()
-    .from(organizationMemberships)
-    .where(eq(organizationMemberships.userId, authUser.id))
-    .limit(1);
+  const membership = await resolveActiveMembership(
+    authUser.id,
+    existing[0].selectedOrganizationId,
+  );
 
-  if (membership.length === 0) {
+  if (!membership) {
     // Profile exists but no org membership — shouldn't normally happen
     // (invites create both atomically). Recover by giving them a fresh org
     // as admin so they aren't stuck in a broken state.
@@ -121,6 +157,11 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       role: "admin",
     });
 
+    await db
+      .update(profiles)
+      .set({ selectedOrganizationId: org.id })
+      .where(eq(profiles.id, authUser.id));
+
     return {
       id: existing[0].id,
       email: existing[0].email,
@@ -128,7 +169,20 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       lastName: existing[0].lastName,
       role: "admin",
       organizationId: org.id,
+      organizationName: org.name,
+      organizationLogoUrl: org.logoUrl ?? null,
     };
+  }
+
+  // If the stored selection didn't resolve (org deleted, user removed from
+  // it, or never set), persist the fallback we just picked so future
+  // requests are deterministic and the column accurately reflects what the
+  // user is looking at.
+  if (existing[0].selectedOrganizationId !== membership.organizationId) {
+    await db
+      .update(profiles)
+      .set({ selectedOrganizationId: membership.organizationId })
+      .where(eq(profiles.id, authUser.id));
   }
 
   return {
@@ -136,8 +190,10 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     email: existing[0].email,
     firstName: existing[0].firstName,
     lastName: existing[0].lastName,
-    role: membership[0].role as Role,
-    organizationId: membership[0].organizationId,
+    role: membership.role as Role,
+    organizationId: membership.organizationId,
+    organizationName: membership.organizationName,
+    organizationLogoUrl: membership.organizationLogoUrl ?? null,
   };
 });
 

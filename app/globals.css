@@ -246,6 +246,122 @@ select {
   font-weight: 500;
 }
 
+/* Workspace badge — current-org label + switcher menu, just below the
+   brand. Always visible; the menu just says "No other workspaces yet"
+   when the user only belongs to one org. */
+.workspace-badge {
+  position: relative;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.workspace-badge-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-s);
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.workspace-badge-button:hover:not(:disabled) {
+  background: var(--bg-elev);
+  color: var(--ink);
+  border-color: var(--border-strong, var(--border));
+}
+.workspace-badge-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.workspace-badge-logo {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.workspace-badge-button .truncate {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-badge-menu {
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 12px;
+  right: 12px;
+  z-index: 30;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-2, var(--shadow-1));
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.workspace-badge-menu-head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-4);
+  padding: 6px 8px 4px;
+}
+.workspace-badge-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--radius-s);
+  background: none;
+  border: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.workspace-badge-menu-item:hover:not(:disabled) {
+  background: var(--bg-muted);
+  color: var(--ink);
+}
+.workspace-badge-menu-item:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.workspace-badge-menu-empty {
+  font-size: 12.5px;
+  color: var(--ink-4);
+  padding: 6px 8px 8px;
+}
+.workspace-badge-menu-error {
+  font-size: 12px;
+  color: var(--c-clay);
+  padding: 6px 8px;
+}
+.workspace-badge-menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px -2px;
+}
+.workspace-badge-menu-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 4px 4px;
+}
+.workspace-badge-menu-form .field {
+  width: 100%;
+  font-size: 12.5px;
+  padding: 6px 8px;
+}
+
 .rail-section {
   padding: 14px 12px 6px;
 }
@@ -1579,6 +1695,36 @@ textarea.field {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
+}
+/* Wraps the card so the archive button can overlay it without nesting
+   a button inside the <Link> (which breaks click handling). */
+.prod-card-wrap {
+  position: relative;
+}
+.prod-card-wrap .prod-card-archive {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--ink-3);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s, border-color 0.12s;
+}
+.prod-card-wrap:hover .prod-card-archive,
+.prod-card-wrap .prod-card-archive:focus-visible {
+  opacity: 1;
+}
+.prod-card-wrap .prod-card-archive:hover {
+  color: var(--c-clay);
+  border-color: var(--c-clay);
 }
 .prod-card {
   position: relative;

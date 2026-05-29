@@ -2,11 +2,14 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { getUserProductions } from "@/features/productions/queries";
 import { resolveProductionColor } from "@/features/productions/constants";
+import { getUserMemberships } from "@/features/workspace/queries";
+import { getSignedLogoUrl } from "@/lib/workspace-logo";
 import { can } from "@/lib/permissions";
 import { Icon } from "@/components/ui/icon";
 import { NAV_ITEMS } from "./nav-items";
 import { RailLink } from "./rail-link";
 import { LogoutButton } from "./logout-button";
+import { WorkspaceRailBadge } from "./workspace-rail-badge";
 
 function initialsFor(firstName: string, lastName: string, email: string) {
   const a = (firstName || "").trim()[0];
@@ -19,7 +22,13 @@ export async function Rail() {
   const user = await getCurrentUser();
   const role = user?.role ?? "cast";
 
-  const productions = user ? await getUserProductions(user.id) : [];
+  const [productions, memberships, logoUrl] = user
+    ? await Promise.all([
+        getUserProductions(user.id),
+        getUserMemberships(user.id),
+        getSignedLogoUrl(user.organizationLogoUrl),
+      ])
+    : [[], [], null];
 
   // Workspace items follow NAV_ITEMS order, gated by capability.
   // We exclude "Productions" since the productions section below covers it.
@@ -37,6 +46,15 @@ export async function Rail() {
           Pro<em>scene</em>
         </div>
       </Link>
+
+      {user && (
+        <WorkspaceRailBadge
+          currentOrgId={user.organizationId}
+          currentOrgName={user.organizationName}
+          currentOrgLogoUrl={logoUrl}
+          memberships={memberships}
+        />
+      )}
 
       <div className="rail-section">
         <div className="rail-section-h">

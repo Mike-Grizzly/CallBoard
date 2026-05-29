@@ -1,14 +1,38 @@
 import { cache } from "react";
 import { db } from "@/db";
 import { productions, productionMemberships } from "@/db/schema";
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, desc, isNull, isNotNull } from "drizzle-orm";
 
+/**
+ * Active productions in an org (archived excluded). For the "Archived"
+ * tab on /productions, call `getArchivedProductionsByOrganization`.
+ */
 export async function getProductionsByOrganization(organizationId: string) {
   return db
     .select()
     .from(productions)
-    .where(eq(productions.organizationId, organizationId))
+    .where(
+      and(
+        eq(productions.organizationId, organizationId),
+        isNull(productions.archivedAt),
+      ),
+    )
     .orderBy(desc(productions.createdAt));
+}
+
+export async function getArchivedProductionsByOrganization(
+  organizationId: string,
+) {
+  return db
+    .select()
+    .from(productions)
+    .where(
+      and(
+        eq(productions.organizationId, organizationId),
+        isNotNull(productions.archivedAt),
+      ),
+    )
+    .orderBy(desc(productions.archivedAt));
 }
 
 /**
@@ -50,7 +74,12 @@ export async function getUserProductions(userId: string) {
       productions,
       eq(productionMemberships.productionId, productions.id),
     )
-    .where(eq(productionMemberships.userId, userId))
+    .where(
+      and(
+        eq(productionMemberships.userId, userId),
+        isNull(productions.archivedAt),
+      ),
+    )
     .orderBy(desc(productions.createdAt));
 
   // Deduplicate by production id — keep the first (highest-privilege) membership

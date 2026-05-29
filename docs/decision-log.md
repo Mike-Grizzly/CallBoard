@@ -1011,3 +1011,70 @@ be renamed via Supabase or a future Settings UI).
   walled-off workspace.
 - Multi-org marker removed from `current-status.md` "Not
   implemented"; new "Multi-org refactor (2026-05-28)" section added.
+
+---
+
+## 2026-05-29 — Settings overhaul: account, workspace, org switcher
+
+**Decision:** Shipped the deferred items from the 2026-05-28 multi-org
+entry (rename workspace, org switcher) plus a real account-settings
+page and a last-admin safeguard on the members page.
+
+**Implementation:**
+
+1. **Schema:** added `profiles.selected_organization_id` (uuid,
+   nullable, FK to `organizations.id` on delete set null).
+   `getCurrentUser` now reads it to resolve which org the user is
+   viewing, with self-healing fallback to the user's first membership
+   when the selection is stale (org deleted, user removed from the
+   selected org, never set). `CurrentUser` carries `organizationName`
+   so the rail / settings header don't need an extra query.
+2. **`/settings/account`:** every user can edit first/last name,
+   phone, pronouns; change password (verify current via
+   `signInWithPassword`, then `updateUser({ password })`). Email
+   stays read-only — changing it requires a re-verification flow that
+   we're deferring.
+3. **`/settings/workspace` (admin only):** rename the current
+   workspace (60-char cap; slug stays stable since slugs aren't
+   user-facing). Shows member + admin counts. Links to members for
+   role changes.
+4. **Org switcher:** `WorkspaceRailBadge` always shows the current
+   workspace name just below the rail brand. Click opens a menu with
+   the user's other orgs, or "No other workspaces yet" when they only
+   belong to one. Same switcher inline on the settings landing.
+   `switchOrganization` server action verifies the caller is a member
+   of the target org, writes `selected_organization_id`, and
+   revalidates the layout; client side calls `router.refresh()`.
+5. **Members — last-admin safeguard:** refuse to demote OR remove
+   the only remaining admin. Defense in depth on top of the existing
+   "can't change/remove yourself" rules. Surfaces a clear error
+   ("Promote another admin first — this workspace needs at least
+   one.") so the user knows what to do.
+6. **Settings landing** reframed around the workspace: org name as
+   the headline, signed-in user + role below, switcher inline, then
+   destinations (Account, Workspace, Members, Send feedback).
+
+**Product calls made on the way:**
+- "Always show the current workspace label" wins over "hide the
+  switcher until needed" — even when the user has one org, the badge
+  shows the name and clicking it explains they can join more via
+  invitation. Discoverability over chrome.
+- "Last admin" safeguard ships in this round, not later — cheap to
+  add now, prevents a workspace from getting into a zero-admin state
+  that would lock everyone out of settings.
+- Email change is **out of scope** this round (needs a re-verification
+  flow). Profile form labels the field read-only with a hint.
+- Delete workspace / delete account are **out of scope** — easy to
+  do wrong; will revisit when actually requested.
+
+**Explicitly NOT shipped:**
+- Email change with re-verification.
+- Delete workspace / delete account / transfer-workspace flows.
+- Account-level avatar upload.
+- Workspace logo / branding fields.
+
+**Impact:**
+- Multi-org is now fully usable end-to-end through the UI (no Supabase
+  Studio required to rename, switch, or recover from stale selection).
+- Users with multiple memberships get a real switcher.
+- Workspaces are protected from accidental zero-admin states.
