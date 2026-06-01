@@ -2,10 +2,14 @@ import { Icon } from "@/components/ui/icon";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getAnnouncementsForUser } from "@/features/announcements/queries";
+import {
+  getAnnouncementsForUser,
+  getAckInfoForAnnouncements,
+} from "@/features/announcements/queries";
 import { OrgAnnouncementForm } from "./announcement-form";
 import { AnnouncementDeleteButton } from "./announcement-delete-button";
 import { AnnouncementPinButton } from "./announcement-pin-button";
+import { AnnouncementAckButton } from "@/app/(app)/(default)/dashboard/announcement-ack-button";
 
 const AVATAR_PALETTE = ["clay", "sage", "dusk", "amber", "plum", "sand"] as const;
 
@@ -39,6 +43,11 @@ export default async function AnnouncementsPage() {
   const canCreate = can(user.role, "announcements:create");
 
   const items = await getAnnouncementsForUser(user.id, user.organizationId, canManage);
+  const ackInfo = await getAckInfoForAnnouncements(
+    items.map((i) => i.id),
+    user.id,
+    user.organizationId,
+  );
 
   return (
     <div
@@ -161,6 +170,14 @@ export default async function AnnouncementsPage() {
                     <div className="ann-body">
                       <RichTextDisplay content={item.body} />
                     </div>
+                  )}
+                  {ackInfo[item.id] && (
+                    <AnnouncementAckButton
+                      announcementId={item.id}
+                      acked={ackInfo[item.id].mine}
+                      count={ackInfo[item.id].acked}
+                      total={ackInfo[item.id].total}
+                    />
                   )}
                 </div>
               </article>

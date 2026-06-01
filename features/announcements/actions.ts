@@ -1,8 +1,8 @@
 "use server";
 
 import { db } from "@/db";
-import { announcements } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { announcements, announcementAcks } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -126,6 +126,49 @@ export async function togglePin(
     })
     .where(eq(announcements.id, announcementId));
 
+  revalidatePath("/announcements");
+  revalidatePath("/productions", "layout");
+
+  return { success: true };
+}
+
+/**
+ * Toggle the current user's acknowledgement of an announcement. Idempotent
+ * per (announcement, user): acknowledging again clears it, so the button
+ * doubles as "Acknowledged ✓ — tap to undo". Any signed-in member who can
+ * see the announcement may acknowledge.
+ */
+export async function acknowledgeAnnouncement(
+  announcementId: string,
+): Promise<AnnouncementResult> {
+  const user = await requireCurrentUser();
+
+  if (!announcementId) {
+    return { error: "Missing announcement ID." };
+  }
+
+  const existing = await db
+    .select({ id: announcementAcks.id })
+    .from(announcementAcks)
+    .where(
+      and(
+        eq(announcementAcks.announcementId, announcementId),
+        eq(announcementAcks.userId, user.id),
+      ),
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db
+      .delete(announcementAcks)
+      .where(eq(announcementAcks.id, existing[0].id));
+  } else {
+    await db
+      .insert(announcementAcks)
+      .values({ announcementId, userId: user.id });
+  }
+
+  revalidatePath("/dashboard");
   revalidatePath("/announcements");
   revalidatePath("/productions", "layout");
 

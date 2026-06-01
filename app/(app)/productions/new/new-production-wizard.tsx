@@ -197,6 +197,31 @@ export default function NewProductionWizard({
       <div className="body">
         <NPRail stepIdx={stepIdx} setStepIdx={setStepIdx} />
         <div className="main">
+          {/* Phone-only step header + segmented progress (the desktop rail
+              is hidden at ≤720px). */}
+          <div className="np-mobile-bar">
+            <div className="np-mb-head">
+              <div className="np-mb-titles">
+                <span className="np-mb-title">New production</span>
+                <span className="np-mb-step">{step.label}</span>
+              </div>
+              <span className="np-mb-count mono">
+                <b>{step.no}</b>/06
+              </span>
+            </div>
+            <div className="np-mb-segs">
+              {STEPS.map((s, i) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  className="np-mb-seg"
+                  data-state={i < stepIdx ? "done" : i === stepIdx ? "active" : "todo"}
+                  onClick={() => setStepIdx(i)}
+                  aria-label={s.label}
+                />
+              ))}
+            </div>
+          </div>
           <div key={step.id} className="anim-in">
             <div className="crumb">Step {step.no} of 06</div>
             {step.id === "basics" && <StepBasics data={data} set={set} />}

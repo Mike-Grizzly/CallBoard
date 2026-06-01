@@ -71,8 +71,10 @@ export async function getUserProductions(userId: string) {
       slug: productions.slug,
       status: productions.status,
       color: productions.color,
+      venue: productions.venue,
       openingDate: productions.openingDate,
       closingDate: productions.closingDate,
+      firstRehearsalDate: productions.firstRehearsalDate,
       role: productionMemberships.role,
     })
     .from(productionMemberships)

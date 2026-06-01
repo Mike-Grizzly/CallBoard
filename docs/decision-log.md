@@ -1262,3 +1262,26 @@ don't run an extra org query.
 - Multi-org is now genuinely usable from inside the app — no
   Supabase Studio required for anything in the workspace lifecycle.
 - PR #20 merged to `main` 2026-05-29 (commit 2792a4b).
+
+## 2026-05-29 — Dashboard redesign builds RSVP + announcement acks; desktop-only re-skin
+
+**Decision:** Adopt the uploaded dashboard draft as the **desktop** dashboard
+and build the two net-new features it implied — **call confirmations (member
+self-confirm RSVP)** and **announcement acknowledgements (Acknowledge
+button)** — as real vertical slices with their own tables
+(`call_confirmations`, `announcement_acks`). The phone dashboard is left as-is
+behind a CSS gate rather than re-skinned in this pass.
+
+**Reason:** The draft looked "cosmetic" but several populated tiles (confirmed
+roster, ack progress) had no backing data. The user chose to build the
+features rather than degrade/stub them. Most other draft elements (countdown,
+Today timeline, week-to-opening, principal avatars, per-show unread) were
+derivable from existing schema, so only the two RSVP/ack tables were added.
+Keeping the proven phone experience avoided a risky full mobile rewrite (no
+mobile-dashboard source was provided in the upload).
+
+**Impact:** Two additive tables (RLS-enabled, app-enforced uniqueness, per the
+composite-unique-constraint known issue). RSVP/ack interactions are idempotent
+toggles. The desktop dashboard diverges visually from phone; both read the
+same data. Follow-ups (event-drawer RSVP, phone bento parity) tracked in
+open-questions.

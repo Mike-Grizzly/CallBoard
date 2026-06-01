@@ -219,3 +219,41 @@ default in place today.
   "invite + make them admin and step down" is worth shipping.
 - **Account-level avatar upload.** Workspace logo shipped; personal
   avatars deferred.
+
+## Dashboard command center / RSVP / acks (2026-05-29)
+
+- **RSVP confirm only on the dashboard focal call.** `confirmCall` works for
+  any member of any call's production, but the only UI to call it is the
+  dashboard focal-call panel (the single next call). Members can't yet RSVP to
+  a *specific* non-focal call. Natural home: the calendar `EventDrawer`
+  (`app/(app)/calendar/event-drawer.tsx`) — would need confirm data threaded
+  through `CalEvent`/`callToEvent`. Deferred to keep the calendar pipeline
+  untouched this pass.
+- **Desktop bento pinned has no unpin.** The desktop bento "Pinned" card
+  renders plain links; unpin is only on the phone `PinnedSection`. Add an
+  unpin affordance to the bento if desktop users want it.
+- **Phone dashboard not redesigned.** The command-center look is desktop-only;
+  phones still get MobileTodayHero + the legacy stacked feeds. The uploaded
+  Mobile_Dashboard.html referenced `mobile-dashboard.jsx`/`mobile-shell.jsx`
+  which were not included, so the phone re-skin is deferred until that source
+  is available. The Acknowledge button *is* reachable on phone via
+  `/announcements`.
+- **Countdown time format assumption.** `FocalCall`'s countdown builds the
+  target as `${callDate}T${callTime}:00` (local), assuming `calls.callTime` is
+  24h `HH:MM`. Verify against real call data; non-24h or null times fall back
+  to "—".
+- **Not verified live.** `tsc` + `eslint` pass, but there's no `DATABASE_URL`
+  here so `next build` page-data collection and real-data rendering weren't
+  exercised.
+
+## Mobile dashboard (2026-05-29)
+
+- **`mobile-today-hero.tsx` removed (RESOLVED 2026-05-29).** The phone
+  dashboard was replaced by `mobile-dashboard.tsx`, orphaning
+  `MobileTodayHero`. The file was deleted after confirming nothing else
+  imported it (`tsc` + `eslint` clean).
+- **Mobile dashboard appbar omitted.** The draft had a top app bar with
+  Search + Notifications buttons; both were demo-only toasts with no real
+  destinations in the app (no global search; the notifications inbox is
+  deferred), so the appbar was dropped and the screen starts at the greeting.
+  Revisit if/when those destinations exist.

@@ -862,3 +862,88 @@ overhaul before PR #20 merged:
 - Rich text HTML rendering should be sanitized before accepting untrusted content
 - Membership uniqueness should be enforced at the database level
 - File upload security (type validation, malware scanning) should be addressed before public launch
+
+## Dashboard command center + RSVP + announcement acks (2026-05-29)
+
+Branch `claude/bold-babbage-qxwCO`. Ported the uploaded dashboard draft and
+mobile new-production builder into the app, and built the two genuinely-new
+features the draft implied (the rest was derivable from existing data).
+
+**New features (schema applied to the `CallBoard` Supabase project, RLS
+enabled to match the rest of the schema):**
+- **Call confirmations (RSVP).** `call_confirmations` (one row per
+  call+user, `status` defaults `confirmed`). `getCallConfirmSummary`
+  (features/calls/queries) returns called total (production members),
+  confirmed count + avatars, and the caller's status. `confirmCall(callId)`
+  (features/calls/actions) is an idempotent member self-confirm toggle. The
+  RSVP UI lives on the dashboard focal-call panel (member self-confirm).
+- **Announcement acknowledgements.** `announcement_acks` (one row per
+  announcement+user). `getAckInfoForAnnouncements` returns acked count,
+  audience size (org members for org-wide, production members for scoped),
+  and the caller's ack. `acknowledgeAnnouncement(id)` is an idempotent
+  toggle. The Acknowledge button + progress shows in the dashboard bento and
+  on the global `/announcements` cards.
+
+**Desktop dashboard redesign (>720px).** `app/(app)/(default)/dashboard/page.tsx`
+now renders a command center inside `.dd-wrap` (gated by the existing
+`.dashboard-desktop-only`): greeting band + status chips, a hero row (focal
+next-call panel with a live countdown + RSVP confirm, and a Today timeline
+built from today's calls with a NOW marker), show tiles with
+week-toward-opening progress + principal avatars + per-show unread badges +
+next call, and a 3-up bento (mentions with mark-read preserved /
+announcements with Acknowledge / pinned). All `.dd-*` styles were added to
+`globals.css`, reusing existing tokens. New client components:
+`focal-call.tsx`, `bento-mentions.tsx`, `announcement-ack-button.tsx`.
+Derivable queries added with no schema beyond the two tables above:
+`getCastForProductions` (members), and `getUserProductions` now also returns
+`venue` + `firstRehearsalDate`.
+
+**Phone dashboard unchanged.** The existing phone experience (MobileTodayHero
++ announcements/productions/mentions/pinned) is preserved behind a new
+`.dashboard-phone-only` gate; the desktop command center is hidden at ≤720px.
+
+**Mobile new-production wizard.** Added a ≤720px layout to the existing
+`.np-root` wizard: the desktop step rail is replaced by a compact step header
++ segmented progress bar (new `.np-mobile-bar` element, hidden on desktop),
+the form is one-step-per-screen, and the action bar sticks to the bottom with
+a full-width Continue/Launch. Pure layout — steps, fields, and `createProductionFull`
+wiring are unchanged.
+
+**Verified:** `tsc --noEmit` passes; `eslint` clean on all changed files.
+**Not verified:** live behavior — no `DATABASE_URL` in this environment, so
+`next build` can't collect page data and the UI wasn't exercised against real
+data. Countdown assumes `calls.callTime` is stored as 24h `HH:MM`.
+
+## Mobile dashboard command center (2026-05-29)
+
+Branch `claude/bold-babbage-qxwCO`. Ported the uploaded `mobile-dashboard.jsx`
+/ `mobile-shell.jsx` design into the app, replacing the phone dashboard.
+
+- New client component `app/(app)/(default)/dashboard/mobile-dashboard.tsx`
+  renders the phone command center inside the existing `.dashboard-phone-only`
+  gate: greeting + status chips, focal next-call card (live countdown + RSVP
+  confirm via `confirmCall`), Today timeline (today's calls + NOW marker),
+  a horizontal **shows carousel** (week-to-opening progress, principal
+  avatars, unread badge, next call), mentions (mark-read on tap), announcements
+  (reuses `AnnouncementAckButton`), and pinned. Fed entirely by data the
+  dashboard page already fetches — no new queries.
+- `dashboard/page.tsx` now builds small serialized arrays (`mdTimeline`,
+  `mdShows`, `mdAnnouncements`, `mdPins`) and renders `<MobileDashboard>` for
+  phone; the desktop command center is unchanged. The previous phone layout
+  (`MobileTodayHero` + the legacy stacked feeds) is no longer rendered.
+- The draft's standalone chrome (its own appbar/bottom-tab-bar/toast and the
+  `.mob-root` token block) was intentionally omitted — the app already
+  provides the bottom tab bar, safe-area pads, and design tokens. All styles
+  added to `globals.css` scoped under `.md-root` (renders only on phone), with
+  a small subset of the mobile-shell primitives (`.mob-card`, `.sec-h*`,
+  `.mbtn`, `.tap`) included under the same scope.
+
+**Verified:** `tsc --noEmit` + `eslint` clean. **Not verified:** live device
+rendering (no `DATABASE_URL` here).
+
+### Follow-up (2026-05-29)
+
+The desktop + mobile dashboard command center, RSVP, and announcement acks
+were confirmed working by the user. The orphaned `mobile-today-hero.tsx` was
+deleted (nothing imported it; `tsc` + `eslint` clean). Branch
+`claude/bold-babbage-qxwCO` merged to `main`.

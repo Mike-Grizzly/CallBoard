@@ -1,6 +1,12 @@
 import { db } from "@/db";
-import { calls, productions, productionMemberships } from "@/db/schema";
-import { and, eq, gte, lte, asc, inArray } from "drizzle-orm";
+import {
+  calls,
+  productions,
+  productionMemberships,
+  callConfirmations,
+  profiles,
+} from "@/db/schema";
+import { and, eq, gte, lte, asc, inArray, count } from "drizzle-orm";
 
 function nowParts() {
   const now = new Date();
@@ -192,4 +198,89 @@ export async function getNextCallsForProductions(
   }
 
   return map;
+}
+
+export type CallConfirmAvatar = {
+  userId: string;
+  firstName: string | null;
+  lastName: string | null;
+};
+
+export type CallConfirmSummary = {
+  /** Total people on the production (the pool that can be called). */
+  called: number;
+  /** How many have confirmed. */
+  confirmed: number;
+  /** Confirmed members, for the avatar stack (capped by the caller). */
+  confirmedMembers: CallConfirmAvatar[];
+  /** Whether the current user is on this production (can respond). */
+  isMember: boolean;
+  /** The current user's response, if any. */
+  myStatus: string | null;
+};
+
+/**
+ * RSVP rollup for a single call: how many of the production's members have
+ * confirmed, the confirmed members (for avatars), and the current user's own
+ * status. Drives the dashboard focal-call "N of M confirmed" panel.
+ */
+export async function getCallConfirmSummary(
+  callId: string,
+  productionId: string,
+  userId: string,
+): Promise<CallConfirmSummary> {
+  const [[calledRow], confirmed, [mine], [membership]] = await Promise.all([
+    db
+      .select({ value: count() })
+      .from(productionMemberships)
+      .where(eq(productionMemberships.productionId, productionId)),
+    db
+      .select({
+        userId: callConfirmations.userId,
+        status: callConfirmations.status,
+        firstName: profiles.firstName,
+        lastName: profiles.lastName,
+      })
+      .from(callConfirmations)
+      .innerJoin(profiles, eq(callConfirmations.userId, profiles.id))
+      .where(
+        and(
+          eq(callConfirmations.callId, callId),
+          eq(callConfirmations.status, "confirmed"),
+        ),
+      )
+      .orderBy(asc(callConfirmations.createdAt)),
+    db
+      .select({ status: callConfirmations.status })
+      .from(callConfirmations)
+      .where(
+        and(
+          eq(callConfirmations.callId, callId),
+          eq(callConfirmations.userId, userId),
+        ),
+      )
+      .limit(1),
+    db
+      .select({ id: productionMemberships.id })
+      .from(productionMemberships)
+      .where(
+        and(
+          eq(productionMemberships.productionId, productionId),
+          eq(productionMemberships.userId, userId),
+        ),
+      )
+      .limit(1),
+  ]);
+
+  return {
+    called: calledRow?.value ?? 0,
+    confirmed: confirmed.length,
+    confirmedMembers: confirmed.map((c) => ({
+      userId: c.userId,
+      firstName: c.firstName,
+      lastName: c.lastName,
+    })),
+    isMember: !!membership,
+    myStatus: mine?.status ?? null,
+  };
 }

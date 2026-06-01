@@ -5,9 +5,52 @@ import {
   productionMemberships,
   productions,
 } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { resolveProductionColorToken } from "@/features/productions/constants";
 import type { Role } from "@/types/roles";
+
+export type ProductionPrincipal = {
+  productionId: string;
+  userId: string;
+  firstName: string | null;
+  lastName: string | null;
+  characterName: string | null;
+};
+
+/**
+ * Cast members across several productions in one query, for the dashboard
+ * show-tile avatar stacks. Grouped into a per-production map in memory.
+ */
+export async function getCastForProductions(
+  productionIds: string[],
+): Promise<Record<string, ProductionPrincipal[]>> {
+  const map: Record<string, ProductionPrincipal[]> = Object.fromEntries(
+    productionIds.map((id) => [id, []]),
+  );
+  if (productionIds.length === 0) return map;
+
+  const rows = await db
+    .select({
+      productionId: productionMemberships.productionId,
+      userId: profiles.id,
+      firstName: profiles.firstName,
+      lastName: profiles.lastName,
+      characterName: productionMemberships.characterName,
+    })
+    .from(productionMemberships)
+    .innerJoin(profiles, eq(productionMemberships.userId, profiles.id))
+    .where(
+      and(
+        inArray(productionMemberships.productionId, productionIds),
+        eq(productionMemberships.role, "cast"),
+      ),
+    );
+
+  for (const r of rows) {
+    (map[r.productionId] ??= []).push(r);
+  }
+  return map;
+}
 
 export async function getOrganizationMembers(organizationId: string) {
   return db
