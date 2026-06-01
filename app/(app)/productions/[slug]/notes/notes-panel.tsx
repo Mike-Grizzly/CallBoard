@@ -17,21 +17,24 @@ import {
   Bold,
   Italic,
   Underline as UnderlineIcon,
+  Strikethrough,
+  Highlighter,
   List,
   ListOrdered,
   Heading2,
-  Undo,
-  Redo,
   ChevronLeft,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
+import Placeholder from "@tiptap/extension-placeholder";
 import Mention from "@tiptap/extension-mention";
+import { SlashCommand } from "@/components/ui/slash-command";
 import type { MentionMember } from "@/components/ui/mention-textarea";
 import { buildMentionSuggestion } from "@/components/ui/mention-suggestion";
 import type { NoteWithAuthor, NoteTagRow } from "@/features/notes/queries";
@@ -78,94 +81,73 @@ function ToolbarBtn({
   );
 }
 
-function EditorToolbar({
-  editor,
-}: {
-  editor: ReturnType<typeof useEditor>;
-}) {
+// Shared formatting buttons — rendered inside the selection BubbleMenu on
+// desktop and the keyboard accessory bar on mobile.
+function FormatButtons({ editor }: { editor: ReturnType<typeof useEditor> }) {
   if (!editor) return null;
+  const div = (
+    <div style={{ width: 1, height: 16, background: "var(--border)", margin: "0 3px" }} />
+  );
   return (
-    <div
-      className="row"
-      style={{
-        flexWrap: "wrap",
-        gap: 2,
-        borderBottom: "1px solid var(--border)",
-        padding: "6px 10px",
-      }}
-    >
+    <>
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleBold().run()}
         active={editor.isActive("bold")}
         title="Bold"
       >
-        <Bold style={{ width: 13, height: 13 }} />
+        <Bold style={{ width: 14, height: 14 }} />
       </ToolbarBtn>
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleItalic().run()}
         active={editor.isActive("italic")}
         title="Italic"
       >
-        <Italic style={{ width: 13, height: 13 }} />
+        <Italic style={{ width: 14, height: 14 }} />
       </ToolbarBtn>
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleUnderline().run()}
         active={editor.isActive("underline")}
         title="Underline"
       >
-        <UnderlineIcon style={{ width: 13, height: 13 }} />
+        <UnderlineIcon style={{ width: 14, height: 14 }} />
       </ToolbarBtn>
-      <div style={{ width: 1, height: 16, background: "var(--border)", margin: "0 4px" }} />
+      <ToolbarBtn
+        onClick={() => editor.chain().focus().toggleStrike().run()}
+        active={editor.isActive("strike")}
+        title="Strikethrough"
+      >
+        <Strikethrough style={{ width: 14, height: 14 }} />
+      </ToolbarBtn>
+      <ToolbarBtn
+        onClick={() => editor.chain().focus().toggleHighlight().run()}
+        active={editor.isActive("highlight")}
+        title="Highlight"
+      >
+        <Highlighter style={{ width: 14, height: 14 }} />
+      </ToolbarBtn>
+      {div}
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
         active={editor.isActive("heading", { level: 2 })}
         title="Heading"
       >
-        <Heading2 style={{ width: 13, height: 13 }} />
+        <Heading2 style={{ width: 14, height: 14 }} />
       </ToolbarBtn>
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleBulletList().run()}
         active={editor.isActive("bulletList")}
         title="Bullet list"
       >
-        <List style={{ width: 13, height: 13 }} />
+        <List style={{ width: 14, height: 14 }} />
       </ToolbarBtn>
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
         active={editor.isActive("orderedList")}
         title="Numbered list"
       >
-        <ListOrdered style={{ width: 13, height: 13 }} />
+        <ListOrdered style={{ width: 14, height: 14 }} />
       </ToolbarBtn>
-      <div style={{ width: 1, height: 16, background: "var(--border)", margin: "0 4px" }} />
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().setTextAlign("left").run()}
-        active={editor.isActive({ textAlign: "left" })}
-        title="Align left"
-      >
-        <span style={{ fontSize: 11, fontWeight: 600 }}>L</span>
-      </ToolbarBtn>
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().setTextAlign("center").run()}
-        active={editor.isActive({ textAlign: "center" })}
-        title="Align center"
-      >
-        <span style={{ fontSize: 11, fontWeight: 600 }}>C</span>
-      </ToolbarBtn>
-      <div style={{ width: 1, height: 16, background: "var(--border)", margin: "0 4px" }} />
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().undo().run()}
-        title="Undo"
-      >
-        <Undo style={{ width: 13, height: 13 }} />
-      </ToolbarBtn>
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().redo().run()}
-        title="Redo"
-      >
-        <Redo style={{ width: 13, height: 13 }} />
-      </ToolbarBtn>
-    </div>
+    </>
   );
 }
 
@@ -228,6 +210,10 @@ function NoteEditor({
       Color,
       Highlight,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
+      Placeholder.configure({
+        placeholder: "Write something, or press '/' for blocks…",
+      }),
+      SlashCommand,
       ...(members && members.length > 0
         ? [
             Mention.configure({
@@ -243,8 +229,8 @@ function NoteEditor({
     },
     editorProps: {
       attributes: {
-        class: "prose prose-sm max-w-none px-4 py-3 focus:outline-none",
-        style: "min-height:200px",
+        class: "prose max-w-none note-prose focus:outline-none",
+        style: "min-height:320px",
       },
     },
   });
@@ -524,59 +510,45 @@ function NoteEditor({
         </div>
       </div>
 
-      {/* Title */}
-      <div style={{ padding: "22px 28px 0" }}>
-        {canEdit ? (
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => handleTitleChange(e.target.value)}
-            placeholder="Untitled"
-            style={{
-              border: 0,
-              padding: 0,
-              fontSize: 24,
-              fontWeight: 600,
-              fontFamily: "var(--font-display)",
-              letterSpacing: "-0.012em",
-              background: "transparent",
-              width: "100%",
-              outline: "none",
-              color: isCompleted ? "var(--ink-4)" : "var(--ink)",
-              textDecoration: isCompleted ? "line-through" : "none",
-            }}
-          />
-        ) : (
-          <h2
-            style={{
-              fontSize: 24,
-              fontWeight: 600,
-              fontFamily: "var(--font-display)",
-              letterSpacing: "-0.012em",
-              margin: 0,
-              color: isCompleted ? "var(--ink-4)" : "var(--ink)",
-              textDecoration: isCompleted ? "line-through" : "none",
-            }}
-          >
-            {title || "Untitled"}
-          </h2>
-        )}
-      </div>
+      {/* Document — spacious, centered column (Notion-style) */}
+      <div className="note-doc-scroll">
+        <div className="note-doc">
+          {canEdit ? (
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => handleTitleChange(e.target.value)}
+              placeholder="Untitled"
+              className="note-title-input"
+              data-done={isCompleted ? "1" : "0"}
+            />
+          ) : (
+            <h2 className="note-title-input" data-done={isCompleted ? "1" : "0"}>
+              {title || "Untitled"}
+            </h2>
+          )}
 
-      {/* Editor */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
-        {canEdit ? (
-          <div className="card" style={{ overflow: "hidden" }}>
-            {editor && <EditorToolbar editor={editor} />}
-            <EditorContent editor={editor} />
-          </div>
-        ) : (
-          <div
-            className="prose prose-sm"
-            style={{ maxWidth: "none", padding: "0 12px" }}
-            dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
-          />
-        )}
+          {canEdit ? (
+            <>
+              {editor && (
+                <BubbleMenu
+                  editor={editor}
+                  className="note-bubble"
+                  options={{ placement: "top" }}
+                >
+                  <FormatButtons editor={editor} />
+                </BubbleMenu>
+              )}
+              <EditorContent editor={editor} />
+            </>
+          ) : (
+            <div
+              className="prose note-prose"
+              style={{ maxWidth: "none" }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
+            />
+          )}
+        </div>
       </div>
 
       {/* Footer */}

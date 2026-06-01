@@ -9897,3 +9897,128 @@ textarea.cform-field {
   color: var(--ink-4);
   margin-top: 1px;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   Notes — Notion-style document editor (slash commands, bubble menu,
+   spacious centered column). Shared desktop + mobile; mobile overlay
+   chrome is added in the phone media block.
+   ════════════════════════════════════════════════════════════════════ */
+.note-doc-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+.note-doc {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px 40px 80px;
+}
+.note-title-input {
+  border: 0;
+  padding: 0;
+  margin: 0 0 8px;
+  width: 100%;
+  background: transparent;
+  outline: none;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -0.018em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+.note-title-input[data-done="1"] {
+  color: var(--ink-4);
+  text-decoration: line-through;
+}
+.note-title-input::placeholder {
+  color: var(--ink-4);
+}
+.note-prose {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.note-prose:focus {
+  outline: none;
+}
+
+/* Placeholder text in an empty editor (TipTap Placeholder extension) */
+.note-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--ink-4);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Selection bubble toolbar */
+.note-bubble {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: var(--shadow-2);
+}
+
+/* Slash command block menu */
+.slash-menu {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow-3);
+  padding: 6px;
+  min-width: 264px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.slash-menu-head {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  padding: 4px 8px 6px;
+}
+.slash-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 8px;
+  border: 0;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.slash-item[data-active="1"] {
+  background: var(--bg-muted);
+}
+.slash-item-ico {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: var(--bg-sunken);
+  color: var(--ink-2);
+  border: 1px solid var(--border);
+}
+.slash-item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.slash-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.slash-item-hint {
+  font-size: 11px;
+  color: var(--ink-4);
+}
