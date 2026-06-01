@@ -7,6 +7,8 @@ export interface SlashItem {
   title: string;
   hint: string;
   Icon: LucideIcon;
+  /** Extra match terms (e.g. "h1", "title") so short queries find the block. */
+  keywords?: string[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   run: (editor: any, range: any) => void;
 }

@@ -27,6 +27,7 @@ const SLASH_ITEMS: SlashItem[] = [
     title: "Text",
     hint: "Plain paragraph",
     Icon: Type,
+    keywords: ["text", "paragraph", "plain", "p", "body"],
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).setParagraph().run(),
   },
@@ -34,27 +35,31 @@ const SLASH_ITEMS: SlashItem[] = [
     title: "Heading 1",
     hint: "Big section heading",
     Icon: Heading1,
+    keywords: ["h1", "title", "heading", "header", "large"],
     run: (editor, range) =>
-      editor.chain().focus().deleteRange(range).setNode("heading", { level: 1 }).run(),
+      editor.chain().focus().deleteRange(range).toggleHeading({ level: 1 }).run(),
   },
   {
     title: "Heading 2",
     hint: "Medium heading",
     Icon: Heading2,
+    keywords: ["h2", "subtitle", "heading", "header", "medium"],
     run: (editor, range) =>
-      editor.chain().focus().deleteRange(range).setNode("heading", { level: 2 }).run(),
+      editor.chain().focus().deleteRange(range).toggleHeading({ level: 2 }).run(),
   },
   {
     title: "Heading 3",
     hint: "Small heading",
     Icon: Heading3,
+    keywords: ["h3", "heading", "header", "small"],
     run: (editor, range) =>
-      editor.chain().focus().deleteRange(range).setNode("heading", { level: 3 }).run(),
+      editor.chain().focus().deleteRange(range).toggleHeading({ level: 3 }).run(),
   },
   {
     title: "Bulleted list",
     hint: "Simple bullet points",
     Icon: List,
+    keywords: ["bullet", "ul", "unordered", "list", "bul"],
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).toggleBulletList().run(),
   },
@@ -62,6 +67,7 @@ const SLASH_ITEMS: SlashItem[] = [
     title: "Numbered list",
     hint: "Ordered steps",
     Icon: ListOrdered,
+    keywords: ["numbered", "ol", "ordered", "list", "number"],
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).toggleOrderedList().run(),
   },
@@ -69,6 +75,7 @@ const SLASH_ITEMS: SlashItem[] = [
     title: "Quote",
     hint: "Callout / blockquote",
     Icon: Quote,
+    keywords: ["quote", "blockquote", "callout"],
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).toggleBlockquote().run(),
   },
@@ -76,6 +83,7 @@ const SLASH_ITEMS: SlashItem[] = [
     title: "Divider",
     hint: "Horizontal rule",
     Icon: Minus,
+    keywords: ["divider", "hr", "rule", "line", "separator"],
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
   },
@@ -83,6 +91,7 @@ const SLASH_ITEMS: SlashItem[] = [
     title: "Code",
     hint: "Code block",
     Icon: Code,
+    keywords: ["code", "codeblock", "snippet", "pre"],
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
   },
@@ -106,11 +115,13 @@ export const SlashCommand = Extension.create({
         },
         command: ({ editor, range, props }) => props.run(editor, range),
         items: ({ query }) => {
-          const q = query.toLowerCase();
+          const q = query.toLowerCase().trim();
+          if (!q) return SLASH_ITEMS;
           return SLASH_ITEMS.filter(
             (i) =>
               i.title.toLowerCase().includes(q) ||
-              i.hint.toLowerCase().includes(q),
+              i.hint.toLowerCase().includes(q) ||
+              (i.keywords ?? []).some((k) => k.includes(q)),
           );
         },
         render: () => {
