@@ -4736,9 +4736,10 @@ select.pp-field {
   color: var(--bg);
 }
 .nf-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 10px;
+  align-items: start;
 }
 .nf-card {
   display: grid;

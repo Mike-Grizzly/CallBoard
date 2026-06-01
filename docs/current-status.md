@@ -984,3 +984,26 @@ to-do/pin, and the workspace `/notes` feed are unchanged.
 (one pre-existing `set-state-in-effect` warning in the unrelated TagManager
 remains). **Not verified:** live behavior — no `DATABASE_URL` here. The
 visual-viewport keyboard tracking and the BubbleMenu need real-device checks.
+
+### Notes Notion-pass round 2 (2026-05-29)
+
+Follow-up to the Notion-style editor — the four items the user approved:
+- **Checkboxes + links** — to-do checklists via `TaskList`/`TaskItem`
+  (`@tiptap/extension-list`, now an explicit dep) with a `/todo` slash item;
+  inline links via `@tiptap/extension-link` (explicit dep) with a Link button
+  in the bubble menu. Sanitizer extended to keep task lists + styled links in
+  the read-only path (display checkboxes forced disabled).
+- **Editor chrome cleanup** — removed the bordered top metadata bar; tag, due
+  date, and to-do/pin/delete now live in a quiet pill **properties row under
+  the title** (`.note-props`). No desktop close 'X'.
+- **Sidebar restyle** — `NoteRow` is now a Notion-style page row (`.note-row`:
+  page/checkbox icon, hover + inset-ring active, quiet tag-dot + due meta).
+- **`/notes` feed** — the workspace feed now tiles cards in a responsive grid
+  (`repeat(auto-fill, minmax(320px, 1fr))`) so it fills the width instead of a
+  single narrow column.
+
+Plus desktop layout fix (full-width sidebar column + filling editor, no
+1180px centering) and editor QoL (autofocus title, Enter→body, click-to-focus).
+
+**Verified:** `tsc` + `eslint` clean (one pre-existing TagManager
+set-state-in-effect warning remains). **Not verified:** live device behavior.
