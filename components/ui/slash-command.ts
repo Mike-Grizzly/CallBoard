@@ -10,6 +10,7 @@ import {
   Heading3,
   List,
   ListOrdered,
+  ListChecks,
   Quote,
   Minus,
   Code,
@@ -70,6 +71,14 @@ const SLASH_ITEMS: SlashItem[] = [
     keywords: ["numbered", "ol", "ordered", "list", "number"],
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).toggleOrderedList().run(),
+  },
+  {
+    title: "To-do list",
+    hint: "Checkable checklist",
+    Icon: ListChecks,
+    keywords: ["todo", "task", "checkbox", "check", "checklist"],
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).toggleTaskList().run(),
   },
   {
     title: "Quote",

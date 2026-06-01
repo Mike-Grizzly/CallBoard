@@ -10127,3 +10127,47 @@ textarea.cform-field {
   font-size: 11px;
   color: var(--ink-4);
 }
+
+/* Notes — task list (checkboxes) + links inside the editor/read-only prose */
+.note-prose ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 2px;
+  margin: 0.4em 0;
+}
+.note-prose ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 3px 0;
+}
+.note-prose ul[data-type="taskList"] li > label {
+  margin-top: 0.28em;
+  flex-shrink: 0;
+  user-select: none;
+}
+.note-prose ul[data-type="taskList"] li > div {
+  flex: 1;
+  min-width: 0;
+}
+.note-prose ul[data-type="taskList"] li > div > p {
+  margin: 0;
+}
+.note-prose ul[data-type="taskList"] input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.note-prose ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: var(--ink-4);
+  text-decoration: line-through;
+}
+.note-link {
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.note-link:hover {
+  color: var(--accent);
+}

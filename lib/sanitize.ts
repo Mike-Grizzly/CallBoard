@@ -28,12 +28,24 @@ export function sanitizeHtml(html: string): string {
       "blockquote", "pre", "code",
       "strong", "b", "em", "i", "u", "s", "strike", "mark",
       "a", "span",
+      // Task lists (checkboxes)
+      "label", "input", "div",
     ],
     allowedAttributes: {
-      a: ["href", "target", "rel"],
+      a: ["href", "target", "rel", "class"],
       span: ["class", "data-type", "data-id", "data-label"],
       mark: ["class", "data-color"],
+      ul: ["data-type"],
+      li: ["data-checked", "data-type"],
+      // Display-only checkboxes; forced inert via transformTags below.
+      input: ["type", "checked", "disabled"],
       "*": ["style"],
+    },
+    transformTags: {
+      input: (tagName, attribs) => ({
+        tagName,
+        attribs: { ...attribs, disabled: "disabled" },
+      }),
     },
     allowedStyles: {
       "*": {

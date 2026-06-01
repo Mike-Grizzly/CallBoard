@@ -19,6 +19,7 @@ import {
   Underline as UnderlineIcon,
   Strikethrough,
   Highlighter,
+  Link as LinkIcon,
   List,
   ListOrdered,
   Heading2,
@@ -35,6 +36,8 @@ import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
 import Placeholder from "@tiptap/extension-placeholder";
 import Mention from "@tiptap/extension-mention";
+import Link from "@tiptap/extension-link";
+import { TaskList, TaskItem } from "@tiptap/extension-list";
 import { SlashCommand } from "@/components/ui/slash-command";
 import type { MentionMember } from "@/components/ui/mention-textarea";
 import { buildMentionSuggestion } from "@/components/ui/mention-suggestion";
@@ -125,6 +128,27 @@ function FormatButtons({ editor }: { editor: ReturnType<typeof useEditor> }) {
         title="Highlight"
       >
         <Highlighter style={{ width: 14, height: 14 }} />
+      </ToolbarBtn>
+      <ToolbarBtn
+        onClick={() => {
+          const prev = editor.getAttributes("link").href as string | undefined;
+          const url = window.prompt("Link URL", prev ?? "https://");
+          if (url === null) return;
+          if (url.trim() === "") {
+            editor.chain().focus().extendMarkRange("link").unsetLink().run();
+            return;
+          }
+          editor
+            .chain()
+            .focus()
+            .extendMarkRange("link")
+            .setLink({ href: url.trim() })
+            .run();
+        }}
+        active={editor.isActive("link")}
+        title="Link"
+      >
+        <LinkIcon style={{ width: 14, height: 14 }} />
       </ToolbarBtn>
       {div}
       <ToolbarBtn
@@ -250,6 +274,13 @@ function NoteEditor({
       Color,
       Highlight,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        HTMLAttributes: { class: "note-link", rel: "noopener noreferrer" },
+      }),
       Placeholder.configure({
         placeholder: "Write something, or press '/' for blocks…",
       }),
