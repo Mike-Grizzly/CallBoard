@@ -378,213 +378,6 @@ function NoteEditor({
       className="note-editor"
       style={{ display: "flex", flexDirection: "column" }}
     >
-      {/* Header row */}
-      <div
-        className="row-between"
-        style={{ padding: "12px 18px", borderBottom: "1px solid var(--border)" }}
-      >
-        <div className="row" style={{ gap: 8 }}>
-          {/* Todo complete toggle */}
-          {isTodo && canEdit && (
-            <button
-              type="button"
-              onClick={handleCompleteToggle}
-              style={{
-                background: "none",
-                border: 0,
-                cursor: "pointer",
-                padding: 0,
-                color: isCompleted ? "var(--c-sage)" : "var(--ink-4)",
-              }}
-              title={isCompleted ? "Mark incomplete" : "Mark complete"}
-            >
-              {isCompleted ? (
-                <CheckCircle2 style={{ width: 18, height: 18 }} />
-              ) : (
-                <Circle style={{ width: 18, height: 18 }} />
-              )}
-            </button>
-          )}
-
-          {/* Tag badge */}
-          <div style={{ position: "relative" }}>
-            <button
-              type="button"
-              onClick={() => canEdit && setShowTagPicker((p) => !p)}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: canEdit ? "pointer" : "default",
-                padding: 0,
-              }}
-              title={canEdit ? "Change tag" : undefined}
-            >
-              {selectedTag ? (
-                <span
-                  className="pill"
-                  style={{
-                    backgroundColor: selectedTag.color,
-                    color: "white",
-                    borderRadius: 999,
-                  }}
-                >
-                  {selectedTag.name}
-                </span>
-              ) : (
-                <span className="pill">
-                  <Tag style={{ width: 10, height: 10 }} />
-                  No tag
-                </span>
-              )}
-            </button>
-
-            {showTagPicker && (
-              <div
-                className="card"
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  top: "100%",
-                  zIndex: 10,
-                  marginTop: 4,
-                  width: 176,
-                  padding: 4,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => handleTagChange(null)}
-                  style={{
-                    width: "100%",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    padding: "4px 8px",
-                    borderRadius: "var(--radius-s)",
-                    fontSize: 12,
-                    color: "var(--ink-3)",
-                  }}
-                  className="hover-bg"
-                >
-                  No tag
-                </button>
-                {tags.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => handleTagChange(t.id)}
-                    className="row hover-bg"
-                    style={{
-                      width: "100%",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      padding: "4px 8px",
-                      borderRadius: "var(--radius-s)",
-                      fontSize: 12,
-                      gap: 8,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        backgroundColor: t.color,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{ flex: 1, textAlign: "left" }}>{t.name}</span>
-                    {t.id === tagId && <Check style={{ width: 11, height: 11 }} />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Due date */}
-          {canEdit && (
-            <span className="row" style={{ gap: 4, fontSize: 12, color: "var(--ink-4)" }}>
-              <Calendar style={{ width: 11, height: 11 }} />
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => handleDueDateChange(e.target.value)}
-                style={{
-                  border: 0,
-                  background: "transparent",
-                  fontSize: 12,
-                  color: "var(--ink-4)",
-                  outline: "none",
-                  cursor: "pointer",
-                }}
-              />
-            </span>
-          )}
-          {!canEdit && dueDate && (
-            <span className="pill">
-              <Calendar style={{ width: 10, height: 10 }} />
-              {dueDate}
-            </span>
-          )}
-          {isPinned && (
-            <span className="pill" data-c="accent">
-              <Pin style={{ width: 10, height: 10 }} />
-              Pinned
-            </span>
-          )}
-        </div>
-
-        <div className="row" style={{ gap: 4 }}>
-          {canEdit && (
-            <button
-              type="button"
-              onClick={handleTodoToggle}
-              title={isTodo ? "Remove to-do" : "Make to-do"}
-              className="btn ghost btn-icon"
-              style={{ color: isTodo ? "var(--accent)" : "var(--ink-4)" }}
-            >
-              {isTodo ? (
-                <CheckCircle2 style={{ width: 14, height: 14 }} />
-              ) : (
-                <Circle style={{ width: 14, height: 14 }} />
-              )}
-            </button>
-          )}
-          {canEdit && (
-            <button
-              type="button"
-              onClick={handlePinToggle}
-              title={isPinned ? "Unpin" : "Pin"}
-              className="btn ghost btn-icon"
-              style={{ color: isPinned ? "var(--c-amber)" : undefined }}
-            >
-              <Pin style={{ width: 14, height: 14 }} />
-            </button>
-          )}
-          {canEdit && (
-            <button
-              type="button"
-              onClick={handleDelete}
-              title="Delete note"
-              className="btn ghost btn-icon"
-            >
-              <Trash2 style={{ width: 14, height: 14 }} />
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn ghost btn-icon"
-            title="Close"
-          >
-            <X style={{ width: 14, height: 14 }} />
-          </button>
-        </div>
-      </div>
-
       {/* Document — spacious, centered column (Notion-style) */}
       <div className="note-doc-scroll">
         <div
@@ -619,6 +412,135 @@ function NoteEditor({
               {title || "Untitled"}
             </h2>
           )}
+
+          {/* Quiet properties row, under the title */}
+          <div className="note-props">
+            {isTodo && canEdit && (
+              <button
+                type="button"
+                className="note-prop note-prop-todo"
+                data-done={isCompleted ? "1" : "0"}
+                onClick={handleCompleteToggle}
+                title={isCompleted ? "Mark incomplete" : "Mark complete"}
+              >
+                {isCompleted ? (
+                  <CheckCircle2 style={{ width: 14, height: 14 }} />
+                ) : (
+                  <Circle style={{ width: 14, height: 14 }} />
+                )}
+                <span>{isCompleted ? "Completed" : "To-do"}</span>
+              </button>
+            )}
+
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                className="note-prop"
+                onClick={() => canEdit && setShowTagPicker((p) => !p)}
+                title={canEdit ? "Change tag" : undefined}
+                style={{ cursor: canEdit ? "pointer" : "default" }}
+              >
+                {selectedTag ? (
+                  <>
+                    <span
+                      className="note-prop-dot"
+                      style={{ background: selectedTag.color }}
+                    />
+                    {selectedTag.name}
+                  </>
+                ) : (
+                  <>
+                    <Tag style={{ width: 12, height: 12 }} />
+                    Add tag
+                  </>
+                )}
+              </button>
+              {showTagPicker && (
+                <div className="card note-tag-pop">
+                  <button
+                    type="button"
+                    className="note-tag-opt"
+                    onClick={() => handleTagChange(null)}
+                  >
+                    No tag
+                  </button>
+                  {tags.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className="note-tag-opt"
+                      onClick={() => handleTagChange(t.id)}
+                    >
+                      <span
+                        className="note-prop-dot"
+                        style={{ background: t.color }}
+                      />
+                      <span style={{ flex: 1, textAlign: "left" }}>{t.name}</span>
+                      {t.id === tagId && <Check style={{ width: 11, height: 11 }} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {canEdit ? (
+              <label className="note-prop">
+                <Calendar style={{ width: 12, height: 12 }} />
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => handleDueDateChange(e.target.value)}
+                  className="note-prop-date"
+                />
+              </label>
+            ) : (
+              dueDate && (
+                <span className="note-prop">
+                  <Calendar style={{ width: 12, height: 12 }} />
+                  {dueDate}
+                </span>
+              )
+            )}
+
+            <div className="note-props-spacer" />
+
+            {canEdit && (
+              <button
+                type="button"
+                className="note-prop-ico"
+                data-on={isTodo ? "1" : "0"}
+                onClick={handleTodoToggle}
+                title={isTodo ? "Remove to-do" : "Make to-do"}
+              >
+                {isTodo ? (
+                  <CheckCircle2 style={{ width: 15, height: 15 }} />
+                ) : (
+                  <Circle style={{ width: 15, height: 15 }} />
+                )}
+              </button>
+            )}
+            {canEdit && (
+              <button
+                type="button"
+                className="note-prop-ico"
+                data-on={isPinned ? "amber" : "0"}
+                onClick={handlePinToggle}
+                title={isPinned ? "Unpin" : "Pin"}
+              >
+                <Pin style={{ width: 15, height: 15 }} />
+              </button>
+            )}
+            {canEdit && (
+              <button
+                type="button"
+                className="note-prop-ico"
+                onClick={handleDelete}
+                title="Delete note"
+              >
+                <Trash2 style={{ width: 15, height: 15 }} />
+              </button>
+            )}
+          </div>
 
           {canEdit ? (
             <>
