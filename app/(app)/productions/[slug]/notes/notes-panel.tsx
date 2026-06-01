@@ -9,6 +9,7 @@ import {
   Circle,
   CheckCircle2,
   PenLine,
+  FileText,
   Tag,
   Calendar,
   Settings,
@@ -619,39 +620,16 @@ function NoteRow({
   const done = visuallyDone;
 
   return (
-    <div
-      onClick={onPick}
-      style={{
-        display: "grid",
-        gridTemplateColumns: "22px 1fr auto",
-        gap: 10,
-        padding: "10px 12px",
-        borderRadius: "var(--radius-s)",
-        cursor: "pointer",
-        border: "1px solid " + (active ? "var(--border-strong)" : "transparent"),
-        background: active ? "var(--bg-elev)" : "transparent",
-        boxShadow: active ? "var(--shadow-1)" : "none",
-      }}
-      onMouseEnter={(e) => {
-        if (!active) e.currentTarget.style.background = "var(--bg-muted)";
-      }}
-      onMouseLeave={(e) => {
-        if (!active) e.currentTarget.style.background = "transparent";
-      }}
-    >
+    <div className="note-row" data-active={active ? "1" : "0"} onClick={onPick}>
       {/* Icon / check button */}
       {note.isTodo && onToggleComplete ? (
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onToggleComplete(); }}
-          style={{
-            background: "none",
-            border: "none",
-            padding: 0,
-            cursor: "pointer",
-            paddingTop: 1,
-            color: done ? "var(--c-sage)" : "var(--ink-4)",
-            transition: "color 0.25s ease",
+          className="note-row-check"
+          data-done={done ? "1" : "0"}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleComplete();
           }}
           title={done ? "Mark incomplete" : "Mark complete"}
         >
@@ -662,47 +640,32 @@ function NoteRow({
           )}
         </button>
       ) : (
-        <div
-          style={{
-            color: note.isTodo ? "var(--ink-4)" : "var(--ink-3)",
-            paddingTop: 1,
-          }}
-        >
-          <PenLine style={{ width: 14, height: 14 }} />
-        </div>
+        <span className="note-row-ico">
+          <FileText style={{ width: 15, height: 15 }} />
+        </span>
       )}
 
-      <div style={{ minWidth: 0 }}>
+      <div className="note-row-body">
         {/* Animated title */}
-        <div
-          className={`note-row-title truncate${done ? " done" : ""}`}
-          style={{ fontSize: 13, fontWeight: 500 }}
-        >
+        <div className={`note-row-title truncate${done ? " done" : ""}`}>
           {note.title || "Untitled"}
           <span className={`note-row-strike${done ? " done" : ""}`} />
         </div>
-        <div className="row" style={{ gap: 8, marginTop: 3 }}>
-          {tag && (
-            <span
-              className="pill"
-              style={{
-                fontSize: 10.5,
-                height: 16,
-                padding: "0 6px",
-                backgroundColor: tag.color,
-                color: "white",
-              }}
-            >
-              {tag.name}
-            </span>
-          )}
-          {note.dueDate && (
-            <span style={{ fontSize: 11, color: "var(--ink-4)" }}>{note.dueDate}</span>
-          )}
-        </div>
+        {(tag || note.dueDate) && (
+          <div className="note-row-meta">
+            {tag && (
+              <span
+                className="note-row-tagdot"
+                style={{ background: tag.color }}
+              />
+            )}
+            {tag && <span className="note-row-tagname">{tag.name}</span>}
+            {note.dueDate && <span className="note-row-due">{note.dueDate}</span>}
+          </div>
+        )}
       </div>
       {note.isPinned && (
-        <Pin style={{ width: 12, height: 12, color: "var(--c-amber)", marginTop: 2 }} />
+        <Pin className="note-row-pin" style={{ width: 12, height: 12 }} />
       )}
     </div>
   );
