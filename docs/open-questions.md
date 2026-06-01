@@ -248,10 +248,10 @@ default in place today.
 
 ## Mobile dashboard (2026-05-29)
 
-- **`mobile-today-hero.tsx` is now orphaned.** The phone dashboard was
-  replaced by `mobile-dashboard.tsx`, so `MobileTodayHero` is no longer
-  imported anywhere. Left in place (pre-existing file, not created this
-  session) pending a decision to delete it.
+- **`mobile-today-hero.tsx` removed (RESOLVED 2026-05-29).** The phone
+  dashboard was replaced by `mobile-dashboard.tsx`, orphaning
+  `MobileTodayHero`. The file was deleted after confirming nothing else
+  imported it (`tsc` + `eslint` clean).
 - **Mobile dashboard appbar omitted.** The draft had a top app bar with
   Search + Notifications buttons; both were demo-only toasts with no real
   destinations in the app (no global search; the notifications inbox is

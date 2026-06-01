@@ -940,3 +940,10 @@ Branch `claude/bold-babbage-qxwCO`. Ported the uploaded `mobile-dashboard.jsx`
 
 **Verified:** `tsc --noEmit` + `eslint` clean. **Not verified:** live device
 rendering (no `DATABASE_URL` here).
+
+### Follow-up (2026-05-29)
+
+The desktop + mobile dashboard command center, RSVP, and announcement acks
+were confirmed working by the user. The orphaned `mobile-today-hero.tsx` was
+deleted (nothing imported it; `tsc` + `eslint` clean). Branch
+`claude/bold-babbage-qxwCO` merged to `main`.
