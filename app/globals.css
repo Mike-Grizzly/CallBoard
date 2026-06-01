@@ -4879,10 +4879,25 @@ select.pp-field {
    The `.mn-back-btn` shows up only at phone widths inside the editor. */
 .notes-panel {
   display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 16px;
-  max-width: 1180px;
-  margin: 0 auto;
+  grid-template-columns: 272px minmax(0, 1fr);
+  grid-template-rows: minmax(560px, calc(100vh - 200px));
+  gap: 0;
+  align-items: stretch;
+}
+.notes-list-col {
+  border-right: 1px solid var(--border);
+  padding-right: 18px;
+  overflow-y: auto;
+}
+/* Editor reads as an open page that fills the rest of the tab — no bordered
+   card, no centered max-width gutters. */
+.notes-editor-col {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0 0 0 8px;
+  min-height: 0;
 }
 .mn-back-btn {
   display: none;
@@ -5869,7 +5884,14 @@ select.pp-field {
      tap the back button → list returns. */
   .notes-panel {
     grid-template-columns: 1fr;
+    grid-template-rows: auto;
     gap: 0;
+  }
+  /* Sidebar is full-width on phone — no divider/inset from the desktop column. */
+  .notes-list-col {
+    border-right: 0;
+    padding-right: 0;
+    overflow-y: visible;
   }
   .notes-panel[data-editor-open="1"] .notes-list-col {
     display: none;
@@ -9992,9 +10014,9 @@ textarea.cform-field {
   min-height: 0;
 }
 .note-doc {
-  max-width: 760px;
+  max-width: 920px;
   margin: 0 auto;
-  padding: 28px 40px 80px;
+  padding: 28px 56px 96px;
 }
 .note-title-input {
   border: 0;
