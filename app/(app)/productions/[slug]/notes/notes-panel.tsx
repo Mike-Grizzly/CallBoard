@@ -192,6 +192,7 @@ function NoteEditor({
   // overlays the keyboard without resizing the layout viewport). Ref mutation
   // only — no React state, so no re-render churn.
   const rootRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
@@ -213,6 +214,16 @@ function NoteEditor({
       vv.removeEventListener("scroll", apply);
       window.removeEventListener("resize", apply);
     };
+  }, []);
+
+  // Focus the title of a freshly created (empty) note so the user can type
+  // immediately, like Notion's "New page".
+  useEffect(() => {
+    if (canEdit && !note.title && !note.content) {
+      titleRef.current?.focus();
+    }
+    // Run once on mount per note.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const scheduleSave = useCallback(
@@ -545,12 +556,29 @@ function NoteEditor({
 
       {/* Document — spacious, centered column (Notion-style) */}
       <div className="note-doc-scroll">
-        <div className="note-doc">
+        <div
+          className="note-doc"
+          onMouseDown={(e) => {
+            // Clicking the empty padding (not the title or body) drops the
+            // cursor at the end of the document.
+            if (canEdit && e.target === e.currentTarget) {
+              e.preventDefault();
+              editor?.commands.focus("end");
+            }
+          }}
+        >
           {canEdit ? (
             <input
+              ref={titleRef}
               type="text"
               value={title}
               onChange={(e) => handleTitleChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  editor?.commands.focus("start");
+                }
+              }}
               placeholder="Untitled"
               className="note-title-input"
               data-done={isCompleted ? "1" : "0"}
