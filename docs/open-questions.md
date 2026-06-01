@@ -245,3 +245,15 @@ default in place today.
 - **Not verified live.** `tsc` + `eslint` pass, but there's no `DATABASE_URL`
   here so `next build` page-data collection and real-data rendering weren't
   exercised.
+
+## Mobile dashboard (2026-05-29)
+
+- **`mobile-today-hero.tsx` is now orphaned.** The phone dashboard was
+  replaced by `mobile-dashboard.tsx`, so `MobileTodayHero` is no longer
+  imported anywhere. Left in place (pre-existing file, not created this
+  session) pending a decision to delete it.
+- **Mobile dashboard appbar omitted.** The draft had a top app bar with
+  Search + Notifications buttons; both were demo-only toasts with no real
+  destinations in the app (no global search; the notifications inbox is
+  deferred), so the appbar was dropped and the screen starts at the greeting.
+  Revisit if/when those destinations exist.

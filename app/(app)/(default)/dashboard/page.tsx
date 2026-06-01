@@ -27,16 +27,18 @@ import {
 import { getMentionsForUser } from "@/features/mentions/queries";
 import { getPinsForUser, type PinRow } from "@/features/pins/queries";
 import { getCastForProductions } from "@/features/members/queries";
-import {
-  DashboardAnnouncements,
-  type SerializedAnnouncement,
-} from "./dashboard-announcements";
-import { MentionsSection, type SerializedMention } from "./mentions-section";
-import { PinnedSection } from "./pinned-section";
-import { MobileTodayHero, type NextCallSummary } from "./mobile-today-hero";
+import { type SerializedAnnouncement } from "./dashboard-announcements";
+import { type SerializedMention } from "./mentions-section";
 import { FocalCall, type FocalAvatar } from "./focal-call";
 import { BentoMentions } from "./bento-mentions";
 import { AnnouncementAckButton } from "./announcement-ack-button";
+import {
+  MobileDashboard,
+  type MdShow,
+  type MdAnnouncement,
+  type MdPin,
+  type MdTimelineItem,
+} from "./mobile-dashboard";
 
 // Deterministic color per production — same palette as the left rail
 const PROD_COLORS = [
@@ -224,7 +226,6 @@ export default async function DashboardPage() {
         )
       : null;
 
-  const pinnedCount = announcements.filter((a) => a.pinned).length;
   const unreadMentionCount = mentionRows.filter((m) => !m.readAt).length;
   const activeShows = myProductions.filter((p) => p.status !== "archived").length;
 
@@ -248,22 +249,6 @@ export default async function DashboardPage() {
       return "now";
     return "up";
   }
-
-  // Mobile next-call summary (unchanged phone hero)
-  const nextCallSummary: NextCallSummary | null =
-    earliestCall && earliestProd
-      ? {
-          productionTitle: earliestProd.title,
-          productionSlug: earliestProd.slug,
-          dateLabel: formatCallDate(earliestCall.callDate, today, tomorrow),
-          isToday: earliestCall.callDate === today,
-          isTomorrow: earliestCall.callDate === tomorrow,
-          callTime: earliestCall.callTime ? formatCallTime(earliestCall.callTime) : null,
-          endTime: earliestCall.endTime ? formatCallTime(earliestCall.endTime) : null,
-          location: earliestCall.location,
-          focus: earliestCall.focus,
-        }
-      : null;
 
   // Serialize announcements (Date → string) for the client list + ack info
   const ackInfo = await getAckInfoForAnnouncements(
@@ -374,18 +359,58 @@ export default async function DashboardPage() {
         })()
       : null;
 
+  // ── Mobile dashboard data (phone widths only) ──────────────────────
+  const mdTimeline: MdTimelineItem[] = todaysCalls.map((c) => ({
+    id: c.id,
+    time: formatCallTime(c.callTime) || "—",
+    what: c.focus || "Rehearsal",
+    sub: [c.productionTitle, c.location].filter(Boolean).join(" · "),
+    state: callState(c),
+  }));
+  const mdMoreThisWeek =
+    moreThisWeek > 0 && nextThisWeek
+      ? `${moreThisWeek} more this week · next ${formatCallDate(nextThisWeek.callDate, today, tomorrow)}${nextThisWeek.callTime ? " " + formatCallTime(nextThisWeek.callTime) : ""}`
+      : null;
+  const mdShows: MdShow[] = myProductions.map((p) => {
+    const prog = progressToOpening(p, todayMs);
+    const cast = castMap[p.id] ?? [];
+    const call = nextCallMap[p.id];
+    return {
+      id: p.id,
+      slug: p.slug,
+      title: p.title,
+      subtitle: [p.venue, roleLabel(p.role)].filter(Boolean).join(" · "),
+      status: p.status,
+      color: prodColor(p.id),
+      unread: unreadByProd[p.id] ?? 0,
+      progLabel: p.status === "archived" ? "Closed" : prog.value,
+      opens: prog.opens,
+      pct: prog.pct,
+      principals: cast.slice(0, 3).map((c) => ({
+        initials: initialsOf(c.firstName, c.lastName),
+        color: colorForName(`${c.firstName ?? ""}${c.lastName ?? ""}${c.userId}`),
+      })),
+      extraPrincipals: Math.max(0, cast.length - 3),
+      next: call
+        ? `${formatCallDate(call.callDate, today, tomorrow)}${call.callTime ? " " + formatCallTime(call.callTime) : ""}`
+        : "—",
+    };
+  });
+  const mdAnnouncements: MdAnnouncement[] = serializedAnnouncements.map((a) => ({
+    ...a,
+    ack: ackInfo[a.id] ?? null,
+  }));
+  const mdPins: MdPin[] = pins.map((pin) => ({
+    id: pin.pinId,
+    title: pin.title,
+    meta: pin.productionTitle,
+    href: pinHref(pin),
+    kind:
+      pin.itemType === "note" && pin.subtype === "todo" ? "todo" : pin.itemType,
+  }));
+
   return (
     <div className="page-narrow home">
-      {/* ── Mobile Today hero (phone widths only) ────────────────────── */}
-      <MobileTodayHero
-        greeting={greeting}
-        firstName={firstName}
-        todayLabel={todayLabel}
-        productionsCount={myProductions.length}
-        unreadMentionCount={unreadMentionCount}
-        pinnedCount={pinnedCount}
-        nextCall={nextCallSummary}
-      />
 
       {/* ════════════════════════════════════════════════════════════════
           DESKTOP COMMAND CENTER (hidden at phone widths)
@@ -698,94 +723,26 @@ export default async function DashboardPage() {
       </div>
 
       {/* ════════════════════════════════════════════════════════════════
-          PHONE FEEDS (hidden on desktop — the command center covers these)
+          MOBILE DASHBOARD (phone widths only — hidden on desktop)
           ════════════════════════════════════════════════════════════════ */}
       <div className="dashboard-phone-only">
-        {serializedAnnouncements.length > 0 && (
-          <DashboardAnnouncements items={serializedAnnouncements} />
-        )}
-
-        <section className="home-section">
-          <header className="home-section-head">
-            <div>
-              <div className="h-eyebrow">Productions</div>
-              <h2 className="h-section">Your shows</h2>
-            </div>
-          </header>
-          {myProductions.length === 0 ? (
-            canManage ? (
-              <Link href="/productions/new" className="btn primary">
-                <Plus size={14} aria-hidden /> New production
-              </Link>
-            ) : (
-              <p style={{ fontSize: 13, color: "var(--ink-3)" }}>
-                You haven&apos;t been assigned to any productions yet.
-              </p>
-            )
-          ) : (
-            <div className="prod-cards">
-              {myProductions.map((p) => {
-                const color = prodColor(p.id);
-                const call = nextCallMap[p.id];
-                const nextLabel = call
-                  ? formatCallDate(call.callDate, today, tomorrow)
-                  : "—";
-                const hasNext = !!call;
-                return (
-                  <Link
-                    key={p.id}
-                    href={`/productions/${p.slug}`}
-                    className="prod-card"
-                    data-status={p.status}
-                  >
-                    <div className="prod-card-head">
-                      <span className="prod-card-status">
-                        <span
-                          className="prod-card-dot"
-                          style={{ background: color }}
-                        />
-                        {p.status}
-                      </span>
-                    </div>
-                    <h3 className="prod-card-title">{p.title}</h3>
-                    <div className="prod-card-foot">
-                      <div>
-                        <div className="prod-card-foot-label">My role</div>
-                        <div className="prod-card-foot-val">{roleLabel(p.role)}</div>
-                      </div>
-                      <div>
-                        <div className="prod-card-foot-label">Opens</div>
-                        <div className="prod-card-foot-val">
-                          {formatOpeningDate(p.openingDate)}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="prod-card-foot-label">Next call</div>
-                        <div
-                          className={
-                            hasNext
-                              ? "prod-card-foot-val prod-card-next"
-                              : "prod-card-foot-val"
-                          }
-                        >
-                          {nextLabel}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="prod-card-cta">
-                      Open hub <ChevronRight size={14} strokeWidth={2} aria-hidden />
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        {serializedMentions.length > 0 && (
-          <MentionsSection items={serializedMentions} />
-        )}
-        <PinnedSection pins={pins} />
+        <MobileDashboard
+          greeting={greeting}
+          firstName={firstName}
+          role={roleLabel(user.role)}
+          todayLabel={todayLabel}
+          unreadMentionCount={unreadMentionCount}
+          announcementCount={announcements.length}
+          activeShows={activeShows}
+          focal={focalProps}
+          timeline={mdTimeline}
+          moreThisWeek={mdMoreThisWeek}
+          shows={mdShows}
+          canManage={canManage}
+          mentions={serializedMentions}
+          announcements={mdAnnouncements}
+          pins={mdPins}
+        />
       </div>
     </div>
   );

@@ -913,3 +913,30 @@ wiring are unchanged.
 **Not verified:** live behavior — no `DATABASE_URL` in this environment, so
 `next build` can't collect page data and the UI wasn't exercised against real
 data. Countdown assumes `calls.callTime` is stored as 24h `HH:MM`.
+
+## Mobile dashboard command center (2026-05-29)
+
+Branch `claude/bold-babbage-qxwCO`. Ported the uploaded `mobile-dashboard.jsx`
+/ `mobile-shell.jsx` design into the app, replacing the phone dashboard.
+
+- New client component `app/(app)/(default)/dashboard/mobile-dashboard.tsx`
+  renders the phone command center inside the existing `.dashboard-phone-only`
+  gate: greeting + status chips, focal next-call card (live countdown + RSVP
+  confirm via `confirmCall`), Today timeline (today's calls + NOW marker),
+  a horizontal **shows carousel** (week-to-opening progress, principal
+  avatars, unread badge, next call), mentions (mark-read on tap), announcements
+  (reuses `AnnouncementAckButton`), and pinned. Fed entirely by data the
+  dashboard page already fetches — no new queries.
+- `dashboard/page.tsx` now builds small serialized arrays (`mdTimeline`,
+  `mdShows`, `mdAnnouncements`, `mdPins`) and renders `<MobileDashboard>` for
+  phone; the desktop command center is unchanged. The previous phone layout
+  (`MobileTodayHero` + the legacy stacked feeds) is no longer rendered.
+- The draft's standalone chrome (its own appbar/bottom-tab-bar/toast and the
+  `.mob-root` token block) was intentionally omitted — the app already
+  provides the bottom tab bar, safe-area pads, and design tokens. All styles
+  added to `globals.css` scoped under `.md-root` (renders only on phone), with
+  a small subset of the mobile-shell primitives (`.mob-card`, `.sec-h*`,
+  `.mbtn`, `.tap`) included under the same scope.
+
+**Verified:** `tsc --noEmit` + `eslint` clean. **Not verified:** live device
+rendering (no `DATABASE_URL` here).
