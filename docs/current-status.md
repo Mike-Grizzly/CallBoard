@@ -947,3 +947,40 @@ The desktop + mobile dashboard command center, RSVP, and announcement acks
 were confirmed working by the user. The orphaned `mobile-today-hero.tsx` was
 deleted (nothing imported it; `tsc` + `eslint` clean). Branch
 `claude/bold-babbage-qxwCO` merged to `main`.
+
+## Notes → Notion-style editor (2026-05-29)
+
+Branch `claude/bold-babbage-qxwCO`. Reworked the production notes editor
+(`app/(app)/productions/[slug]/notes/notes-panel.tsx`) to feel like a real
+document surface rather than a tacked-on panel.
+
+**Desktop**
+- **Slash commands** — `/` opens a block menu (Text, H1/H2/H3, bulleted/
+  numbered list, quote, divider, code). New `SlashCommand` TipTap extension
+  (`components/ui/slash-command.ts` + `slash-command-list.tsx`) built on the
+  existing `@tiptap/suggestion` dep — no new library. `allow` guard fires only
+  at block start / after whitespace so it won't hijack `/` mid-word.
+- **Selection bubble toolbar** (`@tiptap/react/menus` `BubbleMenu`) with
+  bold/italic/underline/strike/highlight + heading/list, replacing the
+  always-on fixed toolbar. Shared `FormatButtons` group.
+- **Placeholder** ("… press / for blocks") via `@tiptap/extension-placeholder`.
+- **Spacious document** — large display-font title, 760px centered column,
+  generous margins, larger prose (`.note-doc` / `.note-title-input` /
+  `.note-prose`).
+
+**Mobile (≤720px) — immersive, like the script reader**
+- The editor column becomes a full-screen overlay (`position:fixed; inset:0;
+  z-index:70`, `msr-in` slide-up) in the app's warm light palette.
+- Top bar: back · centered **"Private" pill** · spacer (`.note-mobile-topbar`).
+- **Keyboard accessory bar** (`.note-accessory`) pins `FormatButtons` to the
+  bottom; the editor root height is JS-synced to `window.visualViewport` (ref
+  mutation, no state) so the bar rides above the on-screen keyboard. Slash +
+  bubble still work. The save-status footer is hidden on phone.
+
+All styles in `globals.css` (`.note-*`, `.slash-*`). Autosave, mentions, tags,
+to-do/pin, and the workspace `/notes` feed are unchanged.
+
+**Verified:** `tsc --noEmit` clean; `eslint` clean on all new/changed files
+(one pre-existing `set-state-in-effect` warning in the unrelated TagManager
+remains). **Not verified:** live behavior — no `DATABASE_URL` here. The
+visual-viewport keyboard tracking and the BubbleMenu need real-device checks.

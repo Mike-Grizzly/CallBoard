@@ -4887,6 +4887,16 @@ select.pp-field {
 .mn-back-btn {
   display: none;
 }
+/* Fills its column on desktop; on phones JS sets a px height (visual
+   viewport) so the keyboard accessory bar stays in view. */
+.note-editor {
+  height: 100%;
+}
+/* Mobile-only editor chrome — hidden on desktop (shown in the phone block). */
+.note-mobile-topbar,
+.note-accessory {
+  display: none;
+}
 
 @media (max-width: 720px) {
   /* Compromise side padding: more generous than the 16px overcorrection
@@ -5867,26 +5877,99 @@ select.pp-field {
   .notes-panel[data-editor-open="0"] .notes-editor-col {
     display: none;
   }
-  .notes-editor-col {
+
+  /* Editor becomes a full-screen, immersive overlay (like the script
+     reader). Height is JS-synced to the visual viewport so the accessory
+     bar rides above the keyboard. */
+  .notes-panel[data-editor-open="1"] .notes-editor-col {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: var(--bg);
+    box-shadow: none;
     min-height: 0;
+    overflow: hidden;
+    animation: msr-in 0.26s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  .note-editor {
+    overflow: hidden;
+  }
+
+  /* Top bar: back · centered "Private" pill · spacer */
+  .note-mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: calc(8px + env(safe-area-inset-top)) 10px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .note-priv-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0 auto;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--bg-muted);
+    border: 1px solid var(--border);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--ink-2);
+  }
+  .note-topbar-spacer {
+    width: 64px;
+    flex-shrink: 0;
   }
   .mn-back-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    align-self: flex-start;
-    margin: 10px 12px 0;
-    padding: 6px 10px 6px 6px;
+    gap: 4px;
+    margin: 0;
+    padding: 6px 8px 6px 4px;
     border: 0;
     background: transparent;
     color: var(--ink-2);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
+    flex-shrink: 0;
   }
   .mn-back-btn:active {
     background: var(--bg-muted);
+  }
+
+  /* Bigger, edge-to-edge document on phones */
+  .note-doc {
+    padding: 18px 18px 40px;
+    max-width: none;
+  }
+  .note-title-input {
+    font-size: 28px;
+  }
+
+  /* Keyboard accessory bar */
+  .note-accessory {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 8px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-elev);
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-shrink: 0;
+  }
+  .note-accessory::-webkit-scrollbar {
+    display: none;
+  }
+  /* The save-status footer is redundant on the immersive phone editor. */
+  .note-editor-footer {
+    display: none;
   }
 
   /* Calendar event drawer slides up from the bottom as a sheet (matches

@@ -257,3 +257,21 @@ default in place today.
   destinations in the app (no global search; the notifications inbox is
   deferred), so the appbar was dropped and the screen starts at the greeting.
   Revisit if/when those destinations exist.
+
+## Notes Notion-style editor (2026-05-29)
+
+- **Mobile keyboard accessory bar needs device verification.** The bar is kept
+  above the keyboard by syncing the editor height to
+  `window.visualViewport.height` (handles the common "keyboard at bottom"
+  case). iOS edge cases (viewport offset when scrolled, split keyboard,
+  floating iPad keyboard) are unverified — check on a real iPhone.
+- **Mobile metadata still uses the editor header.** The Notion mobile design
+  hides tag/due/pin/to-do behind a "⋯" overflow next to the Private pill. Ours
+  keeps the existing metadata header row below the top bar. A follow-up could
+  consolidate those into a "⋯" sheet for a cleaner immersive top.
+- **No in-editor checkbox/to-do block.** Slash commands omit a checklist block
+  because `@tiptap/extension-task-list` isn't installed (would be a new dep).
+  Note-level to-do (the whole note) still exists via the header toggle.
+- **No link mark in the bubble menu.** `@tiptap/extension-link` isn't a
+  declared dependency, so the selection toolbar omits links. Add the dep if we
+  want inline links.

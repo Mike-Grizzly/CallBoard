@@ -23,6 +23,7 @@ import {
   ListOrdered,
   Heading2,
   ChevronLeft,
+  Lock,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
@@ -186,6 +187,34 @@ function NoteEditor({
   const isAuthor = note.createdBy === currentUserId;
   const canEdit = isAuthor || canManageTags;
 
+  // On phones the editor is a full-screen overlay; track the visual viewport
+  // so the bottom formatting bar rides above the on-screen keyboard (iOS
+  // overlays the keyboard without resizing the layout viewport). Ref mutation
+  // only — no React state, so no re-render churn.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const apply = () => {
+      const el = rootRef.current;
+      if (!el) return;
+      if (window.innerWidth > 720) {
+        el.style.removeProperty("height");
+      } else {
+        el.style.height = `${vv.height}px`;
+      }
+    };
+    apply();
+    vv.addEventListener("resize", apply);
+    vv.addEventListener("scroll", apply);
+    window.addEventListener("resize", apply);
+    return () => {
+      vv.removeEventListener("resize", apply);
+      vv.removeEventListener("scroll", apply);
+      window.removeEventListener("resize", apply);
+    };
+  }, []);
+
   const scheduleSave = useCallback(
     (fields: Parameters<typeof updateNote>[2]) => {
       setSaveStatus("saving");
@@ -302,7 +331,11 @@ function NoteEditor({
       : note.createdByEmail;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div
+      ref={rootRef}
+      className="note-editor"
+      style={{ display: "flex", flexDirection: "column" }}
+    >
       {/* Header row */}
       <div
         className="row-between"
@@ -551,9 +584,16 @@ function NoteEditor({
         </div>
       </div>
 
+      {/* Mobile keyboard accessory bar (phone only) */}
+      {canEdit && editor && (
+        <div className="note-accessory">
+          <FormatButtons editor={editor} />
+        </div>
+      )}
+
       {/* Footer */}
       <div
-        className="row-between"
+        className="row-between note-editor-footer"
         style={{
           borderTop: "1px solid var(--border)",
           padding: "10px 18px",
@@ -1124,15 +1164,22 @@ export function NotesPanel({
       >
         {selectedNote ? (
           <>
-            <button
-              type="button"
-              className="mn-back-btn"
-              onClick={() => setSelectedId(null)}
-              aria-label="Back to notes list"
-            >
-              <ChevronLeft style={{ width: 14, height: 14 }} />
-              <span>Notes</span>
-            </button>
+            <div className="note-mobile-topbar">
+              <button
+                type="button"
+                className="mn-back-btn"
+                onClick={() => setSelectedId(null)}
+                aria-label="Back to notes list"
+              >
+                <ChevronLeft style={{ width: 16, height: 16 }} />
+                <span>Notes</span>
+              </button>
+              <span className="note-priv-pill">
+                <Lock style={{ width: 11, height: 11 }} />
+                Private
+              </span>
+              <span aria-hidden className="note-topbar-spacer" />
+            </div>
             <NoteEditor
               key={selectedNote.id}
               note={selectedNote}
