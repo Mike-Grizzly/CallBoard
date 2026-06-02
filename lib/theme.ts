@@ -5,21 +5,24 @@
 
 export const THEME_COOKIE = "proscene-theme";
 
-export type ThemePref = "light" | "dark" | "system";
-export const THEME_PREFS: ThemePref[] = ["light", "dark", "system"];
+export type ThemePref = "light" | "dusk" | "dark" | "system";
+export const THEME_PREFS: ThemePref[] = ["light", "dusk", "dark", "system"];
 
 // The actual value written to body[data-theme]. Light maps to the warm
 // palette (the app's default light theme).
-export type EffectiveTheme = "warm" | "dark";
+export type EffectiveTheme = "warm" | "dusk" | "dark";
 
-const THEME_COLOR_DARK = "#1d1b18";
-const THEME_COLOR_LIGHT = "#fbf8f3";
+const THEME_COLOR: Record<EffectiveTheme, string> = {
+  warm: "#fbf8f3",
+  dusk: "#3b3632",
+  dark: "#1d1b18",
+};
 
 export function readThemePref(): ThemePref {
   if (typeof document === "undefined") return "system";
   const m = document.cookie.match(/(?:^|;\s*)proscene-theme=([^;]+)/);
   const v = m ? decodeURIComponent(m[1]) : "system";
-  return v === "light" || v === "dark" || v === "system" ? v : "system";
+  return (THEME_PREFS as string[]).includes(v) ? (v as ThemePref) : "system";
 }
 
 export function prefersDark(): boolean {
@@ -31,6 +34,7 @@ export function prefersDark(): boolean {
 
 export function resolveTheme(pref: ThemePref): EffectiveTheme {
   if (pref === "dark") return "dark";
+  if (pref === "dusk") return "dusk";
   if (pref === "light") return "warm";
   return prefersDark() ? "dark" : "warm";
 }
@@ -47,12 +51,7 @@ export function applyThemePref(pref: ThemePref): void {
   document.body.dataset.theme = eff;
   document.cookie = `${THEME_COOKIE}=${pref}; path=/; max-age=31536000; samesite=lax`;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) {
-    meta.setAttribute(
-      "content",
-      eff === "dark" ? THEME_COLOR_DARK : THEME_COLOR_LIGHT,
-    );
-  }
+  if (meta) meta.setAttribute("content", THEME_COLOR[eff]);
   window.dispatchEvent(new Event(THEME_EVENT));
 }
 

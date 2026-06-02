@@ -1040,3 +1040,13 @@ token block.
 at page-data collection because this env has no `DATABASE_URL`). **Not
 verified:** live visual QA of the dark palette on real screens — the dark
 token values are a reasonable starting point and may want tuning.
+
+### Dusk theme (2026-05-29)
+
+Added a third palette, **Dusk** — a soft "dim" theme between light and dark
+(warm charcoal `--bg` ~oklch(0.305), lower contrast than dark, gentle for
+evening use). New `body[data-theme="dusk"]` token block; the switch is now
+**Light · Dusk · Dark · System** everywhere (segmented + rail cycle).
+`ThemePref`/`EffectiveTheme`, the no-flash inline script, the cookie
+validators, and the status-bar `theme-color` map all updated. `tsc`/`eslint`
+clean.

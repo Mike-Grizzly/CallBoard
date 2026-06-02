@@ -126,6 +126,35 @@ body[data-theme="dark"] {
   --shadow-3: 0 20px 60px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
+/* Dusk — a soft "dim" theme between light and dark: warm charcoal, lower
+   contrast than dark, gentle for evening use. */
+body[data-theme="dusk"] {
+  color-scheme: dark;
+  --bg: oklch(0.305 0.012 55);
+  --bg-elev: oklch(0.35 0.013 55);
+  --bg-muted: oklch(0.335 0.012 55);
+  --bg-sunken: oklch(0.275 0.012 55);
+  --rail: oklch(0.32 0.013 55);
+  --border: oklch(0.41 0.014 55);
+  --border-strong: oklch(0.47 0.016 55);
+  --ink: oklch(0.93 0.008 75);
+  --ink-2: oklch(0.8 0.01 75);
+  --ink-3: oklch(0.66 0.012 75);
+  --ink-4: oklch(0.55 0.012 75);
+  --accent: oklch(0.68 0.16 28);
+  --accent-soft: oklch(0.4 0.09 28);
+  --accent-ink: oklch(0.86 0.13 28);
+  --c-sage-soft: oklch(0.4 0.05 145);
+  --c-amber-soft: oklch(0.42 0.07 80);
+  --c-dusk-soft: oklch(0.4 0.05 260);
+  --c-clay-soft: oklch(0.42 0.07 35);
+  --c-sand-soft: oklch(0.4 0.04 90);
+  --c-plum-soft: oklch(0.4 0.05 320);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.26), 0 2px 6px rgba(0, 0, 0, 0.2);
+  --shadow-3: 0 20px 60px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
 /* Cool theme */
 body[data-theme="cool"] {
   --bg: oklch(0.985 0.004 250);

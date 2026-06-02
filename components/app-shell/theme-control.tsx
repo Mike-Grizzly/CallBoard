@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { Sun, Moon, Monitor } from "lucide-react";
+import { Sun, Sunset, Moon, Monitor } from "lucide-react";
 import {
   applyThemePref,
   readThemePref,
@@ -12,6 +12,7 @@ import {
 
 const OPTIONS: { pref: ThemePref; label: string; Icon: typeof Sun }[] = [
   { pref: "light", label: "Light", Icon: Sun },
+  { pref: "dusk", label: "Dusk", Icon: Sunset },
   { pref: "dark", label: "Dark", Icon: Moon },
   { pref: "system", label: "System", Icon: Monitor },
 ];
@@ -53,7 +54,7 @@ export function ThemeControl({
 
   if (variant === "icon") {
     const idx = OPTIONS.findIndex((o) => o.pref === pref);
-    const active = OPTIONS[idx === -1 ? 2 : idx];
+    const active = OPTIONS[idx === -1 ? OPTIONS.length - 1 : idx];
     const next = OPTIONS[(idx + 1) % OPTIONS.length];
     const ActiveIcon = active.Icon;
     return (

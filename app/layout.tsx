@@ -48,7 +48,7 @@ export const viewport: Viewport = {
 // Runs before paint: reads the theme cookie, resolves "system" against the OS
 // preference, and sets body[data-theme] + the status-bar color so there is no
 // light-mode flash on load (the server can't know the OS preference).
-const THEME_INIT_SCRIPT = `(function(){try{var m=document.cookie.match(/(?:^|;\\s*)proscene-theme=([^;]+)/);var p=m?decodeURIComponent(m[1]):"system";var d=p==="dark"||(p!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.body.dataset.theme=d?"dark":"warm";var t=document.querySelector('meta[name="theme-color"]');if(t)t.setAttribute("content",d?"#1d1b18":"#fbf8f3");}catch(e){}})();`;
+const THEME_INIT_SCRIPT = `(function(){try{var m=document.cookie.match(/(?:^|;\\s*)proscene-theme=([^;]+)/);var p=m?decodeURIComponent(m[1]):"system";var e=p==="dark"?"dark":p==="dusk"?"dusk":p==="light"?"warm":(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"warm");document.body.dataset.theme=e;var c=e==="dark"?"#1d1b18":e==="dusk"?"#3b3632":"#fbf8f3";var t=document.querySelector('meta[name="theme-color"]');if(t)t.setAttribute("content",c);}catch(e){}})();`;
 
 export default async function RootLayout({
   children,
@@ -58,7 +58,8 @@ export default async function RootLayout({
   // Server-side default to minimise flash for explicit light/dark choices;
   // the inline script corrects "system" before paint.
   const pref = (await cookies()).get("proscene-theme")?.value;
-  const initialTheme = pref === "dark" ? "dark" : "warm";
+  const initialTheme =
+    pref === "dark" ? "dark" : pref === "dusk" ? "dusk" : "warm";
 
   return (
     <html
