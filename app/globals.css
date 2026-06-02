@@ -8373,9 +8373,9 @@ textarea.cform-field {
 }
 .dd-chip {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 9px;
-  padding: 9px 14px;
+  padding: 11px 14px 9px;
   border-radius: var(--radius);
   background: var(--bg-elev);
   border: 1px solid var(--border);
@@ -8402,12 +8402,14 @@ textarea.cform-field {
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 600;
-  line-height: 1;
+  /* Match the icon height so the digit's optical center lines up with the
+     icon rather than floating above the two-line text block. */
+  line-height: 30px;
 }
 .dd-chip-lbl {
   font-size: 11px;
   color: var(--ink-3);
-  margin-top: 2px;
+  margin-top: -2px;
 }
 
 /* Section heads */
