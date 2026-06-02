@@ -9,6 +9,7 @@ import {
   Circle,
   CheckCircle2,
   PenLine,
+  FileText,
   Tag,
   Calendar,
   Settings,
@@ -17,21 +18,28 @@ import {
   Bold,
   Italic,
   Underline as UnderlineIcon,
+  Strikethrough,
+  Highlighter,
+  Link as LinkIcon,
   List,
   ListOrdered,
   Heading2,
-  Undo,
-  Redo,
   ChevronLeft,
+  Lock,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
+import Placeholder from "@tiptap/extension-placeholder";
 import Mention from "@tiptap/extension-mention";
+import Link from "@tiptap/extension-link";
+import { TaskList, TaskItem } from "@tiptap/extension-list";
+import { SlashCommand } from "@/components/ui/slash-command";
 import type { MentionMember } from "@/components/ui/mention-textarea";
 import { buildMentionSuggestion } from "@/components/ui/mention-suggestion";
 import type { NoteWithAuthor, NoteTagRow } from "@/features/notes/queries";
@@ -78,94 +86,94 @@ function ToolbarBtn({
   );
 }
 
-function EditorToolbar({
-  editor,
-}: {
-  editor: ReturnType<typeof useEditor>;
-}) {
+// Shared formatting buttons — rendered inside the selection BubbleMenu on
+// desktop and the keyboard accessory bar on mobile.
+function FormatButtons({ editor }: { editor: ReturnType<typeof useEditor> }) {
   if (!editor) return null;
+  const div = (
+    <div style={{ width: 1, height: 16, background: "var(--border)", margin: "0 3px" }} />
+  );
   return (
-    <div
-      className="row"
-      style={{
-        flexWrap: "wrap",
-        gap: 2,
-        borderBottom: "1px solid var(--border)",
-        padding: "6px 10px",
-      }}
-    >
+    <>
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleBold().run()}
         active={editor.isActive("bold")}
         title="Bold"
       >
-        <Bold style={{ width: 13, height: 13 }} />
+        <Bold style={{ width: 14, height: 14 }} />
       </ToolbarBtn>
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleItalic().run()}
         active={editor.isActive("italic")}
         title="Italic"
       >
-        <Italic style={{ width: 13, height: 13 }} />
+        <Italic style={{ width: 14, height: 14 }} />
       </ToolbarBtn>
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleUnderline().run()}
         active={editor.isActive("underline")}
         title="Underline"
       >
-        <UnderlineIcon style={{ width: 13, height: 13 }} />
+        <UnderlineIcon style={{ width: 14, height: 14 }} />
       </ToolbarBtn>
-      <div style={{ width: 1, height: 16, background: "var(--border)", margin: "0 4px" }} />
+      <ToolbarBtn
+        onClick={() => editor.chain().focus().toggleStrike().run()}
+        active={editor.isActive("strike")}
+        title="Strikethrough"
+      >
+        <Strikethrough style={{ width: 14, height: 14 }} />
+      </ToolbarBtn>
+      <ToolbarBtn
+        onClick={() => editor.chain().focus().toggleHighlight().run()}
+        active={editor.isActive("highlight")}
+        title="Highlight"
+      >
+        <Highlighter style={{ width: 14, height: 14 }} />
+      </ToolbarBtn>
+      <ToolbarBtn
+        onClick={() => {
+          const prev = editor.getAttributes("link").href as string | undefined;
+          const url = window.prompt("Link URL", prev ?? "https://");
+          if (url === null) return;
+          if (url.trim() === "") {
+            editor.chain().focus().extendMarkRange("link").unsetLink().run();
+            return;
+          }
+          editor
+            .chain()
+            .focus()
+            .extendMarkRange("link")
+            .setLink({ href: url.trim() })
+            .run();
+        }}
+        active={editor.isActive("link")}
+        title="Link"
+      >
+        <LinkIcon style={{ width: 14, height: 14 }} />
+      </ToolbarBtn>
+      {div}
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
         active={editor.isActive("heading", { level: 2 })}
         title="Heading"
       >
-        <Heading2 style={{ width: 13, height: 13 }} />
+        <Heading2 style={{ width: 14, height: 14 }} />
       </ToolbarBtn>
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleBulletList().run()}
         active={editor.isActive("bulletList")}
         title="Bullet list"
       >
-        <List style={{ width: 13, height: 13 }} />
+        <List style={{ width: 14, height: 14 }} />
       </ToolbarBtn>
       <ToolbarBtn
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
         active={editor.isActive("orderedList")}
         title="Numbered list"
       >
-        <ListOrdered style={{ width: 13, height: 13 }} />
+        <ListOrdered style={{ width: 14, height: 14 }} />
       </ToolbarBtn>
-      <div style={{ width: 1, height: 16, background: "var(--border)", margin: "0 4px" }} />
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().setTextAlign("left").run()}
-        active={editor.isActive({ textAlign: "left" })}
-        title="Align left"
-      >
-        <span style={{ fontSize: 11, fontWeight: 600 }}>L</span>
-      </ToolbarBtn>
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().setTextAlign("center").run()}
-        active={editor.isActive({ textAlign: "center" })}
-        title="Align center"
-      >
-        <span style={{ fontSize: 11, fontWeight: 600 }}>C</span>
-      </ToolbarBtn>
-      <div style={{ width: 1, height: 16, background: "var(--border)", margin: "0 4px" }} />
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().undo().run()}
-        title="Undo"
-      >
-        <Undo style={{ width: 13, height: 13 }} />
-      </ToolbarBtn>
-      <ToolbarBtn
-        onClick={() => editor.chain().focus().redo().run()}
-        title="Redo"
-      >
-        <Redo style={{ width: 13, height: 13 }} />
-      </ToolbarBtn>
-    </div>
+    </>
   );
 }
 
@@ -204,6 +212,45 @@ function NoteEditor({
   const isAuthor = note.createdBy === currentUserId;
   const canEdit = isAuthor || canManageTags;
 
+  // On phones the editor is a full-screen overlay; track the visual viewport
+  // so the bottom formatting bar rides above the on-screen keyboard (iOS
+  // overlays the keyboard without resizing the layout viewport). Ref mutation
+  // only — no React state, so no re-render churn.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const apply = () => {
+      const el = rootRef.current;
+      if (!el) return;
+      if (window.innerWidth > 720) {
+        el.style.removeProperty("height");
+      } else {
+        el.style.height = `${vv.height}px`;
+      }
+    };
+    apply();
+    vv.addEventListener("resize", apply);
+    vv.addEventListener("scroll", apply);
+    window.addEventListener("resize", apply);
+    return () => {
+      vv.removeEventListener("resize", apply);
+      vv.removeEventListener("scroll", apply);
+      window.removeEventListener("resize", apply);
+    };
+  }, []);
+
+  // Focus the title of a freshly created (empty) note so the user can type
+  // immediately, like Notion's "New page".
+  useEffect(() => {
+    if (canEdit && !note.title && !note.content) {
+      titleRef.current?.focus();
+    }
+    // Run once on mount per note.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const scheduleSave = useCallback(
     (fields: Parameters<typeof updateNote>[2]) => {
       setSaveStatus("saving");
@@ -228,6 +275,17 @@ function NoteEditor({
       Color,
       Highlight,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        HTMLAttributes: { class: "note-link", rel: "noopener noreferrer" },
+      }),
+      Placeholder.configure({
+        placeholder: "Write something, or press '/' for blocks…",
+      }),
+      SlashCommand,
       ...(members && members.length > 0
         ? [
             Mention.configure({
@@ -243,8 +301,8 @@ function NoteEditor({
     },
     editorProps: {
       attributes: {
-        class: "prose prose-sm max-w-none px-4 py-3 focus:outline-none",
-        style: "min-height:200px",
+        class: "prose max-w-none note-prose focus:outline-none",
+        style: "min-height:320px",
       },
     },
   });
@@ -316,272 +374,208 @@ function NoteEditor({
       : note.createdByEmail;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Header row */}
-      <div
-        className="row-between"
-        style={{ padding: "12px 18px", borderBottom: "1px solid var(--border)" }}
-      >
-        <div className="row" style={{ gap: 8 }}>
-          {/* Todo complete toggle */}
-          {isTodo && canEdit && (
-            <button
-              type="button"
-              onClick={handleCompleteToggle}
-              style={{
-                background: "none",
-                border: 0,
-                cursor: "pointer",
-                padding: 0,
-                color: isCompleted ? "var(--c-sage)" : "var(--ink-4)",
+    <div
+      ref={rootRef}
+      className="note-editor"
+      style={{ display: "flex", flexDirection: "column" }}
+    >
+      {/* Document — spacious, centered column (Notion-style) */}
+      <div className="note-doc-scroll">
+        <div
+          className="note-doc"
+          onMouseDown={(e) => {
+            // Clicking the empty padding (not the title or body) drops the
+            // cursor at the end of the document.
+            if (canEdit && e.target === e.currentTarget) {
+              e.preventDefault();
+              editor?.commands.focus("end");
+            }
+          }}
+        >
+          {canEdit ? (
+            <input
+              ref={titleRef}
+              type="text"
+              value={title}
+              onChange={(e) => handleTitleChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  editor?.commands.focus("start");
+                }
               }}
-              title={isCompleted ? "Mark incomplete" : "Mark complete"}
-            >
-              {isCompleted ? (
-                <CheckCircle2 style={{ width: 18, height: 18 }} />
-              ) : (
-                <Circle style={{ width: 18, height: 18 }} />
-              )}
-            </button>
+              placeholder="Untitled"
+              className="note-title-input"
+              data-done={isCompleted ? "1" : "0"}
+            />
+          ) : (
+            <h2 className="note-title-input" data-done={isCompleted ? "1" : "0"}>
+              {title || "Untitled"}
+            </h2>
           )}
 
-          {/* Tag badge */}
-          <div style={{ position: "relative" }}>
-            <button
-              type="button"
-              onClick={() => canEdit && setShowTagPicker((p) => !p)}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: canEdit ? "pointer" : "default",
-                padding: 0,
-              }}
-              title={canEdit ? "Change tag" : undefined}
-            >
-              {selectedTag ? (
-                <span
-                  className="pill"
-                  style={{
-                    backgroundColor: selectedTag.color,
-                    color: "white",
-                    borderRadius: 999,
-                  }}
-                >
-                  {selectedTag.name}
-                </span>
-              ) : (
-                <span className="pill">
-                  <Tag style={{ width: 10, height: 10 }} />
-                  No tag
-                </span>
-              )}
-            </button>
-
-            {showTagPicker && (
-              <div
-                className="card"
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  top: "100%",
-                  zIndex: 10,
-                  marginTop: 4,
-                  width: 176,
-                  padding: 4,
-                }}
+          {/* Quiet properties row, under the title */}
+          <div className="note-props">
+            {isTodo && canEdit && (
+              <button
+                type="button"
+                className="note-prop note-prop-todo"
+                data-done={isCompleted ? "1" : "0"}
+                onClick={handleCompleteToggle}
+                title={isCompleted ? "Mark incomplete" : "Mark complete"}
               >
-                <button
-                  type="button"
-                  onClick={() => handleTagChange(null)}
-                  style={{
-                    width: "100%",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    padding: "4px 8px",
-                    borderRadius: "var(--radius-s)",
-                    fontSize: 12,
-                    color: "var(--ink-3)",
-                  }}
-                  className="hover-bg"
-                >
-                  No tag
-                </button>
-                {tags.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => handleTagChange(t.id)}
-                    className="row hover-bg"
-                    style={{
-                      width: "100%",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      padding: "4px 8px",
-                      borderRadius: "var(--radius-s)",
-                      fontSize: 12,
-                      gap: 8,
-                    }}
-                  >
+                {isCompleted ? (
+                  <CheckCircle2 style={{ width: 14, height: 14 }} />
+                ) : (
+                  <Circle style={{ width: 14, height: 14 }} />
+                )}
+                <span>{isCompleted ? "Completed" : "To-do"}</span>
+              </button>
+            )}
+
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                className="note-prop"
+                onClick={() => canEdit && setShowTagPicker((p) => !p)}
+                title={canEdit ? "Change tag" : undefined}
+                style={{ cursor: canEdit ? "pointer" : "default" }}
+              >
+                {selectedTag ? (
+                  <>
                     <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        backgroundColor: t.color,
-                        flexShrink: 0,
-                      }}
+                      className="note-prop-dot"
+                      style={{ background: selectedTag.color }}
                     />
-                    <span style={{ flex: 1, textAlign: "left" }}>{t.name}</span>
-                    {t.id === tagId && <Check style={{ width: 11, height: 11 }} />}
+                    {selectedTag.name}
+                  </>
+                ) : (
+                  <>
+                    <Tag style={{ width: 12, height: 12 }} />
+                    Add tag
+                  </>
+                )}
+              </button>
+              {showTagPicker && (
+                <div className="card note-tag-pop">
+                  <button
+                    type="button"
+                    className="note-tag-opt"
+                    onClick={() => handleTagChange(null)}
+                  >
+                    No tag
                   </button>
-                ))}
-              </div>
+                  {tags.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className="note-tag-opt"
+                      onClick={() => handleTagChange(t.id)}
+                    >
+                      <span
+                        className="note-prop-dot"
+                        style={{ background: t.color }}
+                      />
+                      <span style={{ flex: 1, textAlign: "left" }}>{t.name}</span>
+                      {t.id === tagId && <Check style={{ width: 11, height: 11 }} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {canEdit ? (
+              <label className="note-prop">
+                <Calendar style={{ width: 12, height: 12 }} />
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => handleDueDateChange(e.target.value)}
+                  className="note-prop-date"
+                />
+              </label>
+            ) : (
+              dueDate && (
+                <span className="note-prop">
+                  <Calendar style={{ width: 12, height: 12 }} />
+                  {dueDate}
+                </span>
+              )
+            )}
+
+            <div className="note-props-spacer" />
+
+            {canEdit && (
+              <button
+                type="button"
+                className="note-prop-ico"
+                data-on={isTodo ? "1" : "0"}
+                onClick={handleTodoToggle}
+                title={isTodo ? "Remove to-do" : "Make to-do"}
+              >
+                {isTodo ? (
+                  <CheckCircle2 style={{ width: 15, height: 15 }} />
+                ) : (
+                  <Circle style={{ width: 15, height: 15 }} />
+                )}
+              </button>
+            )}
+            {canEdit && (
+              <button
+                type="button"
+                className="note-prop-ico"
+                data-on={isPinned ? "amber" : "0"}
+                onClick={handlePinToggle}
+                title={isPinned ? "Unpin" : "Pin"}
+              >
+                <Pin style={{ width: 15, height: 15 }} />
+              </button>
+            )}
+            {canEdit && (
+              <button
+                type="button"
+                className="note-prop-ico"
+                onClick={handleDelete}
+                title="Delete note"
+              >
+                <Trash2 style={{ width: 15, height: 15 }} />
+              </button>
             )}
           </div>
 
-          {/* Due date */}
-          {canEdit && (
-            <span className="row" style={{ gap: 4, fontSize: 12, color: "var(--ink-4)" }}>
-              <Calendar style={{ width: 11, height: 11 }} />
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => handleDueDateChange(e.target.value)}
-                style={{
-                  border: 0,
-                  background: "transparent",
-                  fontSize: 12,
-                  color: "var(--ink-4)",
-                  outline: "none",
-                  cursor: "pointer",
-                }}
-              />
-            </span>
-          )}
-          {!canEdit && dueDate && (
-            <span className="pill">
-              <Calendar style={{ width: 10, height: 10 }} />
-              {dueDate}
-            </span>
-          )}
-          {isPinned && (
-            <span className="pill" data-c="accent">
-              <Pin style={{ width: 10, height: 10 }} />
-              Pinned
-            </span>
-          )}
-        </div>
-
-        <div className="row" style={{ gap: 4 }}>
-          {canEdit && (
-            <button
-              type="button"
-              onClick={handleTodoToggle}
-              title={isTodo ? "Remove to-do" : "Make to-do"}
-              className="btn ghost btn-icon"
-              style={{ color: isTodo ? "var(--accent)" : "var(--ink-4)" }}
-            >
-              {isTodo ? (
-                <CheckCircle2 style={{ width: 14, height: 14 }} />
-              ) : (
-                <Circle style={{ width: 14, height: 14 }} />
+          {canEdit ? (
+            <>
+              {editor && (
+                <BubbleMenu
+                  editor={editor}
+                  className="note-bubble"
+                  options={{ placement: "top" }}
+                >
+                  <FormatButtons editor={editor} />
+                </BubbleMenu>
               )}
-            </button>
+              <EditorContent editor={editor} />
+            </>
+          ) : (
+            <div
+              className="prose note-prose"
+              style={{ maxWidth: "none" }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
+            />
           )}
-          {canEdit && (
-            <button
-              type="button"
-              onClick={handlePinToggle}
-              title={isPinned ? "Unpin" : "Pin"}
-              className="btn ghost btn-icon"
-              style={{ color: isPinned ? "var(--c-amber)" : undefined }}
-            >
-              <Pin style={{ width: 14, height: 14 }} />
-            </button>
-          )}
-          {canEdit && (
-            <button
-              type="button"
-              onClick={handleDelete}
-              title="Delete note"
-              className="btn ghost btn-icon"
-            >
-              <Trash2 style={{ width: 14, height: 14 }} />
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn ghost btn-icon"
-            title="Close"
-          >
-            <X style={{ width: 14, height: 14 }} />
-          </button>
         </div>
       </div>
 
-      {/* Title */}
-      <div style={{ padding: "22px 28px 0" }}>
-        {canEdit ? (
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => handleTitleChange(e.target.value)}
-            placeholder="Untitled"
-            style={{
-              border: 0,
-              padding: 0,
-              fontSize: 24,
-              fontWeight: 600,
-              fontFamily: "var(--font-display)",
-              letterSpacing: "-0.012em",
-              background: "transparent",
-              width: "100%",
-              outline: "none",
-              color: isCompleted ? "var(--ink-4)" : "var(--ink)",
-              textDecoration: isCompleted ? "line-through" : "none",
-            }}
-          />
-        ) : (
-          <h2
-            style={{
-              fontSize: 24,
-              fontWeight: 600,
-              fontFamily: "var(--font-display)",
-              letterSpacing: "-0.012em",
-              margin: 0,
-              color: isCompleted ? "var(--ink-4)" : "var(--ink)",
-              textDecoration: isCompleted ? "line-through" : "none",
-            }}
-          >
-            {title || "Untitled"}
-          </h2>
-        )}
-      </div>
-
-      {/* Editor */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
-        {canEdit ? (
-          <div className="card" style={{ overflow: "hidden" }}>
-            {editor && <EditorToolbar editor={editor} />}
-            <EditorContent editor={editor} />
-          </div>
-        ) : (
-          <div
-            className="prose prose-sm"
-            style={{ maxWidth: "none", padding: "0 12px" }}
-            dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
-          />
-        )}
-      </div>
+      {/* Mobile keyboard accessory bar (phone only) */}
+      {canEdit && editor && (
+        <div className="note-accessory">
+          <FormatButtons editor={editor} />
+        </div>
+      )}
 
       {/* Footer */}
       <div
-        className="row-between"
+        className="row-between note-editor-footer"
         style={{
           borderTop: "1px solid var(--border)",
           padding: "10px 18px",
@@ -626,39 +620,16 @@ function NoteRow({
   const done = visuallyDone;
 
   return (
-    <div
-      onClick={onPick}
-      style={{
-        display: "grid",
-        gridTemplateColumns: "22px 1fr auto",
-        gap: 10,
-        padding: "10px 12px",
-        borderRadius: "var(--radius-s)",
-        cursor: "pointer",
-        border: "1px solid " + (active ? "var(--border-strong)" : "transparent"),
-        background: active ? "var(--bg-elev)" : "transparent",
-        boxShadow: active ? "var(--shadow-1)" : "none",
-      }}
-      onMouseEnter={(e) => {
-        if (!active) e.currentTarget.style.background = "var(--bg-muted)";
-      }}
-      onMouseLeave={(e) => {
-        if (!active) e.currentTarget.style.background = "transparent";
-      }}
-    >
+    <div className="note-row" data-active={active ? "1" : "0"} onClick={onPick}>
       {/* Icon / check button */}
       {note.isTodo && onToggleComplete ? (
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onToggleComplete(); }}
-          style={{
-            background: "none",
-            border: "none",
-            padding: 0,
-            cursor: "pointer",
-            paddingTop: 1,
-            color: done ? "var(--c-sage)" : "var(--ink-4)",
-            transition: "color 0.25s ease",
+          className="note-row-check"
+          data-done={done ? "1" : "0"}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleComplete();
           }}
           title={done ? "Mark incomplete" : "Mark complete"}
         >
@@ -669,47 +640,32 @@ function NoteRow({
           )}
         </button>
       ) : (
-        <div
-          style={{
-            color: note.isTodo ? "var(--ink-4)" : "var(--ink-3)",
-            paddingTop: 1,
-          }}
-        >
-          <PenLine style={{ width: 14, height: 14 }} />
-        </div>
+        <span className="note-row-ico">
+          <FileText style={{ width: 15, height: 15 }} />
+        </span>
       )}
 
-      <div style={{ minWidth: 0 }}>
+      <div className="note-row-body">
         {/* Animated title */}
-        <div
-          className={`note-row-title truncate${done ? " done" : ""}`}
-          style={{ fontSize: 13, fontWeight: 500 }}
-        >
+        <div className={`note-row-title truncate${done ? " done" : ""}`}>
           {note.title || "Untitled"}
           <span className={`note-row-strike${done ? " done" : ""}`} />
         </div>
-        <div className="row" style={{ gap: 8, marginTop: 3 }}>
-          {tag && (
-            <span
-              className="pill"
-              style={{
-                fontSize: 10.5,
-                height: 16,
-                padding: "0 6px",
-                backgroundColor: tag.color,
-                color: "white",
-              }}
-            >
-              {tag.name}
-            </span>
-          )}
-          {note.dueDate && (
-            <span style={{ fontSize: 11, color: "var(--ink-4)" }}>{note.dueDate}</span>
-          )}
-        </div>
+        {(tag || note.dueDate) && (
+          <div className="note-row-meta">
+            {tag && (
+              <span
+                className="note-row-tagdot"
+                style={{ background: tag.color }}
+              />
+            )}
+            {tag && <span className="note-row-tagname">{tag.name}</span>}
+            {note.dueDate && <span className="note-row-due">{note.dueDate}</span>}
+          </div>
+        )}
       </div>
       {note.isPinned && (
-        <Pin style={{ width: 12, height: 12, color: "var(--c-amber)", marginTop: 2 }} />
+        <Pin className="note-row-pin" style={{ width: 12, height: 12 }} />
       )}
     </div>
   );
@@ -1152,15 +1108,22 @@ export function NotesPanel({
       >
         {selectedNote ? (
           <>
-            <button
-              type="button"
-              className="mn-back-btn"
-              onClick={() => setSelectedId(null)}
-              aria-label="Back to notes list"
-            >
-              <ChevronLeft style={{ width: 14, height: 14 }} />
-              <span>Notes</span>
-            </button>
+            <div className="note-mobile-topbar">
+              <button
+                type="button"
+                className="mn-back-btn"
+                onClick={() => setSelectedId(null)}
+                aria-label="Back to notes list"
+              >
+                <ChevronLeft style={{ width: 16, height: 16 }} />
+                <span>Notes</span>
+              </button>
+              <span className="note-priv-pill">
+                <Lock style={{ width: 11, height: 11 }} />
+                Private
+              </span>
+              <span aria-hidden className="note-topbar-spacer" />
+            </div>
             <NoteEditor
               key={selectedNote.id}
               note={selectedNote}

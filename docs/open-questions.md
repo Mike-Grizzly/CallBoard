@@ -257,3 +257,17 @@ default in place today.
   destinations in the app (no global search; the notifications inbox is
   deferred), so the appbar was dropped and the screen starts at the greeting.
   Revisit if/when those destinations exist.
+## Notes Notion-style editor (2026-05-29)
+
+- **Mobile keyboard accessory bar needs device verification.** The bar is kept
+  above the keyboard by syncing the editor height to
+  `window.visualViewport.height` (handles the common "keyboard at bottom"
+  case). iOS edge cases (viewport offset when scrolled, split keyboard,
+  floating iPad keyboard) are unverified — check on a real iPhone.
+- **Mobile metadata uses the in-document properties row.** Tag/due/pin/to-do
+  now live in a quiet row under the title (desktop + mobile) rather than a
+  top bar. A future polish could tuck them behind a "⋯" sheet next to the
+  Private pill for an even cleaner immersive top.
+- **Inline link uses `window.prompt`.** The bubble-menu Link button prompts
+  for a URL. An inline link popover (edit/remove/open) would be nicer — quick
+  follow-up.

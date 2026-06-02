@@ -4736,9 +4736,10 @@ select.pp-field {
   color: var(--bg);
 }
 .nf-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 10px;
+  align-items: start;
 }
 .nf-card {
   display: grid;
@@ -4879,12 +4880,37 @@ select.pp-field {
    The `.mn-back-btn` shows up only at phone widths inside the editor. */
 .notes-panel {
   display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 16px;
-  max-width: 1180px;
-  margin: 0 auto;
+  grid-template-columns: 272px minmax(0, 1fr);
+  grid-template-rows: minmax(560px, calc(100vh - 200px));
+  gap: 0;
+  align-items: stretch;
+}
+.notes-list-col {
+  border-right: 1px solid var(--border);
+  padding-right: 18px;
+  overflow-y: auto;
+}
+/* Editor reads as an open page that fills the rest of the tab — no bordered
+   card, no centered max-width gutters. */
+.notes-editor-col {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0 0 0 8px;
+  min-height: 0;
 }
 .mn-back-btn {
+  display: none;
+}
+/* Fills its column on desktop; on phones JS sets a px height (visual
+   viewport) so the keyboard accessory bar stays in view. */
+.note-editor {
+  height: 100%;
+}
+/* Mobile-only editor chrome — hidden on desktop (shown in the phone block). */
+.note-mobile-topbar,
+.note-accessory {
   display: none;
 }
 
@@ -5859,7 +5885,14 @@ select.pp-field {
      tap the back button → list returns. */
   .notes-panel {
     grid-template-columns: 1fr;
+    grid-template-rows: auto;
     gap: 0;
+  }
+  /* Sidebar is full-width on phone — no divider/inset from the desktop column. */
+  .notes-list-col {
+    border-right: 0;
+    padding-right: 0;
+    overflow-y: visible;
   }
   .notes-panel[data-editor-open="1"] .notes-list-col {
     display: none;
@@ -5867,26 +5900,99 @@ select.pp-field {
   .notes-panel[data-editor-open="0"] .notes-editor-col {
     display: none;
   }
-  .notes-editor-col {
+
+  /* Editor becomes a full-screen, immersive overlay (like the script
+     reader). Height is JS-synced to the visual viewport so the accessory
+     bar rides above the keyboard. */
+  .notes-panel[data-editor-open="1"] .notes-editor-col {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: var(--bg);
+    box-shadow: none;
     min-height: 0;
+    overflow: hidden;
+    animation: msr-in 0.26s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  .note-editor {
+    overflow: hidden;
+  }
+
+  /* Top bar: back · centered "Private" pill · spacer */
+  .note-mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: calc(8px + env(safe-area-inset-top)) 10px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .note-priv-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0 auto;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--bg-muted);
+    border: 1px solid var(--border);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--ink-2);
+  }
+  .note-topbar-spacer {
+    width: 64px;
+    flex-shrink: 0;
   }
   .mn-back-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    align-self: flex-start;
-    margin: 10px 12px 0;
-    padding: 6px 10px 6px 6px;
+    gap: 4px;
+    margin: 0;
+    padding: 6px 8px 6px 4px;
     border: 0;
     background: transparent;
     color: var(--ink-2);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
+    flex-shrink: 0;
   }
   .mn-back-btn:active {
     background: var(--bg-muted);
+  }
+
+  /* Bigger, edge-to-edge document on phones */
+  .note-doc {
+    padding: 18px 18px 40px;
+    max-width: none;
+  }
+  .note-title-input {
+    font-size: 28px;
+  }
+
+  /* Keyboard accessory bar */
+  .note-accessory {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 8px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-elev);
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-shrink: 0;
+  }
+  .note-accessory::-webkit-scrollbar {
+    display: none;
+  }
+  /* The save-status footer is redundant on the immersive phone editor. */
+  .note-editor-footer {
+    display: none;
   }
 
   /* Calendar event drawer slides up from the bottom as a sheet (matches
@@ -9896,4 +10002,340 @@ textarea.cform-field {
   font-size: 11px;
   color: var(--ink-4);
   margin-top: 1px;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Notes — Notion-style document editor (slash commands, bubble menu,
+   spacious centered column). Shared desktop + mobile; mobile overlay
+   chrome is added in the phone media block.
+   ════════════════════════════════════════════════════════════════════ */
+.note-doc-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+.note-doc {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 28px 56px 96px;
+}
+.note-title-input {
+  border: 0;
+  padding: 0;
+  margin: 0 0 8px;
+  width: 100%;
+  background: transparent;
+  outline: none;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -0.018em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+.note-title-input[data-done="1"] {
+  color: var(--ink-4);
+  text-decoration: line-through;
+}
+.note-title-input::placeholder {
+  color: var(--ink-4);
+}
+.note-prose {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.note-prose:focus {
+  outline: none;
+}
+
+/* Placeholder text in an empty editor (TipTap Placeholder extension) */
+.note-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--ink-4);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Selection bubble toolbar */
+.note-bubble {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: var(--shadow-2);
+}
+
+/* Slash command block menu */
+.slash-menu {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow-3);
+  padding: 6px;
+  min-width: 264px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.slash-menu-head {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  padding: 4px 8px 6px;
+}
+.slash-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 8px;
+  border: 0;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.slash-item[data-active="1"] {
+  background: var(--bg-muted);
+}
+.slash-item-ico {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: var(--bg-sunken);
+  color: var(--ink-2);
+  border: 1px solid var(--border);
+}
+.slash-item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.slash-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.slash-item-hint {
+  font-size: 11px;
+  color: var(--ink-4);
+}
+
+/* Notes — task list (checkboxes) + links inside the editor/read-only prose */
+.note-prose ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 2px;
+  margin: 0.4em 0;
+}
+.note-prose ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 3px 0;
+}
+.note-prose ul[data-type="taskList"] li > label {
+  margin-top: 0.28em;
+  flex-shrink: 0;
+  user-select: none;
+}
+.note-prose ul[data-type="taskList"] li > div {
+  flex: 1;
+  min-width: 0;
+}
+.note-prose ul[data-type="taskList"] li > div > p {
+  margin: 0;
+}
+.note-prose ul[data-type="taskList"] input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.note-prose ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: var(--ink-4);
+  text-decoration: line-through;
+}
+.note-link {
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.note-link:hover {
+  color: var(--accent);
+}
+
+/* Notes — quiet properties row under the title (tag / due / actions) */
+.note-props {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 2px 0 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.note-prop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border: 0;
+  background: var(--bg-muted);
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.note-prop:hover {
+  background: var(--bg-sunken);
+}
+.note-prop-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.note-prop-date {
+  border: 0;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  color: var(--ink-2);
+  cursor: pointer;
+  padding: 0;
+}
+.note-prop-todo[data-done="1"] {
+  color: var(--c-sage);
+}
+.note-props-spacer {
+  flex: 1;
+  min-width: 8px;
+}
+.note-prop-ico {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  border-radius: 8px;
+  color: var(--ink-4);
+  cursor: pointer;
+}
+.note-prop-ico:hover {
+  background: var(--bg-muted);
+  color: var(--ink-2);
+}
+.note-prop-ico[data-on="1"] {
+  color: var(--accent);
+}
+.note-prop-ico[data-on="amber"] {
+  color: var(--c-amber);
+}
+.note-tag-pop {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  width: 200px;
+  padding: 5px;
+  box-shadow: var(--shadow-2);
+}
+.note-tag-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border: 0;
+  background: none;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.note-tag-opt:hover {
+  background: var(--bg-muted);
+}
+
+/* Notes sidebar — Notion-style page rows */
+.note-row {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  gap: 9px;
+  align-items: start;
+  padding: 6px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.note-row:hover {
+  background: var(--bg-muted);
+}
+.note-row[data-active="1"] {
+  background: var(--bg-elev);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.note-row-ico {
+  display: flex;
+  color: var(--ink-4);
+  padding-top: 2px;
+}
+.note-row-check {
+  background: none;
+  border: 0;
+  padding: 2px 0 0;
+  cursor: pointer;
+  color: var(--ink-4);
+  transition: color 0.25s ease;
+}
+.note-row-check[data-done="1"] {
+  color: var(--c-sage);
+}
+.note-row-body {
+  min-width: 0;
+}
+.note-row-title {
+  font-size: 13px;
+  font-weight: 500;
+}
+.note-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.note-row-tagdot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.note-row-tagname {
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+.note-row-due {
+  font-size: 11px;
+  color: var(--ink-4);
+  white-space: nowrap;
+}
+.note-row-pin {
+  color: var(--c-amber);
+  margin-top: 3px;
+  flex-shrink: 0;
 }
