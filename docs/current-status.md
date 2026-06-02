@@ -1007,3 +1007,36 @@ Plus desktop layout fix (full-width sidebar column + filling editor, no
 
 **Verified:** `tsc` + `eslint` clean (one pre-existing TagManager
 set-state-in-effect warning remains). **Not verified:** live device behavior.
+
+## Dark mode (2026-05-29)
+
+Branch `claude/bold-babbage-qxwCO`. App-wide light/dark/system theming, built
+on the design-token system (`body[data-theme]`), which already had a dark
+token block.
+
+- **Preference model:** Light / Dark / **System** (follows OS, live). Stored in
+  a `proscene-theme` cookie (device-level, not the DB). New users default to
+  System; existing users stay Light until they choose.
+- **No-flash SSR:** the root layout (`app/layout.tsx`, now async) reads the
+  cookie and renders `body[data-theme]` server-side; an inline `<script>` at
+  body start resolves "system" against `prefers-color-scheme` and corrects the
+  attribute + mobile `theme-color` before paint.
+- **Switch UI:** `components/app-shell/theme-control.tsx` — a segmented
+  Light/Dark/System control in **Settings → Appearance** and the **mobile More
+  page**, plus a compact cycle button in the **rail footer**. Applies instantly
+  (no reload) and persists via cookie; on "System" it follows live OS changes
+  via `matchMedia`. State uses `useSyncExternalStore` (seeded with a
+  server-read `initialPref`) so there's no setState-in-effect and no active-
+  option flicker. `lib/theme.ts` (client apply/read) + `lib/theme-server.ts`
+  (cookie read).
+- **Native controls:** `color-scheme` set per theme (`:root` light, dark block
+  dark) so scrollbars, date inputs, and form controls render dark.
+- **Audit:** the app is token-driven, so the dark block flips nearly
+  everything. The few literal whites (toggle knobs, PDF/document page
+  backgrounds, the calendar "today" pip) are intentional and left as-is; auth
+  screens use `var(--bg)` and go dark automatically.
+
+**Verified:** `next build` compiles + `tsc` + `eslint` clean (build stops only
+at page-data collection because this env has no `DATABASE_URL`). **Not
+verified:** live visual QA of the dark palette on real screens — the dark
+token values are a reasonable starting point and may want tuning.

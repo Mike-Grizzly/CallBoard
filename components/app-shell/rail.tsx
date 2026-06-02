@@ -10,6 +10,8 @@ import { NAV_ITEMS } from "./nav-items";
 import { RailLink } from "./rail-link";
 import { LogoutButton } from "./logout-button";
 import { WorkspaceRailBadge } from "./workspace-rail-badge";
+import { ThemeControl } from "./theme-control";
+import { getThemePref } from "@/lib/theme-server";
 
 function initialsFor(firstName: string, lastName: string, email: string) {
   const a = (firstName || "").trim()[0];
@@ -21,6 +23,7 @@ function initialsFor(firstName: string, lastName: string, email: string) {
 export async function Rail() {
   const user = await getCurrentUser();
   const role = user?.role ?? "cast";
+  const themePref = await getThemePref();
 
   const [productions, memberships, logoUrl] = user
     ? await Promise.all([
@@ -143,6 +146,7 @@ export async function Rail() {
                 {user.role}
               </span>
             </div>
+            <ThemeControl variant="icon" initialPref={themePref} />
             <Link href="/settings" title="Settings" aria-label="Settings">
               <Icon name="Settings" className="ico" aria-hidden />
             </Link>

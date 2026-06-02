@@ -13,6 +13,7 @@
  */
 
 :root {
+  color-scheme: light;
   /* Warm theatre palette — paper, ink, curtain */
   --bg: oklch(0.985 0.005 75);
   --bg-elev: oklch(1 0 0);
@@ -99,6 +100,7 @@
 
 /* Dark mode */
 body[data-theme="dark"] {
+  color-scheme: dark;
   --bg: oklch(0.18 0.008 60);
   --bg-elev: oklch(0.22 0.008 60);
   --bg-muted: oklch(0.21 0.008 60);
@@ -10338,4 +10340,66 @@ textarea.cform-field {
   color: var(--c-amber);
   margin-top: 3px;
   flex-shrink: 0;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Theme control (Settings / mobile More segmented + rail quick toggle)
+   ════════════════════════════════════════════════════════════════════ */
+.theme-seg {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.theme-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-3);
+  font: 500 13px var(--font-ui);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.theme-seg-btn:hover {
+  color: var(--ink);
+}
+.theme-seg-btn[data-active="1"] {
+  background: var(--bg-elev);
+  color: var(--ink);
+  box-shadow: var(--shadow-1);
+}
+.theme-quick {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: none;
+  border-radius: 8px;
+  color: var(--ink-3);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.theme-quick:hover {
+  background: var(--bg-muted);
+  color: var(--ink);
+}
+.more-appearance {
+  margin-top: 22px;
+}
+@media (max-width: 720px) {
+  .theme-seg {
+    display: flex;
+    width: 100%;
+  }
+  .theme-seg-btn {
+    flex: 1;
+    justify-content: center;
+  }
 }

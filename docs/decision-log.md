@@ -1285,3 +1285,21 @@ composite-unique-constraint known issue). RSVP/ack interactions are idempotent
 toggles. The desktop dashboard diverges visually from phone; both read the
 same data. Follow-ups (event-drawer RSVP, phone bento parity) tracked in
 open-questions.
+
+## 2026-05-29 — Theme preference: cookie-based, no-flash, light/dark/system
+
+**Decision:** Dark mode is a **device preference stored in a cookie**
+(`proscene-theme`), not a per-user DB column. The root layout reads it
+server-side for a no-flash first paint; an inline script resolves "system"
+before paint. Switch lives in Settings → Appearance + mobile More + a rail
+quick toggle.
+
+**Reason:** Theme is a per-device/browser concern, so a cookie (readable in the
+server layout) gives correct SSR with no flash and no schema change. A DB
+column would flash (client-only) and wrongly sync across a user's devices.
+`useSyncExternalStore` (not setState-in-effect) keeps it lint-clean and
+flicker-free.
+
+**Impact:** No schema change. `body[data-theme]` is now dynamic (was hardcoded
+`warm`). Future per-workspace branding or additional themes (the `cool` token
+set already exists) can extend the same mechanism.
