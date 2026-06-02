@@ -4,6 +4,8 @@ import { Icon, type IconName } from "@/components/ui/icon";
 import { requireCurrentUser } from "@/lib/auth";
 import { can, type Capability } from "@/lib/permissions";
 import { logout } from "@/app/actions/auth";
+import { ThemeControl } from "@/components/app-shell/theme-control";
+import { getThemePref } from "@/lib/theme-server";
 
 interface MoreItem {
   label: string;
@@ -33,6 +35,7 @@ function initialsFor(firstName: string, lastName: string, email: string) {
 
 export default async function MorePage() {
   const user = await requireCurrentUser();
+  const themePref = await getThemePref();
   const items = ITEMS.filter((item) => !item.capability || can(user.role, item.capability));
   const displayName =
     user.firstName || user.lastName
@@ -67,6 +70,13 @@ export default async function MorePage() {
           </li>
         ))}
       </ul>
+
+      <div className="more-appearance">
+        <div className="h-eyebrow" style={{ marginBottom: 8 }}>
+          Appearance
+        </div>
+        <ThemeControl variant="segmented" initialPref={themePref} />
+      </div>
 
       <form action={logout} className="more-logout">
         <button type="submit" className="btn ghost">

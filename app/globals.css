@@ -13,6 +13,7 @@
  */
 
 :root {
+  color-scheme: light;
   /* Warm theatre palette — paper, ink, curtain */
   --bg: oklch(0.985 0.005 75);
   --bg-elev: oklch(1 0 0);
@@ -99,6 +100,7 @@
 
 /* Dark mode */
 body[data-theme="dark"] {
+  color-scheme: dark;
   --bg: oklch(0.18 0.008 60);
   --bg-elev: oklch(0.22 0.008 60);
   --bg-muted: oklch(0.21 0.008 60);
@@ -122,6 +124,35 @@ body[data-theme="dark"] {
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.25);
   --shadow-3: 0 20px 60px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Dusk — a soft "dim" theme between light and dark: warm charcoal, lower
+   contrast than dark, gentle for evening use. */
+body[data-theme="dusk"] {
+  color-scheme: dark;
+  --bg: oklch(0.305 0.012 55);
+  --bg-elev: oklch(0.35 0.013 55);
+  --bg-muted: oklch(0.335 0.012 55);
+  --bg-sunken: oklch(0.275 0.012 55);
+  --rail: oklch(0.32 0.013 55);
+  --border: oklch(0.41 0.014 55);
+  --border-strong: oklch(0.47 0.016 55);
+  --ink: oklch(0.93 0.008 75);
+  --ink-2: oklch(0.8 0.01 75);
+  --ink-3: oklch(0.66 0.012 75);
+  --ink-4: oklch(0.55 0.012 75);
+  --accent: oklch(0.68 0.16 28);
+  --accent-soft: oklch(0.4 0.09 28);
+  --accent-ink: oklch(0.86 0.13 28);
+  --c-sage-soft: oklch(0.4 0.05 145);
+  --c-amber-soft: oklch(0.42 0.07 80);
+  --c-dusk-soft: oklch(0.4 0.05 260);
+  --c-clay-soft: oklch(0.42 0.07 35);
+  --c-sand-soft: oklch(0.4 0.04 90);
+  --c-plum-soft: oklch(0.4 0.05 320);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.26), 0 2px 6px rgba(0, 0, 0, 0.2);
+  --shadow-3: 0 20px 60px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
 /* Cool theme */
@@ -10338,4 +10369,66 @@ textarea.cform-field {
   color: var(--c-amber);
   margin-top: 3px;
   flex-shrink: 0;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Theme control (Settings / mobile More segmented + rail quick toggle)
+   ════════════════════════════════════════════════════════════════════ */
+.theme-seg {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.theme-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-3);
+  font: 500 13px var(--font-ui);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.theme-seg-btn:hover {
+  color: var(--ink);
+}
+.theme-seg-btn[data-active="1"] {
+  background: var(--bg-elev);
+  color: var(--ink);
+  box-shadow: var(--shadow-1);
+}
+.theme-quick {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: none;
+  border-radius: 8px;
+  color: var(--ink-3);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.theme-quick:hover {
+  background: var(--bg-muted);
+  color: var(--ink);
+}
+.more-appearance {
+  margin-top: 22px;
+}
+@media (max-width: 720px) {
+  .theme-seg {
+    display: flex;
+    width: 100%;
+  }
+  .theme-seg-btn {
+    flex: 1;
+    justify-content: center;
+  }
 }

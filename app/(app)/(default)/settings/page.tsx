@@ -5,6 +5,11 @@ import { can } from "@/lib/permissions";
 import { getUserMemberships } from "@/features/workspace/queries";
 import { getSignedLogoUrl } from "@/lib/workspace-logo";
 import { WorkspaceSwitcher } from "./workspace-switcher";
+import {
+  ThemeControl,
+  ThemeStatusNote,
+} from "@/components/app-shell/theme-control";
+import { getThemePref } from "@/lib/theme-server";
 
 function roleLabel(role: string): string {
   const labels: Record<string, string> = {
@@ -22,9 +27,10 @@ function roleLabel(role: string): string {
 export default async function SettingsPage() {
   const user = await requireCurrentUser();
   const canManage = can(user.role, "settings:manage");
-  const [memberships, logoUrl] = await Promise.all([
+  const [memberships, logoUrl, themePref] = await Promise.all([
     getUserMemberships(user.id),
     getSignedLogoUrl(user.organizationLogoUrl),
+    getThemePref(),
   ]);
 
   return (
@@ -93,6 +99,15 @@ export default async function SettingsPage() {
           current={user.organizationId}
           memberships={memberships}
         />
+      </div>
+
+      <div className="card card-pad">
+        <div className="h-eyebrow">Appearance</div>
+        <h2 className="h-section" style={{ marginTop: 2, marginBottom: 12 }}>
+          Theme
+        </h2>
+        <ThemeControl variant="segmented" initialPref={themePref} />
+        <ThemeStatusNote initialPref={themePref} />
       </div>
 
       <ul className="more-list" role="list">

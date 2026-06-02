@@ -267,7 +267,6 @@ All tables use UUID primary keys, cascade deletes on foreign keys, and timezone-
 - AI script analysis (schema prepared, no processing logic)
 - Document comments/annotations (UI placeholder, no data model)
 - Tests
-- Dark mode
 - Mobile navigation drawer
 - Email notifications
 - Real-time updates
