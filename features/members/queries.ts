@@ -62,6 +62,7 @@ export async function getOrganizationMembers(organizationId: string) {
       lastName: profiles.lastName,
       requestedRole: profiles.requestedRole,
       role: organizationMemberships.role,
+      status: profiles.status,
       createdAt: organizationMemberships.createdAt,
     })
     .from(organizationMemberships)

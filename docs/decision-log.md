@@ -1303,3 +1303,71 @@ flicker-free.
 **Impact:** No schema change. `body[data-theme]` is now dynamic (was hardcoded
 `warm`). Future per-workspace branding or additional themes (the `cool` token
 set already exists) can extend the same mechanism.
+
+---
+
+## 2026-06-03 — Announcement notifications: scope-based fan-out, channel preferences, push deferred
+
+**Decision:** Announcements now actively notify their audience instead of being
+pull-only. Targeting is **scope-based**, not a new mention syntax: on create,
+`createAnnouncement` fans out to org members (org-wide announcements) or
+production members (production-scoped), excluding the author. Delivery is
+per-user across channels stored in a new `notification_preferences` table
+(`in_app`, `email`, `push`). In-app reuses the existing `notifications` table
+(surfaced by a now-**global** bell in the rail foot — previously the bell only
+existed inside a production layout). Email reuses the existing Resend pipeline.
+
+**Reason:** An announcement is already a broadcast object whose audience is
+defined by its scope; requiring authors to also @mention a group would be
+redundant and easy to forget. Reusing scope keeps authoring foolproof and
+reuses the audience logic already in `getAckInfoForAnnouncements`.
+
+**Push deferred (Phase 2):** there is no native app or PWA push transport yet.
+The `push` channel is modeled in the schema/UI (disabled "coming soon" toggle)
+but inert — nothing delivers it. The realistic future path is Web Push (PWA:
+manifest + service worker + VAPID + a `push_subscriptions` table), with the
+caveat that iOS only delivers Web Push after "Add to Home Screen". Chosen over a
+third-party push service (e.g. OneSignal) to avoid an external dependency.
+
+**Impact:** New table `notification_preferences` (uniqueness on `userId`
+enforced in app code, per the drizzle-push constraint note — run
+`npm run db:push` to apply). New `features/notifications/announce.ts`
+(fan-out + email) and `preferences.ts`. The notification bell moved from
+`app/(app)/productions/[slug]/notification-bell.tsx` to
+`components/app-shell/notification-bell.tsx` and is rendered globally in the
+rail (removed from the production topbar to avoid duplication). New settings
+page `/settings/notifications`. Implemented but **not yet browser-verified**.
+
+---
+
+## 2026-06-03 — Orphaned (login-less) profiles: diagnosis, cleanup, invite hardening
+
+**Context:** A password reset for a member shown in the org (`mgrigsby.beazleyrealtors@gmail.com`) never delivered. Investigation via the live Supabase project found the address had a `profiles` row but **no `auth.users` account** — so Supabase silently 200s the reset (anti-enumeration) and sends nothing. Several such orphan profiles existed (1 real director, 10 `@wellmantheatre.org` demo/seed rows from one 2026-05-14 batch, and 2 duplicate `katieandmikeyplaygames` rows alongside the real login).
+
+**Root cause:** logins link to profiles by `profiles.id == auth.users.id` (`lib/auth.ts`). The current invite flow is correct (creates the auth user first, then `profile.id = auth.id`). The orphans are **legacy** rows with random ids and no auth account; on signup they can't link, so a fresh self-signup profile + new org is created instead (this is how the katie duplicates arose). Additionally, `inviteMembers` assumed "profile exists ⇒ login exists", so re-inviting an orphan just added a membership and reported success without provisioning an account.
+
+**Security assessment:** NOT a vulnerability in the exploit sense. Orphans have no auth row (no password, no session). Because linking is by auth UID (not email), signing up with an orphan's email yields a new account + new org and does **not** inherit the orphan's role/memberships. Latent risk noted: any future "reconcile by email" logic must be gated on verified email ownership and limited to the admin invite flow.
+
+**Decisions / actions:**
+1. **Data cleanup (production):** deleted the orphan director profile + the 2 duplicate katie profiles (all login-less, no authored content; FKs to `profiles.id` are all CASCADE). Left the 10 `@wellmantheatre.org` demo rows in place for now.
+2. **Invite hardening (code):** `inviteMembers` now calls `auth.admin.getUserById` on a matched profile; if there's no login it deletes the orphan and falls through to the normal create path (real auth account + invite email).
+3. **UX:** member list shows a "Pending invite" badge for `profiles.status = 'invited'`.
+
+**Impact:** Bundled into branch `claude/keen-bardeen-kSndq` / PR #25. No schema change. Remaining: demo rows still present; broader backfill of any other legacy orphans not done.
+
+---
+
+## 2026-06-03 — Announcement notifications surface as an acknowledge banner (not a bell)
+
+**Context:** The rail-foot notification bell worked but crowded the footer (avatar, name, role, theme, settings, logout) and had no mobile surface (rail is hidden on phones). Announcements are infrequent but important (schedule/room/last-minute changes).
+
+**Decision:** Replace the bell with a **top-of-content acknowledge banner**. It appears only when the user has unacknowledged announcements in their audience and clears as each is acknowledged. Acknowledging from the banner records the same `announcementAcks` row managers already see rolled up on the announcements page ("N/M acknowledged"). Because it lives in the content column, it also shows on phones — closing the earlier mobile gap.
+
+**Implementation:**
+- `getUnacknowledgedAnnouncements(userId, orgId, productionIds)` — audience-scoped (org-wide + user's productions), excludes the user's own posts, 30-day window so enabling acks doesn't resurface ancient notices.
+- `AnnouncementBanner` (server) in the `(app)` layout via `AppFrame`'s new `banner` slot → `AnnouncementBannerClient` (optimistic dismiss, reuses `acknowledgeAnnouncement`).
+- Removed `NotificationBell` from the rail foot (and its unread-count fetch).
+
+**Consequences / open items:**
+- Email fan-out unchanged (still gated by the user's email preference).
+- `fanoutAnnouncement` still writes `notifications` rows and `notification-bell.tsx` still exists, but **nothing renders them now** — dead until a future header "notification center." Document-comment notifications (which also write to `notifications`) likewise have no surface currently. The `notification_preferences` "in-app" toggle is therefore a no-op for the moment (the banner always shows for unacked items). Tracked in open-questions; cleanup or a header center is a follow-up.

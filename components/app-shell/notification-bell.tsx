@@ -11,9 +11,14 @@ import type { Notification } from "@/db/schema";
 
 interface Props {
   initialUnread: number;
+  /**
+   * Where the panel opens from. "down" (default) suits a topbar; "up" suits the
+   * rail foot at the bottom-left of the screen so the panel doesn't clip.
+   */
+  placement?: "down" | "up";
 }
 
-export function NotificationBell({ initialUnread }: Props) {
+export function NotificationBell({ initialUnread, placement = "down" }: Props) {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(initialUnread);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -69,24 +74,35 @@ export function NotificationBell({ initialUnread }: Props) {
       <button
         ref={btnRef}
         type="button"
-        className="btn ghost btn-icon"
         title="Notifications"
         aria-label="Notifications"
         onClick={toggle}
-        style={{ position: "relative" }}
+        style={{
+          position: "relative",
+          width: 28,
+          height: 28,
+          display: "grid",
+          placeItems: "center",
+          background: "none",
+          border: 0,
+          borderRadius: 7,
+          color: "var(--ink-3)",
+          cursor: "pointer",
+          flexShrink: 0,
+        }}
       >
-        <Bell className="ico" aria-hidden />
+        <Bell size={16} aria-hidden />
         {unread > 0 && (
           <span
             style={{
               position: "absolute",
-              top: 4,
-              right: 4,
+              top: 2,
+              right: 2,
               width: 8,
               height: 8,
               borderRadius: "50%",
               background: "var(--c-clay)",
-              border: "2px solid var(--bg-elev)",
+              border: "2px solid var(--rail)",
             }}
           />
         )}
@@ -98,8 +114,9 @@ export function NotificationBell({ initialUnread }: Props) {
           className="anim-in"
           style={{
             position: "absolute",
-            top: "calc(100% + 8px)",
-            right: 0,
+            ...(placement === "up"
+              ? { bottom: "calc(100% + 8px)", left: 0 }
+              : { top: "calc(100% + 8px)", right: 0 }),
             width: 340,
             background: "var(--bg-elev)",
             border: "1px solid var(--border)",

@@ -7,7 +7,7 @@ import {
   organizationMemberships,
   announcementAcks,
 } from "@/db/schema";
-import { eq, desc, and, or, isNull, inArray, count } from "drizzle-orm";
+import { eq, desc, and, or, isNull, inArray, count, ne, gte } from "drizzle-orm";
 
 const announcementFields = {
   id: announcements.id,
@@ -100,6 +100,58 @@ export async function getAnnouncementsForUser(
       ),
     )
     .orderBy(desc(announcements.pinned), desc(announcements.createdAt));
+}
+
+/**
+ * Announcements in the user's audience that they haven't acknowledged yet —
+ * powers the acknowledge banner. Excludes the user's own posts and anything
+ * older than 30 days (so enabling acks doesn't resurface ancient notices).
+ * Audience = org-wide (null production) plus productions the user is in.
+ */
+export async function getUnacknowledgedAnnouncements(
+  userId: string,
+  orgId: string,
+  productionIds: string[],
+) {
+  const audience =
+    productionIds.length > 0
+      ? or(
+          isNull(announcements.productionId),
+          inArray(announcements.productionId, productionIds),
+        )
+      : isNull(announcements.productionId);
+
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  return db
+    .select({
+      id: announcements.id,
+      title: announcements.title,
+      productionId: announcements.productionId,
+      productionTitle: productions.title,
+      productionSlug: productions.slug,
+      createdAt: announcements.createdAt,
+    })
+    .from(announcements)
+    .leftJoin(productions, eq(announcements.productionId, productions.id))
+    .leftJoin(
+      announcementAcks,
+      and(
+        eq(announcementAcks.announcementId, announcements.id),
+        eq(announcementAcks.userId, userId),
+      ),
+    )
+    .where(
+      and(
+        eq(announcements.organizationId, orgId),
+        ne(announcements.createdBy, userId),
+        audience,
+        isNull(announcementAcks.id),
+        gte(announcements.createdAt, since),
+      ),
+    )
+    .orderBy(desc(announcements.createdAt))
+    .limit(10);
 }
 
 export type AnnouncementWithMeta = Awaited<

@@ -90,7 +90,58 @@ A bulletin board for the company and individual productions. Lets authorized use
 - [ ] Announcements card on production overview shows correct count
 - [ ] Announcements tab on production detail navigates correctly
 
+## Notifications (2026-06-03 — implemented, not browser-verified)
+
+Posting an announcement now actively notifies its audience (previously
+pull-only). Targeting is **scope-based**, not a mention syntax:
+
+- `createAnnouncement` resolves the audience from the announcement's scope —
+  `getOrganizationMembers` for org-wide (`production_id IS NULL`),
+  `getProductionMembers` for production-scoped — and calls
+  `fanoutAnnouncement` (`features/notifications/announce.ts`). The author is
+  excluded.
+- Delivery is per-user by channel, stored in the new `notification_preferences`
+  table (`in_app`, `email`, `push`; missing row = defaults of in-app + email
+  on, push off). Edited at `/settings/notifications`.
+  - **in_app (updated 2026-06-03):** surfaced as a **top-of-content acknowledge
+    banner** (`components/app-shell/announcement-banner.tsx`), shown when the user
+    has unacknowledged announcements in their audience and cleared as each is
+    acknowledged (reuses `announcementAcks`, so managers still see the ack rollup).
+    Works on desktop and mobile. The earlier rail bell was removed; `fanoutAnnouncement`
+    still writes `notifications` rows but nothing renders them yet (see decision-log
+    + open-questions, 2026-06-03).
+  - **email:** sent via the existing Resend pipeline (one message per recipient,
+    batched ≤100). Best-effort — email failure never fails the post.
+  - **push:** modeled but **inert** (no transport yet — see decision-log
+    2026-06-03 and open-questions). The settings toggle is disabled.
+- `@mention`s inside the body still create `mentions` rows (dashboard Mentions
+  bento) as before — unchanged and complementary to the broadcast fan-out.
+
+### New/changed files
+
+| File | Purpose |
+|------|---------|
+| `db/schema/notification-preferences.ts` | Per-user channel toggles |
+| `features/notifications/preferences.ts` | Get/bulk-get prefs with defaults |
+| `features/notifications/announce.ts` | Scope fan-out + Resend email |
+| `features/notifications/actions.ts` | `updateNotificationPreferences` |
+| `features/announcements/actions.ts` | Calls fan-out after insert |
+| `components/app-shell/notification-bell.tsx` | Bell promoted to global (rail) |
+| `app/(app)/(default)/settings/notifications/*` | Preference page + form |
+
+### Manual test checklist (notifications)
+
+- [ ] `npm run db:push` creates `notification_preferences`
+- [ ] Org-wide announcement → every other org member gets a bell notification
+- [ ] Production announcement → only that production's members are notified
+- [ ] Author does not notify themselves
+- [ ] Turning off "Email" in `/settings/notifications` stops the email but keeps the bell
+- [ ] Email arrives with title, author, snippet, and a working "View announcement" link
+- [ ] Rail bell dropdown opens upward and is readable
+
 ## Open questions
 
 - Should stage managers have `announcements:create`? Currently they cannot post. (Current permission map excludes them.)
-- Email distribution of announcements is deferred — tracked as a future feature alongside the rehearsal report overhaul.
+- ~~Email distribution of announcements is deferred~~ — **shipped 2026-06-03**
+  (scope-based fan-out, in-app + email). Phone push remains deferred (Phase 2,
+  Web Push). See `docs/open-questions.md` → Notifications questions.

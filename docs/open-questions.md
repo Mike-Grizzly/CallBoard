@@ -271,3 +271,73 @@ default in place today.
 - **Inline link uses `window.prompt`.** The bubble-menu Link button prompts
   for a URL. An inline link popover (edit/remove/open) would be nicer — quick
   follow-up.
+
+---
+
+## Notifications questions (2026-06-03)
+
+- **Announcement notifications are implemented but not browser-verified.**
+  Scope-based fan-out (in-app + email) + a `/settings/notifications` preference
+  page + a global rail bell were added this session. Not yet tested end-to-end:
+  (a) that a recipient actually sees the in-app bell count update and the email
+  arrives, (b) the rail bell dropdown renders correctly opening *upward* from
+  the rail foot (it was originally built for a topbar; `placement="up"` flips
+  it), (c) large-org fan-out performance (one `notifications` insert batch +
+  Resend batch per ≤100 recipients).
+- **Push is modeled but inert.** The `notification_preferences.push` column and
+  the disabled settings toggle exist, but there is no delivery transport. Phase 2
+  = Web Push (PWA: manifest + service worker + VAPID + `push_subscriptions`).
+  Open: iOS requires "Add to Home Screen" before Web Push works at all — is that
+  acceptable, or is a native wrapper (Expo/Capacitor + APNs/FCM) eventually
+  needed for reliable phone alerts?
+- **Email volume / opt-out.** Every announcement currently emails every audience
+  member who hasn't turned email off. For a busy show this could feel spammy —
+  consider per-production muting or digest batching before wide rollout.
+- **No real-time refresh.** The rail bell count updates on next navigation, not
+  live (consistent with the documented "no real-time updates" stance). Revisit
+  if instant delivery is expected.
+
+---
+
+## Orphaned profiles / invites (2026-06-03)
+
+- **Legacy orphan profiles** (a `profiles` row with no `auth.users` account) existed
+  from an older invite/seed path. Three were deleted (director + 2 katie dupes);
+  **10 `@wellmantheatre.org` demo rows remain** by choice. If more real orphans
+  exist in other orgs, they'll show as members but can't log in or reset a
+  password until re-invited. `inviteMembers` now self-heals these on re-invite.
+- **Misleading password reset.** Supabase returns 200 for reset requests on
+  unknown/login-less emails (anti-enumeration) and sends nothing. The member
+  list now flags `invited` status, but the public reset screen still can't tell
+  a user "you were invited, accept the invite instead" without leaking account
+  existence. Acceptable for now; revisit if it confuses testers.
+- **Latent risk:** do NOT add profile↔login reconciliation by email outside the
+  admin invite flow without requiring verified email ownership — that would turn
+  pre-seeded roles into an account-takeover vector. Current linking is by auth
+  UID, which is safe.
+- **Duplicate profiles per email** were possible historically (katie had 3). The
+  invite path dedupes by email now, but there's no DB-level uniqueness on
+  `profiles.email`; self-signup with an email that already has a login-less
+  profile still creates a separate profile + org. Consider a reconciliation step
+  or a guard if this recurs.
+
+---
+
+## Notification surface after the banner pivot (2026-06-03)
+
+- **Dead bell code.** `components/app-shell/notification-bell.tsx` and the
+  notifications actions (`getNotifications`, `getUnreadNotificationCount`,
+  `markNotificationsRead`) are no longer referenced by any UI after the rail
+  bell was removed in favour of the acknowledge banner. Left in place for a
+  possible future "notification center" header. Decide: build that center, or
+  delete the dead chain.
+- **Orphaned notification rows.** `fanoutAnnouncement` still inserts `notifications`
+  rows and document comments still do too, but nothing displays them. Either wire
+  a viewer or stop writing announcement rows (the banner reads acks directly, so
+  in-app announcements don't need the table).
+- **`notification_preferences.in_app` is currently a no-op** — the banner always
+  shows for unacknowledged announcements regardless of the toggle. Only `email`
+  is meaningful right now; `push` remains inert. Revisit the settings copy if the
+  bell/center doesn't come back.
+- **Banner scope choices to confirm with use:** 30-day window and audience-only
+  (a manager isn't nagged to ack announcements for productions they're not in).

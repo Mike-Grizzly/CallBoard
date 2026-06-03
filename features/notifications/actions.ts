@@ -1,8 +1,9 @@
 "use server";
 
 import { db } from "@/db";
-import { notifications } from "@/db/schema";
+import { notifications, notificationPreferences } from "@/db/schema";
 import { eq, isNull, and, desc } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/auth";
 
 export async function getNotifications() {
@@ -51,4 +52,46 @@ export async function markNotificationsRead(ids?: string[]): Promise<void> {
         ),
       );
   }
+}
+
+export type PreferencesResult = {
+  error?: string;
+  success?: boolean;
+};
+
+/**
+ * Upsert the current user's notification channel preferences. Uniqueness on
+ * userId is enforced here (read-then-update/insert) rather than a DB constraint
+ * — see the notification-preferences schema note.
+ */
+export async function updateNotificationPreferences(
+  _prevState: PreferencesResult | undefined,
+  formData: FormData,
+): Promise<PreferencesResult> {
+  const user = await requireCurrentUser();
+
+  const inApp = formData.get("in_app") != null;
+  const email = formData.get("email") != null;
+  const push = formData.get("push") != null;
+
+  const [existing] = await db
+    .select({ id: notificationPreferences.id })
+    .from(notificationPreferences)
+    .where(eq(notificationPreferences.userId, user.id))
+    .limit(1);
+
+  if (existing) {
+    await db
+      .update(notificationPreferences)
+      .set({ inApp, email, push, updatedAt: new Date() })
+      .where(eq(notificationPreferences.id, existing.id));
+  } else {
+    await db
+      .insert(notificationPreferences)
+      .values({ userId: user.id, inApp, email, push });
+  }
+
+  revalidatePath("/settings/notifications");
+
+  return { success: true };
 }

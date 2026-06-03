@@ -70,6 +70,18 @@ function MemberRow({
             <div className="pp-name">
               {displayName(member)}
               {isCurrentUser && <span className="pp-you">You</span>}
+              {member.status === "invited" && (
+                <span
+                  className="pp-you"
+                  style={{
+                    background: "var(--c-amber-soft)",
+                    color: "oklch(0.5 0.12 70)",
+                  }}
+                  title="Invited — hasn't signed in yet, so they can't reset a password until they accept the invite."
+                >
+                  Pending invite
+                </span>
+              )}
             </div>
             <div className="pp-email">{member.email}</div>
             {member.requestedRole &&
