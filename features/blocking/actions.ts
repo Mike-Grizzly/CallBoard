@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { stageConfigurations, blockingPositions, beatComments, profiles, customSetPieces, beatArrows } from "@/db/schema";
+import { stageConfigurations, blockingPositions, beatComments, profiles, customSetPieces, beatArrows, mentions, sceneBeats, productionScenes, productions } from "@/db/schema";
 import type { BeatArrow } from "@/db/schema";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { eq, and, asc } from "drizzle-orm";
@@ -285,6 +285,47 @@ export async function createBeatComment(
     })
     .returning({ id: beatComments.id });
 
+  // Surface @mentions on the recipients' dashboards. Beat comments carry the
+  // mentioned user ids explicitly (not data-id HTML), so write the mention
+  // rows directly. Resolve the production/org from the beat's scene.
+  const recipients = [...new Set(mentionedUserIds)].filter(
+    (id) => id && id !== user.id,
+  );
+  if (recipients.length > 0) {
+    const [prod] = await db
+      .select({
+        productionId: productions.id,
+        organizationId: productions.organizationId,
+      })
+      .from(sceneBeats)
+      .innerJoin(
+        productionScenes,
+        eq(sceneBeats.sceneId, productionScenes.id),
+      )
+      .innerJoin(productions, eq(productionScenes.productionId, productions.id))
+      .where(eq(sceneBeats.id, beatId))
+      .limit(1);
+
+    if (prod) {
+      const snippet = trimmed
+        .replace(/@\{([^}]+)\}/g, "@$1")
+        .slice(0, 200);
+      await db.insert(mentions).values(
+        recipients.map((mentionedUserId) => ({
+          organizationId: prod.organizationId,
+          productionId: prod.productionId,
+          mentionedUserId,
+          mentionedById: user.id,
+          contextType: "blocking",
+          contextId: row.id,
+          contextTitle: "Blocking note",
+          snippet,
+        })),
+      );
+      revalidatePath("/dashboard");
+    }
+  }
+
   revalidatePath("/productions");
   return { id: row.id };
 }
@@ -310,7 +351,16 @@ export async function deleteBeatComment(
   }
 
   await db.delete(beatComments).where(eq(beatComments.id, commentId));
+  await db
+    .delete(mentions)
+    .where(
+      and(
+        eq(mentions.contextType, "blocking"),
+        eq(mentions.contextId, commentId),
+      ),
+    );
   revalidatePath("/productions");
+  revalidatePath("/dashboard");
   return {};
 }
 
