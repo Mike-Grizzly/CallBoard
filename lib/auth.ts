@@ -89,6 +89,14 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 
   if (existing.length === 0) {
     // Self-signup: no profile yet. Create a new org with this user as admin.
+    //
+    // SECURITY: profiles are matched to logins by auth UID ONLY (above) — never
+    // by email. Do NOT "fix" duplicate/orphan profiles here by looking up an
+    // existing profile by `authUser.email` and adopting it: a login-less or
+    // pre-seeded profile may carry org memberships and a role, so adopting it on
+    // self-signup would let anyone who can verify an email inherit that role —
+    // an account-takeover vector. Email-based reconciliation belongs only in the
+    // admin-gated invite flow (features/members/actions.ts → inviteMembers).
     const meta = authUser.user_metadata ?? {};
     const firstName = (meta.first_name as string) || "";
     const lastName = (meta.last_name as string) || "";
