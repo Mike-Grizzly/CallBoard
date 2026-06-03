@@ -8,6 +8,14 @@ import {
   announcementAcks,
 } from "@/db/schema";
 import { eq, desc, and, or, isNull, inArray, count, ne, gte } from "drizzle-orm";
+import { sanitizeHtml } from "@/lib/sanitize";
+import { can } from "@/lib/permissions";
+import type { Role } from "@/types/roles";
+import {
+  getOrganizationMembers,
+  getProductionMembers,
+  getUserProductionIds,
+} from "@/features/members/queries";
 
 const announcementFields = {
   id: announcements.id,
@@ -240,4 +248,137 @@ export async function getAckInfoForAnnouncements(
     };
   }
   return out;
+}
+
+export type AnnouncementRosterEntry = {
+  userId: string;
+  name: string;
+  initials: string;
+  acked: boolean;
+  ackedAtIso: string | null;
+  isMe: boolean;
+};
+
+export type AnnouncementDetail = {
+  id: string;
+  title: string;
+  bodyHtml: string;
+  scopeLabel: string;
+  scopeTone: "amber" | "dusk";
+  authorName: string;
+  createdAtIso: string;
+  mineAcked: boolean;
+  ackedCount: number;
+  total: number;
+  roster: AnnouncementRosterEntry[];
+};
+
+function nameInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  const a = parts[0]?.[0] ?? "";
+  const b = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (a + b || name[0] || "?").toUpperCase();
+}
+
+/**
+ * Full announcement plus its acknowledgement roster, for the detail drawer.
+ * Returns null if the announcement doesn't exist, isn't in the user's org, or
+ * the user isn't in its audience. The roster is the audience (org members for
+ * org-wide, production members for scoped) minus the author, each flagged
+ * acked/not with a timestamp, acknowledged first.
+ */
+export async function getAnnouncementDetailForUser(
+  userId: string,
+  orgId: string,
+  role: Role,
+  announcementId: string,
+): Promise<AnnouncementDetail | null> {
+  const [row] = await db
+    .select({
+      id: announcements.id,
+      title: announcements.title,
+      body: announcements.body,
+      productionId: announcements.productionId,
+      createdBy: announcements.createdBy,
+      createdAt: announcements.createdAt,
+      organizationId: announcements.organizationId,
+      authorFirst: profiles.firstName,
+      authorLast: profiles.lastName,
+      authorEmail: profiles.email,
+      productionTitle: productions.title,
+    })
+    .from(announcements)
+    .innerJoin(profiles, eq(announcements.createdBy, profiles.id))
+    .leftJoin(productions, eq(announcements.productionId, productions.id))
+    .where(eq(announcements.id, announcementId))
+    .limit(1);
+
+  if (!row || row.organizationId !== orgId) return null;
+
+  const canManage = can(role, "productions:manage");
+  if (row.productionId && !canManage) {
+    const prodIds = await getUserProductionIds(userId);
+    if (!prodIds.has(row.productionId)) return null;
+  }
+
+  const members: {
+    userId: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+  }[] = row.productionId
+    ? await getProductionMembers(row.productionId)
+    : await getOrganizationMembers(orgId);
+
+  const acks = await db
+    .select({
+      userId: announcementAcks.userId,
+      ackedAt: announcementAcks.ackedAt,
+    })
+    .from(announcementAcks)
+    .where(eq(announcementAcks.announcementId, announcementId));
+  const ackMap = new Map(acks.map((a) => [a.userId, a.ackedAt]));
+
+  const roster: AnnouncementRosterEntry[] = members
+    .filter((m) => m.userId !== row.createdBy)
+    .map((m) => {
+      const name =
+        `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim() || m.email;
+      const ackedAt = ackMap.get(m.userId) ?? null;
+      return {
+        userId: m.userId,
+        name,
+        initials: nameInitials(name),
+        acked: !!ackedAt,
+        ackedAtIso: ackedAt ? ackedAt.toISOString() : null,
+        isMe: m.userId === userId,
+      };
+    });
+
+  roster.sort((a, b) => {
+    if (a.acked !== b.acked) return a.acked ? -1 : 1;
+    if (a.acked && b.acked)
+      return (a.ackedAtIso ?? "").localeCompare(b.ackedAtIso ?? "");
+    return a.name.localeCompare(b.name);
+  });
+
+  const authorName =
+    `${row.authorFirst ?? ""} ${row.authorLast ?? ""}`.trim() ||
+    row.authorEmail;
+
+  return {
+    id: row.id,
+    title: row.title,
+    bodyHtml: row.body ? sanitizeHtml(row.body) : "",
+    scopeLabel: row.productionId
+      ? (row.productionTitle ?? "Production")
+      : "Company-wide",
+    scopeTone: row.productionId ? "dusk" : "amber",
+    authorName,
+    createdAtIso: row.createdAt.toISOString(),
+    mineAcked: ackMap.has(userId),
+    ackedCount: roster.filter((r) => r.acked).length,
+    total: roster.length,
+    roster,
+  };
 }

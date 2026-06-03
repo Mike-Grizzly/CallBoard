@@ -10532,3 +10532,180 @@ textarea.cform-field {
   color: var(--ink-3);
   font-size: 13px;
 }
+
+/* ─── Announcement detail drawer ──────────────────────────────────────
+ * Opens from an announcement title: right-side panel on desktop, bottom
+ * sheet on mobile. Shows the announcement + acknowledgement roster. */
+.ann-title-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.ann-title-btn:hover {
+  text-decoration: underline;
+}
+.ann-drawer-wrap {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 10, 5, 0.32);
+  z-index: 240;
+  display: flex;
+  justify-content: flex-end;
+  animation: pp-fade 0.15s ease;
+}
+.ann-drawer {
+  width: 460px;
+  max-width: 92vw;
+  height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -16px 0 36px -10px rgba(40, 15, 5, 0.22);
+  animation: pp-slide 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.05);
+  overflow-y: auto;
+}
+.ann-drawer-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 2;
+}
+.ann-drawer-hero {
+  padding: 20px 22px 8px;
+}
+.ann-drawer-hero h2 {
+  font: 600 22px var(--font-display);
+  margin: 0 0 6px;
+  line-height: 1.2;
+}
+.ann-drawer-sub {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.ann-drawer-body {
+  padding: 8px 22px 4px;
+}
+.ann-drawer-ackbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 22px;
+}
+.ann-drawer-ackcount {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.ann-drawer-section {
+  border-top: 1px solid var(--border);
+  padding: 16px 22px 24px;
+}
+.ann-drawer-section h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+  margin: 0 0 10px;
+}
+.ann-roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ann-roster-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+.ann-roster-av {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-sunken);
+  color: var(--ink-2);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.ann-roster-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ann-roster-you {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.ann-roster-ack {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--c-sage);
+  flex-shrink: 0;
+}
+.ann-roster-pending {
+  font-size: 12px;
+  color: var(--ink-4);
+  flex-shrink: 0;
+}
+.ann-drawer-empty {
+  padding: 40px 22px;
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 14px;
+}
+.ann-drawer-empty-sm {
+  font-size: 13px;
+  color: var(--ink-4);
+}
+@media (max-width: 720px) {
+  .ann-drawer-wrap {
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .ann-drawer {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 88vh;
+    border-radius: 16px 16px 0 0;
+    animation: ann-sheet-up 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.05);
+  }
+}
+@keyframes ann-sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
