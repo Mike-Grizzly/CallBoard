@@ -67,8 +67,8 @@ export function BentoMentions({ items }: { items: SerializedMention[] }) {
       </div>
       <div className="dd-ment">
         {shown.length === 0 ? (
-          <div className="dd-ment-item" style={{ color: "var(--ink-3)" }}>
-            You&apos;re all caught up.
+          <div className="dd-ment-empty">
+            You&apos;re all caught up — no mentions waiting.
           </div>
         ) : (
           shown.map((m) => {

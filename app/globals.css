@@ -10522,3 +10522,13 @@ textarea.cform-field {
     justify-content: flex-end;
   }
 }
+
+/* Empty state for the dashboard "Waiting on you" bento — plain text, not the
+   3-column mention-row grid (which squeezed the message into the 30px avatar
+   column and wrapped it one word per line). */
+.dd-ment-empty {
+  padding: 16px 18px;
+  border-top: 1px solid var(--border);
+  color: var(--ink-3);
+  font-size: 13px;
+}
