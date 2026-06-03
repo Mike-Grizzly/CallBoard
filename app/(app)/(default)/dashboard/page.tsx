@@ -294,6 +294,8 @@ export default async function DashboardPage() {
         href = `/productions/${m.productionSlug}/notes`;
       else if (m.contextType === "announcement")
         href = `/productions/${m.productionSlug}/announcements`;
+      else if (m.contextType === "blocking")
+        href = `/productions/${m.productionSlug}/blocking`;
       else href = `/productions/${m.productionSlug}`;
     }
 
