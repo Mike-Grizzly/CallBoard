@@ -434,44 +434,60 @@ export async function inviteMembers(
 
       if (existingProfile.length > 0) {
         const userId = existingProfile[0].id;
-        const existingMembership = await db
-          .select({ id: organizationMemberships.id })
-          .from(organizationMemberships)
-          .where(
-            and(
-              eq(organizationMemberships.userId, userId),
-              eq(
-                organizationMemberships.organizationId,
-                currentUser.organizationId,
-              ),
-            ),
-          )
-          .limit(1);
 
-        if (existingMembership.length > 0) {
+        // A profile row doesn't guarantee a real login: legacy/seed rows can
+        // exist with no matching auth.users account. Those people can't sign
+        // in or reset a password, so re-inviting must actually provision an
+        // account rather than report a misleading success. Only treat the
+        // profile as an existing member if it has a login.
+        const { data: authLookup } =
+          await getAdmin().auth.admin.getUserById(userId);
+
+        if (authLookup?.user) {
+          const existingMembership = await db
+            .select({ id: organizationMemberships.id })
+            .from(organizationMemberships)
+            .where(
+              and(
+                eq(organizationMemberships.userId, userId),
+                eq(
+                  organizationMemberships.organizationId,
+                  currentUser.organizationId,
+                ),
+              ),
+            )
+            .limit(1);
+
+          if (existingMembership.length > 0) {
+            await applyAssignments(userId, person.assignments);
+            results.push({
+              email,
+              name,
+              outcome: "skipped",
+              message: "Already in your organization.",
+            });
+            continue;
+          }
+
+          await db.insert(organizationMemberships).values({
+            userId,
+            organizationId: currentUser.organizationId,
+            role: person.role,
+          });
           await applyAssignments(userId, person.assignments);
           results.push({
             email,
             name,
-            outcome: "skipped",
-            message: "Already in your organization.",
+            outcome: "added",
+            message: "Existing account added to your organization.",
           });
           continue;
         }
 
-        await db.insert(organizationMemberships).values({
-          userId,
-          organizationId: currentUser.organizationId,
-          role: person.role,
-        });
-        await applyAssignments(userId, person.assignments);
-        results.push({
-          email,
-          name,
-          outcome: "added",
-          message: "Existing account added to your organization.",
-        });
-        continue;
+        // Login-less orphan profile — remove it (cascades its memberships)
+        // and fall through to the create path below, which provisions a real
+        // auth account + invite email.
+        await db.delete(profiles).where(eq(profiles.id, userId));
       }
 
       const metadata = {

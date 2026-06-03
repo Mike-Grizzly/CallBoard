@@ -296,3 +296,27 @@ default in place today.
 - **No real-time refresh.** The rail bell count updates on next navigation, not
   live (consistent with the documented "no real-time updates" stance). Revisit
   if instant delivery is expected.
+
+---
+
+## Orphaned profiles / invites (2026-06-03)
+
+- **Legacy orphan profiles** (a `profiles` row with no `auth.users` account) existed
+  from an older invite/seed path. Three were deleted (director + 2 katie dupes);
+  **10 `@wellmantheatre.org` demo rows remain** by choice. If more real orphans
+  exist in other orgs, they'll show as members but can't log in or reset a
+  password until re-invited. `inviteMembers` now self-heals these on re-invite.
+- **Misleading password reset.** Supabase returns 200 for reset requests on
+  unknown/login-less emails (anti-enumeration) and sends nothing. The member
+  list now flags `invited` status, but the public reset screen still can't tell
+  a user "you were invited, accept the invite instead" without leaking account
+  existence. Acceptable for now; revisit if it confuses testers.
+- **Latent risk:** do NOT add profile↔login reconciliation by email outside the
+  admin invite flow without requiring verified email ownership — that would turn
+  pre-seeded roles into an account-takeover vector. Current linking is by auth
+  UID, which is safe.
+- **Duplicate profiles per email** were possible historically (katie had 3). The
+  invite path dedupes by email now, but there's no DB-level uniqueness on
+  `profiles.email`; self-signup with an email that already has a login-less
+  profile still creates a separate profile + org. Consider a reconciliation step
+  or a guard if this recurs.
