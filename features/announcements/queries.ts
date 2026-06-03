@@ -10,6 +10,7 @@ import {
 import { eq, desc, and, or, isNull, inArray, count, ne, gte } from "drizzle-orm";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { can } from "@/lib/permissions";
+import type { Role } from "@/types/roles";
 import {
   getOrganizationMembers,
   getProductionMembers,
@@ -289,7 +290,7 @@ function nameInitials(name: string): string {
 export async function getAnnouncementDetailForUser(
   userId: string,
   orgId: string,
-  role: string,
+  role: Role,
   announcementId: string,
 ): Promise<AnnouncementDetail | null> {
   const [row] = await db
