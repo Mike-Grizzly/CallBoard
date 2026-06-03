@@ -103,8 +103,13 @@ pull-only). Targeting is **scope-based**, not a mention syntax:
 - Delivery is per-user by channel, stored in the new `notification_preferences`
   table (`in_app`, `email`, `push`; missing row = defaults of in-app + email
   on, push off). Edited at `/settings/notifications`.
-  - **in_app:** inserts a `notifications` row (`type: "announcement"`), shown in
-    the global notification bell (rail foot — `components/app-shell/notification-bell.tsx`).
+  - **in_app (updated 2026-06-03):** surfaced as a **top-of-content acknowledge
+    banner** (`components/app-shell/announcement-banner.tsx`), shown when the user
+    has unacknowledged announcements in their audience and cleared as each is
+    acknowledged (reuses `announcementAcks`, so managers still see the ack rollup).
+    Works on desktop and mobile. The earlier rail bell was removed; `fanoutAnnouncement`
+    still writes `notifications` rows but nothing renders them yet (see decision-log
+    + open-questions, 2026-06-03).
   - **email:** sent via the existing Resend pipeline (one message per recipient,
     batched ≤100). Best-effort — email failure never fails the post.
   - **push:** modeled but **inert** (no transport yet — see decision-log

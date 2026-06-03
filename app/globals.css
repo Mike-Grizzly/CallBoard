@@ -10434,3 +10434,91 @@ textarea.cform-field {
     justify-content: center;
   }
 }
+
+/* ─── Announcement banner ─────────────────────────────────────────────
+ * Top-of-content strip surfacing unacknowledged announcements. Appears
+ * only when there's something to act on; clears as each is acknowledged.
+ * Lives in the content column so it also shows on phones. */
+.ann-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px var(--pad-x);
+  background: var(--c-amber-soft);
+  border-bottom: 1px solid var(--border);
+}
+.ann-banner-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--bg-elev);
+  color: oklch(0.5 0.12 70);
+  flex-shrink: 0;
+}
+.ann-banner-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.ann-banner-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+.ann-banner-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ann-banner-title:hover {
+  text-decoration: underline;
+}
+.ann-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.ann-banner-link {
+  font-size: 13px;
+  color: var(--ink-2);
+  text-decoration: none;
+  padding: 6px 8px;
+}
+.ann-banner-link:hover {
+  color: var(--ink);
+}
+.ann-banner-ack {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 12px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev);
+  color: var(--ink);
+  cursor: pointer;
+}
+.ann-banner-ack:hover {
+  background: var(--bg-muted);
+}
+@media (max-width: 720px) {
+  .ann-banner {
+    flex-wrap: wrap;
+  }
+  .ann-banner-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

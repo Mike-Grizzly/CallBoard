@@ -320,3 +320,24 @@ default in place today.
   `profiles.email`; self-signup with an email that already has a login-less
   profile still creates a separate profile + org. Consider a reconciliation step
   or a guard if this recurs.
+
+---
+
+## Notification surface after the banner pivot (2026-06-03)
+
+- **Dead bell code.** `components/app-shell/notification-bell.tsx` and the
+  notifications actions (`getNotifications`, `getUnreadNotificationCount`,
+  `markNotificationsRead`) are no longer referenced by any UI after the rail
+  bell was removed in favour of the acknowledge banner. Left in place for a
+  possible future "notification center" header. Decide: build that center, or
+  delete the dead chain.
+- **Orphaned notification rows.** `fanoutAnnouncement` still inserts `notifications`
+  rows and document comments still do too, but nothing displays them. Either wire
+  a viewer or stop writing announcement rows (the banner reads acks directly, so
+  in-app announcements don't need the table).
+- **`notification_preferences.in_app` is currently a no-op** — the banner always
+  shows for unacknowledged announcements regardless of the toggle. Only `email`
+  is meaningful right now; `push` remains inert. Revisit the settings copy if the
+  bell/center doesn't come back.
+- **Banner scope choices to confirm with use:** 30-day window and audience-only
+  (a manager isn't nagged to ack announcements for productions they're not in).

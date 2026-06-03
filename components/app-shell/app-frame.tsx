@@ -11,16 +11,21 @@ import { ZoomReset } from "./zoom-reset";
  */
 export function AppFrame({
   rail,
+  banner,
   children,
 }: {
   rail: ReactNode;
+  banner?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="app">
       <ZoomReset />
       {rail}
-      <main className="main">{children}</main>
+      <main className="main">
+        {banner}
+        {children}
+      </main>
       <MobileTabBar />
     </div>
   );

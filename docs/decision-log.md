@@ -1354,3 +1354,20 @@ page `/settings/notifications`. Implemented but **not yet browser-verified**.
 3. **UX:** member list shows a "Pending invite" badge for `profiles.status = 'invited'`.
 
 **Impact:** Bundled into branch `claude/keen-bardeen-kSndq` / PR #25. No schema change. Remaining: demo rows still present; broader backfill of any other legacy orphans not done.
+
+---
+
+## 2026-06-03 — Announcement notifications surface as an acknowledge banner (not a bell)
+
+**Context:** The rail-foot notification bell worked but crowded the footer (avatar, name, role, theme, settings, logout) and had no mobile surface (rail is hidden on phones). Announcements are infrequent but important (schedule/room/last-minute changes).
+
+**Decision:** Replace the bell with a **top-of-content acknowledge banner**. It appears only when the user has unacknowledged announcements in their audience and clears as each is acknowledged. Acknowledging from the banner records the same `announcementAcks` row managers already see rolled up on the announcements page ("N/M acknowledged"). Because it lives in the content column, it also shows on phones — closing the earlier mobile gap.
+
+**Implementation:**
+- `getUnacknowledgedAnnouncements(userId, orgId, productionIds)` — audience-scoped (org-wide + user's productions), excludes the user's own posts, 30-day window so enabling acks doesn't resurface ancient notices.
+- `AnnouncementBanner` (server) in the `(app)` layout via `AppFrame`'s new `banner` slot → `AnnouncementBannerClient` (optimistic dismiss, reuses `acknowledgeAnnouncement`).
+- Removed `NotificationBell` from the rail foot (and its unread-count fetch).
+
+**Consequences / open items:**
+- Email fan-out unchanged (still gated by the user's email preference).
+- `fanoutAnnouncement` still writes `notifications` rows and `notification-bell.tsx` still exists, but **nothing renders them now** — dead until a future header "notification center." Document-comment notifications (which also write to `notifications`) likewise have no surface currently. The `notification_preferences` "in-app" toggle is therefore a no-op for the moment (the banner always shows for unacked items). Tracked in open-questions; cleanup or a header center is a follow-up.
