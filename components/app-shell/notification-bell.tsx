@@ -74,24 +74,35 @@ export function NotificationBell({ initialUnread, placement = "down" }: Props) {
       <button
         ref={btnRef}
         type="button"
-        className="btn ghost btn-icon"
         title="Notifications"
         aria-label="Notifications"
         onClick={toggle}
-        style={{ position: "relative" }}
+        style={{
+          position: "relative",
+          width: 28,
+          height: 28,
+          display: "grid",
+          placeItems: "center",
+          background: "none",
+          border: 0,
+          borderRadius: 7,
+          color: "var(--ink-3)",
+          cursor: "pointer",
+          flexShrink: 0,
+        }}
       >
-        <Bell className="ico" aria-hidden />
+        <Bell size={16} aria-hidden />
         {unread > 0 && (
           <span
             style={{
               position: "absolute",
-              top: 4,
-              right: 4,
+              top: 2,
+              right: 2,
               width: 8,
               height: 8,
               borderRadius: "50%",
               background: "var(--c-clay)",
-              border: "2px solid var(--bg-elev)",
+              border: "2px solid var(--rail)",
             }}
           />
         )}
