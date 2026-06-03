@@ -13,7 +13,10 @@ A bulletin board for the company and individual productions. Lets authorized use
 
 ## Status
 
-**Implemented** — not fully verified in browser.
+**Implemented + live in production.** Base announcements plus scope-based
+notifications (acknowledge banner + email) shipped via PR #25 (2026-06-03).
+Acknowledge-banner flow verified on the Vercel preview; phone push deferred
+(Phase 2).
 
 ## Data model
 
@@ -90,7 +93,7 @@ A bulletin board for the company and individual productions. Lets authorized use
 - [ ] Announcements card on production overview shows correct count
 - [ ] Announcements tab on production detail navigates correctly
 
-## Notifications (2026-06-03 — implemented, not browser-verified)
+## Notifications (2026-06-03 — shipped to production via PR #25)
 
 Posting an announcement now actively notifies its audience (previously
 pull-only). Targeting is **scope-based**, not a mention syntax:
@@ -126,18 +129,23 @@ pull-only). Targeting is **scope-based**, not a mention syntax:
 | `features/notifications/announce.ts` | Scope fan-out + Resend email |
 | `features/notifications/actions.ts` | `updateNotificationPreferences` |
 | `features/announcements/actions.ts` | Calls fan-out after insert |
-| `components/app-shell/notification-bell.tsx` | Bell promoted to global (rail) |
+| `features/announcements/queries.ts` | `getUnacknowledgedAnnouncements` (banner) |
+| `components/app-shell/announcement-banner*.tsx` | In-app acknowledge banner (server + client) |
+| `components/app-shell/app-frame.tsx` | `banner` slot above page content |
 | `app/(app)/(default)/settings/notifications/*` | Preference page + form |
+| `components/app-shell/notification-bell.tsx` | Superseded by the banner; currently unused |
 
 ### Manual test checklist (notifications)
 
-- [ ] `npm run db:push` creates `notification_preferences`
-- [ ] Org-wide announcement → every other org member gets a bell notification
-- [ ] Production announcement → only that production's members are notified
-- [ ] Author does not notify themselves
-- [ ] Turning off "Email" in `/settings/notifications` stops the email but keeps the bell
+- [x] `notification_preferences` table created in production Supabase
+- [x] Org-wide announcement → fan-out writes a row per other org member (verified in DB)
+- [x] Author excluded from the fan-out
+- [ ] Acknowledge banner appears at top of content for a recipient with an unacked announcement
+- [ ] Acknowledging from the banner clears it AND shows the user as acknowledged in the manager rollup on the announcements page
+- [ ] Production announcement → banner only appears for that production's members
+- [ ] Turning off "Email" in `/settings/notifications` stops the email (banner still shows)
 - [ ] Email arrives with title, author, snippet, and a working "View announcement" link
-- [ ] Rail bell dropdown opens upward and is readable
+- [ ] Banner renders on mobile (content column, not the hidden rail)
 
 ## Open questions
 
@@ -145,3 +153,31 @@ pull-only). Targeting is **scope-based**, not a mention syntax:
 - ~~Email distribution of announcements is deferred~~ — **shipped 2026-06-03**
   (scope-based fan-out, in-app + email). Phone push remains deferred (Phase 2,
   Web Push). See `docs/open-questions.md` → Notifications questions.
+
+## Planned enhancement — announcement detail drawer (requested 2026-06-03)
+
+**Goal:** clicking an announcement (from the banner, dashboard, the `/announcements`
+list, or a production's announcements tab) opens a **detail drawer** instead of
+just navigating — mirroring the existing People drawer.
+
+- **Desktop:** a right-hand side drawer (mirror `app/(app)/(default)/people/person-drawer.tsx`;
+  other examples: `document-drawer.tsx`, `event-drawer.tsx`, `trash-drawer.tsx`).
+- **Mobile:** the same content as a bottom sheet (slides up from the bottom),
+  matching the mobile drawer/bottom-sheet pattern used elsewhere.
+
+**Contents:**
+- The full announcement (title, rich-text body, author, scope, posted time).
+- An **acknowledgement roster** — who has acknowledged and who hasn't, not just
+  the `N/M` count. The acknowledge action lives here too (so reading = the place
+  you ack).
+
+**Implementation notes / gaps:**
+- `getAckInfoForAnnouncements` returns counts (`acked`/`total`/`mine`) but NOT the
+  list of who acknowledged. A new query is needed: the audience roster (org members
+  for org-wide, production members for scoped) left-joined to `announcement_acks`
+  to mark each person acked / not-acked, with ack timestamps.
+- Gate the roster view to managers where appropriate (`productions:manage` /
+  `settings:manage`), or show everyone their own ack state plus the rollup.
+- Reuse `acknowledgeAnnouncement` for the in-drawer ack toggle.
+- This pairs naturally with the acknowledge banner: banner = "act on it",
+  drawer = "read it + see who's seen it".
