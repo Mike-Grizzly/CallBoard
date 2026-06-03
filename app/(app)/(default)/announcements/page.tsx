@@ -10,6 +10,7 @@ import { OrgAnnouncementForm } from "./announcement-form";
 import { AnnouncementDeleteButton } from "./announcement-delete-button";
 import { AnnouncementPinButton } from "./announcement-pin-button";
 import { AnnouncementAckButton } from "@/app/(app)/(default)/dashboard/announcement-ack-button";
+import { AnnouncementTitleTrigger } from "@/components/announcements/announcement-detail-drawer";
 
 const AVATAR_PALETTE = ["clay", "sage", "dusk", "amber", "plum", "sand"] as const;
 
@@ -165,7 +166,10 @@ export default async function AnnouncementsPage() {
                       </div>
                     )}
                   </div>
-                  <h3 className="ann-title">{item.title}</h3>
+                  <AnnouncementTitleTrigger
+                    announcementId={item.id}
+                    title={item.title}
+                  />
                   {item.body && (
                     <div className="ann-body">
                       <RichTextDisplay content={item.body} />

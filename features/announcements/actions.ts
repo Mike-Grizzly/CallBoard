@@ -15,6 +15,8 @@ import {
   fanoutAnnouncement,
   type AnnouncementAudienceMember,
 } from "@/features/notifications/announce";
+import { getAnnouncementDetailForUser } from "./queries";
+import type { AnnouncementDetail } from "./queries";
 
 export type AnnouncementResult = {
   error?: string;
@@ -219,4 +221,25 @@ export async function acknowledgeAnnouncement(
   revalidatePath("/productions", "layout");
 
   return { success: true };
+}
+
+/**
+ * Fetch one announcement plus its acknowledgement roster for the detail drawer.
+ * Authorization (org + audience) is enforced in the query.
+ */
+export async function getAnnouncementDetail(
+  announcementId: string,
+): Promise<{ error?: string; data?: AnnouncementDetail }> {
+  const user = await requireCurrentUser();
+  if (!announcementId) return { error: "Missing announcement ID." };
+
+  const data = await getAnnouncementDetailForUser(
+    user.id,
+    user.organizationId,
+    user.role,
+    announcementId,
+  );
+  if (!data) return { error: "Announcement not found." };
+
+  return { data };
 }

@@ -154,11 +154,24 @@ pull-only). Targeting is **scope-based**, not a mention syntax:
   (scope-based fan-out, in-app + email). Phone push remains deferred (Phase 2,
   Web Push). See `docs/open-questions.md` → Notifications questions.
 
-## Planned enhancement — announcement detail drawer (requested 2026-06-03)
+## Announcement detail drawer (implemented 2026-06-03)
 
-**Goal:** clicking an announcement (from the banner, dashboard, the `/announcements`
-list, or a production's announcements tab) opens a **detail drawer** instead of
-just navigating — mirroring the existing People drawer.
+Clicking an announcement **title** on `/announcements` or
+`/productions/[slug]/announcements` opens a detail drawer — right-side panel on
+desktop, bottom sheet on mobile (≤720px) — showing the full announcement plus
+an **acknowledgement roster** (who has / hasn't acknowledged, acked first, with
+relative timestamps). Acknowledging from the drawer is optimistic and reuses
+`acknowledgeAnnouncement`.
+
+- Data: `getAnnouncementDetailForUser` (queries) → `getAnnouncementDetail`
+  (server action, auth + audience enforced). Body is sanitized server-side.
+- UI: `components/announcements/announcement-detail-drawer.tsx`
+  (`AnnouncementTitleTrigger` + drawer). Audience roster excludes the author.
+- Not yet wired from the dashboard announcements list or the banner (follow-up).
+- Roster is visible to anyone who can view the announcement (consistent with the
+  existing public N/M ack count); gate to managers later if needed.
+
+### Original request / rationale (2026-06-03)
 
 - **Desktop:** a right-hand side drawer (mirror `app/(app)/(default)/people/person-drawer.tsx`;
   other examples: `document-drawer.tsx`, `event-drawer.tsx`, `trash-drawer.tsx`).
