@@ -317,6 +317,9 @@ export default async function DashboardPage() {
       href,
     };
   });
+  // Surface unread mentions first so they're never hidden behind read ones in
+  // the capped dashboard lists (stable sort preserves recency within a group).
+  serializedMentions.sort((a, b) => Number(b.isUnread) - Number(a.isUnread));
 
   // Focal call props
   const focalProps =

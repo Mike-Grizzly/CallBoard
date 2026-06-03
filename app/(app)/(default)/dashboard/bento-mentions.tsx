@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Hash, ChevronRight } from "lucide-react";
-import { markMentionRead } from "@/features/mentions/actions";
+import { Hash, ChevronRight, X } from "lucide-react";
+import { markMentionRead, dismissMention } from "@/features/mentions/actions";
 import type { SerializedMention } from "./mentions-section";
 
 const MENTION_COLORS = [
@@ -40,9 +40,12 @@ export function BentoMentions({ items }: { items: SerializedMention[] }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [faded, setFaded] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState(false);
 
-  const unread = items.filter((m) => m.isUnread && !faded.has(m.id)).length;
-  const shown = items.slice(0, 4);
+  const visible = items.filter((m) => !dismissed.has(m.id));
+  const unread = visible.filter((m) => m.isUnread && !faded.has(m.id)).length;
+  const shown = expanded ? visible : visible.slice(0, 4);
 
   function click(m: SerializedMention) {
     if (m.isUnread && !faded.has(m.id)) {
@@ -52,6 +55,14 @@ export function BentoMentions({ items }: { items: SerializedMention[] }) {
       });
     }
     if (m.href) router.push(m.href);
+  }
+
+  function dismiss(e: React.MouseEvent, m: SerializedMention) {
+    e.stopPropagation();
+    setDismissed((p) => new Set([...p, m.id]));
+    startTransition(async () => {
+      await dismissMention(m.id);
+    });
   }
 
   return (
@@ -66,7 +77,7 @@ export function BentoMentions({ items }: { items: SerializedMention[] }) {
         </div>
       </div>
       <div className="dd-ment">
-        {shown.length === 0 ? (
+        {visible.length === 0 ? (
           <div className="dd-ment-empty">
             You&apos;re all caught up — no mentions waiting.
           </div>
@@ -107,6 +118,25 @@ export function BentoMentions({ items }: { items: SerializedMention[] }) {
                     </span>
                   )}
                 </div>
+                <button
+                  type="button"
+                  className="dd-ment-dismiss"
+                  onClick={(e) => dismiss(e, m)}
+                  title="Dismiss"
+                  aria-label="Dismiss mention"
+                  style={{
+                    alignSelf: "center",
+                    display: "flex",
+                    alignItems: "center",
+                    background: "none",
+                    border: "none",
+                    padding: 4,
+                    cursor: "pointer",
+                    color: "var(--ink-4)",
+                  }}
+                >
+                  <X size={14} aria-hidden />
+                </button>
                 <ChevronRight
                   size={14}
                   aria-hidden
@@ -115,6 +145,22 @@ export function BentoMentions({ items }: { items: SerializedMention[] }) {
               </div>
             );
           })
+        )}
+        {visible.length > 4 && (
+          <button
+            type="button"
+            className="dd-link"
+            onClick={() => setExpanded((v) => !v)}
+            style={{
+              alignSelf: "flex-start",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "4px 0",
+            }}
+          >
+            {expanded ? "Show less" : `View all ${visible.length}`}
+          </button>
         )}
       </div>
     </div>

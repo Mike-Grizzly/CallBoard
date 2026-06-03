@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { MentionText } from "@/components/ui/mention-text";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getProductionBySlug } from "@/features/productions/queries";
@@ -284,7 +285,7 @@ export default async function ReportDetailPage({
                     {n.note && (
                       <>
                         <br />
-                        <span className="muted">{n.note}</span>
+                        <span className="muted"><MentionText text={n.note} /></span>
                       </>
                     )}
                   </div>
@@ -413,7 +414,7 @@ export default async function ReportDetailPage({
                     }}
                   >
                     <span className="pill" data-c={s.c || ""}>{s.who || "—"}</span>
-                    <span style={{ fontSize: 13 }}>{s.what || "—"}</span>
+                    <span style={{ fontSize: 13 }}>{s.what ? <MentionText text={s.what} /> : "—"}</span>
                   </div>
                 ))}
               </div>
@@ -458,7 +459,7 @@ export default async function ReportDetailPage({
                   >
                     <b style={{ fontWeight: 500 }}>{l.who || "—"}</b>
                     <span className="mono muted">{l.line || "—"}</span>
-                    <span>{l.issue || "—"}</span>
+                    <span>{l.issue ? <MentionText text={l.issue} /> : "—"}</span>
                   </div>
                 ))}
               </div>
@@ -494,7 +495,7 @@ export default async function ReportDetailPage({
                     </div>
                     {inj.text && (
                       <div style={{ fontSize: 13, paddingLeft: 26, whiteSpace: "pre-wrap" }}>
-                        {inj.text}
+                        <MentionText text={inj.text} />
                       </div>
                     )}
                   </div>
