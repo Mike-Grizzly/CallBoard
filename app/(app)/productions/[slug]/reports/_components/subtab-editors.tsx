@@ -1,6 +1,10 @@
 "use client";
 
 import { Icon } from "@/components/ui/icon";
+import {
+  MentionTextarea,
+  type MentionMember,
+} from "@/components/ui/mention-textarea";
 import type {
   ScheduleChange,
   LineNote,
@@ -13,9 +17,11 @@ import { DEPARTMENTS } from "@/features/reports/constants";
 export function ScheduleChangesEditor({
   changes,
   onChange,
+  members = [],
 }: {
   changes: ScheduleChange[];
   onChange: (next: ScheduleChange[]) => void;
+  members?: MentionMember[];
 }) {
   const deptOpts = DEPARTMENTS.map((d) => ({
     label: d.label.split(" /")[0],
@@ -57,13 +63,12 @@ export function ScheduleChangesEditor({
                 </option>
               ))}
             </select>
-            <input
-              type="text"
+            <MentionTextarea
               value={s.what}
-              placeholder="What changed"
-              onChange={(e) => update(i, { what: e.target.value })}
-              className="field"
-              style={{ flex: 1 }}
+              onChange={(v) => update(i, { what: v })}
+              members={members}
+              placeholder="What changed (type @ to mention)"
+              rows={1}
             />
             <button
               type="button"
@@ -104,9 +109,11 @@ export function ScheduleChangesEditor({
 export function LineNotesEditor({
   lines,
   onChange,
+  members = [],
 }: {
   lines: LineNote[];
   onChange: (next: LineNote[]) => void;
+  members?: MentionMember[];
 }) {
   const update = (i: number, patch: Partial<LineNote>) =>
     onChange(lines.map((l, j) => (j === i ? { ...l, ...patch } : l)));
@@ -160,12 +167,12 @@ export function LineNotesEditor({
               className="field"
               style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}
             />
-            <input
-              type="text"
+            <MentionTextarea
               value={l.issue}
+              onChange={(v) => update(i, { issue: v })}
+              members={members}
               placeholder="Paraphrased / dropped / clean"
-              onChange={(e) => update(i, { issue: e.target.value })}
-              className="field"
+              rows={1}
             />
             <button
               type="button"
@@ -209,9 +216,11 @@ export function LineNotesEditor({
 export function InjuriesEditor({
   injuries,
   onChange,
+  members = [],
 }: {
   injuries: Injury[];
   onChange: (next: Injury[]) => void;
+  members?: MentionMember[];
 }) {
   const update = (i: number, patch: Partial<Injury>) =>
     onChange(injuries.map((s, j) => (j === i ? { ...s, ...patch } : s)));
@@ -302,11 +311,12 @@ export function InjuriesEditor({
                 <Icon name="X" size={13} aria-hidden />
               </button>
             </div>
-            <textarea
+            <MentionTextarea
               value={inj.text}
+              onChange={(v) => update(i, { text: v })}
+              members={members}
               placeholder="Description, treatment, follow-up…"
-              onChange={(e) => update(i, { text: e.target.value })}
-              className="field"
+              rows={2}
               style={{ minHeight: 60 }}
             />
           </div>

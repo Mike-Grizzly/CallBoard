@@ -9,8 +9,27 @@ import { can } from "@/lib/permissions";
 import {
   validateReportForm,
   type ReportFormErrors,
+  type ReportFormData,
 } from "./validation";
-import { writeMentions } from "@/features/mentions/write";
+import { writeContextMentions } from "@/features/mentions/write";
+import { getOrganizationMembers } from "@/features/members/queries";
+
+/** Gather the report's mention-bearing fields: rich-text (data-id) + plain (@{Name}). */
+function reportMentionSources(d: ReportFormData): {
+  htmlFields: string[];
+  textFields: string[];
+} {
+  const htmlFields = [d.generalNotes, ...Object.values(d.departments)].filter(
+    (s): s is string => !!s,
+  );
+  const textFields = [
+    ...d.scheduleChanges.flatMap((s) => [s.what, s.c ?? ""]),
+    ...d.attendanceNotes.map((a) => a.note),
+    ...d.lineNotes.flatMap((l) => [l.issue, l.line]),
+    ...d.injuries.map((i) => i.text),
+  ].filter(Boolean);
+  return { htmlFields, textFields };
+}
 
 export type ReportActionResult = {
   errors?: ReportFormErrors;
@@ -107,14 +126,18 @@ export async function createReport(
     })
     .returning({ id: rehearsalReports.id });
 
-  if (data!.generalNotes) {
-    await writeMentions(data!.generalNotes, {
+  {
+    const { htmlFields, textFields } = reportMentionSources(data!);
+    await writeContextMentions({
       organizationId: user.organizationId,
       productionId,
       mentionedById: user.id,
       contextType: "report",
       contextId: inserted[0].id,
       contextTitle: `Report ${data!.reportDate}`,
+      htmlFields,
+      textFields,
+      members: await getOrganizationMembers(user.organizationId),
     });
   }
 
@@ -223,14 +246,18 @@ export async function updateReport(
     })
     .where(eq(rehearsalReports.id, reportId));
 
-  if (data!.generalNotes) {
-    await writeMentions(data!.generalNotes, {
+  {
+    const { htmlFields, textFields } = reportMentionSources(data!);
+    await writeContextMentions({
       organizationId: user.organizationId,
       productionId,
       mentionedById: user.id,
       contextType: "report",
       contextId: reportId,
       contextTitle: `Report ${data!.reportDate}`,
+      htmlFields,
+      textFields,
+      members: await getOrganizationMembers(user.organizationId),
     });
   }
 
