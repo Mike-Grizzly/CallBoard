@@ -295,7 +295,9 @@ export default async function DashboardPage() {
       else if (m.contextType === "announcement")
         href = `/productions/${m.productionSlug}/announcements`;
       else if (m.contextType === "blocking")
-        href = `/productions/${m.productionSlug}/blocking`;
+        href = m.beatId
+          ? `/productions/${m.productionSlug}/blocking?beat=${m.beatId}`
+          : `/productions/${m.productionSlug}/blocking`;
       else href = `/productions/${m.productionSlug}`;
     }
 

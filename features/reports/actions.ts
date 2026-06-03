@@ -11,24 +11,38 @@ import {
   type ReportFormErrors,
   type ReportFormData,
 } from "./validation";
-import { writeContextMentions } from "@/features/mentions/write";
+import {
+  writeContextMentions,
+  type ContextMentionSource,
+} from "@/features/mentions/write";
 import { getOrganizationMembers } from "@/features/members/queries";
+import { DEPARTMENTS } from "./constants";
 
-/** Gather the report's mention-bearing fields: rich-text (data-id) + plain (@{Name}). */
-function reportMentionSources(d: ReportFormData): {
-  htmlFields: string[];
-  textFields: string[];
-} {
-  const htmlFields = [d.generalNotes, ...Object.values(d.departments)].filter(
-    (s): s is string => !!s,
-  );
-  const textFields = [
-    ...d.scheduleChanges.flatMap((s) => [s.what, s.c ?? ""]),
-    ...d.attendanceNotes.map((a) => a.note),
-    ...d.lineNotes.flatMap((l) => [l.issue, l.line]),
-    ...d.injuries.map((i) => i.text),
-  ].filter(Boolean);
-  return { htmlFields, textFields };
+/**
+ * The report's mention-bearing sections, each notified separately: General
+ * Notes, every department note (rich text), and the structured note groups
+ * (schedule changes, attendance, line notes, injuries — plain `@{Name}` text).
+ */
+function reportMentionSources(d: ReportFormData): ContextMentionSource[] {
+  const sources: ContextMentionSource[] = [];
+  if (d.generalNotes)
+    sources.push({ html: d.generalNotes, label: "General notes" });
+  for (const dept of DEPARTMENTS) {
+    const html = d.departments[dept.key];
+    if (html) sources.push({ html, label: dept.label });
+  }
+  const sched = d.scheduleChanges.flatMap((s) => [s.what, s.c ?? ""]).join("\n");
+  if (sched.includes("@{"))
+    sources.push({ text: sched, label: "Schedule changes" });
+  const attendance = d.attendanceNotes.map((a) => a.note).join("\n");
+  if (attendance.includes("@{"))
+    sources.push({ text: attendance, label: "Attendance" });
+  const lines = d.lineNotes.flatMap((l) => [l.issue, l.line]).join("\n");
+  if (lines.includes("@{")) sources.push({ text: lines, label: "Line notes" });
+  const injuries = d.injuries.map((i) => i.text).join("\n");
+  if (injuries.includes("@{"))
+    sources.push({ text: injuries, label: "Injuries" });
+  return sources;
 }
 
 export type ReportActionResult = {
@@ -127,7 +141,6 @@ export async function createReport(
     .returning({ id: rehearsalReports.id });
 
   {
-    const { htmlFields, textFields } = reportMentionSources(data!);
     await writeContextMentions({
       organizationId: user.organizationId,
       productionId,
@@ -135,8 +148,7 @@ export async function createReport(
       contextType: "report",
       contextId: inserted[0].id,
       contextTitle: `Report ${data!.reportDate}`,
-      htmlFields,
-      textFields,
+      sources: reportMentionSources(data!),
       members: await getOrganizationMembers(user.organizationId),
     });
   }
@@ -247,7 +259,6 @@ export async function updateReport(
     .where(eq(rehearsalReports.id, reportId));
 
   {
-    const { htmlFields, textFields } = reportMentionSources(data!);
     await writeContextMentions({
       organizationId: user.organizationId,
       productionId,
@@ -255,8 +266,7 @@ export async function updateReport(
       contextType: "report",
       contextId: reportId,
       contextTitle: `Report ${data!.reportDate}`,
-      htmlFields,
-      textFields,
+      sources: reportMentionSources(data!),
       members: await getOrganizationMembers(user.organizationId),
     });
   }
