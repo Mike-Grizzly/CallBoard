@@ -1,10 +1,8 @@
 "use client";
 
 import { Icon } from "@/components/ui/icon";
-import {
-  MentionTextarea,
-  type MentionMember,
-} from "@/components/ui/mention-textarea";
+import { MentionInput } from "@/components/ui/mention-input";
+import type { MentionMember } from "@/components/ui/mention-textarea";
 import type {
   ScheduleChange,
   LineNote,
@@ -63,12 +61,12 @@ export function ScheduleChangesEditor({
                 </option>
               ))}
             </select>
-            <MentionTextarea
+            <MentionInput
               value={s.what}
               onChange={(v) => update(i, { what: v })}
               members={members}
               placeholder="What changed (type @ to mention)"
-              rows={1}
+              singleLine
             />
             <button
               type="button"
@@ -167,12 +165,12 @@ export function LineNotesEditor({
               className="field"
               style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}
             />
-            <MentionTextarea
+            <MentionInput
               value={l.issue}
               onChange={(v) => update(i, { issue: v })}
               members={members}
               placeholder="Paraphrased / dropped / clean"
-              rows={1}
+              singleLine
             />
             <button
               type="button"
@@ -311,13 +309,11 @@ export function InjuriesEditor({
                 <Icon name="X" size={13} aria-hidden />
               </button>
             </div>
-            <MentionTextarea
+            <MentionInput
               value={inj.text}
               onChange={(v) => update(i, { text: v })}
               members={members}
               placeholder="Description, treatment, follow-up…"
-              rows={2}
-              style={{ minHeight: 60 }}
             />
           </div>
         ))}

@@ -1,10 +1,8 @@
 "use client";
 
 import { Icon } from "@/components/ui/icon";
-import {
-  MentionTextarea,
-  type MentionMember,
-} from "@/components/ui/mention-textarea";
+import { MentionInput } from "@/components/ui/mention-input";
+import type { MentionMember } from "@/components/ui/mention-textarea";
 import type {
   Break,
   BreakKind,
@@ -195,12 +193,12 @@ export function AttendanceEditor({
               className="field"
               style={{ width: 130, fontSize: 12.5 }}
             />
-            <MentionTextarea
+            <MentionInput
               value={n.note}
               onChange={(v) => update(i, { note: v })}
               members={members}
               placeholder="Excused, vocal rest… (@ to mention)"
-              rows={1}
+              singleLine
               style={{ fontSize: 12.5 }}
             />
             <button
