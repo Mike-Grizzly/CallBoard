@@ -13,8 +13,6 @@ import {
 import { getReportCountByProduction, getDeletedReportCountByProduction } from "@/features/reports/queries";
 import { getDocumentCountByProduction, getDeletedDocumentCountByProduction } from "@/features/documents/queries";
 import { getAnnouncementCountByProduction } from "@/features/announcements/queries";
-import { getUnreadNotificationCount } from "@/features/notifications/actions";
-import { NotificationBell } from "./notification-bell";
 import { TrashDrawer } from "./trash-drawer";
 import { ProductionTabsNav, type ProductionTab } from "./production-tabs";
 
@@ -87,7 +85,6 @@ export default async function ProductionLayout({
     reportCount,
     documentCount,
     announcementCount,
-    unreadCount,
     deletedDocCount,
     deletedReportCount,
   ] = await Promise.all([
@@ -95,7 +92,6 @@ export default async function ProductionLayout({
     getReportCountByProduction(production.id),
     getDocumentCountByProduction(production.id),
     getAnnouncementCountByProduction(production.id, user.organizationId),
-    getUnreadNotificationCount(),
     getDeletedDocumentCountByProduction(production.id),
     getDeletedReportCountByProduction(production.id),
   ]);
@@ -232,7 +228,6 @@ export default async function ProductionLayout({
               <Search className="ico" aria-hidden />
             </button>
             <TrashDrawer productionId={production.id} initialTrashCount={initialTrashCount} />
-            <NotificationBell initialUnread={unreadCount} />
             {canManage && (
               <Link
                 href={`/productions/${slug}/members`}

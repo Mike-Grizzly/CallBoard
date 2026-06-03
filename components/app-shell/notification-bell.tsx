@@ -11,9 +11,14 @@ import type { Notification } from "@/db/schema";
 
 interface Props {
   initialUnread: number;
+  /**
+   * Where the panel opens from. "down" (default) suits a topbar; "up" suits the
+   * rail foot at the bottom-left of the screen so the panel doesn't clip.
+   */
+  placement?: "down" | "up";
 }
 
-export function NotificationBell({ initialUnread }: Props) {
+export function NotificationBell({ initialUnread, placement = "down" }: Props) {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(initialUnread);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -98,8 +103,9 @@ export function NotificationBell({ initialUnread }: Props) {
           className="anim-in"
           style={{
             position: "absolute",
-            top: "calc(100% + 8px)",
-            right: 0,
+            ...(placement === "up"
+              ? { bottom: "calc(100% + 8px)", left: 0 }
+              : { top: "calc(100% + 8px)", right: 0 }),
             width: 340,
             background: "var(--bg-elev)",
             border: "1px solid var(--border)",

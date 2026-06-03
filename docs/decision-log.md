@@ -1303,3 +1303,37 @@ flicker-free.
 **Impact:** No schema change. `body[data-theme]` is now dynamic (was hardcoded
 `warm`). Future per-workspace branding or additional themes (the `cool` token
 set already exists) can extend the same mechanism.
+
+---
+
+## 2026-06-03 — Announcement notifications: scope-based fan-out, channel preferences, push deferred
+
+**Decision:** Announcements now actively notify their audience instead of being
+pull-only. Targeting is **scope-based**, not a new mention syntax: on create,
+`createAnnouncement` fans out to org members (org-wide announcements) or
+production members (production-scoped), excluding the author. Delivery is
+per-user across channels stored in a new `notification_preferences` table
+(`in_app`, `email`, `push`). In-app reuses the existing `notifications` table
+(surfaced by a now-**global** bell in the rail foot — previously the bell only
+existed inside a production layout). Email reuses the existing Resend pipeline.
+
+**Reason:** An announcement is already a broadcast object whose audience is
+defined by its scope; requiring authors to also @mention a group would be
+redundant and easy to forget. Reusing scope keeps authoring foolproof and
+reuses the audience logic already in `getAckInfoForAnnouncements`.
+
+**Push deferred (Phase 2):** there is no native app or PWA push transport yet.
+The `push` channel is modeled in the schema/UI (disabled "coming soon" toggle)
+but inert — nothing delivers it. The realistic future path is Web Push (PWA:
+manifest + service worker + VAPID + a `push_subscriptions` table), with the
+caveat that iOS only delivers Web Push after "Add to Home Screen". Chosen over a
+third-party push service (e.g. OneSignal) to avoid an external dependency.
+
+**Impact:** New table `notification_preferences` (uniqueness on `userId`
+enforced in app code, per the drizzle-push constraint note — run
+`npm run db:push` to apply). New `features/notifications/announce.ts`
+(fan-out + email) and `preferences.ts`. The notification bell moved from
+`app/(app)/productions/[slug]/notification-bell.tsx` to
+`components/app-shell/notification-bell.tsx` and is rendered globally in the
+rail (removed from the production topbar to avoid duplication). New settings
+page `/settings/notifications`. Implemented but **not yet browser-verified**.

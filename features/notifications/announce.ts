@@ -1,0 +1,152 @@
+import { Resend } from "resend";
+import { db } from "@/db";
+import { notifications } from "@/db/schema";
+import { getPreferencesForUsers } from "./preferences";
+
+export type AnnouncementAudienceMember = {
+  userId: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+};
+
+type FanoutInput = {
+  announcementId: string;
+  title: string;
+  body: string;
+  productionSlug: string | null;
+  productionTitle: string | null;
+  authorId: string;
+  authorName: string;
+  audience: AnnouncementAudienceMember[];
+};
+
+function snippetFromHtml(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 200);
+}
+
+function announcementLink(productionSlug: string | null): string {
+  return productionSlug
+    ? `/productions/${productionSlug}/announcements`
+    : `/announcements`;
+}
+
+/**
+ * Fan an announcement out to its audience across the user's chosen channels.
+ *
+ * Audience is resolved by the caller from the announcement's scope (org members
+ * for org-wide, production members for scoped). The author is excluded here.
+ * Delivery is best-effort: a failure in one channel (e.g. email) must never
+ * fail announcement creation, so email is wrapped and swallowed.
+ *
+ * `push` is intentionally not delivered yet — there is no web-push transport
+ * (Phase 2). When it lands, add a step here keyed on `prefs.push`.
+ */
+export async function fanoutAnnouncement(input: FanoutInput): Promise<void> {
+  const recipients = input.audience.filter(
+    (m) => m.userId !== input.authorId,
+  );
+  if (recipients.length === 0) return;
+
+  const prefs = await getPreferencesForUsers(recipients.map((r) => r.userId));
+  const link = announcementLink(input.productionSlug);
+  const scopeLabel = input.productionTitle ?? "your company";
+
+  const inAppRows = recipients
+    .filter((r) => prefs[r.userId]?.inApp)
+    .map((r) => ({
+      recipientId: r.userId,
+      type: "announcement",
+      title: `New announcement: ${input.title}`,
+      body: `${input.authorName} posted to ${scopeLabel}`,
+      link,
+    }));
+
+  if (inAppRows.length > 0) {
+    await db.insert(notifications).values(inAppRows);
+  }
+
+  const emailRecipients = recipients.filter(
+    (r) => prefs[r.userId]?.email && r.email,
+  );
+  if (emailRecipients.length > 0) {
+    await sendAnnouncementEmails(emailRecipients, input, link, scopeLabel);
+  }
+}
+
+async function sendAnnouncementEmails(
+  recipients: AnnouncementAudienceMember[],
+  input: FanoutInput,
+  link: string,
+  scopeLabel: string,
+): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+
+  const from = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
+  ).replace(/\/$/, "");
+  const url = `${siteUrl}${link}`;
+  const snippet = snippetFromHtml(input.body);
+  const html = announcementEmailHtml({
+    title: input.title,
+    authorName: input.authorName,
+    scopeLabel,
+    snippet,
+    url,
+  });
+  const subject = `New announcement: ${input.title}`;
+
+  const resend = new Resend(apiKey);
+
+  // Resend caps batch sends at 100 messages; chunk to stay under it. One
+  // message per recipient keeps the audience list private.
+  const CHUNK = 100;
+  try {
+    for (let i = 0; i < recipients.length; i += CHUNK) {
+      const chunk = recipients.slice(i, i + CHUNK);
+      await resend.batch.send(
+        chunk.map((r) => ({
+          from,
+          to: [r.email],
+          subject,
+          html,
+        })),
+      );
+    }
+  } catch (err) {
+    // Best-effort: never fail announcement creation because email failed.
+    console.error("Failed to send announcement emails:", err);
+  }
+}
+
+function announcementEmailHtml(p: {
+  title: string;
+  authorName: string;
+  scopeLabel: string;
+  snippet: string;
+  url: string;
+}): string {
+  return `
+  <div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1a1a1a;">
+    <p style="font-size: 13px; color: #6b7280; margin: 0 0 6px;">New announcement · ${escapeHtml(p.scopeLabel)}</p>
+    <h1 style="font-size: 20px; margin: 0 0 8px;">${escapeHtml(p.title)}</h1>
+    <p style="font-size: 13px; color: #6b7280; margin: 0 0 16px;">Posted by ${escapeHtml(p.authorName)}</p>
+    ${p.snippet ? `<p style="font-size: 15px; line-height: 1.5; margin: 0 0 20px;">${escapeHtml(p.snippet)}</p>` : ""}
+    <a href="${p.url}" style="display: inline-block; background: #1a1a1a; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-size: 14px;">View announcement</a>
+    <p style="font-size: 12px; color: #9ca3af; margin: 24px 0 0;">You're receiving this because you're a member. Manage how you get alerts in Settings → Notifications.</p>
+  </div>`;
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}

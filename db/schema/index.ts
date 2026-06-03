@@ -19,6 +19,7 @@ export * from "./calls";
 export * from "./call-confirmations";
 export * from "./beat-comments";
 export * from "./notifications";
+export * from "./notification-preferences";
 export * from "./custom-set-pieces";
 export * from "./beat-arrows";
 export * from "./mentions";

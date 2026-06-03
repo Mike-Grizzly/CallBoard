@@ -1,12 +1,20 @@
 "use server";
 
 import { db } from "@/db";
-import { announcements, announcementAcks } from "@/db/schema";
+import { announcements, announcementAcks, productions } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { writeMentions } from "@/features/mentions/write";
+import {
+  getOrganizationMembers,
+  getProductionMembers,
+} from "@/features/members/queries";
+import {
+  fanoutAnnouncement,
+  type AnnouncementAudienceMember,
+} from "@/features/notifications/announce";
 
 export type AnnouncementResult = {
   error?: string;
@@ -51,6 +59,44 @@ export async function createAnnouncement(
       contextTitle: title,
     });
   }
+
+  // Notify the announcement's audience (scope-based fan-out): org members for
+  // org-wide, production members for production-scoped. The author is excluded
+  // inside fanoutAnnouncement.
+  let productionSlug: string | null = null;
+  let productionTitle: string | null = null;
+  let audience: AnnouncementAudienceMember[];
+  if (productionId) {
+    const [prod] = await db
+      .select({ slug: productions.slug, title: productions.title })
+      .from(productions)
+      .where(eq(productions.id, productionId))
+      .limit(1);
+    productionSlug = prod?.slug ?? null;
+    productionTitle = prod?.title ?? null;
+    audience = await getProductionMembers(productionId);
+  } else {
+    audience = await getOrganizationMembers(user.organizationId);
+  }
+
+  const authorName =
+    `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email;
+
+  await fanoutAnnouncement({
+    announcementId: row.id,
+    title,
+    body,
+    productionSlug,
+    productionTitle,
+    authorId: user.id,
+    authorName,
+    audience: audience.map((m) => ({
+      userId: m.userId,
+      email: m.email,
+      firstName: m.firstName,
+      lastName: m.lastName,
+    })),
+  });
 
   revalidatePath("/announcements");
   revalidatePath("/productions", "layout");

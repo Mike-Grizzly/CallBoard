@@ -271,3 +271,28 @@ default in place today.
 - **Inline link uses `window.prompt`.** The bubble-menu Link button prompts
   for a URL. An inline link popover (edit/remove/open) would be nicer — quick
   follow-up.
+
+---
+
+## Notifications questions (2026-06-03)
+
+- **Announcement notifications are implemented but not browser-verified.**
+  Scope-based fan-out (in-app + email) + a `/settings/notifications` preference
+  page + a global rail bell were added this session. Not yet tested end-to-end:
+  (a) that a recipient actually sees the in-app bell count update and the email
+  arrives, (b) the rail bell dropdown renders correctly opening *upward* from
+  the rail foot (it was originally built for a topbar; `placement="up"` flips
+  it), (c) large-org fan-out performance (one `notifications` insert batch +
+  Resend batch per ≤100 recipients).
+- **Push is modeled but inert.** The `notification_preferences.push` column and
+  the disabled settings toggle exist, but there is no delivery transport. Phase 2
+  = Web Push (PWA: manifest + service worker + VAPID + `push_subscriptions`).
+  Open: iOS requires "Add to Home Screen" before Web Push works at all — is that
+  acceptable, or is a native wrapper (Expo/Capacitor + APNs/FCM) eventually
+  needed for reliable phone alerts?
+- **Email volume / opt-out.** Every announcement currently emails every audience
+  member who hasn't turned email off. For a busy show this could feel spammy —
+  consider per-production muting or digest batching before wide rollout.
+- **No real-time refresh.** The rail bell count updates on next navigation, not
+  live (consistent with the documented "no real-time updates" stance). Revisit
+  if instant delivery is expected.

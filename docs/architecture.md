@@ -268,7 +268,9 @@ All tables use UUID primary keys, cascade deletes on foreign keys, and timezone-
 - Document comments/annotations (UI placeholder, no data model)
 - Tests
 - Mobile navigation drawer
-- Email notifications
+- Phone push notifications (Web Push / PWA — Phase 2; the `push` channel is
+  modeled in `notification_preferences` but inert). Announcement notifications
+  via in-app bell + email shipped 2026-06-03; rehearsal-report email predates it.
 - Real-time updates
 - Org switcher / Settings UI to rename the current org
 
