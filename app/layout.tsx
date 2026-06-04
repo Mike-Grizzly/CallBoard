@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Geist_Mono, Newsreader } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
+  style: ["normal", "italic"],
   variable: "--font-ui",
   display: "swap",
 });
@@ -12,14 +13,6 @@ const inter = Inter({
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
-  display: "swap",
-});
-
-const newsreader = Newsreader({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  style: ["normal", "italic"],
-  variable: "--font-display",
   display: "swap",
 });
 
@@ -64,7 +57,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${geistMono.variable} ${newsreader.variable} h-full antialiased`}
+      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body

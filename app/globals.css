@@ -55,8 +55,9 @@
   --radius-l: 14px;
 
   /* font-family vars are populated by next/font in app/layout.tsx; these
-     fallbacks let the file stand alone if the layout vars are missing */
-  --font-display: "Newsreader", Georgia, serif;
+     fallbacks let the file stand alone if the layout vars are missing.
+     Display headings now use Inter too (was Newsreader serif). */
+  --font-display: var(--font-ui, "Inter", ui-sans-serif, system-ui, sans-serif);
   --font-ui: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
 
@@ -6224,7 +6225,7 @@ select.pp-field {
  * the dark / cool theme switch instead of pinning the light palette.
  * ============================================================ */
 .np-root {
-  --font-display: "Newsreader", Georgia, serif;
+  --font-display: var(--font-ui, "Inter", ui-sans-serif, system-ui, sans-serif);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
