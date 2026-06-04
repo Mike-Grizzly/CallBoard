@@ -60,7 +60,13 @@ the channel-preferences form (which now only writes in-app/email).
 | `app/(app)/(default)/settings/notifications/push-toggle.tsx` | Client | Per-device enable/disable: registers SW, requests permission, subscribes |
 | `features/notifications/announce.ts` | Server | Fan-out now sends push to recipients with `prefs.push` |
 | `app/(app)/(default)/settings/notifications/page.tsx` | Server | Renders `<PushToggle />` |
-| `app/(app)/(default)/settings/notifications/notification-preferences-form.tsx` | Client | Push toggle removed (now device-managed) |
+| `app/(app)/(default)/settings/notifications/notification-preferences-form.tsx` | Client | Push + in-app toggles removed; in-app shown as static "Always on", email is the only toggle |
+| `features/push/use-push-subscription.ts` | Client hook | Shared register/permission/subscribe flow (used by the Settings card AND onboarding) |
+| `features/mentions/notify.ts` | Server | `pushMentionNotifications()` — best-effort, batches multiple mentions in one write into "N new mentions" |
+| `features/mentions/write.ts`, `features/blocking/actions.ts` | Server | Call the mention push helper after writing mention rows |
+| `app/(app)/(default)/dashboard/onboarding-dialog.tsx` | Client | First-visit prompt: pick email + push; in-app always on |
+| `app/(app)/(default)/dashboard/page.tsx` | Server | Renders `<OnboardingDialog />` when the user has no prefs row |
+| `features/notifications/actions.ts` | Server | `completeOnboarding()`; `updateNotificationPreferences` forces in-app on |
 
 ## Security
 
@@ -119,13 +125,36 @@ the channel-preferences form (which now only writes in-app/email).
       push pref
 - [ ] Non-PWA / unsupported browser shows the explanatory message rather than a
       broken button
+- [ ] With push on, being @mentioned (report / note / announcement / blocking
+      comment) sends a phone push
+- [ ] Being mentioned multiple times in one rehearsal-report save sends ONE
+      "N new mentions" push, not several
+- [ ] A brand-new user (no prefs row) sees the onboarding dialog on first
+      dashboard visit; existing users (with a row) do not
+- [ ] Onboarding: email toggle + "Enable on this device" work; Save/Skip both
+      dismiss it and it does not reappear
+- [ ] Settings shows in-app as a static "Always on" row (no toggle); saving
+      email prefs does not disable push
+
+## What pushes today
+
+- **Announcements** → audience members with `prefs.push`.
+- **@mentions** (2026-06-04) → mentioned users with `prefs.push`, from
+  announcements, notes, rehearsal reports, and blocking beat comments. Multiple
+  mentions in a single write are batched into one "N new mentions" push.
+- Rehearsal reports are sent **manually** to chosen recipients and are
+  intentionally NOT wired to push.
 
 ## Open questions
 
-- Only announcements push today. Mentions and rehearsal-report notifications go
-  through a separate path (`mentions` table) and could call `sendPushToUsers`
-  too — wire up if desired.
-- No per-device labels/management UI beyond the current device. A "your devices"
+- **Mention batching is per-write only.** Multiple mentions across *separate*
+  saves within a few minutes still send separate pushes. A true time-window
+  debounce would need a queue/scheduled job — deferred.
+- **Mention pushes link to `/dashboard`**, not the exact context (the write
+  paths lack slug/author cheaply). Deep-linking is a future nicety.
+- **No per-device management UI** beyond the current device. A "your devices"
   list could be added if users accumulate stale subscriptions.
-- iOS requires the PWA be added to the Home Screen before Web Push works at all
-  — acceptable for Phase 1; revisit with Capacitor if reliability demands it.
+- **iOS requires the PWA be Home-Screen-installed** before Web Push works —
+  accepted for Phase 1; revisit with Capacitor if reliability demands it.
+- **Upcoming-rehearsal reminders (FUTURE):** auto email/push the morning of a
+  scheduled call, pulled from the calendar. Planned, not built.

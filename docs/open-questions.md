@@ -290,8 +290,18 @@ default in place today.
   push channel. Not yet device-verified end to end. Still open: (a) iOS requires
   "Add to Home Screen" before Web Push works at all — accepted for Phase 1;
   (b) a native wrapper (Capacitor + APNs/FCM) remains the eventual path for the
-  most reliable phone alerts and reuses this same backend; (c) only announcements
-  push today — mentions/report notifications could call `sendPushToUsers` too.
+  most reliable phone alerts and reuses this same backend.
+  **Update 2026-06-04:** @mentions now push too (batched per-write; from reports,
+  notes, announcements, blocking). Onboarding added (first-dashboard dialog asks
+  email + push; in-app always on). Still open: per-write batching only (no
+  cross-write time-window debounce); mention pushes link to `/dashboard` rather
+  than deep-linking the exact context.
+- **Upcoming-rehearsal reminders (FUTURE, requested 2026-06-04).** Auto-notify
+  people the morning of a scheduled rehearsal, pulled from the calendar
+  (`calls`), via email (and push). Not built. Needs a scheduled trigger (cron /
+  Supabase scheduled function / Vercel cron) since it fires on a clock, not on a
+  user action. Rehearsal reports + these reminders are the "always both channels"
+  category the product wants; everything else follows the user's chosen channels.
 - **Email volume / opt-out.** Every announcement currently emails every audience
   member who hasn't turned email off. For a busy show this could feel spammy —
   consider per-production muting or digest batching before wide rollout.

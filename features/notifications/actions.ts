@@ -60,14 +60,14 @@ export type PreferencesResult = {
 };
 
 /**
- * Upsert the current user's in-app/email notification preferences. Uniqueness on
- * userId is enforced here (read-then-update/insert) rather than a DB constraint
- * — see the notification-preferences schema note.
+ * Upsert the current user's email notification preference. Uniqueness on userId
+ * is enforced here (read-then-update/insert) rather than a DB constraint — see
+ * the notification-preferences schema note.
  *
- * The `push` channel is NOT touched here: it is driven per-device by the push
- * subscribe/unsubscribe flow (features/push/actions.ts), which keeps the flag in
- * sync with whether the user has any registered device. Setting it from this
- * form too would silently flip it off on every save.
+ * `in_app` is always on (not user-configurable — the acknowledge banner is the
+ * baseline channel) so it is forced true here. `push` is NOT touched: it is
+ * driven per-device by the subscribe/unsubscribe flow (features/push/actions.ts),
+ * which keeps the flag in sync with whether the user has any registered device.
  */
 export async function updateNotificationPreferences(
   _prevState: PreferencesResult | undefined,
@@ -75,27 +75,45 @@ export async function updateNotificationPreferences(
 ): Promise<PreferencesResult> {
   const user = await requireCurrentUser();
 
-  const inApp = formData.get("in_app") != null;
   const email = formData.get("email") != null;
 
+  await upsertEmailPreference(user.id, email);
+  revalidatePath("/settings/notifications");
+
+  return { success: true };
+}
+
+/**
+ * Persist the channel choice made during signup onboarding. Email comes from
+ * the dialog; in-app is always on; push is handled separately by the device
+ * subscribe flow. Writing this row is also what marks the user as onboarded
+ * (see hasNotificationPreferences), so the prompt won't show again.
+ */
+export async function completeOnboarding(email: boolean): Promise<void> {
+  const user = await requireCurrentUser();
+  await upsertEmailPreference(user.id, email);
+  revalidatePath("/dashboard");
+}
+
+/** Shared in-app(=true)+email upsert, preserving any existing push flag. */
+async function upsertEmailPreference(
+  userId: string,
+  email: boolean,
+): Promise<void> {
   const [existing] = await db
     .select({ id: notificationPreferences.id })
     .from(notificationPreferences)
-    .where(eq(notificationPreferences.userId, user.id))
+    .where(eq(notificationPreferences.userId, userId))
     .limit(1);
 
   if (existing) {
     await db
       .update(notificationPreferences)
-      .set({ inApp, email, updatedAt: new Date() })
+      .set({ inApp: true, email, updatedAt: new Date() })
       .where(eq(notificationPreferences.id, existing.id));
   } else {
     await db
       .insert(notificationPreferences)
-      .values({ userId: user.id, inApp, email });
+      .values({ userId, inApp: true, email });
   }
-
-  revalidatePath("/settings/notifications");
-
-  return { success: true };
 }

@@ -25,6 +25,7 @@ import {
   getCallConfirmSummary,
 } from "@/features/calls/queries";
 import { getMentionsForUser } from "@/features/mentions/queries";
+import { hasNotificationPreferences } from "@/features/notifications/preferences";
 import { getPinsForUser, type PinRow } from "@/features/pins/queries";
 import { getCastForProductions } from "@/features/members/queries";
 import { type SerializedAnnouncement } from "./dashboard-announcements";
@@ -39,6 +40,7 @@ import {
   type MdPin,
   type MdTimelineItem,
 } from "./mobile-dashboard";
+import { OnboardingDialog } from "./onboarding-dialog";
 
 // Deterministic color per production — same palette as the left rail
 const PROD_COLORS = [
@@ -180,21 +182,29 @@ export default async function DashboardPage() {
   weekEndDate.setDate(weekEndDate.getDate() + 13);
   const weekEnd = weekEndDate.toISOString().split("T")[0];
 
-  const [announcements, nextCallMap, mentionRows, pins, castMap, rangeCalls] =
-    await Promise.all([
-      getAnnouncementsForUser(user.id, user.organizationId, canManage),
-      getNextCallsForProductions(prodIds),
-      getMentionsForUser(user.id),
-      getPinsForUser(user.id),
-      getCastForProductions(prodIds),
-      getCallsForUserInRange({
-        userId: user.id,
-        organizationId: user.organizationId,
-        startDate: today,
-        endDate: weekEnd,
-        manageAll: canManage,
-      }),
-    ]);
+  const [
+    announcements,
+    nextCallMap,
+    mentionRows,
+    pins,
+    castMap,
+    rangeCalls,
+    hasNotifPrefs,
+  ] = await Promise.all([
+    getAnnouncementsForUser(user.id, user.organizationId, canManage),
+    getNextCallsForProductions(prodIds),
+    getMentionsForUser(user.id),
+    getPinsForUser(user.id),
+    getCastForProductions(prodIds),
+    getCallsForUserInRange({
+      userId: user.id,
+      organizationId: user.organizationId,
+      startDate: today,
+      endDate: weekEnd,
+      manageAll: canManage,
+    }),
+    hasNotificationPreferences(user.id),
+  ]);
 
   const greeting = getGreeting(now.getHours());
   const firstName = user.firstName || "";
@@ -418,6 +428,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="page-narrow home">
+      {!hasNotifPrefs && <OnboardingDialog />}
 
       {/* ════════════════════════════════════════════════════════════════
           DESKTOP COMMAND CENTER (hidden at phone widths)

@@ -1401,3 +1401,18 @@ page `/settings/notifications`. Implemented but **not yet browser-verified**.
 5. **Announcements only, for now.** Fan-out (`features/notifications/announce.ts`) sends push at the spot previously marked TODO. Mentions/report notifications use a separate path and can call `sendPushToUsers` later.
 
 **Impact:** Requires three new env vars (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`) in Vercel + local, and creating `push_subscriptions` via the Supabase SQL editor/MCP with RLS enabled (NOT `db:push`, which is retired here — see current-status "Known limitations"). New dependency: `web-push`. iOS only delivers Web Push to a Home-Screen-installed PWA (accepted for Phase 1). Full setup + test steps in `docs/feature-specs/17-push-notifications.md`.
+
+---
+
+## 2026-06-04 — Push for @mentions (batched) + signup notification onboarding + in-app always on
+
+**Context:** Follow-up to the Web Push work. (1) @mentions were pull-only (dashboard bento) — no phone alert. (2) New users had no way to choose how they're notified. (3) Product decision: in-app should never be a toggle.
+
+**Decisions:**
+1. **@mentions now push, gated on `prefs.push`.** A shared best-effort helper `pushMentionNotifications()` (`features/mentions/notify.ts`) is called from all three mention-creation sites: `writeMentions` (announcements/notes), `writeContextMentions` (reports), and the direct insert in `features/blocking/actions.ts` (beat comments). It never throws, so a push failure can't fail the underlying save. Email is intentionally NOT added for mentions (push + the existing dashboard bento only).
+2. **Batching is per-write, not time-windowed.** `countsByUser` counts how many times each user was tagged in THIS save; >1 → a single "N new mentions" push instead of one per mention. This covers the stated case (multiple tags across one rehearsal report's sections) without a debounce/queue. Cross-write time-window batching is deferred (see open-questions).
+3. **Mention pushes link to `/dashboard`.** The write paths lack the slug/author context to build deep links cheaply; the dashboard Mentions list is always valid. Deep-linking is a future nicety (open-questions).
+4. **In-app is always on (not user-configurable).** Removed the in-app toggle from Settings (now a static "Always on" row); `updateNotificationPreferences` forces `in_app = true` and only writes the email choice. Push stays device-managed.
+5. **Signup onboarding via a first-dashboard dialog, no schema change.** `OnboardingDialog` shows when the user has no `notification_preferences` row (`hasNotificationPreferences`). It asks email (toggle) + push (per-device enable, reusing the new `usePushSubscription` hook); in-app shown as always-on. Finishing or skipping calls `completeOnboarding` which writes the row — which is also what stops it reappearing. Gating on row-absence avoids a `profiles` column / DDL.
+
+**Impact:** No new env vars or DB changes. The push-subscribe browser flow was extracted to `features/push/use-push-subscription.ts` and is shared by the Settings card and the onboarding dialog. "Upcoming rehearsal reminders" (auto email/push the morning of a scheduled call, pulled from the calendar) is a separately-scoped FUTURE feature — see open-questions; not built here. Rehearsal reports were intentionally left untouched (they're sent manually to chosen recipients).

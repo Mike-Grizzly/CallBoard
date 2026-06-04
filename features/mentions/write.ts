@@ -3,6 +3,7 @@
 import { db } from "@/db";
 import { mentions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
+import { pushMentionNotifications } from "./notify";
 
 interface MentionWriteContext {
   organizationId: string;
@@ -62,6 +63,19 @@ export async function writeMentions(
       snippet,
     })),
   );
+
+  const label =
+    ctx.contextTitle ||
+    (ctx.contextType === "announcement"
+      ? "an announcement"
+      : ctx.contextType === "note"
+        ? "a note"
+        : "a post");
+  await pushMentionNotifications({
+    mentionedById: ctx.mentionedById,
+    countsByUser: Object.fromEntries(userIds.map((id) => [id, 1])),
+    contextLabel: label,
+  });
 }
 
 interface ContextMentionMember {
@@ -119,6 +133,7 @@ export async function writeContextMentions(
   }
 
   const rows: (typeof mentions.$inferInsert)[] = [];
+  const countsByUser: Record<string, number> = {};
   for (const source of params.sources) {
     const ids = new Set<string>();
     if (source.html) {
@@ -146,6 +161,7 @@ export async function writeContextMentions(
       : (params.contextTitle ?? null);
 
     for (const userId of ids) {
+      countsByUser[userId] = (countsByUser[userId] ?? 0) + 1;
       rows.push({
         organizationId: params.organizationId,
         productionId: params.productionId,
@@ -160,4 +176,12 @@ export async function writeContextMentions(
   }
 
   if (rows.length > 0) await db.insert(mentions).values(rows);
+
+  // One push per mentioned user — batched to "N new mentions" when they were
+  // tagged in several sections of this same context (e.g. a rehearsal report).
+  await pushMentionNotifications({
+    mentionedById: params.mentionedById,
+    countsByUser,
+    contextLabel: params.contextTitle ?? "a rehearsal report",
+  });
 }

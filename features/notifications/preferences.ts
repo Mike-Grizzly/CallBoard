@@ -10,13 +10,31 @@ export type NotificationChannels = {
 
 /**
  * Defaults applied when a user has no preferences row yet: in-app and email on,
- * push off (push has no delivery path yet — see notification-preferences schema).
+ * push off. In-app is always on (not user-configurable); push is opt-in per
+ * device via the subscribe flow.
  */
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationChannels = {
   inApp: true,
   email: true,
   push: false,
 };
+
+/**
+ * Whether the user has ever saved notification preferences. Used to decide if
+ * the one-time signup onboarding prompt should appear — a row is written when
+ * they finish (or skip) onboarding, save prefs, or enable push, so "no row"
+ * cleanly means "hasn't chosen yet."
+ */
+export async function hasNotificationPreferences(
+  userId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: notificationPreferences.id })
+    .from(notificationPreferences)
+    .where(eq(notificationPreferences.userId, userId))
+    .limit(1);
+  return !!row;
+}
 
 export async function getNotificationPreferences(
   userId: string,
