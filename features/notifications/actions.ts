@@ -60,9 +60,14 @@ export type PreferencesResult = {
 };
 
 /**
- * Upsert the current user's notification channel preferences. Uniqueness on
+ * Upsert the current user's in-app/email notification preferences. Uniqueness on
  * userId is enforced here (read-then-update/insert) rather than a DB constraint
  * — see the notification-preferences schema note.
+ *
+ * The `push` channel is NOT touched here: it is driven per-device by the push
+ * subscribe/unsubscribe flow (features/push/actions.ts), which keeps the flag in
+ * sync with whether the user has any registered device. Setting it from this
+ * form too would silently flip it off on every save.
  */
 export async function updateNotificationPreferences(
   _prevState: PreferencesResult | undefined,
@@ -72,7 +77,6 @@ export async function updateNotificationPreferences(
 
   const inApp = formData.get("in_app") != null;
   const email = formData.get("email") != null;
-  const push = formData.get("push") != null;
 
   const [existing] = await db
     .select({ id: notificationPreferences.id })
@@ -83,12 +87,12 @@ export async function updateNotificationPreferences(
   if (existing) {
     await db
       .update(notificationPreferences)
-      .set({ inApp, email, push, updatedAt: new Date() })
+      .set({ inApp, email, updatedAt: new Date() })
       .where(eq(notificationPreferences.id, existing.id));
   } else {
     await db
       .insert(notificationPreferences)
-      .values({ userId: user.id, inApp, email, push });
+      .values({ userId: user.id, inApp, email });
   }
 
   revalidatePath("/settings/notifications");

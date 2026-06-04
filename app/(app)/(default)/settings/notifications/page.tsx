@@ -3,6 +3,7 @@ import { Icon } from "@/components/ui/icon";
 import { requireCurrentUser } from "@/lib/auth";
 import { getNotificationPreferences } from "@/features/notifications/preferences";
 import { NotificationPreferencesForm } from "./notification-preferences-form";
+import { PushToggle } from "./push-toggle";
 
 export default async function NotificationSettingsPage() {
   const user = await requireCurrentUser();
@@ -30,6 +31,7 @@ export default async function NotificationSettingsPage() {
       </div>
 
       <NotificationPreferencesForm initial={prefs} />
+      <PushToggle />
     </div>
   );
 }

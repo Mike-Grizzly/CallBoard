@@ -284,12 +284,14 @@ default in place today.
   the rail foot (it was originally built for a topbar; `placement="up"` flips
   it), (c) large-org fan-out performance (one `notifications` insert batch +
   Resend batch per ≤100 recipients).
-- **Push is modeled but inert.** The `notification_preferences.push` column and
-  the disabled settings toggle exist, but there is no delivery transport. Phase 2
-  = Web Push (PWA: manifest + service worker + VAPID + `push_subscriptions`).
-  Open: iOS requires "Add to Home Screen" before Web Push works at all — is that
-  acceptable, or is a native wrapper (Expo/Capacitor + APNs/FCM) eventually
-  needed for reliable phone alerts?
+- ~~**Push is modeled but inert.**~~ **SHIPPED 2026-06-04** — Web Push
+  implemented (service worker + VAPID + `push_subscriptions` + per-device toggle;
+  see `feature-specs/17-push-notifications.md`). Announcements now fan out to the
+  push channel. Not yet device-verified end to end. Still open: (a) iOS requires
+  "Add to Home Screen" before Web Push works at all — accepted for Phase 1;
+  (b) a native wrapper (Capacitor + APNs/FCM) remains the eventual path for the
+  most reliable phone alerts and reuses this same backend; (c) only announcements
+  push today — mentions/report notifications could call `sendPushToUsers` too.
 - **Email volume / opt-out.** Every announcement currently emails every audience
   member who hasn't turned email off. For a busy show this could feel spammy —
   consider per-production muting or digest batching before wide rollout.

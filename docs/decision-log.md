@@ -1386,3 +1386,18 @@ page `/settings/notifications`. Implemented but **not yet browser-verified**.
 5. **Dashboard: unread-first + View all + dismiss.** The capped mention lists hid unread items beyond the cap; unread now sort first, a View all toggle expands, and `dismissMention()` deletes a recipient's row.
 
 **Impact:** `writeContextMentions` is the report mention path; do not also call `writeMentions` for reports (it would delete-then-insert and wipe the per-section rows). Plain-text mention resolution is name/email-based, so renaming a member between mention and save could fail to resolve a token (acceptable; the chip still displays). `mention-input.tsx` is contenteditable — caret/serialization behavior is hand-rolled; test in a browser when changing it.
+
+---
+
+## 2026-06-04 — Web Push notifications via PWA (VAPID + service worker), not native wrapper for Phase 1
+
+**Context:** The `notification_preferences.push` channel had been modeled but inert since 2026-06-03 — no transport. The app is already an installable PWA (manifest + icons), but had no service worker, so it could install but not receive push. Decision needed on how to deliver phone alerts.
+
+**Decisions:**
+1. **Web Push first, native (Capacitor) later.** Implemented standard Web Push (VAPID keypair + `public/sw.js` service worker + `push_subscriptions` table) rather than a native wrapper. It is fully additive, deploys through Vercel with no extra build pipeline, and needs no app stores or Apple Developer account. A future Capacitor wrapper reuses the same `push_subscriptions` table and `sendPushToUsers()` helper, swapping only the channel to APNs/FCM — so this is not throwaway work.
+2. **Push is per-device, managed by the subscribe flow — not the channel-prefs form.** `savePushSubscription`/`deletePushSubscription` (`features/push/actions.ts`) own the `notification_preferences.push` flag (set true on first device, false when the last is removed). `updateNotificationPreferences` was changed to write only in-app/email — previously it would have silently flipped `push` off on every save once the disabled form toggle was removed.
+3. **`push_subscriptions` follows the RLS-on/no-policies convention.** An endpoint is a capability, so the table is server-only via the Drizzle pooler role; RLS is enabled manually after `db:push` (drizzle-kit doesn't manage RLS). Endpoint uniqueness is enforced in app code (delete-then-insert), not a DB constraint, per the drizzle-kit hang note.
+4. **Best-effort, self-healing delivery.** `sendPushToUsers` swallows its own errors (a dead device never fails announcement creation, mirroring email) and prunes subscriptions the push service reports as gone (404/410).
+5. **Announcements only, for now.** Fan-out (`features/notifications/announce.ts`) sends push at the spot previously marked TODO. Mentions/report notifications use a separate path and can call `sendPushToUsers` later.
+
+**Impact:** Requires three new env vars (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`) in Vercel + local, and creating `push_subscriptions` via the Supabase SQL editor/MCP with RLS enabled (NOT `db:push`, which is retired here — see current-status "Known limitations"). New dependency: `web-push`. iOS only delivers Web Push to a Home-Screen-installed PWA (accepted for Phase 1). Full setup + test steps in `docs/feature-specs/17-push-notifications.md`.

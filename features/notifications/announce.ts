@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { db } from "@/db";
 import { notifications } from "@/db/schema";
 import { getPreferencesForUsers } from "./preferences";
+import { sendPushToUsers } from "@/features/push/send";
 
 export type AnnouncementAudienceMember = {
   userId: string;
@@ -43,8 +44,9 @@ function announcementLink(productionSlug: string | null): string {
  * Delivery is best-effort: a failure in one channel (e.g. email) must never
  * fail announcement creation, so email is wrapped and swallowed.
  *
- * `push` is intentionally not delivered yet — there is no web-push transport
- * (Phase 2). When it lands, add a step here keyed on `prefs.push`.
+ * `push` is delivered via Web Push (features/push/send.ts), keyed on
+ * `prefs.push` and the user having at least one registered device. Like email,
+ * it is best-effort — sendPushToUsers swallows its own failures.
  */
 export async function fanoutAnnouncement(input: FanoutInput): Promise<void> {
   const recipients = input.audience.filter(
@@ -75,6 +77,18 @@ export async function fanoutAnnouncement(input: FanoutInput): Promise<void> {
   );
   if (emailRecipients.length > 0) {
     await sendAnnouncementEmails(emailRecipients, input, link, scopeLabel);
+  }
+
+  const pushUserIds = recipients
+    .filter((r) => prefs[r.userId]?.push)
+    .map((r) => r.userId);
+  if (pushUserIds.length > 0) {
+    await sendPushToUsers(pushUserIds, {
+      title: `New announcement: ${input.title}`,
+      body: `${input.authorName} posted to ${scopeLabel}`,
+      url: link,
+      tag: `announcement-${input.announcementId}`,
+    });
   }
 }
 

@@ -91,13 +91,6 @@ export function NotificationPreferencesForm({
         hint="Send a copy to your email address."
         defaultChecked={initial.email}
       />
-      <Toggle
-        name="push"
-        label="Push (coming soon)"
-        hint="Phone push isn't available yet — this turns on automatically once it ships."
-        defaultChecked={initial.push}
-        disabled
-      />
 
       <button
         type="submit"
