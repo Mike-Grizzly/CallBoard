@@ -72,10 +72,48 @@ function initialsOf(
   return (email ?? "?").slice(0, 2).toUpperCase();
 }
 
-function getGreeting(hour: number): string {
-  if (hour < 5) return "Working late";
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
+function addDays(dateStr: string, n: number): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return d.toISOString().split("T")[0];
+}
+
+// Greeting prefix. Rendered as `{greeting}, {firstName}.`, so every phrase reads
+// naturally with a name appended. Theatre-aware: opening night and tech week
+// (from the production calendar) take priority over a plain time-of-day hello.
+function getContextualGreeting(opts: {
+  hour: number;
+  today: string;
+  productions: {
+    status: string;
+    openingDate: string | null;
+    techStartDate: string | null;
+  }[];
+  hasCallToday: boolean;
+}): string {
+  const active = opts.productions.filter((p) => p.status !== "archived");
+
+  // 1) Opening night — a show the user is on opens today.
+  if (active.some((p) => p.openingDate === opts.today)) {
+    return "Break a leg";
+  }
+
+  // 2) Tech week — today falls in [techStart, opening); if no opening date is
+  //    set, cap the window at two weeks so it can't run forever.
+  const inTech = active.some((p) => {
+    if (!p.techStartDate || opts.today < p.techStartDate) return false;
+    const end = p.openingDate ?? addDays(p.techStartDate, 14);
+    return opts.today < end;
+  });
+  if (inTech) return "Welcome to tech week";
+
+  // 3) Something is on the calendar today.
+  if (opts.hasCallToday) return "Ready for rehearsal";
+
+  // 4) Plain time-of-day default.
+  if (opts.hour < 5) return "Working late";
+  if (opts.hour < 12) return "Good morning";
+  if (opts.hour < 17) return "Good afternoon";
   return "Good evening";
 }
 
@@ -206,7 +244,12 @@ export default async function DashboardPage() {
     hasNotificationPreferences(user.id),
   ]);
 
-  const greeting = getGreeting(now.getHours());
+  const greeting = getContextualGreeting({
+    hour: now.getHours(),
+    today,
+    productions: myProductions,
+    hasCallToday: rangeCalls.some((c) => c.callDate === today),
+  });
   const firstName = user.firstName || "";
   const todayLabel = now.toLocaleDateString("en-US", {
     weekday: "long",

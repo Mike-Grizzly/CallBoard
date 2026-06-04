@@ -1416,3 +1416,13 @@ page `/settings/notifications`. Implemented but **not yet browser-verified**.
 5. **Signup onboarding via a first-dashboard dialog, no schema change.** `OnboardingDialog` shows when the user has no `notification_preferences` row (`hasNotificationPreferences`). It asks email (toggle) + push (per-device enable, reusing the new `usePushSubscription` hook); in-app shown as always-on. Finishing or skipping calls `completeOnboarding` which writes the row — which is also what stops it reappearing. Gating on row-absence avoids a `profiles` column / DDL.
 
 **Impact:** No new env vars or DB changes. The push-subscribe browser flow was extracted to `features/push/use-push-subscription.ts` and is shared by the Settings card and the onboarding dialog. "Upcoming rehearsal reminders" (auto email/push the morning of a scheduled call, pulled from the calendar) is a separately-scoped FUTURE feature — see open-questions; not built here. Rehearsal reports were intentionally left untouched (they're sent manually to chosen recipients).
+
+---
+
+## 2026-06-04 — UI font → Inter; theatre-aware dashboard greeting
+
+**Decisions:**
+1. **UI font is now Inter** (`--font-ui`, was Geist), loaded via `next/font/google` in `app/layout.tsx`. The **display serif (Newsreader) and mono (Geist Mono) are unchanged** — headings, including the greeting, keep the Newsreader accent. Only the primary sans/body typeface changed.
+2. **Contextual dashboard greeting.** `getContextualGreeting()` in the dashboard page replaces the time-of-day-only `getGreeting`. Priority: opening night ("Break a leg") → tech week ("Welcome to tech week") → a call on today's calendar ("Ready for rehearsal") → time-of-day default. Every phrase is written to read with the existing `{greeting}, {firstName}.` render, so both desktop and mobile dashboards inherit it from the single computed string. Tech window = `[techStartDate, openingDate)`, capped at 14 days when no opening date is set. `getUserProductions` now also selects `techStartDate`.
+
+**Impact:** Inter is fetched at build by Vercel (no local action). Greeting phrases are deliberately stable per request (no randomization) for predictability; adding variety per category is an easy follow-up. No DB or env changes.
