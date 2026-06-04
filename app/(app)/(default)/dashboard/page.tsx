@@ -12,7 +12,7 @@ import {
   Pencil,
   CheckSquare,
 } from "lucide-react";
-import { requireCurrentUser } from "@/lib/auth";
+import { requireCurrentUser, markActiveAndGetPrevious } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getUserProductions } from "@/features/productions/queries";
 import {
@@ -95,6 +95,8 @@ function getContextualGreeting(opts: {
     techStartDate: string | null;
   }[];
   hasCallToday: boolean;
+  /** Whole days since the user's previous visit; null for new/first visit. */
+  daysAway: number | null;
 }): Greeting {
   const active = opts.productions.filter((p) => p.status !== "archived");
   const isToday = (d: string | null) => !!d && d === opts.today;
@@ -127,6 +129,11 @@ function getContextualGreeting(opts: {
 
   // A call is on the calendar today.
   if (opts.hasCallToday) return { greeting: "Ready for rehearsal" };
+
+  // Returning after a day or more away (and no milestone above stole the show).
+  if (opts.daysAway !== null && opts.daysAway >= 1) {
+    return { greeting: "Welcome back" };
+  }
 
   // Day off — inside an active production's run/rehearsal window, but nothing
   // scheduled today. (Outside any active window, fall through to time-of-day.)
@@ -233,6 +240,9 @@ export default async function DashboardPage() {
   const user = await requireCurrentUser();
   const canManage = can(user.role, "productions:manage");
 
+  // Stamp this visit and learn how long they were away (for "Welcome back").
+  const lastActiveAt = await markActiveAndGetPrevious(user.id);
+
   const myProductions = await getUserProductions(user.id);
   const prodIds = myProductions.map((p) => p.id);
 
@@ -271,11 +281,15 @@ export default async function DashboardPage() {
     hasNotificationPreferences(user.id),
   ]);
 
+  const daysAway = lastActiveAt
+    ? Math.floor((todayMs - lastActiveAt.getTime()) / 86_400_000)
+    : null;
   const { greeting, note: greetingNote } = getContextualGreeting({
     hour: now.getHours(),
     today,
     productions: myProductions,
     hasCallToday: rangeCalls.some((c) => c.callDate === today),
+    daysAway,
   });
   const firstName = user.firstName || "";
   const todayLabel = now.toLocaleDateString("en-US", {
