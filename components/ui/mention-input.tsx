@@ -10,6 +10,9 @@ interface Props {
   placeholder?: string;
   /** Block Enter from inserting newlines (for one-line note fields). */
   singleLine?: boolean;
+  /** Called when Enter is pressed (without Shift) and the @ picker is closed. */
+  onSubmit?: () => void;
+  disabled?: boolean;
   style?: React.CSSProperties;
 }
 
@@ -38,15 +41,26 @@ function makeChip(name: string): HTMLElement {
 /** Serialize the editable DOM back to the stored `@{Name}` token format. */
 function serialize(root: HTMLElement): string {
   let out = "";
-  root.childNodes.forEach((node) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      out += node.textContent ?? "";
-    } else if (node instanceof HTMLElement) {
-      if (node.dataset.mentionName) out += `@{${node.dataset.mentionName}}`;
-      else if (node.tagName === "BR") out += "\n";
-      else out += node.textContent ?? "";
-    }
-  });
+  const walk = (parent: Node) => {
+    parent.childNodes.forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        out += node.textContent ?? "";
+      } else if (node instanceof HTMLElement) {
+        if (node.dataset.mentionName) {
+          out += `@{${node.dataset.mentionName}}`;
+        } else if (node.tagName === "BR") {
+          out += "\n";
+        } else {
+          // Block elements (DIV/P the browser may insert on Enter) are line breaks.
+          if (/^(DIV|P)$/.test(node.tagName) && out && !out.endsWith("\n")) {
+            out += "\n";
+          }
+          walk(node);
+        }
+      }
+    });
+  };
+  walk(root);
   return out;
 }
 
@@ -62,6 +76,8 @@ export function MentionInput({
   members,
   placeholder,
   singleLine = false,
+  onSubmit,
+  disabled = false,
   style,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -148,6 +164,11 @@ export function MentionInput({
       return;
     }
     if (e.key === "Escape") setQuery(null);
+    if (e.key === "Enter" && !e.shiftKey && query === null && onSubmit) {
+      e.preventDefault();
+      onSubmit();
+      return;
+    }
     if (singleLine && e.key === "Enter") e.preventDefault();
   }
 
@@ -168,7 +189,7 @@ export function MentionInput({
         ref={rootRef}
         role="textbox"
         aria-multiline={!singleLine}
-        contentEditable
+        contentEditable={!disabled}
         suppressContentEditableWarning
         onInput={() => {
           emit();
@@ -190,6 +211,7 @@ export function MentionInput({
           lineHeight: 1.5,
           whiteSpace: "pre-wrap",
           wordBreak: "break-word",
+          opacity: disabled ? 0.6 : 1,
           ...style,
         }}
       />
