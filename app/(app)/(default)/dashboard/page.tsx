@@ -78,43 +78,70 @@ function addDays(dateStr: string, n: number): string {
   return d.toISOString().split("T")[0];
 }
 
-// Greeting prefix. Rendered as `{greeting}, {firstName}.`, so every phrase reads
-// naturally with a name appended. Theatre-aware: opening night and tech week
-// (from the production calendar) take priority over a plain time-of-day hello.
+// Greeting. `greeting` is rendered as `{greeting}, {firstName}.`, so every
+// phrase reads naturally with a name appended; the optional `note` is a short
+// follow-up line shown beneath it. Theatre-aware: milestones from the
+// production calendar take priority over a plain time-of-day hello.
+type Greeting = { greeting: string; note?: string };
+
 function getContextualGreeting(opts: {
   hour: number;
   today: string;
   productions: {
     status: string;
     openingDate: string | null;
+    closingDate: string | null;
+    firstRehearsalDate: string | null;
     techStartDate: string | null;
   }[];
   hasCallToday: boolean;
-}): string {
+}): Greeting {
   const active = opts.productions.filter((p) => p.status !== "archived");
+  const isToday = (d: string | null) => !!d && d === opts.today;
 
-  // 1) Opening night — a show the user is on opens today.
-  if (active.some((p) => p.openingDate === opts.today)) {
-    return "Break a leg";
+  // Exact-day milestones first (most specific).
+
+  // Opening night.
+  if (active.some((p) => isToday(p.openingDate))) {
+    return { greeting: "Break a leg" };
   }
 
-  // 2) Tech week — today falls in [techStart, opening); if no opening date is
-  //    set, cap the window at two weeks so it can't run forever.
+  // Closing / last show.
+  if (active.some((p) => isToday(p.closingDate))) {
+    return { greeting: "Congratulations", note: "See you on the next one." };
+  }
+
+  // First day of rehearsal.
+  if (active.some((p) => isToday(p.firstRehearsalDate))) {
+    return { greeting: "First day of rehearsal" };
+  }
+
+  // Tech week — today falls in [techStart, opening); if no opening date is set,
+  // cap the window at two weeks so it can't run forever.
   const inTech = active.some((p) => {
     if (!p.techStartDate || opts.today < p.techStartDate) return false;
     const end = p.openingDate ?? addDays(p.techStartDate, 14);
     return opts.today < end;
   });
-  if (inTech) return "Welcome to tech week";
+  if (inTech) return { greeting: "Welcome to tech week" };
 
-  // 3) Something is on the calendar today.
-  if (opts.hasCallToday) return "Ready for rehearsal";
+  // A call is on the calendar today.
+  if (opts.hasCallToday) return { greeting: "Ready for rehearsal" };
 
-  // 4) Plain time-of-day default.
-  if (opts.hour < 5) return "Working late";
-  if (opts.hour < 12) return "Good morning";
-  if (opts.hour < 17) return "Good afternoon";
-  return "Good evening";
+  // Day off — inside an active production's run/rehearsal window, but nothing
+  // scheduled today. (Outside any active window, fall through to time-of-day.)
+  const onBreak = active.some((p) => {
+    if (!p.firstRehearsalDate || opts.today < p.firstRehearsalDate) return false;
+    const end = p.closingDate ?? p.openingDate;
+    return !!end && opts.today <= end;
+  });
+  if (onBreak) return { greeting: "Enjoy your day off" };
+
+  // Plain time-of-day default.
+  if (opts.hour < 5) return { greeting: "Working late" };
+  if (opts.hour < 12) return { greeting: "Good morning" };
+  if (opts.hour < 17) return { greeting: "Good afternoon" };
+  return { greeting: "Good evening" };
 }
 
 function roleLabel(role: string): string {
@@ -244,7 +271,7 @@ export default async function DashboardPage() {
     hasNotificationPreferences(user.id),
   ]);
 
-  const greeting = getContextualGreeting({
+  const { greeting, note: greetingNote } = getContextualGreeting({
     hour: now.getHours(),
     today,
     productions: myProductions,
@@ -496,6 +523,14 @@ export default async function DashboardPage() {
               ) : null}
               .
             </h1>
+            {greetingNote && (
+              <p
+                className="muted"
+                style={{ marginTop: 4, fontSize: 14 }}
+              >
+                {greetingNote}
+              </p>
+            )}
           </div>
           <div className="dd-chips">
             <div className="dd-chip" data-tone="accent">
@@ -789,6 +824,7 @@ export default async function DashboardPage() {
       <div className="dashboard-phone-only">
         <MobileDashboard
           greeting={greeting}
+          greetingNote={greetingNote}
           firstName={firstName}
           role={roleLabel(user.role)}
           todayLabel={todayLabel}

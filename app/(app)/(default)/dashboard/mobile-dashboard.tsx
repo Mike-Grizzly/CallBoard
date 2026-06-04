@@ -63,6 +63,7 @@ export type MdAnnouncement = SerializedAnnouncement & {
 
 export type MobileDashboardProps = {
   greeting: string;
+  greetingNote?: string;
   firstName: string;
   role: string;
   todayLabel: string;
@@ -131,6 +132,7 @@ function PinIcon({ kind }: { kind: string }) {
 export function MobileDashboard(props: MobileDashboardProps) {
   const {
     greeting,
+    greetingNote,
     firstName,
     role,
     todayLabel,
@@ -161,6 +163,14 @@ export function MobileDashboard(props: MobileDashboardProps) {
           ) : null}
           .
         </h1>
+        {greetingNote && (
+          <div
+            className="muted"
+            style={{ fontSize: 13, marginTop: 2 }}
+          >
+            {greetingNote}
+          </div>
+        )}
         <div className="md-greet-date">{todayLabel}</div>
       </div>
 
