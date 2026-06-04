@@ -48,3 +48,17 @@ export async function markAllMentionsRead(): Promise<void> {
     );
   revalidatePath("/dashboard");
 }
+
+/** Permanently remove a mention notification from the recipient's dashboard. */
+export async function dismissMention(mentionId: string): Promise<void> {
+  const user = await requireCurrentUser();
+  await db
+    .delete(mentions)
+    .where(
+      and(
+        eq(mentions.id, mentionId),
+        eq(mentions.mentionedUserId, user.id),
+      ),
+    );
+  revalidatePath("/dashboard");
+}

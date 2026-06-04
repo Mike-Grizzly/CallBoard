@@ -63,3 +63,101 @@ export async function writeMentions(
     })),
   );
 }
+
+interface ContextMentionMember {
+  userId: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+}
+
+/**
+ * One mention-bearing section of a context (e.g. a report's General Notes or
+ * one department's notes). Mentions are encoded either as `data-id` (rich text)
+ * or `@{Full Name}` tokens (plain text). `label` distinguishes this section in
+ * the resulting notification.
+ */
+export interface ContextMentionSource {
+  html?: string;
+  text?: string;
+  label?: string;
+}
+
+interface ContextMentionParams extends MentionWriteContext {
+  /** Each section is notified separately, so a person mentioned in several
+   *  sections gets a notification for each. */
+  sources: ContextMentionSource[];
+  /** Audience used to resolve `@{Name}` tokens back to user ids. */
+  members: ContextMentionMember[];
+}
+
+/**
+ * Like `writeMentions`, but for contexts (e.g. a rehearsal report) whose
+ * mentions are spread across several sections. Writes ONE notification per
+ * (user, section) — de-duplicated within a section, separate across sections —
+ * so a person mentioned in both General Notes and a department note gets two
+ * notifications. Idempotent for the context: clears its existing mentions then
+ * rewrites them. The author is never notified of their own mention.
+ */
+export async function writeContextMentions(
+  params: ContextMentionParams,
+): Promise<void> {
+  await db
+    .delete(mentions)
+    .where(
+      and(
+        eq(mentions.contextType, params.contextType),
+        eq(mentions.contextId, params.contextId),
+      ),
+    );
+
+  const byName = new Map<string, string>();
+  for (const m of params.members) {
+    const full = `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim();
+    if (full) byName.set(full.toLowerCase(), m.userId);
+    if (m.email) byName.set(m.email.toLowerCase(), m.userId);
+  }
+
+  const rows: (typeof mentions.$inferInsert)[] = [];
+  for (const source of params.sources) {
+    const ids = new Set<string>();
+    if (source.html) {
+      for (const id of extractMentionedUserIds(source.html)) ids.add(id);
+    }
+    if (source.text && source.text.includes("@{")) {
+      const re = /@\{([^}]+)\}/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(source.text)) !== null) {
+        const id = byName.get(m[1].trim().toLowerCase());
+        if (id) ids.add(id);
+      }
+    }
+    ids.delete(params.mentionedById);
+    if (ids.size === 0) continue;
+
+    const snippet = (source.html ?? source.text ?? "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/@\{([^}]+)\}/g, "@$1")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 200);
+    const title = source.label
+      ? `${params.contextTitle ?? ""} · ${source.label}`.replace(/^ · /, "")
+      : (params.contextTitle ?? null);
+
+    for (const userId of ids) {
+      rows.push({
+        organizationId: params.organizationId,
+        productionId: params.productionId,
+        mentionedUserId: userId,
+        mentionedById: params.mentionedById,
+        contextType: params.contextType,
+        contextId: params.contextId,
+        contextTitle: title,
+        snippet,
+      });
+    }
+  }
+
+  if (rows.length > 0) await db.insert(mentions).values(rows);
+}

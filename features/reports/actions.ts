@@ -9,8 +9,41 @@ import { can } from "@/lib/permissions";
 import {
   validateReportForm,
   type ReportFormErrors,
+  type ReportFormData,
 } from "./validation";
-import { writeMentions } from "@/features/mentions/write";
+import {
+  writeContextMentions,
+  type ContextMentionSource,
+} from "@/features/mentions/write";
+import { getOrganizationMembers } from "@/features/members/queries";
+import { DEPARTMENTS } from "./constants";
+
+/**
+ * The report's mention-bearing sections, each notified separately: General
+ * Notes, every department note (rich text), and the structured note groups
+ * (schedule changes, attendance, line notes, injuries — plain `@{Name}` text).
+ */
+function reportMentionSources(d: ReportFormData): ContextMentionSource[] {
+  const sources: ContextMentionSource[] = [];
+  if (d.generalNotes)
+    sources.push({ html: d.generalNotes, label: "General notes" });
+  for (const dept of DEPARTMENTS) {
+    const html = d.departments[dept.key];
+    if (html) sources.push({ html, label: dept.label });
+  }
+  const sched = d.scheduleChanges.flatMap((s) => [s.what, s.c ?? ""]).join("\n");
+  if (sched.includes("@{"))
+    sources.push({ text: sched, label: "Schedule changes" });
+  const attendance = d.attendanceNotes.map((a) => a.note).join("\n");
+  if (attendance.includes("@{"))
+    sources.push({ text: attendance, label: "Attendance" });
+  const lines = d.lineNotes.flatMap((l) => [l.issue, l.line]).join("\n");
+  if (lines.includes("@{")) sources.push({ text: lines, label: "Line notes" });
+  const injuries = d.injuries.map((i) => i.text).join("\n");
+  if (injuries.includes("@{"))
+    sources.push({ text: injuries, label: "Injuries" });
+  return sources;
+}
 
 export type ReportActionResult = {
   errors?: ReportFormErrors;
@@ -107,14 +140,16 @@ export async function createReport(
     })
     .returning({ id: rehearsalReports.id });
 
-  if (data!.generalNotes) {
-    await writeMentions(data!.generalNotes, {
+  {
+    await writeContextMentions({
       organizationId: user.organizationId,
       productionId,
       mentionedById: user.id,
       contextType: "report",
       contextId: inserted[0].id,
       contextTitle: `Report ${data!.reportDate}`,
+      sources: reportMentionSources(data!),
+      members: await getOrganizationMembers(user.organizationId),
     });
   }
 
@@ -223,14 +258,16 @@ export async function updateReport(
     })
     .where(eq(rehearsalReports.id, reportId));
 
-  if (data!.generalNotes) {
-    await writeMentions(data!.generalNotes, {
+  {
+    await writeContextMentions({
       organizationId: user.organizationId,
       productionId,
       mentionedById: user.id,
       contextType: "report",
       contextId: reportId,
       contextTitle: `Report ${data!.reportDate}`,
+      sources: reportMentionSources(data!),
+      members: await getOrganizationMembers(user.organizationId),
     });
   }
 

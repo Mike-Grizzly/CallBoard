@@ -16,9 +16,10 @@ import {
   Check,
   Hash,
   Layers,
+  X,
 } from "lucide-react";
 import { confirmCall } from "@/features/calls/actions";
-import { markMentionRead } from "@/features/mentions/actions";
+import { markMentionRead, dismissMention } from "@/features/mentions/actions";
 import { AnnouncementAckButton } from "./announcement-ack-button";
 import type { FocalCallProps } from "./focal-call";
 import type { SerializedMention } from "./mentions-section";
@@ -546,6 +547,8 @@ function MdMentions({
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [faded, setFaded] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState(false);
 
   function tap(m: SerializedMention) {
     if (m.isUnread && !faded.has(m.id)) {
@@ -557,6 +560,17 @@ function MdMentions({
     if (m.href) router.push(m.href);
   }
 
+  function dismiss(e: React.MouseEvent, m: SerializedMention) {
+    e.stopPropagation();
+    setDismissed((p) => new Set([...p, m.id]));
+    startTransition(async () => {
+      await dismissMention(m.id);
+    });
+  }
+
+  const visible = items.filter((m) => !dismissed.has(m.id));
+  const shown = expanded ? visible : visible.slice(0, 5);
+
   return (
     <>
       <div className="sec-h-row">
@@ -566,7 +580,7 @@ function MdMentions({
         </h3>
       </div>
       <div className="md-feed">
-        {items.slice(0, 5).map((m) => {
+        {shown.map((m) => {
           const isUnread = m.isUnread && !faded.has(m.id);
           return (
             <div
@@ -599,9 +613,40 @@ function MdMentions({
                   </span>
                 )}
               </div>
+              <button
+                type="button"
+                onClick={(e) => dismiss(e, m)}
+                aria-label="Dismiss mention"
+                style={{
+                  alignSelf: "flex-start",
+                  background: "none",
+                  border: "none",
+                  padding: 4,
+                  cursor: "pointer",
+                  color: "var(--ink-4)",
+                }}
+              >
+                <X size={15} aria-hidden />
+              </button>
             </div>
           );
         })}
+        {visible.length > 5 && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="md-link"
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "6px 0",
+              textAlign: "left",
+            }}
+          >
+            {expanded ? "Show less" : `View all ${visible.length}`}
+          </button>
+        )}
       </div>
     </>
   );

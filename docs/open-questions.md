@@ -341,3 +341,18 @@ default in place today.
   bell/center doesn't come back.
 - **Banner scope choices to confirm with use:** 30-day window and audience-only
   (a manager isn't nagged to ack announcements for productions they're not in).
+
+## Mentions questions (2026-06-04, PR #28)
+
+- **`mention-input.tsx` contenteditable not device-verified.** The inline chip
+  editor is hand-rolled (Selection/Range, caret placement, paste, serialize).
+  Verified in desktop preview; unverified on iOS/Android soft keyboards (IME
+  composition, autocorrect, caret-after-chip on touch). Test on real devices.
+- **Plain-text mention resolution is name/email-based.** `@{Full Name}` tokens
+  resolve to a user id by matching org members' full name or email at save time.
+  A member renamed between typing the mention and saving, or two members sharing
+  a full name, can mis-resolve or fail to notify (the chip still displays). The
+  rich-text (`data-id`) path is unaffected.
+- **Pre-existing report mentions weren't re-split.** Reports saved before the
+  per-section change keep their old single merged `report` row; only a re-save
+  rewrites them into per-section rows. No backfill was run.

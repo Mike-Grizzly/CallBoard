@@ -1371,3 +1371,18 @@ page `/settings/notifications`. Implemented but **not yet browser-verified**.
 **Consequences / open items:**
 - Email fan-out unchanged (still gated by the user's email preference).
 - `fanoutAnnouncement` still writes `notifications` rows and `notification-bell.tsx` still exists, but **nothing renders them now** — dead until a future header "notification center." Document-comment notifications (which also write to `notifications`) likewise have no surface currently. The `notification_preferences` "in-app" toggle is therefore a no-op for the moment (the banner always shows for unacked items). Tracked in open-questions; cleanup or a header center is a follow-up.
+
+---
+
+## 2026-06-04 — @Mentions extended to all report sections + blocking, with per-section notifications and inline chips (PR #27 + #28)
+
+**Context:** @mentions originally fired only from rich-text fields scanned for `data-id` (report General Notes, department notes, announcements, notes). Department-note mentions and the report's structured note fields (schedule changes, attendance, line notes, injuries) didn't notify; blocking beat-comment mentions were also unreliable.
+
+**Decisions:**
+1. **Two mention encodings, unified at write time.** Rich-text fields keep `data-id`; plain-text fields (the structured report note groups, blocking comments) use `@{Full Name}` tokens. `writeContextMentions()` accepts a list of `sources` (each `html` or `text` + optional `label`) and resolves `@{Name}` tokens to user ids by matching org members' full name/email. Reports call it via `reportMentionSources()`; the old `writeMentions(html, ctx)` remains for announcements/notes.
+2. **One notification per section, not per report.** A merged-per-report approach (first attempt) hid mentions: a person tagged in General Notes *and* a department note got a single row showing only the general-notes snippet. `writeContextMentions` now emits one row per (user, section), de-duped within a section, titled `Report <date> · <section>`. The author is excluded.
+3. **Keep the `@{Name}` plain-text storage format; fix the *rendering* instead.** Rather than migrate the structured fields to stored HTML/`data-id` (which would ripple into display and extraction), the token format stays. `components/ui/mention-input.tsx` (contenteditable) renders tokens as chips while editing and serializes back to `@{Name}`; `components/ui/mention-text.tsx` renders them as chips in read-only views. This kept the data model and server extraction unchanged — only the editor/display components changed.
+4. **Blocking mentions deep-link to the beat.** `contextId` stays the beat-comment id (precise delete cleanup); `getMentionsForUser` left-joins `beat_comments` to expose `beatId` for the dashboard href (`/blocking?beat=<id>`), and `blocking/page.tsx` validates `?beat=` against the production before opening it.
+5. **Dashboard: unread-first + View all + dismiss.** The capped mention lists hid unread items beyond the cap; unread now sort first, a View all toggle expands, and `dismissMention()` deletes a recipient's row.
+
+**Impact:** `writeContextMentions` is the report mention path; do not also call `writeMentions` for reports (it would delete-then-insert and wipe the per-section rows). Plain-text mention resolution is name/email-based, so renaming a member between mention and save could fail to resolve a token (acceptable; the chip still displays). `mention-input.tsx` is contenteditable — caret/serialization behavior is hand-rolled; test in a browser when changing it.

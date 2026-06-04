@@ -417,6 +417,7 @@ export function ReportForm({
           onAbsentChange={setAbsent}
           onLateChange={setLate}
           onNotesChange={setAttendanceNotes}
+          members={members}
         />
         <ScenesWorkedEditor
           scenes={scenesWorked}
@@ -553,13 +554,22 @@ export function ReportForm({
             <ScheduleChangesEditor
               changes={scheduleChanges}
               onChange={setScheduleChanges}
+              members={members}
             />
           </div>
           <div style={{ display: activeTab === "lines" ? "block" : "none" }}>
-            <LineNotesEditor lines={lineNotes} onChange={setLineNotes} />
+            <LineNotesEditor
+              lines={lineNotes}
+              onChange={setLineNotes}
+              members={members}
+            />
           </div>
           <div style={{ display: activeTab === "injuries" ? "block" : "none" }}>
-            <InjuriesEditor injuries={injuries} onChange={setInjuries} />
+            <InjuriesEditor
+              injuries={injuries}
+              onChange={setInjuries}
+              members={members}
+            />
           </div>
           <div style={{ display: activeTab === "general" ? "block" : "none" }}>
             <RichTextEditor
