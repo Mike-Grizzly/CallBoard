@@ -8,7 +8,7 @@ import { getReportAttachments } from "./attachments";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { formatReportAsHtml, type EmailAttachmentMeta } from "./email-html";
 import { formatReportAsEmail } from "./email-format";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
@@ -62,7 +62,7 @@ export async function sendReport(
   // attach them inline. Drop anything that pushes us over the budget so
   // the email still goes through with a partial attachment list.
   const attachmentRows = await getReportAttachments(reportId);
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
 
   const resendAttachments: { filename: string; content: Buffer }[] = [];
   const includedMeta: EmailAttachmentMeta[] = [];

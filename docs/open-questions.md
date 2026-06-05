@@ -390,12 +390,17 @@ After the multi-tenant authorization pass (see decision-log 2026-06-05):
   People page would remove them everywhere. Decide the multi-org behavior:
   remove-from-this-org-only when the user has other memberships, vs. full
   delete only when this is their last org.
-- **`attachments` Storage bucket policies are permissive.** Any authenticated
-  user could call Supabase Storage directly (anon key + their JWT) and
-  read/write/delete files, bypassing the app. The app now generates signed URLs
-  with org-scoped access checks, so the app path is safe — but tightening the
-  bucket policy is defense-in-depth. Risky on live infra (can break
-  uploads/downloads); verify path conventions before applying.
+- **`attachments` Storage bucket lockdown — code done, live rule flip
+  PENDING (do at launch cutover).** All server-side storage operations now go
+  through the service-role admin client (`createSupabaseAdminClient`), which
+  bypasses storage RLS; the browser only ever uses short-lived signed
+  URLs/tokens minted server-side after an org-scoped access check. The
+  remaining step is to flip the live `storage.objects` policies on the
+  `attachments` bucket to DENY direct anon/authenticated access (currently
+  permissive). That is the only thing standing between "code-ready" and
+  "closed"; defer the live toggle to the launch cutover and verify
+  uploads/downloads on a preview deploy first, because a wrong policy breaks
+  file access for real users.
 - **Leaked-password protection** is disabled in Supabase Auth — enable it
   (HaveIBeenPwned check); may require the Pro plan.
 - **A couple of read-only leaks remain low-priority** (e.g. some blocking read

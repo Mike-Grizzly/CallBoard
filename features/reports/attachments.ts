@@ -5,7 +5,7 @@ import { reportAttachments, rehearsalReports } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 export type UploadResult = {
@@ -54,7 +54,7 @@ export async function requestReportAttachmentUpload(
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storagePath = `reports/${reportId}/${Date.now()}-${safeName}`;
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase.storage
     .from("attachments")
     .createSignedUploadUrl(storagePath);
@@ -120,7 +120,7 @@ export async function getAttachmentUrl(attachmentId: string): Promise<string> {
   if (!row) return "";
   if (!(await userCanAccessProduction(user, row.productionId))) return "";
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data } = await supabase.storage
     .from("attachments")
     .createSignedUrl(row.storagePath, 3600);
@@ -163,7 +163,7 @@ export async function deleteReportAttachment(
     return { error: "You don't have access to this report." };
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   // Best-effort storage cleanup — DB delete is the source of truth.
   await supabase.storage.from("attachments").remove([row.storagePath]);
 

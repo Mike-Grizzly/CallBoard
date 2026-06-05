@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { stageConfigurations, blockingPositions, beatComments, profiles, customSetPieces, beatArrows, mentions, sceneBeats, productionScenes, productions } from "@/db/schema";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { eq, and, asc } from "drizzle-orm";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -64,7 +64,7 @@ export async function requestGroundPlanImageUpload(
   }
 
   const storagePath = `ground-plans/${productionId}/${Date.now()}.jpg`;
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase.storage
     .from("attachments")
     .createSignedUploadUrl(storagePath);
@@ -92,7 +92,7 @@ export async function getGroundPlanImageUrl(
     return "";
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data } = await supabase.storage
     .from("attachments")
     .createSignedUrl(storagePath, 3600);
@@ -463,7 +463,7 @@ export async function getCustomSetPieceUrls(
 
   if (pieces.length === 0) return {};
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const entries = await Promise.all(
     pieces.map(async ({ storagePath }) => {
       const { data } = await supabase.storage
@@ -503,7 +503,7 @@ export async function requestCustomSetPieceUpload(
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storagePath = `set-pieces/${productionId}/${Date.now()}-${safeName}`;
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase.storage
     .from("attachments")
     .createSignedUploadUrl(storagePath);
@@ -547,7 +547,7 @@ export async function finalizeCustomSetPieceUpload(input: {
     })
     .returning();
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data: urlData } = await supabase.storage
     .from("attachments")
     .createSignedUrl(input.storagePath, 3600);
@@ -579,7 +579,7 @@ export async function deleteCustomSetPiece(
     .limit(1);
   if (!piece) return { error: "Set piece not found." };
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   await supabase.storage.from("attachments").remove([piece.storagePath]);
   await db.delete(customSetPieces).where(eq(customSetPieces.id, pieceId));
 

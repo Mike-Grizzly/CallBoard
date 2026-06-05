@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Sign the workspace logo's storage path for display. Returns null if
@@ -10,7 +10,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export const getSignedLogoUrl = cache(
   async (logoPath: string | null): Promise<string | null> => {
     if (!logoPath) return null;
-    const supabase = await createSupabaseServerClient();
+    const supabase = createSupabaseAdminClient();
     const { data, error } = await supabase.storage
       .from("attachments")
       .createSignedUrl(logoPath, 60 * 60);

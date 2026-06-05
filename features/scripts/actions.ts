@@ -6,7 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export type SetDefaultScriptResult = { error?: string; success?: boolean };
 
@@ -179,7 +179,7 @@ export async function getScriptUrl(storagePath: string): Promise<string> {
     return "";
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data } = await supabase.storage
     .from("attachments")
     .createSignedUrl(storagePath, 3600);

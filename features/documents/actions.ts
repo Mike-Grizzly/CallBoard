@@ -6,7 +6,7 @@ import { eq, and, isNotNull, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_FOLDERS } from "./constants";
 
 export type UploadDocumentResult = {
@@ -111,7 +111,7 @@ export async function requestDocumentUpload(
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storagePath = `documents/${productionId}/${Date.now()}-${safeName}`;
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase.storage
     .from("attachments")
     .createSignedUploadUrl(storagePath);
@@ -239,7 +239,7 @@ export async function permanentlyDeleteDocument(
   const doc = await resolveAccessibleDocument(documentId);
   if (!doc) return { error: "Document not found." };
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   await supabase.storage.from("attachments").remove([doc.storagePath]);
   await db.delete(documents).where(eq(documents.id, documentId));
 
@@ -352,7 +352,7 @@ export async function getDocumentUrl(documentId: string): Promise<string> {
   const doc = await resolveAccessibleDocument(documentId);
   if (!doc) return "";
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data } = await supabase.storage
     .from("attachments")
     .createSignedUrl(doc.storagePath, 3600);
@@ -367,7 +367,7 @@ export async function getDocumentDownloadUrl(
   const doc = await resolveAccessibleDocument(documentId);
   if (!doc) return "";
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data } = await supabase.storage
     .from("attachments")
     .createSignedUrl(doc.storagePath, 3600, { download: fileName });

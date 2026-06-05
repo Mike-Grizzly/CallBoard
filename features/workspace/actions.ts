@@ -11,7 +11,7 @@ import { and, eq } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
 import { createOrganization } from "@/lib/organization";
 import { can } from "@/lib/permissions";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { ROLES, type Role } from "@/types/roles";
 
 export type WorkspaceActionResult = {
@@ -192,7 +192,7 @@ export async function requestWorkspaceLogoUpload(
   const ext = LOGO_EXTENSIONS[contentType] ?? "bin";
   const storagePath = `org-logos/${user.organizationId}/${Date.now()}.${ext}`;
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase.storage
     .from("attachments")
     .createSignedUploadUrl(storagePath);
@@ -237,7 +237,7 @@ export async function finalizeWorkspaceLogoUpload(
 
   const previous = existing[0]?.logoUrl;
   if (previous && previous !== storagePath) {
-    const supabase = await createSupabaseServerClient();
+    const supabase = createSupabaseAdminClient();
     await supabase.storage.from("attachments").remove([previous]);
   }
 
@@ -265,7 +265,7 @@ export async function removeWorkspaceLogo(): Promise<WorkspaceActionResult> {
 
   const previous = existing[0]?.logoUrl;
   if (previous) {
-    const supabase = await createSupabaseServerClient();
+    const supabase = createSupabaseAdminClient();
     await supabase.storage.from("attachments").remove([previous]);
   }
 
