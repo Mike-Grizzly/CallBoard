@@ -712,12 +712,13 @@ export async function setMemberStatus(
 }
 
 /**
- * Permanently delete a person. Removes their profile row (which cascades to
- * org/production memberships, mentions, reports, documents, announcements,
- * notes, notifications, pins) and then deletes their auth user. There is no
- * FK from auth.users to profiles in this project, so both sides must be
- * cleared explicitly. Deletes are destructive — any content they authored
- * goes with them.
+ * Remove a person from the CALLER'S organization. Deletes their org membership
+ * and their production memberships within this org's productions. Only when
+ * this was their LAST organization do we fully delete the global profile row
+ * (which cascades to mentions, reports, documents, announcements, notes,
+ * notifications, pins) and the auth user — so a person who belongs to other
+ * workspaces is never nuked across all of them. There is no FK from
+ * auth.users to profiles, so both sides are cleared explicitly on full delete.
  */
 export async function deletePerson(
   userId: string,
@@ -732,20 +733,58 @@ export async function deletePerson(
     return { error: "You cannot delete your own account." };
   }
 
-  if (!(await userInOrg(userId, currentUser.organizationId))) {
+  const orgId = currentUser.organizationId;
+  if (!(await userInOrg(userId, orgId))) {
     return { error: "Member not found." };
   }
 
   try {
-    await db.delete(profiles).where(eq(profiles.id, userId));
+    // Remove their production memberships within this org's productions.
+    const orgProductionIds = (
+      await db
+        .select({ id: productions.id })
+        .from(productions)
+        .where(eq(productions.organizationId, orgId))
+    ).map((p) => p.id);
+    if (orgProductionIds.length > 0) {
+      await db
+        .delete(productionMemberships)
+        .where(
+          and(
+            eq(productionMemberships.userId, userId),
+            inArray(productionMemberships.productionId, orgProductionIds),
+          ),
+        );
+    }
 
-    const admin = createSupabaseAdminClient();
-    const { error } = await admin.auth.admin.deleteUser(userId);
-    // Ignore "user not found" — the auth user may already be gone (e.g.
-    // deleted from the Supabase dashboard); the profile cleanup above is
-    // what actually clears them from /people.
-    if (error && !/not\s*found/i.test(error.message)) {
-      return { error: error.message };
+    // Remove their membership in this organization.
+    await db
+      .delete(organizationMemberships)
+      .where(
+        and(
+          eq(organizationMemberships.userId, userId),
+          eq(organizationMemberships.organizationId, orgId),
+        ),
+      );
+
+    // Only when they belong to no organization at all do we delete the global
+    // account. Otherwise they stay intact in their other workspaces.
+    const remaining = await db
+      .select({ id: organizationMemberships.id })
+      .from(organizationMemberships)
+      .where(eq(organizationMemberships.userId, userId))
+      .limit(1);
+
+    if (remaining.length === 0) {
+      await db.delete(profiles).where(eq(profiles.id, userId));
+
+      const admin = createSupabaseAdminClient();
+      const { error } = await admin.auth.admin.deleteUser(userId);
+      // Ignore "user not found" — the auth user may already be gone (e.g.
+      // deleted from the Supabase dashboard).
+      if (error && !/not\s*found/i.test(error.message)) {
+        return { error: error.message };
+      }
     }
   } catch (err) {
     return {

@@ -402,3 +402,15 @@ After the multi-tenant authorization pass (see decision-log 2026-06-05):
   helpers were gated in this pass; `saveAnnotations` rows are self-owned). Worth
   a second skim, but no destructive cross-tenant path remains among the
   audited actions.
+
+---
+
+## ⏰ REMINDER — enable when we upgrade to Supabase Pro
+
+These are deferred ONLY because they require the Supabase Pro plan. Revisit
+the moment we go Pro:
+
+- **Enable leaked-password protection** (Supabase → Authentication → Password
+  security) — checks new/changed passwords against HaveIBeenPwned. Flagged by
+  the Supabase security advisor (2026-06-05); deliberately deferred per user
+  decision until Pro.
