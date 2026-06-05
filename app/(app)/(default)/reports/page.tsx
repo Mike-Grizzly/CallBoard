@@ -1,6 +1,8 @@
 import { PlaceholderPage } from "@/components/app-shell/placeholder-page";
+import { requireCurrentUser } from "@/lib/auth";
 
-export default function ReportsPage() {
+export default async function ReportsPage() {
+  await requireCurrentUser();
   return (
     <PlaceholderPage
       title="Reports"

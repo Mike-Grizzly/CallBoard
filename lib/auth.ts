@@ -6,6 +6,7 @@ import {
   organizations,
   organizationMemberships,
   productionMemberships,
+  productions,
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -214,15 +215,27 @@ export async function requireCurrentUser(): Promise<CurrentUser> {
 }
 
 /**
- * Whether the user may access a production's data. Mirrors the page-level
- * gate: holders of `productions:manage` reach any production; everyone else
- * needs a production membership. Used to guard signed-URL generation so a
- * caller cannot pull files for a production they are not part of.
+ * Whether the user may access a production's data. Two gates:
+ *  1. Tenant boundary — the production must belong to the user's current
+ *     organization. Without this, a `productions:manage` holder in one org
+ *     could reach productions in any org.
+ *  2. Within the org, holders of `productions:manage` reach any production;
+ *     everyone else needs a production membership.
+ * Used to guard mutations and signed-URL generation so a caller cannot touch
+ * a production they are not part of.
  */
 export async function userCanAccessProduction(
   user: CurrentUser,
   productionId: string,
 ): Promise<boolean> {
+  const [prod] = await db
+    .select({ organizationId: productions.organizationId })
+    .from(productions)
+    .where(eq(productions.id, productionId))
+    .limit(1);
+
+  if (!prod || prod.organizationId !== user.organizationId) return false;
+
   if (can(user.role, "productions:manage")) return true;
 
   const rows = await db

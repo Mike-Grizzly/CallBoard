@@ -46,6 +46,10 @@ export async function createFolder(
     return { error: "Folder name must be 50 characters or less." };
   }
 
+  if (!(await userCanAccessProduction(user, productionId))) {
+    return { error: "You don't have access to this production." };
+  }
+
   const existing = await db
     .select({ id: documentFolders.id })
     .from(documentFolders)
@@ -74,6 +78,9 @@ export async function requestDocumentUpload(
   }
 
   if (!productionId) return { error: "Missing production." };
+  if (!(await userCanAccessProduction(user, productionId))) {
+    return { error: "You don't have access to this production." };
+  }
   if (!fileName || fileSize <= 0) {
     return { error: "Please select a file to upload." };
   }
@@ -140,6 +147,10 @@ export async function finalizeDocumentUpload(input: {
     return { error: "Upload could not be completed." };
   }
 
+  if (!(await userCanAccessProduction(user, input.productionId))) {
+    return { error: "You don't have access to this production." };
+  }
+
   // The storage path was generated server-side under the production's
   // prefix; reject anything else so a caller cannot attach an arbitrary
   // stored object to a production.
@@ -175,6 +186,10 @@ export async function deleteDocument(
   const documentId = formData.get("document_id") as string;
   if (!documentId) return { error: "Missing document ID." };
 
+  if (!(await resolveAccessibleDocument(documentId))) {
+    return { error: "Document not found." };
+  }
+
   await db
     .update(documents)
     .set({ deletedAt: new Date() })
@@ -195,6 +210,10 @@ export async function restoreDocument(
 
   const documentId = formData.get("document_id") as string;
   if (!documentId) return { error: "Missing document ID." };
+
+  if (!(await resolveAccessibleDocument(documentId))) {
+    return { error: "Document not found." };
+  }
 
   await db
     .update(documents)
@@ -217,16 +236,11 @@ export async function permanentlyDeleteDocument(
   const documentId = formData.get("document_id") as string;
   if (!documentId) return { error: "Missing document ID." };
 
-  const doc = await db
-    .select({ storagePath: documents.storagePath })
-    .from(documents)
-    .where(eq(documents.id, documentId))
-    .limit(1);
-
-  if (doc.length === 0) return { error: "Document not found." };
+  const doc = await resolveAccessibleDocument(documentId);
+  if (!doc) return { error: "Document not found." };
 
   const supabase = await createSupabaseServerClient();
-  await supabase.storage.from("attachments").remove([doc[0].storagePath]);
+  await supabase.storage.from("attachments").remove([doc.storagePath]);
   await db.delete(documents).where(eq(documents.id, documentId));
 
   revalidatePath("/productions");

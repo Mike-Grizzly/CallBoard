@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { rehearsalReports, productions } from "@/db/schema";
 import { eq, sql, and, isNotNull, desc } from "drizzle-orm";
-import { requireCurrentUser } from "@/lib/auth";
+import {
+  requireCurrentUser,
+  userCanAccessProduction,
+  type CurrentUser,
+} from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
   validateReportForm,
@@ -27,6 +31,20 @@ export type ReportActionResult = {
 export type CreateReportResult = ReportActionResult;
 export type UpdateReportResult = ReportActionResult;
 
+// Whether the caller may act on a report, by tenant + production access.
+async function userCanAccessReport(
+  user: CurrentUser,
+  reportId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ productionId: rehearsalReports.productionId })
+    .from(rehearsalReports)
+    .where(eq(rehearsalReports.id, reportId))
+    .limit(1);
+  if (!row) return false;
+  return userCanAccessProduction(user, row.productionId);
+}
+
 export async function createReport(
   _prevState: ReportActionResult | undefined,
   formData: FormData,
@@ -41,6 +59,10 @@ export async function createReport(
 
   if (!productionId) {
     return { error: "Missing production." };
+  }
+
+  if (!(await userCanAccessProduction(user, productionId))) {
+    return { error: "You don't have access to this production." };
   }
 
   const production = await db
@@ -157,6 +179,10 @@ export async function updateReport(
     return { error: "Report not found." };
   }
 
+  if (!(await userCanAccessProduction(user, productionId))) {
+    return { error: "You don't have access to this production." };
+  }
+
   const production = await db
     .select({ slug: productions.slug })
     .from(productions)
@@ -260,6 +286,10 @@ export async function deleteReport(
   const reportId = formData.get("report_id") as string;
   if (!reportId) return { error: "Missing report ID." };
 
+  if (!(await userCanAccessReport(user, reportId))) {
+    return { error: "Report not found." };
+  }
+
   await db
     .update(rehearsalReports)
     .set({ deletedAt: new Date() })
@@ -281,6 +311,10 @@ export async function restoreReport(
   const reportId = formData.get("report_id") as string;
   if (!reportId) return { error: "Missing report ID." };
 
+  if (!(await userCanAccessReport(user, reportId))) {
+    return { error: "Report not found." };
+  }
+
   await db
     .update(rehearsalReports)
     .set({ deletedAt: null })
@@ -301,6 +335,10 @@ export async function permanentlyDeleteReport(
 
   const reportId = formData.get("report_id") as string;
   if (!reportId) return { error: "Missing report ID." };
+
+  if (!(await userCanAccessReport(user, reportId))) {
+    return { error: "Report not found." };
+  }
 
   await db.delete(rehearsalReports).where(eq(rehearsalReports.id, reportId));
 
