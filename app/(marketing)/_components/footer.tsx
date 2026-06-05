@@ -60,7 +60,7 @@ export function Footer() {
       <div className="wrap">
         <div className="footer-grid">
           <div>
-            <Link className="brand" href="/home" aria-label="ProScene home">
+            <Link className="brand" href="/" aria-label="ProScene home">
               <span className="brand-mark">{ARCH}</span>
               <span className="brand-name">
                 Pro<em>Scene</em>

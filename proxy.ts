@@ -17,7 +17,7 @@ const PUBLIC_ROUTES = [
   "/forgot-password",
   "/reset-password",
   // Public marketing site — must be reachable by logged-out visitors.
-  "/home",
+  "/",
   "/features",
   "/pricing",
   "/reviews",

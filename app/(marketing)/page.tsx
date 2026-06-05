@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./home.css";
-import { HOME_HTML } from "./content";
+import { HOME_HTML } from "./home-content";
 
 export const metadata: Metadata = {
   title: "ProScene — The production hub for stage managers",

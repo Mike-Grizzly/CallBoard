@@ -28,7 +28,7 @@ const ARCH = (
 
 function Brand() {
   return (
-    <Link className="brand" href="/home" aria-label="ProScene home">
+    <Link className="brand" href="/" aria-label="ProScene home">
       <span className="brand-mark">{ARCH}</span>
       <span className="brand-name">
         Pro<em>Scene</em>
