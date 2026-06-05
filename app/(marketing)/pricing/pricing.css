@@ -1,0 +1,51 @@
+/* Pricing page-local styles (from pricing.html <style>). */
+[data-page="pricing"] .page-hero{padding:clamp(48px,7vw,80px) 0 clamp(24px,3vw,36px);text-align:center}
+[data-page="pricing"] .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:start}
+[data-page="pricing"] .tier{
+  background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-l);
+  padding:30px;display:flex;flex-direction:column;box-shadow:var(--shadow-1);position:relative;
+}
+[data-page="pricing"] .tier[data-feat]{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent),var(--shadow-3);z-index:1}
+[data-page="pricing"] .tier-flag{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:11.5px;font-weight:600;letter-spacing:.06em;padding:5px 14px;border-radius:999px;text-transform:uppercase}
+[data-page="pricing"] .tier-name{font-family:var(--font-display);font-size:23px;font-weight:600;letter-spacing:-.01em}
+[data-page="pricing"] .tier-desc{color:var(--ink-3);font-size:14px;margin-top:6px;min-height:42px}
+[data-page="pricing"] .tier-price{display:flex;align-items:baseline;gap:4px;margin:18px 0 4px}
+[data-page="pricing"] .tier-price .amt{font-family:var(--font-display);font-size:48px;font-weight:600;letter-spacing:-.025em;line-height:1}
+[data-page="pricing"] .tier-price .per{color:var(--ink-3);font-size:14px}
+[data-page="pricing"] .tier-sub{font-size:12.5px;color:var(--ink-4);min-height:18px}
+[data-page="pricing"] .tier .btn{margin:22px 0 22px;width:100%}
+[data-page="pricing"] .tier-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px}
+[data-page="pricing"] .tier-list li{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--ink-2)}
+[data-page="pricing"] .tier-list .tick{width:18px;height:18px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center;flex-shrink:0;margin-top:1px}
+[data-page="pricing"] .tier-list .tick svg{width:11px;height:11px;stroke-width:2.6}
+[data-page="pricing"] .tier-list li.off{color:var(--ink-4)}
+[data-page="pricing"] .tier-list li.off .tick{background:var(--bg-sunken);color:var(--ink-4)}
+
+[data-page="pricing"] .billing{display:inline-flex;align-items:center;gap:12px;background:var(--bg-elev);border:1px solid var(--border);border-radius:999px;padding:5px;margin-top:26px}
+[data-page="pricing"] .billing button{border:0;background:transparent;padding:9px 18px;border-radius:999px;font-size:14px;font-weight:500;color:var(--ink-3);white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+[data-page="pricing"] .billing button[data-on]{background:var(--ink);color:var(--bg)}
+[data-page="pricing"] .billing .save{font-size:11.5px;color:var(--c-sage);font-weight:600}
+[data-page="pricing"] .billing button[data-on] .save{color:color-mix(in oklch,var(--c-sage) 75%,white)}
+
+[data-page="pricing"] .compare{width:100%;border-collapse:collapse;margin-top:18px}
+[data-page="pricing"] .compare th,[data-page="pricing"] .compare td{text-align:left;padding:15px 18px;border-bottom:1px solid var(--border);font-size:14.5px}
+[data-page="pricing"] .compare thead th{font-family:var(--font-display);font-size:18px;font-weight:600;border-bottom:2px solid var(--border-strong)}
+[data-page="pricing"] .compare thead th:first-child{font-family:var(--font-ui);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-4);font-weight:600}
+[data-page="pricing"] .compare td:not(:first-child),[data-page="pricing"] .compare th:not(:first-child){text-align:center;width:20%}
+[data-page="pricing"] .compare td:first-child{color:var(--ink-2)}
+[data-page="pricing"] .compare tbody tr:hover{background:var(--bg-muted)}
+[data-page="pricing"] .compare .yes{color:var(--accent-ink)}
+[data-page="pricing"] .compare .yes svg{width:18px;height:18px;stroke-width:2.4}
+[data-page="pricing"] .compare .no{color:var(--ink-4)}
+[data-page="pricing"] .compare .grouphd td{font-weight:600;color:var(--ink);background:var(--bg-muted);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase}
+[data-page="pricing"] .compare-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-elev);box-shadow:var(--shadow-1)}
+
+[data-page="pricing"] .faq-mini{display:flex;flex-direction:column;gap:0}
+[data-page="pricing"] .qa{border-bottom:1px solid var(--border);padding:22px 0}
+[data-page="pricing"] .qa summary{font-family:var(--font-display);font-size:19px;font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:16px;align-items:center}
+[data-page="pricing"] .qa summary::-webkit-details-marker{display:none}
+[data-page="pricing"] .qa summary .pl{width:24px;height:24px;flex-shrink:0;color:var(--ink-3);transition:transform .2s}
+[data-page="pricing"] .qa[open] summary .pl{transform:rotate(45deg)}
+[data-page="pricing"] .qa p{margin-top:12px;color:var(--ink-3);font-size:15px;line-height:1.6;max-width:70ch}
+
+@media (max-width:860px){[data-page="pricing"] .tiers{grid-template-columns:1fr;max-width:420px;margin:0 auto}[data-page="pricing"] .tier[data-feat]{order:-1}}
