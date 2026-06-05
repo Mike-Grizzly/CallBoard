@@ -341,3 +341,38 @@ default in place today.
   bell/center doesn't come back.
 - **Banner scope choices to confirm with use:** 30-day window and audience-only
   (a manager isn't nagged to ack announcements for productions they're not in).
+
+---
+
+## Marketing website (added 2026-06-05)
+
+Context: the ProScene marketing site is ported into `app/(marketing)/` on
+branch `claude/magical-ride-usNEW` (see decision-log 2026-06-05). Open
+follow-ups before it ships:
+
+- **CTAs are placeholders.** In-page "Start free" / "Book a demo" / "Message
+  support" etc. are still `data-noop` (no navigation), faithfully matching the
+  uploaded mockups. Only the **nav** "Sign in" → `/login` and "Start free" →
+  `/signup` are wired. Decide which CTAs route to `/signup` vs a real demo /
+  contact flow, then wire them.
+- **Brand casing + domain mismatch.** Mockups say "ProScene" and
+  `app.proscene.live`; the live product is "Proscene" at `proscene.app`.
+  Reconcile wordmark casing and the in-mock URLs during a cleanup pass.
+- **Payload + Next bump pending.** CMS not installed yet; needs `next`
+  16.2.3 → ≥16.2.6 and `payload` + `@payloadcms/next` + Postgres adapter,
+  verified on a preview deploy before merge.
+- **Set-piece SVGs are placeholders.** `public/marketing/setpieces/*.svg`
+  (rug/table/throne/tree/bench) are simple stand-ins for the features
+  blocking demo — replace with the real artwork.
+- **Single blog post.** `/blog/[slug]` renders one post for any slug. Real
+  multi-post content comes with Payload.
+- **`feature-demos.css` / `dash-hero.css` are imported unscoped** (only on
+  `/features`). Their `.cal-*` / `.sm-*` class names could in theory collide
+  with app classes if these ever load on an app route; they currently never
+  do. Scope under `.ps-site` if that assumption changes.
+- **Claim `/` at the repo split.** Home is at `/home` until the marketing
+  site moves to its own repo/domain and can own `/`.
+- **Verification.** `next build` compiles and `tsc`/eslint pass, but the
+  pages have **not been viewed in a browser** from this environment (no
+  `.env.local`/DB). Smoke-test the routes on a preview deploy or local `npm
+  run dev`.

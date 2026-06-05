@@ -1,6 +1,6 @@
 # Current Status
 
-**Last updated:** 2026-06-03
+**Last updated:** 2026-06-05
 
 **App name:** **Proscene** (renamed from "CallBoard" on 2026-05-27 — the `callboard` domain could not be secured). The product is **live at [https://proscene.app](https://proscene.app)** with a verified email sending domain. The rebrand updates the rail wordmark (`Pro<em>scene</em>`), the rail/icon mark glyph (`C` → `P`), the four auth-screen brand headers (login, signup, forgot-password, reset-password), the PWA manifest, root metadata (`title` / `applicationName` / `appleWebApp.title`), `apple-icon.tsx`, `public/icon.svg` + `public/icon-maskable.svg`, the rehearsal-report email footer ("Sent via Proscene"), and `package.json` / `package-lock.json` `name`. The Supabase project is still literally named `CallBoard` in the Supabase dashboard — backticked `CallBoard` references in these docs point to that project identifier and are intentionally unchanged. Colors and design tokens are unchanged. PR [#10](https://github.com/Mike-Grizzly/CallBoard/pull/10) merged to `main` 2026-05-27.
 
@@ -1052,3 +1052,40 @@ evening use). New `body[data-theme="dusk"]` token block; the switch is now
 `ThemePref`/`EffectiveTheme`, the no-flash inline script, the cookie
 validators, and the status-bar `theme-color` map all updated. `tsc`/`eslint`
 clean.
+
+## Marketing website port (2026-06-05) — branch `claude/magical-ride-usNEW`, NOT merged
+
+The standalone ProScene marketing site (hand-built static HTML/CSS/JS,
+uploaded by the user) is ported into the app under a new isolated
+`app/(marketing)/` route group. See `decision-log.md` (2026-06-05) for the
+approach and `open-questions.md` (Marketing website) for follow-ups.
+
+- **Routes:** `/home` (landing), `/features`, `/pricing`, `/reviews`,
+  `/blog`, `/blog/[slug]`, `/faq`. Home is at `/home` (not `/`) because the
+  live `app/page.tsx` still redirects `/` → `/dashboard`; `/` is claimed when
+  the marketing site is split into its own repo before public launch.
+- **Isolation:** all marketing tokens + base styles are scoped to a
+  `.ps-site` wrapper (`app/(marketing)/marketing.css`) so they cannot leak
+  into the app and the app's `body[data-theme]` dark/dusk system cannot
+  recolor marketing pages. Per-page `<style>` blocks scoped under
+  `[data-page="…"]`. `feature-demos.css` + `dash-hero.css` load only on
+  `/features`.
+- **Approach:** faithful-HTML render — page bodies via
+  `dangerouslySetInnerHTML` from authored static content (no user input);
+  shared chrome (`Nav`/`Footer`) and interactions (reveal-on-scroll, mobile
+  menu, pricing billing toggle, FAQ search + scrollspy, feature scroll-demo
+  engine, blog tabs) are real React/client components under
+  `app/(marketing)/**`.
+- **Fonts:** Inter via `next/font` (`--font-inter`); Geist Mono inherited
+  from the app's root layout.
+- **Wired:** nav "Sign in" → `/login`, "Start free" → `/signup`. In-page CTAs
+  remain `data-noop` placeholders (match the mockups) pending a decision on
+  where they route.
+- **Assets:** placeholder set-piece SVGs in `public/marketing/setpieces/`.
+- **Not built yet:** Payload CMS (planned; needs `next` ≥ 16.2.6), Stripe,
+  GTM, brand-casing/domain reconciliation, real blog content, CTA wiring.
+- **Verified:** `next build` compiles cleanly (only fails afterward on the
+  app's `DATABASE_URL` requirement, unrelated); `tsc --noEmit` and `eslint`
+  pass. **Not** browser-verified from this environment (no `.env.local`/DB) —
+  smoke-test on a preview deploy or local `npm run dev`.
+- **Live app:** untouched. Nothing reaches production until merged.

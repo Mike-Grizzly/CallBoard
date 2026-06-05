@@ -1371,3 +1371,46 @@ page `/settings/notifications`. Implemented but **not yet browser-verified**.
 **Consequences / open items:**
 - Email fan-out unchanged (still gated by the user's email preference).
 - `fanoutAnnouncement` still writes `notifications` rows and `notification-bell.tsx` still exists, but **nothing renders them now** — dead until a future header "notification center." Document-comment notifications (which also write to `notifications`) likewise have no surface currently. The `notification_preferences` "in-app" toggle is therefore a no-op for the moment (the banner always shows for unacked items). Tracked in open-questions; cleanup or a header center is a follow-up.
+
+---
+
+## 2026-06-05 — Marketing website ported into the app (interim same-repo)
+
+**Decision:** The standalone ProScene marketing site (hand-built static
+HTML/CSS/JS — home, features, pricing, reviews, blog, blog post, FAQ) is
+ported into this repo under a new `app/(marketing)/` route group, to be
+**split into its own repo before public launch**. Chosen approach and
+constraints:
+
+- **Same repo now, separate repo at launch.** Building in-repo during the
+  pre-launch phase keeps the convenience of one stack/deploy while there is
+  no real traffic or live payments to protect; the site is extracted to its
+  own repo (its own minimal env, no product secrets) before going public so
+  the public marketing surface and the product don't share a blast radius.
+- **CMS = Payload (planned, not yet installed).** Self-hosted in the same
+  stack, content stored in the existing Supabase Postgres. Requires bumping
+  `next` 16.2.3 → ≥16.2.6 (`@payloadcms/next` peer floor) — deferred to its
+  own slice and to be verified on a preview deploy before merging.
+- **Faithful-HTML render, not full JSX componentization.** Page bodies are
+  rendered via `dangerouslySetInnerHTML` from authored, static, no-user-input
+  content (safe; flagged not hidden). Shared chrome (Nav/Footer) and all
+  interactions (reveal-on-scroll, mobile menu, pricing toggle, FAQ
+  search/scrollspy, feature demo engine, blog tabs) are real React/client
+  components. Rationale: content migrates into Payload collections later, so
+  hand-componentizing every section now is largely throwaway.
+- **Style isolation via `.ps-site` scope.** The marketing `site.css` shares
+  token names with the app's `globals.css` and the app has a `body[data-theme]`
+  dark/dusk system. Marketing tokens + base styles are redeclared on a
+  `.ps-site` wrapper so they cannot leak into the app and the app's theme
+  switching cannot recolor marketing pages. Per-page `<style>` blocks are
+  scoped under `[data-page="…"]`. `feature-demos.css` + `dash-hero.css` are
+  imported only on `/features`.
+
+**Reason:** Matches the user's priorities — full control over tracking/ads,
+shared design + integrated signup, and editability via a CMS — while keeping
+the live product untouched and the eventual repo split cheap.
+
+**Impact:** New routes `/home`, `/features`, `/pricing`, `/reviews`, `/blog`,
+`/blog/[slug]`, `/faq`. Home lives at `/home` (not `/`) because the live
+`app/page.tsx` still redirects `/` → `/dashboard`; `/` is claimed at the repo
+split. Live app behavior unchanged. Branch `claude/magical-ride-usNEW`.
