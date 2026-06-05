@@ -16,6 +16,13 @@ const PUBLIC_ROUTES = [
   "/auth/callback",
   "/forgot-password",
   "/reset-password",
+  // Public marketing site — must be reachable by logged-out visitors.
+  "/home",
+  "/features",
+  "/pricing",
+  "/reviews",
+  "/blog",
+  "/faq",
 ];
 
 function isPublicRoute(pathname: string): boolean {
