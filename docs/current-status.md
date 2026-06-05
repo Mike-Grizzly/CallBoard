@@ -1060,10 +1060,10 @@ uploaded by the user) is ported into the app under a new isolated
 `app/(marketing)/` route group. See `decision-log.md` (2026-06-05) for the
 approach and `open-questions.md` (Marketing website) for follow-ups.
 
-- **Routes:** `/home` (landing), `/features`, `/pricing`, `/reviews`,
-  `/blog`, `/blog/[slug]`, `/faq`. Home is at `/home` (not `/`) because the
-  live `app/page.tsx` still redirects `/` → `/dashboard`; `/` is claimed when
-  the marketing site is split into its own repo before public launch.
+- **Routes:** `/` (landing), `/features`, `/pricing`, `/reviews`,
+  `/blog`, `/blog/[slug]`, `/faq`. The root `/` is the marketing homepage (the old `app/page.tsx` `/` →
+  `/dashboard` redirect was removed 2026-06-05); users sign in at `/login`
+  and land in the app at `/dashboard` after auth.
 - **Isolation:** all marketing tokens + base styles are scoped to a
   `.ps-site` wrapper (`app/(marketing)/marketing.css`) so they cannot leak
   into the app and the app's `body[data-theme]` dark/dusk system cannot

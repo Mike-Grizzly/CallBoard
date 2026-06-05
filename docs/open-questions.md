@@ -370,8 +370,9 @@ follow-ups before it ships:
   `/features`). Their `.cal-*` / `.sm-*` class names could in theory collide
   with app classes if these ever load on an app route; they currently never
   do. Scope under `.ps-site` if that assumption changes.
-- **Claim `/` at the repo split.** Home is at `/home` until the marketing
-  site moves to its own repo/domain and can own `/`.
+- **App vs marketing on the same domain.** `/` is now the marketing home and
+  the app lives at `/dashboard` etc. on the same domain. At the repo split,
+  decide whether the app moves to a subdomain (e.g. `app.proscene.app`).
 - **Verification.** `next build` compiles and `tsc`/eslint pass, but the
   pages have **not been viewed in a browser** from this environment (no
   `.env.local`/DB). Smoke-test the routes on a preview deploy or local `npm

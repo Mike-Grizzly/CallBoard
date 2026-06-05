@@ -1410,7 +1410,9 @@ constraints:
 shared design + integrated signup, and editability via a CMS — while keeping
 the live product untouched and the eventual repo split cheap.
 
-**Impact:** New routes `/home`, `/features`, `/pricing`, `/reviews`, `/blog`,
-`/blog/[slug]`, `/faq`. Home lives at `/home` (not `/`) because the live
-`app/page.tsx` still redirects `/` → `/dashboard`; `/` is claimed at the repo
-split. Live app behavior unchanged. Branch `claude/magical-ride-usNEW`.
+**Impact:** Routes: `/` (home), `/features`, `/pricing`, `/reviews`, `/blog`,
+`/blog/[slug]`, `/faq`. The root `/` serves the marketing homepage — the old
+`app/page.tsx` `/` → `/dashboard` redirect was removed (2026-06-05) so the
+domain root is the marketing front door; users sign in at `/login` and land in
+the app at `/dashboard`. App behavior otherwise unchanged. Branch
+`claude/magical-ride-usNEW`.
