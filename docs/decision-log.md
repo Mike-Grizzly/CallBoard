@@ -1416,3 +1416,40 @@ the live product untouched and the eventual repo split cheap.
 domain root is the marketing front door; users sign in at `/login` and land in
 the app at `/dashboard`. App behavior otherwise unchanged. Branch
 `claude/magical-ride-usNEW`.
+
+---
+
+## 2026-06-05 — Multi-tenant authorization hardening pass
+
+**Decision:** Closed a systemic class of cross-tenant authorization gaps. Many
+client-invocable server actions checked only the caller's capability
+(`can(role, …)`) — which reflects the caller's role in their OWN org — without
+verifying the target row belonged to a production/organization the caller can
+access. With UUID ids this was hard to exploit, but it was a real IDOR class.
+
+**Fixes:**
+- `userCanAccessProduction` (`lib/auth.ts`) is now the tenant boundary: it
+  verifies `production.organizationId === user.organizationId` BEFORE the
+  `productions:manage` shortcut, so a manager in one org can no longer reach
+  another org's productions. This hardened every existing caller at once.
+- Added access checks to mutating/sensitive actions across `features/`:
+  documents, reports, calls, notes, announcements, scenes, blocking, scripts,
+  notifications, and members. People-management actions (role change, remove,
+  profile/status edits, delete, resend invite, production assignment) now
+  verify the target user/production shares the caller's org. Two signed-URL
+  helpers (`getScriptUrl`, `getGroundPlanImageUrl`) that had NO auth now
+  require auth + org-scoped access.
+- Defense-in-depth: the `/activity`, `/documents`, `/reports` placeholder pages
+  call `requireCurrentUser()` instead of relying on the proxy alone.
+
+**Process:** the `architecture.md` "Where permissions are NOT enforced" notes
+were partly stale (the signed-URL guards had already been added). The audit +
+fixes were verified against the current code; `tsc` + `next build` compile and
+`eslint` pass. Work is on `claude/magical-ride-usNEW` (unmerged).
+
+**DB posture (Supabase advisors, read-only):** all public tables have RLS
+enabled with no policies = deny-by-default for direct PostgREST/anon access;
+the app uses a server-side Postgres connection with the app-level checks above.
+No table RLS changes were made (changing them blind risks breakage and isn't
+needed). One WARN: leaked-password protection is disabled (enable in Supabase
+Auth; may need Pro).

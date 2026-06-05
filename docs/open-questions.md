@@ -377,3 +377,28 @@ follow-ups before it ships:
   pages have **not been viewed in a browser** from this environment (no
   `.env.local`/DB). Smoke-test the routes on a preview deploy or local `npm
   run dev`.
+
+---
+
+## Security follow-ups (added 2026-06-05)
+
+After the multi-tenant authorization pass (see decision-log 2026-06-05):
+
+- **`deletePerson` is a global delete.** It now verifies the target shares the
+  caller's org before running, but it still deletes the global `profiles` row +
+  auth user. If a person belongs to MULTIPLE orgs, deleting them from one org's
+  People page would remove them everywhere. Decide the multi-org behavior:
+  remove-from-this-org-only when the user has other memberships, vs. full
+  delete only when this is their last org.
+- **`attachments` Storage bucket policies are permissive.** Any authenticated
+  user could call Supabase Storage directly (anon key + their JWT) and
+  read/write/delete files, bypassing the app. The app now generates signed URLs
+  with org-scoped access checks, so the app path is safe — but tightening the
+  bucket policy is defense-in-depth. Risky on live infra (can break
+  uploads/downloads); verify path conventions before applying.
+- **Leaked-password protection** is disabled in Supabase Auth — enable it
+  (HaveIBeenPwned check); may require the Pro plan.
+- **A couple of read-only leaks remain low-priority** (e.g. some blocking read
+  helpers were gated in this pass; `saveAnnotations` rows are self-owned). Worth
+  a second skim, but no destructive cross-tenant path remains among the
+  audited actions.
