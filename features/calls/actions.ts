@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { calls, productions, callConfirmations } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { requireCurrentUser } from "@/lib/auth";
+import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getProductionBySlug } from "@/features/productions/queries";
 import {
@@ -94,6 +94,10 @@ export async function createCall(
     return { error: "Production and date are required." };
   }
 
+  if (!(await userCanAccessProduction(user, productionId))) {
+    return { error: "You don't have access to this production." };
+  }
+
   await db.insert(calls).values({
     productionId,
     createdBy: user.id,
@@ -131,6 +135,17 @@ export async function updateCall(
     return { error: "Missing required fields." };
   }
 
+  const callRows = await db
+    .select({ productionId: calls.productionId })
+    .from(calls)
+    .where(eq(calls.id, callId))
+    .limit(1);
+  if (callRows.length === 0) return { error: "Call not found." };
+
+  if (!(await userCanAccessProduction(user, callRows[0].productionId))) {
+    return { error: "You don't have access to this production." };
+  }
+
   await db
     .update(calls)
     .set({
@@ -162,6 +177,15 @@ export async function deleteCall(formData: FormData): Promise<void> {
   const productionId = trim(formData.get("production_id"));
   if (!callId || !productionId) return;
 
+  const callRows = await db
+    .select({ productionId: calls.productionId })
+    .from(calls)
+    .where(eq(calls.id, callId))
+    .limit(1);
+  if (callRows.length === 0) return;
+
+  if (!(await userCanAccessProduction(user, callRows[0].productionId))) return;
+
   await db.delete(calls).where(eq(calls.id, callId));
 
   const slug = await getSlug(productionId);
@@ -187,9 +211,8 @@ export async function confirmCall(callId: string): Promise<CallResult> {
   if (call.length === 0) return { error: "Call not found." };
 
   const productionId = call[0].productionId;
-  if (!can(user.role, "productions:manage")) {
-    const membership = await getProductionMembership(user.id, productionId);
-    if (!membership) return { error: "You're not on this production." };
+  if (!(await userCanAccessProduction(user, productionId))) {
+    return { error: "You don't have access to this production." };
   }
 
   const existing = await db

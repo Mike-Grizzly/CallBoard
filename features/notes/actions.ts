@@ -1,10 +1,10 @@
 "use server";
 
 import { db } from "@/db";
-import { productionNotes, noteTags, productions } from "@/db/schema";
+import { productionNotes, noteTags } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { requireCurrentUser } from "@/lib/auth";
+import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { writeMentions } from "@/features/mentions/write";
 
@@ -17,6 +17,10 @@ export async function createNote(
   const user = await requireCurrentUser();
   if (!can(user.role, "notes:create")) {
     return { error: "You don't have permission to create notes." };
+  }
+
+  if (!(await userCanAccessProduction(user, productionId))) {
+    return { error: "You don't have access to this production." };
   }
 
   const today = new Date().toISOString().split("T")[0];
@@ -57,12 +61,19 @@ export async function updateNote(
   }
 
   const note = await db
-    .select({ createdBy: productionNotes.createdBy })
+    .select({
+      createdBy: productionNotes.createdBy,
+      productionId: productionNotes.productionId,
+    })
     .from(productionNotes)
     .where(eq(productionNotes.id, noteId))
     .limit(1);
 
   if (note.length === 0) return { error: "Note not found." };
+
+  if (!(await userCanAccessProduction(user, note[0].productionId))) {
+    return { error: "You don't have access to this production." };
+  }
 
   // Only the author or tag managers can edit
   if (
@@ -109,12 +120,19 @@ export async function deleteNote(
   }
 
   const note = await db
-    .select({ createdBy: productionNotes.createdBy })
+    .select({
+      createdBy: productionNotes.createdBy,
+      productionId: productionNotes.productionId,
+    })
     .from(productionNotes)
     .where(eq(productionNotes.id, noteId))
     .limit(1);
 
   if (note.length === 0) return { error: "Note not found." };
+
+  if (!(await userCanAccessProduction(user, note[0].productionId))) {
+    return { error: "You don't have access to this production." };
+  }
 
   if (
     note[0].createdBy !== user.id &&
@@ -130,7 +148,7 @@ export async function deleteNote(
 }
 
 export async function createNoteTag(
-  organizationId: string,
+  _organizationId: string,
   name: string,
   color: string,
 ): Promise<ActionResult & { tag?: { id: string; name: string; color: string } }> {
@@ -144,7 +162,12 @@ export async function createNoteTag(
 
   const rows = await db
     .insert(noteTags)
-    .values({ organizationId, name: trimmed, color, createdBy: user.id })
+    .values({
+      organizationId: user.organizationId,
+      name: trimmed,
+      color,
+      createdBy: user.id,
+    })
     .returning();
 
   return { success: true, tag: rows[0] };
@@ -152,7 +175,7 @@ export async function createNoteTag(
 
 export async function deleteNoteTag(
   tagId: string,
-  organizationId: string,
+  _organizationId: string,
 ): Promise<ActionResult> {
   const user = await requireCurrentUser();
   if (!can(user.role, "notes:manage_tags")) {
@@ -161,7 +184,12 @@ export async function deleteNoteTag(
 
   await db
     .delete(noteTags)
-    .where(and(eq(noteTags.id, tagId), eq(noteTags.organizationId, organizationId)));
+    .where(
+      and(
+        eq(noteTags.id, tagId),
+        eq(noteTags.organizationId, user.organizationId),
+      ),
+    );
 
   return { success: true };
 }

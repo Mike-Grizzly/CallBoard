@@ -39,7 +39,12 @@ export async function markNotificationsRead(ids?: string[]): Promise<void> {
       await db
         .update(notifications)
         .set({ readAt: now })
-        .where(eq(notifications.id, id));
+        .where(
+          and(
+            eq(notifications.id, id),
+            eq(notifications.recipientId, user.id),
+          ),
+        );
     }
   } else {
     await db

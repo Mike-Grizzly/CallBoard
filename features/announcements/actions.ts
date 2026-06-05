@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { announcements, announcementAcks, productions } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { requireCurrentUser } from "@/lib/auth";
+import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { writeMentions } from "@/features/mentions/write";
 import {
@@ -38,6 +38,10 @@ export async function createAnnouncement(
 
   if (!title) {
     return { error: "Title is required." };
+  }
+
+  if (productionId && !(await userCanAccessProduction(user, productionId))) {
+    return { error: "You don't have access to that production." };
   }
 
   const [row] = await db
@@ -128,7 +132,9 @@ export async function deleteAnnouncement(
 
   const announcement = rows[0];
   const isAuthor = announcement.createdBy === user.id;
-  const canManage = can(user.role, "productions:manage");
+  const canManage =
+    can(user.role, "productions:manage") &&
+    announcement.organizationId === user.organizationId;
 
   if (!isAuthor && !canManage) {
     return { error: "You don't have permission to delete this announcement." };
@@ -157,13 +163,20 @@ export async function togglePin(
   }
 
   const rows = await db
-    .select({ pinned: announcements.pinned })
+    .select({
+      pinned: announcements.pinned,
+      organizationId: announcements.organizationId,
+    })
     .from(announcements)
     .where(eq(announcements.id, announcementId))
     .limit(1);
 
   if (rows.length === 0) {
     return { error: "Announcement not found." };
+  }
+
+  if (rows[0].organizationId !== user.organizationId) {
+    return { error: "You don't have permission to pin this announcement." };
   }
 
   await db

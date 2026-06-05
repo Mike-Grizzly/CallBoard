@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { documents, scriptAnnotations } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { requireCurrentUser } from "@/lib/auth";
+import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -24,6 +24,26 @@ export async function setDefaultScript(
 
   if (!documentId || !productionId) {
     return { error: "Missing required fields." };
+  }
+
+  if (!(await userCanAccessProduction(user, productionId))) {
+    return { error: "You don't have access to that production." };
+  }
+
+  // Verify the document belongs to this production
+  const [doc] = await db
+    .select({ id: documents.id })
+    .from(documents)
+    .where(
+      and(
+        eq(documents.id, documentId),
+        eq(documents.productionId, productionId),
+      ),
+    )
+    .limit(1);
+
+  if (!doc) {
+    return { error: "Document not found for this production." };
   }
 
   // Unset any existing default for this production
@@ -76,6 +96,10 @@ export async function saveAnnotations(
 
   if (!scriptId || !productionId) {
     return { error: "Missing required fields." };
+  }
+
+  if (!(await userCanAccessProduction(user, productionId))) {
+    return { error: "You don't have access to that production." };
   }
 
   const annotations = JSON.parse(annotationsJson || "[]");
@@ -139,6 +163,22 @@ export async function dismissStaleBanner(
 }
 
 export async function getScriptUrl(storagePath: string): Promise<string> {
+  const user = await requireCurrentUser();
+
+  if (!storagePath) return "";
+
+  // Resolve the owning production via the document that holds this storagePath,
+  // then gate access (org-scoped) before minting a signed URL.
+  const [doc] = await db
+    .select({ productionId: documents.productionId })
+    .from(documents)
+    .where(eq(documents.storagePath, storagePath))
+    .limit(1);
+
+  if (!doc || !(await userCanAccessProduction(user, doc.productionId))) {
+    return "";
+  }
+
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.storage
     .from("attachments")

@@ -6,10 +6,11 @@ import {
   organizationMemberships,
   organizations,
   productionMemberships,
+  productions,
   profiles,
 } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
-import { requireCurrentUser } from "@/lib/auth";
+import { eq, and, sql, inArray } from "drizzle-orm";
+import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { Role } from "@/types/roles";
@@ -20,6 +21,25 @@ import { MEMBER_STATUSES, type MemberStatus } from "./constants";
 export type MemberActionResult = {
   error?: string;
 };
+
+// Whether a user is a member of the given organization — the tenant boundary
+// for people-management actions that take a target user/membership id.
+async function userInOrg(
+  userId: string,
+  organizationId: string,
+): Promise<boolean> {
+  const [m] = await db
+    .select({ id: organizationMemberships.id })
+    .from(organizationMemberships)
+    .where(
+      and(
+        eq(organizationMemberships.userId, userId),
+        eq(organizationMemberships.organizationId, organizationId),
+      ),
+    )
+    .limit(1);
+  return !!m;
+}
 
 export async function updateMemberRole(
   _prevState: MemberActionResult | undefined,
@@ -46,7 +66,12 @@ export async function updateMemberRole(
   const membership = await db
     .select()
     .from(organizationMemberships)
-    .where(eq(organizationMemberships.id, membershipId))
+    .where(
+      and(
+        eq(organizationMemberships.id, membershipId),
+        eq(organizationMemberships.organizationId, currentUser.organizationId),
+      ),
+    )
     .limit(1);
 
   if (membership.length === 0) {
@@ -106,7 +131,12 @@ export async function removeMember(
   const membership = await db
     .select()
     .from(organizationMemberships)
-    .where(eq(organizationMemberships.id, membershipId))
+    .where(
+      and(
+        eq(organizationMemberships.id, membershipId),
+        eq(organizationMemberships.organizationId, currentUser.organizationId),
+      ),
+    )
     .limit(1);
 
   if (membership.length === 0) {
@@ -177,6 +207,26 @@ export async function assignProductionMember(
     return { error: "Select at least one member." };
   }
 
+  if (!(await userCanAccessProduction(currentUser, productionId))) {
+    return { error: "You don't have access to this production." };
+  }
+
+  // Only assign people who belong to the caller's organization.
+  const orgMembers = await db
+    .select({ userId: organizationMemberships.userId })
+    .from(organizationMemberships)
+    .where(
+      and(
+        eq(organizationMemberships.organizationId, currentUser.organizationId),
+        inArray(organizationMemberships.userId, userIds),
+      ),
+    );
+  const allowed = new Set(orgMembers.map((m) => m.userId));
+  userIds = userIds.filter((id) => allowed.has(id));
+  if (userIds.length === 0) {
+    return { error: "Select at least one member of your organization." };
+  }
+
   const characterName = (formData.get("character_name") as string | null)?.trim() || null;
 
   for (const userId of userIds) {
@@ -226,6 +276,15 @@ export async function updateCharacterName(
 
   if (!membershipId) return { error: "Missing membership ID." };
 
+  const [target] = await db
+    .select({ productionId: productionMemberships.productionId })
+    .from(productionMemberships)
+    .where(eq(productionMemberships.id, membershipId))
+    .limit(1);
+  if (!target || !(await userCanAccessProduction(currentUser, target.productionId))) {
+    return { error: "Member not found." };
+  }
+
   await db
     .update(productionMemberships)
     .set({ characterName })
@@ -249,6 +308,15 @@ export async function removeProductionMember(
 
   if (!membershipId) {
     return { error: "Missing membership ID." };
+  }
+
+  const [target] = await db
+    .select({ productionId: productionMemberships.productionId })
+    .from(productionMemberships)
+    .where(eq(productionMemberships.id, membershipId))
+    .limit(1);
+  if (!target || !(await userCanAccessProduction(currentUser, target.productionId))) {
+    return { error: "Member not found." };
   }
 
   await db
@@ -305,11 +373,25 @@ export type InviteMembersResult = {
 async function applyAssignments(
   userId: string,
   assignments: ProductionAssignmentInput[] | undefined,
+  organizationId: string,
 ) {
   if (!assignments || assignments.length === 0) return;
 
   for (const a of assignments) {
     if (!a.productionId || !ROLES.includes(a.role)) continue;
+
+    // Skip assignments to productions outside the caller's organization.
+    const [prod] = await db
+      .select({ id: productions.id })
+      .from(productions)
+      .where(
+        and(
+          eq(productions.id, a.productionId),
+          eq(productions.organizationId, organizationId),
+        ),
+      )
+      .limit(1);
+    if (!prod) continue;
 
     const existing = await db
       .select({ id: productionMemberships.id })
@@ -459,7 +541,7 @@ export async function inviteMembers(
             .limit(1);
 
           if (existingMembership.length > 0) {
-            await applyAssignments(userId, person.assignments);
+            await applyAssignments(userId, person.assignments, currentUser.organizationId);
             results.push({
               email,
               name,
@@ -474,7 +556,7 @@ export async function inviteMembers(
             organizationId: currentUser.organizationId,
             role: person.role,
           });
-          await applyAssignments(userId, person.assignments);
+          await applyAssignments(userId, person.assignments, currentUser.organizationId);
           results.push({
             email,
             name,
@@ -533,7 +615,7 @@ export async function inviteMembers(
         organizationId: currentUser.organizationId,
         role: person.role,
       });
-      await applyAssignments(userId, person.assignments);
+      await applyAssignments(userId, person.assignments, currentUser.organizationId);
 
       results.push({
         email,
@@ -577,6 +659,10 @@ export async function updatePersonProfile(
   const userId = formData.get("user_id") as string;
   if (!userId) return { error: "Missing user ID." };
 
+  if (!(await userInOrg(userId, currentUser.organizationId))) {
+    return { error: "Member not found." };
+  }
+
   const firstName = ((formData.get("first_name") as string) ?? "").trim();
   const lastName = ((formData.get("last_name") as string) ?? "").trim();
   const phone = ((formData.get("phone") as string) ?? "").trim() || null;
@@ -612,6 +698,10 @@ export async function setMemberStatus(
     return { error: "You cannot change your own status." };
   }
 
+  if (!(await userInOrg(userId, currentUser.organizationId))) {
+    return { error: "Member not found." };
+  }
+
   await db
     .update(profiles)
     .set({ status, updatedAt: new Date() })
@@ -640,6 +730,10 @@ export async function deletePerson(
 
   if (userId === currentUser.id) {
     return { error: "You cannot delete your own account." };
+  }
+
+  if (!(await userInOrg(userId, currentUser.organizationId))) {
+    return { error: "Member not found." };
   }
 
   try {
@@ -671,6 +765,10 @@ export async function resendInvite(
 
   if (!can(currentUser.role, "settings:manage")) {
     return { error: "You don't have permission to manage team members." };
+  }
+
+  if (!(await userInOrg(userId, currentUser.organizationId))) {
+    return { error: "Person not found." };
   }
 
   const rows = await db

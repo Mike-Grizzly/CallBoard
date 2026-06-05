@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { stageConfigurations, blockingPositions, beatComments, profiles, customSetPieces, beatArrows, mentions, sceneBeats, productionScenes, productions } from "@/db/schema";
-import type { BeatArrow } from "@/db/schema";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { eq, and, asc } from "drizzle-orm";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
@@ -22,7 +21,16 @@ export type PositionRow = {
 export async function fetchBeatPositions(
   beatId: string,
 ): Promise<PositionRow[]> {
-  await requireCurrentUser();
+  const user = await requireCurrentUser();
+  const [beat] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(sceneBeats)
+    .innerJoin(productionScenes, eq(sceneBeats.sceneId, productionScenes.id))
+    .where(eq(sceneBeats.id, beatId))
+    .limit(1);
+  if (!beat || !(await userCanAccessProduction(user, beat.productionId))) {
+    return [];
+  }
   const rows = await db
     .select({
       entityType: blockingPositions.entityType,
@@ -51,6 +59,9 @@ export async function requestGroundPlanImageUpload(
     return { error: "You don't have permission to configure the stage." };
   }
   if (!productionId) return { error: "Production ID is required." };
+  if (!(await userCanAccessProduction(user, productionId))) {
+    return { error: "You don't have permission to configure the stage." };
+  }
 
   const storagePath = `ground-plans/${productionId}/${Date.now()}.jpg`;
   const supabase = await createSupabaseServerClient();
@@ -70,6 +81,17 @@ export async function getGroundPlanImageUrl(
   storagePath: string,
 ): Promise<string> {
   if (!storagePath) return "";
+  const user = await requireCurrentUser();
+
+  const [config] = await db
+    .select({ productionId: stageConfigurations.productionId })
+    .from(stageConfigurations)
+    .where(eq(stageConfigurations.groundPlanImagePath, storagePath))
+    .limit(1);
+  if (!config || !(await userCanAccessProduction(user, config.productionId))) {
+    return "";
+  }
+
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.storage
     .from("attachments")
@@ -120,6 +142,9 @@ export async function saveStageConfiguration(
     return { error: "Proscenium width must be a positive number." };
   if (isNaN(stageDepthFt) || stageDepthFt <= 0)
     return { error: "Stage depth must be a positive number." };
+  if (!(await userCanAccessProduction(user, productionId))) {
+    return { error: "You don't have permission to configure the stage." };
+  }
 
   const existing = await db
     .select({ id: stageConfigurations.id })
@@ -177,6 +202,17 @@ export async function saveBlockingPosition(
   const { beatId, entityType, entityId, xPercent, yPercent, rotation = 0 } =
     payload;
 
+  const [beat] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(sceneBeats)
+    .innerJoin(productionScenes, eq(sceneBeats.sceneId, productionScenes.id))
+    .where(eq(sceneBeats.id, beatId))
+    .limit(1);
+  if (!beat) return { error: "Beat not found." };
+  if (!(await userCanAccessProduction(user, beat.productionId))) {
+    return { error: "You don't have permission to edit blocking." };
+  }
+
   const existing = await db
     .select({ id: blockingPositions.id })
     .from(blockingPositions)
@@ -219,6 +255,17 @@ export async function removeBlockingPosition(
     return { error: "You don't have permission to edit blocking." };
   }
 
+  const [beat] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(sceneBeats)
+    .innerJoin(productionScenes, eq(sceneBeats.sceneId, productionScenes.id))
+    .where(eq(sceneBeats.id, beatId))
+    .limit(1);
+  if (!beat) return { error: "Beat not found." };
+  if (!(await userCanAccessProduction(user, beat.productionId))) {
+    return { error: "You don't have permission to edit blocking." };
+  }
+
   await db
     .delete(blockingPositions)
     .where(
@@ -235,7 +282,16 @@ export async function removeBlockingPosition(
 // ─── Beat Comments ──────────────────────────────────────────────────
 
 export async function getBeatComments(beatId: string) {
-  await requireCurrentUser();
+  const user = await requireCurrentUser();
+  const [beat] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(sceneBeats)
+    .innerJoin(productionScenes, eq(sceneBeats.sceneId, productionScenes.id))
+    .where(eq(sceneBeats.id, beatId))
+    .limit(1);
+  if (!beat || !(await userCanAccessProduction(user, beat.productionId))) {
+    return [];
+  }
   return db
     .select({
       id: beatComments.id,
@@ -274,6 +330,17 @@ export async function createBeatComment(
   const trimmed = body.trim();
   if (!trimmed) return { error: "Comment cannot be empty." };
   if (trimmed.length > 2000) return { error: "Comment is too long." };
+
+  const [beat] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(sceneBeats)
+    .innerJoin(productionScenes, eq(sceneBeats.sceneId, productionScenes.id))
+    .where(eq(sceneBeats.id, beatId))
+    .limit(1);
+  if (!beat) return { error: "Beat not found." };
+  if (!(await userCanAccessProduction(user, beat.productionId))) {
+    return { error: "You don't have permission to comment here." };
+  }
 
   const [row] = await db
     .insert(beatComments)
@@ -336,12 +403,21 @@ export async function deleteBeatComment(
   const user = await requireCurrentUser();
 
   const existing = await db
-    .select({ createdBy: beatComments.createdBy })
+    .select({
+      createdBy: beatComments.createdBy,
+      productionId: productionScenes.productionId,
+    })
     .from(beatComments)
+    .innerJoin(sceneBeats, eq(beatComments.beatId, sceneBeats.id))
+    .innerJoin(productionScenes, eq(sceneBeats.sceneId, productionScenes.id))
     .where(eq(beatComments.id, commentId))
     .limit(1);
 
   if (!existing[0]) return { error: "Comment not found." };
+
+  if (!(await userCanAccessProduction(user, existing[0].productionId))) {
+    return { error: "You don't have permission to delete this comment." };
+  }
 
   const isOwner = existing[0].createdBy === user.id;
   const canModerate = can(user.role, "blocking:edit");
@@ -411,6 +487,9 @@ export async function requestCustomSetPieceUpload(
   }
 
   if (!productionId) return { error: "Production ID is required." };
+  if (!(await userCanAccessProduction(user, productionId))) {
+    return { error: "You don't have permission to upload set pieces." };
+  }
   if (!fileName || fileSize <= 0) return { error: "No file selected." };
 
   const allowed = ["image/svg+xml", "image/png", "image/jpeg"];
@@ -511,7 +590,16 @@ export async function deleteCustomSetPiece(
 // ─── Beat Arrows ────────────────────────────────────────────────────
 
 export async function fetchBeatArrows(beatId: string) {
-  await requireCurrentUser();
+  const user = await requireCurrentUser();
+  const [beat] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(sceneBeats)
+    .innerJoin(productionScenes, eq(sceneBeats.sceneId, productionScenes.id))
+    .where(eq(sceneBeats.id, beatId))
+    .limit(1);
+  if (!beat || !(await userCanAccessProduction(user, beat.productionId))) {
+    return [];
+  }
   return db
     .select({
       id: beatArrows.id,
@@ -537,6 +625,16 @@ export async function createBeatArrow(
   if (!can(user.role, "blocking:edit")) {
     return { error: "You don't have permission to add arrows." };
   }
+  const [beat] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(sceneBeats)
+    .innerJoin(productionScenes, eq(sceneBeats.sceneId, productionScenes.id))
+    .where(eq(sceneBeats.id, beatId))
+    .limit(1);
+  if (!beat) return { error: "Beat not found." };
+  if (!(await userCanAccessProduction(user, beat.productionId))) {
+    return { error: "You don't have permission to add arrows." };
+  }
   const [arrow] = await db
     .insert(beatArrows)
     .values({ beatId, fromX, fromY, toX, toY, color })
@@ -556,6 +654,17 @@ export async function deleteBeatArrow(
 ): Promise<{ error?: string }> {
   const user = await requireCurrentUser();
   if (!can(user.role, "blocking:edit")) {
+    return { error: "You don't have permission to delete arrows." };
+  }
+  const [arrow] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(beatArrows)
+    .innerJoin(sceneBeats, eq(beatArrows.beatId, sceneBeats.id))
+    .innerJoin(productionScenes, eq(sceneBeats.sceneId, productionScenes.id))
+    .where(eq(beatArrows.id, arrowId))
+    .limit(1);
+  if (!arrow) return { error: "Arrow not found." };
+  if (!(await userCanAccessProduction(user, arrow.productionId))) {
     return { error: "You don't have permission to delete arrows." };
   }
   await db.delete(beatArrows).where(eq(beatArrows.id, arrowId));

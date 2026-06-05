@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { productionScenes, sceneBeats, blockingPositions } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { requireCurrentUser } from "@/lib/auth";
+import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { validateSceneForm, validateBeatForm } from "./validation";
 
@@ -21,6 +21,10 @@ export async function createScene(
 
   const { data, errors } = validateSceneForm(formData);
   if (errors) return { error: Object.values(errors)[0] };
+
+  if (!(await userCanAccessProduction(user, data!.productionId))) {
+    return { error: "You don't have permission to manage scenes." };
+  }
 
   await db.insert(productionScenes).values({
     productionId: data!.productionId,
@@ -48,6 +52,16 @@ export async function updateScene(
   if (errors) return { error: Object.values(errors)[0] };
   if (!sceneId) return { error: "Missing scene ID." };
 
+  const [scene] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(productionScenes)
+    .where(eq(productionScenes.id, sceneId))
+    .limit(1);
+  if (!scene) return { error: "Missing scene ID." };
+  if (!(await userCanAccessProduction(user, scene.productionId))) {
+    return { error: "You don't have permission to manage scenes." };
+  }
+
   await db
     .update(productionScenes)
     .set({
@@ -74,6 +88,16 @@ export async function deleteScene(
   const sceneId = formData.get("scene_id") as string;
   if (!sceneId) return { error: "Missing scene ID." };
 
+  const [scene] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(productionScenes)
+    .where(eq(productionScenes.id, sceneId))
+    .limit(1);
+  if (!scene) return { error: "Missing scene ID." };
+  if (!(await userCanAccessProduction(user, scene.productionId))) {
+    return { error: "You don't have permission to manage scenes." };
+  }
+
   await db.delete(productionScenes).where(eq(productionScenes.id, sceneId));
 
   revalidatePath(`/productions`);
@@ -91,6 +115,16 @@ export async function createBeat(
 
   const { data, errors } = validateBeatForm(formData);
   if (errors) return { error: Object.values(errors)[0] };
+
+  const [scene] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(productionScenes)
+    .where(eq(productionScenes.id, data!.sceneId))
+    .limit(1);
+  if (!scene) return { error: "Missing required fields." };
+  if (!(await userCanAccessProduction(user, scene.productionId))) {
+    return { error: "You don't have permission to manage beats." };
+  }
 
   await db.insert(sceneBeats).values({
     sceneId: data!.sceneId,
@@ -115,6 +149,17 @@ export async function updateBeat(
   const label = (formData.get("label") as string)?.trim();
   if (!beatId || !label) return { error: "Missing required fields." };
 
+  const [beat] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(sceneBeats)
+    .innerJoin(productionScenes, eq(sceneBeats.sceneId, productionScenes.id))
+    .where(eq(sceneBeats.id, beatId))
+    .limit(1);
+  if (!beat) return { error: "Missing required fields." };
+  if (!(await userCanAccessProduction(user, beat.productionId))) {
+    return { error: "You don't have permission to manage beats." };
+  }
+
   await db
     .update(sceneBeats)
     .set({ label })
@@ -136,6 +181,17 @@ export async function deleteBeat(
   const beatId = formData.get("beat_id") as string;
   if (!beatId) return { error: "Missing beat ID." };
 
+  const [beat] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(sceneBeats)
+    .innerJoin(productionScenes, eq(sceneBeats.sceneId, productionScenes.id))
+    .where(eq(sceneBeats.id, beatId))
+    .limit(1);
+  if (!beat) return { error: "Missing beat ID." };
+  if (!(await userCanAccessProduction(user, beat.productionId))) {
+    return { error: "You don't have permission to manage beats." };
+  }
+
   await db.delete(sceneBeats).where(eq(sceneBeats.id, beatId));
 
   revalidatePath(`/productions`);
@@ -148,6 +204,16 @@ export async function saveBeatNotes(
 ): Promise<{ error?: string }> {
   const user = await requireCurrentUser();
   if (!can(user.role, "blocking:edit")) {
+    return { error: "You don't have permission to edit beat notes." };
+  }
+  const [beat] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(sceneBeats)
+    .innerJoin(productionScenes, eq(sceneBeats.sceneId, productionScenes.id))
+    .where(eq(sceneBeats.id, beatId))
+    .limit(1);
+  if (!beat) return { error: "Beat not found." };
+  if (!(await userCanAccessProduction(user, beat.productionId))) {
     return { error: "You don't have permission to edit beat notes." };
   }
   await db.update(sceneBeats).set({ notes }).where(eq(sceneBeats.id, beatId));
@@ -171,6 +237,9 @@ export async function ensureFirstSceneAndBeat(
 ): Promise<EnsureFirstBeatResult> {
   const user = await requireCurrentUser();
   if (!can(user.role, "blocking:edit")) {
+    return { error: "You don't have permission to manage scenes." };
+  }
+  if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have permission to manage scenes." };
   }
 
@@ -227,6 +296,16 @@ export async function captureNextBeat(
 ): Promise<CaptureNextBeatResult> {
   const user = await requireCurrentUser();
   if (!can(user.role, "blocking:edit")) {
+    return { error: "You don't have permission to manage beats." };
+  }
+
+  const [scene] = await db
+    .select({ productionId: productionScenes.productionId })
+    .from(productionScenes)
+    .where(eq(productionScenes.id, sceneId))
+    .limit(1);
+  if (!scene) return { error: "Scene not found." };
+  if (!(await userCanAccessProduction(user, scene.productionId))) {
     return { error: "You don't have permission to manage beats." };
   }
 
