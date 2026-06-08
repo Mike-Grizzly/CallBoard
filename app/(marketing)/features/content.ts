@@ -7,10 +7,10 @@ export const FEATURES_HTML = `
       <div class="dh-intro">
         <span class="eyebrow">The workspace</span>
         <h1 class="display">Your whole production, <em>at a glance.</em></h1>
-        <p class="lede">Open ProScene and you already know where things stand — tonight's call, today's schedule, every show on your desk, and exactly what's waiting on you. One home screen the whole company runs from.</p>
+        <p class="lede">Open Proscene and you already know where things stand — tonight's call, today's schedule, every show on your desk, and exactly what's waiting on you. One home screen the whole company runs from.</p>
         <div class="hero-actions">
-          <a class="btn primary lg" href="#signup" data-noop>Start free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
-          <a class="btn lg" href="#demo" data-noop>Book a demo</a>
+          <a class="btn primary lg" href="/signup">Start free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+          <a class="btn lg" href="/contact?reason=demo">Book a demo</a>
         </div>
         <div class="dh-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Free for your first production · No card required</div>
       </div>
@@ -18,7 +18,7 @@ export const FEATURES_HTML = `
       <div class="dh-window">
         <div class="dh-bar">
           <div class="dh-dots"><i></i><i></i><i></i></div>
-          <div class="dh-url"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg> app.proscene.live</div>
+          <div class="dh-url"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg> proscene.app</div>
         </div>
         <div class="dh-body">
           <div class="dh-greet">
@@ -105,7 +105,7 @@ export const FEATURES_HTML = `
     <div class="wrap">
       <span class="eyebrow">One source of truth</span>
       <h2 class="title" style="margin-top:14px;font-size:clamp(26px,3.4vw,40px)">Every part of the prompt book, <em>connected.</em></h2>
-      <p class="lede lede-narrow" style="margin:16px auto 0">ProScene isn't six tools stapled together. Calls, calendars, the script, blocking, and reports all share the same cast list, the same calendar, the same source of truth — so nothing falls out of sync.</p>
+      <p class="lede lede-narrow" style="margin:16px auto 0">Proscene isn't six tools stapled together. Calls, calendars, the script, blocking, and reports all share the same cast list, the same calendar, the same source of truth — so nothing falls out of sync.</p>
     </div>
   </section>
 
@@ -190,7 +190,7 @@ export const FEATURES_HTML = `
         <div>
           <span class="pill" data-c="sage"><span class="dot"></span>Script</span>
           <h2 class="title" style="margin:16px 0 16px">The book, <em>live</em> and shared.</h2>
-          <p class="lede" style="margin-bottom:22px">Upload the script and ProScene threads it through everything — calls reference scenes, blocking pins to lines, and notes attach to exactly the moment they're about. Line changes reach the whole company at once.</p>
+          <p class="lede" style="margin-bottom:22px">Upload the script and Proscene threads it through everything — calls reference scenes, blocking pins to lines, and notes attach to exactly the moment they're about. Line changes reach the whole company at once.</p>
           <ul class="checklist">
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Scene &amp; French-scene breakdown built in</li>
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Line notes and cuts tracked by version</li>
@@ -264,7 +264,7 @@ export const FEATURES_HTML = `
         <div>
           <span class="pill" data-c="amber"><span class="dot"></span>Reports</span>
           <h2 class="title" style="margin:16px 0 16px">Daily reports, <em>done by curtain.</em></h2>
-          <p class="lede" style="margin-bottom:22px">Tag a note to a department as the room runs. ProScene formats the rehearsal and performance reports and routes each note to the people who need it — out before the company's left the lobby.</p>
+          <p class="lede" style="margin-bottom:22px">Tag a note to a department as the room runs. Proscene formats the rehearsal and performance reports and routes each note to the people who need it — out before the company's left the lobby.</p>
           <ul class="checklist">
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Rehearsal, performance &amp; production report templates</li>
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Running time and break tracking</li>
@@ -316,7 +316,7 @@ export const FEATURES_HTML = `
       <div class="section-head center reveal" style="text-align:center">
         <span class="eyebrow no-rule">Mobile</span>
         <h2 class="title" style="margin-top:16px">It all fits in a <em>pocket.</em></h2>
-        <p class="lede" style="margin-left:auto;margin-right:auto">Everything above travels with you. The ProScene app puts tonight's call, the day's schedule, and the latest report a glance away — on stage, in the booth, or on the bus home.</p>
+        <p class="lede" style="margin-left:auto;margin-right:auto">Everything above travels with you. The Proscene app puts tonight's call, the day's schedule, and the latest report a glance away — on stage, in the booth, or on the bus home.</p>
       </div>
       <div class="grid grid-3 reveal" style="margin-top:48px">
         <div class="night-card card-pad">
@@ -347,7 +347,7 @@ export const FEATURES_HTML = `
           <h2 class="title" style="font-size:clamp(28px,4vw,46px)">See it on <em>your show.</em></h2>
           <p class="lede" style="margin:18px auto 30px;max-width:48ch">Spin up a production and feel the difference at your next rehearsal.</p>
           <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
-            <a class="btn primary lg" href="#" data-noop>Start free</a>
+            <a class="btn primary lg" href="/signup">Start free</a>
             <a class="btn ghost lg" href="/pricing">See pricing</a>
           </div>
         </div>

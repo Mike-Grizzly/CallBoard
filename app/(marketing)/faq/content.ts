@@ -9,7 +9,7 @@ export const FAQ_HTML = `
     <div class="wrap">
       <span class="eyebrow no-rule" style="justify-content:center">Help</span>
       <h1 class="display" style="margin-top:16px;font-size:clamp(36px,5.4vw,62px)">Questions, <em>answered.</em></h1>
-      <p class="lede" style="margin:18px auto 0;max-width:50ch">Everything stage managers ask before their first show. Can't find it? <a href="#" data-noop style="color:var(--accent-ink);font-weight:500">Talk to a human →</a></p>
+      <p class="lede" style="margin:18px auto 0;max-width:50ch">Everything stage managers ask before their first show. Can't find it? <a href="/contact" style="color:var(--accent-ink);font-weight:500">Talk to a human →</a></p>
       <div class="faq-search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         <input type="text" id="faqq" placeholder="Search questions…" aria-label="Search FAQ">
@@ -29,7 +29,7 @@ export const FAQ_HTML = `
         </aside>
 
         <div class="faq-main">
-          <p class="no-results" id="noresults">No questions match that search. Try a different word, or <a href="#" data-noop style="color:var(--accent-ink)">ask us directly</a>.</p>
+          <p class="no-results" id="noresults">No questions match that search. Try a different word, or <a href="/contact" style="color:var(--accent-ink)">ask us directly</a>.</p>
 
           <div class="faq-group" id="getting-started">
             <h2>Getting started</h2>
@@ -40,11 +40,11 @@ export const FAQ_HTML = `
             )}
             ${qa(
               "Do I need to install anything?",
-              "No. ProScene runs in any browser, and the company installs the mobile app from the App Store or Google Play. Nothing to maintain, nothing to update."
+              "No. Proscene runs in any browser, and the company installs the mobile app from the App Store or Google Play. Nothing to maintain, nothing to update."
             )}
             ${qa(
               "Can I import a cast list from a spreadsheet?",
-              "Yes. Paste from a spreadsheet or upload a CSV and ProScene maps the columns — names, roles, email, phone, and emergency contacts. Reuse the same company on your next show."
+              "Yes. Paste from a spreadsheet or upload a CSV and Proscene maps the columns — names, roles, email, phone, and emergency contacts. Reuse the same company on your next show."
             )}
             ${qa(
               "What if my actors aren't tech people?",
@@ -78,11 +78,11 @@ export const FAQ_HTML = `
             <p class="gsub">Calls, script, blocking, and reports.</p>
             ${qa(
               "Can I send a call to only part of the company?",
-              "Yes. Call by scene, by role, by department, or hand-pick people. ProScene works out who's needed for the scenes you're working and only calls them."
+              "Yes. Call by scene, by role, by department, or hand-pick people. Proscene works out who's needed for the scenes you're working and only calls them."
             )}
             ${qa(
               "What file types can I upload for the script?",
-              "PDF and Word documents. ProScene detects scenes and characters automatically, and you can adjust the breakdown by hand. Line changes are versioned so the company always has the current pages."
+              "PDF and Word documents. Proscene detects scenes and characters automatically, and you can adjust the breakdown by hand. Line changes are versioned so the company always has the current pages."
             )}
             ${qa(
               "Does blocking use standard notation?",
@@ -90,7 +90,7 @@ export const FAQ_HTML = `
             )}
             ${qa(
               "Can I export reports as PDF?",
-              "Every report exports to a clean, printable PDF, and can be emailed straight from ProScene to the right departments. Running times and breaks are tracked automatically."
+              "Every report exports to a clean, printable PDF, and can be emailed straight from Proscene to the right departments. Running times and breaks are tracked automatically."
             )}
           </div>
 
@@ -139,8 +139,8 @@ export const FAQ_HTML = `
         <h3 class="subtitle">Still have a question?</h3>
         <p class="lede" style="margin:12px auto 24px;max-width:46ch">Our team are former stage managers. Ask us anything — we answer in hours, not days.</p>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-          <a class="btn primary" href="#" data-noop>Message support</a>
-          <a class="btn" href="#demo" data-noop>Book a walkthrough</a>
+          <a class="btn primary" href="/contact">Message support</a>
+          <a class="btn" href="/contact?reason=demo">Book a walkthrough</a>
         </div>
       </div>
     </div>

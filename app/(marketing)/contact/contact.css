@@ -1,0 +1,44 @@
+/* Contact page-local styles. */
+[data-page="contact"] .page-hero{padding:clamp(48px,7vw,72px) 0 clamp(20px,3vw,28px);text-align:center}
+[data-page="contact"] .cf-wrap{max-width:680px;margin:0 auto}
+
+[data-page="contact"] .cf-form{display:flex;flex-direction:column;gap:18px;text-align:left}
+[data-page="contact"] .cf-row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+[data-page="contact"] .cf-field{display:flex;flex-direction:column;gap:7px}
+[data-page="contact"] .cf-field > span{font-size:13px;font-weight:600;color:var(--ink-2)}
+[data-page="contact"] .cf-field input,
+[data-page="contact"] .cf-field select,
+[data-page="contact"] .cf-field textarea{
+  width:100%;border:1px solid var(--border-strong);border-radius:var(--radius);
+  background:var(--bg-elev);color:var(--ink);font-family:inherit;font-size:15px;
+  padding:0 14px;height:48px;outline:none;transition:border-color .14s,box-shadow .14s;
+}
+[data-page="contact"] .cf-field textarea{height:auto;padding:12px 14px;line-height:1.55;resize:vertical;min-height:120px}
+[data-page="contact"] .cf-field input:focus,
+[data-page="contact"] .cf-field select:focus,
+[data-page="contact"] .cf-field textarea:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft);
+}
+[data-page="contact"] .cf-form .btn{align-self:flex-start;margin-top:2px}
+[data-page="contact"] .cf-error{color:var(--accent-ink);font-size:14px;font-weight:500}
+
+/* visually-hidden honeypot */
+[data-page="contact"] .cf-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none}
+
+[data-page="contact"] .cf-done{text-align:center}
+[data-page="contact"] .cf-check{
+  width:54px;height:54px;border-radius:50%;margin:0 auto 16px;
+  background:var(--c-sage-soft);color:color-mix(in oklch,var(--c-sage) 55%,var(--ink));
+  display:grid;place-items:center;
+}
+[data-page="contact"] .cf-check svg{width:26px;height:26px}
+
+[data-page="contact"] .cf-demo-note{
+  display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
+  margin:0 auto 22px;font-size:14.5px;color:var(--ink-3);
+}
+
+@media (max-width:560px){
+  [data-page="contact"] .cf-row{grid-template-columns:1fr}
+}

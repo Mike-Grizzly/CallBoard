@@ -12,9 +12,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ProScene — The production hub for stage managers",
+  title: "Proscene — The production hub for stage managers",
   description:
-    "ProScene keeps your whole production on the same page — calls, calendars, scripts, blocking, and reports. One hub for the stage manager, the cast, and the crew.",
+    "Proscene keeps your whole production on the same page — calls, calendars, scripts, blocking, and reports. One hub for the stage manager, the cast, and the crew.",
 };
 
 export default function MarketingLayout({

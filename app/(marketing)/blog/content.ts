@@ -5,7 +5,7 @@ const POST = "/blog/setup-your-first-production";
 export const BLOG_HTML = `
   <section class="page-hero">
     <div class="wrap">
-      <span class="eyebrow">The ProScene blog</span>
+      <span class="eyebrow">The Proscene blog</span>
       <h1 class="display" style="margin-top:18px;font-size:clamp(34px,5vw,58px)">Notes from the <em>prompt desk.</em></h1>
       <p class="lede lede-narrow" style="margin-top:18px">Walkthroughs, stage-management craft, and the occasional opinion about call times — written by people who've held the book.</p>
       <div class="blog-tabs">
@@ -28,7 +28,7 @@ export const BLOG_HTML = `
             <span class="pill" data-c="accent">Walkthrough</span>
             <span class="read">8 min read</span>
           </div>
-          <h2>Set up your first production in ProScene — a 10-minute walkthrough</h2>
+          <h2>Set up your first production in Proscene — a 10-minute walkthrough</h2>
           <p>From a blank screen to your first call going out. We build a real show step by step: venues, cast list, the rehearsal calendar, and sending a call the whole company confirms.</p>
           <span class="btn-link" style="display:inline-flex">Read the walkthrough <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
           <div class="by" style="margin-top:14px">Maya Okafor · Head of Community · May 28, 2026</div>
@@ -46,7 +46,7 @@ export const BLOG_HTML = `
           <div class="body">
             <div class="meta"><span class="pill" data-c="amber">Walkthrough</span><span class="read">6 min</span></div>
             <h3>Daily reports that send themselves</h3>
-            <p>Tag notes by department as the room runs, and let ProScene format and route the report before you've packed up.</p>
+            <p>Tag notes by department as the room runs, and let Proscene format and route the report before you've packed up.</p>
             <div class="by">Devon Cole · May 21, 2026</div>
           </div>
         </a>
@@ -66,8 +66,8 @@ export const BLOG_HTML = `
           <div class="body">
             <div class="meta"><span class="pill" data-c="dusk">Product</span><span class="read">4 min</span></div>
             <h3>New: conflict detection across your whole company</h3>
-            <p>ProScene now flags double-bookings before you schedule them. Here's how it reads the cast's availability.</p>
-            <div class="by">The ProScene team · May 7, 2026</div>
+            <p>Proscene now flags double-bookings before you schedule them. Here's how it reads the cast's availability.</p>
+            <div class="by">The Proscene team · May 7, 2026</div>
           </div>
         </a>
 
@@ -86,7 +86,7 @@ export const BLOG_HTML = `
           <div class="body">
             <div class="meta"><span class="pill" data-c="sage">Company story</span><span class="read">7 min</span></div>
             <h3>How Hart House ran a 38-student musical without a single missed call</h3>
-            <p>A high-school theatre program swapped three group chats for one ProScene — and the director got her voice back.</p>
+            <p>A high-school theatre program swapped three group chats for one Proscene — and the director got her voice back.</p>
             <div class="by">Rachel Pruitt · Apr 23, 2026</div>
           </div>
         </a>

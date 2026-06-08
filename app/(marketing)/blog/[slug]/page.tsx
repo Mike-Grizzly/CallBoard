@@ -3,7 +3,7 @@ import "./blogpost.css";
 import { BLOGPOST_HTML } from "./content";
 
 export const metadata: Metadata = {
-  title: "Set up your first production — ProScene",
+  title: "Set up your first production — Proscene",
   description:
     "A blank screen to your first call going out, step by step. We build a real show and have the whole company confirmed by the end.",
 };

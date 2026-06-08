@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════
-   ProScene — animated feature demos
+   Proscene — animated feature demos
    Phase-driven: site/feature-demos.js sets [data-phase] on each
    [data-demo] container; everything below is pure CSS state.
    All motion is gated so prefers-reduced-motion freezes on a

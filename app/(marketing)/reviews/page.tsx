@@ -3,9 +3,9 @@ import "./reviews.css";
 import { REVIEWS_HTML } from "./content";
 
 export const metadata: Metadata = {
-  title: "Reviews — ProScene",
+  title: "Reviews — Proscene",
   description:
-    "From the people holding the book. 4.9/5 from 600+ productions — why stage managers run their shows on ProScene.",
+    "From the people holding the book. 4.9/5 from 600+ productions — why stage managers run their shows on Proscene.",
 };
 
 export default function ReviewsPage() {

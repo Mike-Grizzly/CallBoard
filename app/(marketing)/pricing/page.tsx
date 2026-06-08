@@ -4,7 +4,7 @@ import { PRICING_HTML } from "./content";
 import { PricingInteractions } from "./pricing-interactions";
 
 export const metadata: Metadata = {
-  title: "Pricing — ProScene",
+  title: "Pricing — Proscene",
   description:
     "Pay for the shows you run. No per-seat fees — invite the whole company at no extra cost. Start free, upgrade when you load in.",
 };

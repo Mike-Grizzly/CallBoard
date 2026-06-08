@@ -6,7 +6,7 @@ import { FEATURES_HTML } from "./content";
 import { FeaturesInteractions } from "./features-interactions";
 
 export const metadata: Metadata = {
-  title: "Features — ProScene",
+  title: "Features — Proscene",
   description:
     "Your whole production, at a glance. Calls, calendar, script, blocking, reports, people, and mobile — every part of the prompt book, connected.",
 };

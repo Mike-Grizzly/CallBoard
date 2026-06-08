@@ -23,6 +23,7 @@ const PUBLIC_ROUTES = [
   "/reviews",
   "/blog",
   "/faq",
+  "/contact",
 ];
 
 function isPublicRoute(pathname: string): boolean {

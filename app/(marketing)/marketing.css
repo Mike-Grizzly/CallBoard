@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   ProScene — marketing site (ported from the standalone HTML mockup)
+   Proscene — marketing site (ported from the standalone HTML mockup)
    Scoped under `.ps-site` so the marketing tokens + base styles cannot
    leak into the live app, and so the app's body[data-theme] dark/dusk
    switching can't recolor the marketing pages (a closer ancestor that

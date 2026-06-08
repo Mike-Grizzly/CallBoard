@@ -29,17 +29,14 @@ const COLS = [
     links: [
       ["Walkthroughs", "/blog"],
       ["FAQ", "/faq"],
-      ["Customer stories", "/reviews"],
-      ["Help center", "#"],
+      ["Help center", "/faq"],
     ],
   },
   {
     h: "Company",
     links: [
-      ["About", "#"],
-      ["Careers", "#"],
-      ["Contact", "#"],
-      ["Book a demo", "#demo"],
+      ["Contact", "/contact"],
+      ["Book a demo", "/contact?reason=demo"],
     ],
   },
 ] as const;
@@ -60,10 +57,10 @@ export function Footer() {
       <div className="wrap">
         <div className="footer-grid">
           <div>
-            <Link className="brand" href="/" aria-label="ProScene home">
+            <Link className="brand" href="/" aria-label="Proscene home">
               <span className="brand-mark">{ARCH}</span>
               <span className="brand-name">
-                Pro<em>Scene</em>
+                Pro<em>scene</em>
               </span>
             </Link>
             <p className="footer-blurb">
@@ -91,7 +88,7 @@ export function Footer() {
           ))}
         </div>
         <div className="footer-bottom">
-          <span>© {new Date().getFullYear()} ProScene. Made for the theatre.</span>
+          <span>© {new Date().getFullYear()} Proscene. Made for the theatre.</span>
           <div className="footer-social">
             <Social label="Instagram">
               <rect x="3" y="3" width="18" height="18" rx="5" />

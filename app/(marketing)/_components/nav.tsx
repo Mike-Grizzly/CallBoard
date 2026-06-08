@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 const NAV_LINKS = [
   { label: "Features", href: "/features" },
   { label: "Pricing", href: "/pricing" },
-  { label: "Reviews", href: "/reviews" },
   { label: "Blog", href: "/blog" },
   { label: "FAQ", href: "/faq" },
 ];
@@ -28,10 +27,10 @@ const ARCH = (
 
 function Brand() {
   return (
-    <Link className="brand" href="/" aria-label="ProScene home">
+    <Link className="brand" href="/" aria-label="Proscene home">
       <span className="brand-mark">{ARCH}</span>
       <span className="brand-name">
-        Pro<em>Scene</em>
+        Pro<em>scene</em>
       </span>
     </Link>
   );

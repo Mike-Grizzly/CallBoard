@@ -4,7 +4,7 @@ import { FAQ_HTML } from "./content";
 import { FaqInteractions } from "./faq-interactions";
 
 export const metadata: Metadata = {
-  title: "FAQ — ProScene",
+  title: "FAQ — Proscene",
   description:
     "Everything stage managers ask before their first show — getting started, the company, features, billing, and data & privacy.",
 };

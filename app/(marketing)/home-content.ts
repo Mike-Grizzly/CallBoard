@@ -11,10 +11,10 @@ export const HOME_HTML = `
         <div class="hero-copy">
           <span class="eyebrow">Built by stage managers</span>
           <h1 class="display">The paper call board, <em>reinvented.</em></h1>
-          <p class="lede">ProScene keeps your whole production on the same page — calls, calendars, scripts, blocking, and reports. One hub for the stage manager, the cast, and the crew.</p>
+          <p class="lede">Proscene keeps your whole production on the same page — calls, calendars, scripts, blocking, and reports. One hub for the stage manager, the cast, and the crew.</p>
           <div class="hero-actions">
-            <a class="btn primary lg" href="#signup" data-noop>Start free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
-            <a class="btn lg" href="#demo" data-noop>Book a demo</a>
+            <a class="btn primary lg" href="/signup">Start free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+            <a class="btn lg" href="/contact?reason=demo">Book a demo</a>
           </div>
           <div class="hero-note">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
@@ -26,7 +26,7 @@ export const HOME_HTML = `
           <div class="window">
             <div class="window-bar">
               <div class="window-dots"><i></i><i></i><i></i></div>
-              <div class="window-url"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>app.proscene.live/pirates-of-penzance</div>
+              <div class="window-url"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>proscene.app/pirates-of-penzance</div>
             </div>
             <div class="mock">
               <div class="mock-card">
@@ -83,27 +83,16 @@ export const HOME_HTML = `
     </div>
   </section>
 
-  <!-- TRUST -->
-  <section class="section-tight">
-    <div class="wrap">
-      <div class="trust reveal">
-        <span class="trust-label">Trusted in rehearsal rooms at</span>
-        <span class="trust-logo">Wellman Theatre</span>
-        <span class="trust-logo">Riverside Opera</span>
-        <span class="trust-logo">Hart House</span>
-        <span class="trust-logo">The Gaslight</span>
-        <span class="trust-logo">Northtown Rep</span>
-      </div>
-    </div>
-  </section>
+  <!-- TRUST — add real customer logos here once we have them -->
+
 
   <!-- PROBLEM / SOLUTION -->
-  <section class="section" data-screen-label="Why ProScene">
+  <section class="section" data-screen-label="Why Proscene">
     <div class="wrap">
       <div class="section-head center reveal" style="text-align:center">
         <span class="eyebrow no-rule">The end of the group chat scramble</span>
         <h2 class="title" style="margin-top:16px">Sticky notes, spreadsheets, and three<br>different group chats — <em>retired.</em></h2>
-        <p class="lede" style="margin-left:auto;margin-right:auto">Stage managers hold a production together with paper and willpower. ProScene gives every show a single source of truth, so a schedule change reaches all 40 people in seconds — not after the fourth follow-up text.</p>
+        <p class="lede" style="margin-left:auto;margin-right:auto">Stage managers hold a production together with paper and willpower. Proscene gives every show a single source of truth, so a schedule change reaches all 40 people in seconds — not after the fourth follow-up text.</p>
       </div>
       <div class="grid grid-3" style="margin-top:56px">
         <div class="feature-card reveal">
@@ -132,7 +121,7 @@ export const HOME_HTML = `
         <div>
           <span class="eyebrow">Production calendar</span>
           <h2 class="title" style="margin:16px 0 18px">From first read to <em>closing night.</em></h2>
-          <p class="lede" style="margin-bottom:24px">Lay out the whole rehearsal period at a glance. Drag to reschedule, flag tech week, and let ProScene surface conflicts before they cost you a room.</p>
+          <p class="lede" style="margin-bottom:24px">Lay out the whole rehearsal period at a glance. Drag to reschedule, flag tech week, and let Proscene surface conflicts before they cost you a room.</p>
           <ul class="checklist">
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Block, scene, and character coverage in one view</li>
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Conflict detection across the full company</li>
@@ -161,7 +150,7 @@ export const HOME_HTML = `
         <div>
           <span class="eyebrow">Rehearsal reports</span>
           <h2 class="title" style="margin:16px 0 18px">The report writes <em>itself.</em></h2>
-          <p class="lede" style="margin-bottom:24px">Log notes as the room runs — for sets, lights, costumes, props. ProScene assembles the daily report and sends it to every department before you've packed up the table.</p>
+          <p class="lede" style="margin-bottom:24px">Log notes as the room runs — for sets, lights, costumes, props. Proscene assembles the daily report and sends it to every department before you've packed up the table.</p>
           <ul class="checklist">
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Tag notes to departments as you go</li>
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Auto-formatted daily &amp; performance reports</li>
@@ -217,7 +206,7 @@ export const HOME_HTML = `
         <div>
           <span class="eyebrow">In the wings</span>
           <h2 class="title" style="margin:16px 0 18px">The whole company,<br>in their <em>pocket.</em></h2>
-          <p class="lede" style="margin-bottom:26px">ProScene travels. Cast check tonight's call on the bus, designers read reports over coffee, and you run the deck from backstage. Push a change and everyone feels it buzz.</p>
+          <p class="lede" style="margin-bottom:26px">Proscene travels. Cast check tonight's call on the bus, designers read reports over coffee, and you run the deck from backstage. Push a change and everyone feels it buzz.</p>
           <ul class="checklist">
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Push notifications for new calls and changes</li>
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Today screen built for a glance backstage</li>
@@ -246,34 +235,8 @@ export const HOME_HTML = `
     </div>
   </section>
 
-  <!-- TESTIMONIAL -->
-  <section class="section night" style="padding-top:0">
-    <div class="wrap-narrow center">
-      <div class="reveal">
-        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--accent);margin:0 auto 24px;opacity:.7"><path d="M5 4c0 8 3 14 7 14s7-6 7-14H5z"/><path d="M9 9c.5.5 1.2.5 2 0M13 9c.8.5 1.5.5 2 0"/></svg>
-        <p class="quote">"I ran our last three shows out of a binder and a panic. With ProScene the company just <em>knows</em> where to be — I sent one call and 22 confirmations came back before I'd left the building."</p>
-        <div class="quote-by center" style="justify-content:center">
-          <span class="quote-av">MO</span>
-          <div style="text-align:left">
-            <b>Maya Okafor</b>
-            <span>Production Stage Manager · Wellman Theatre</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+  <!-- TESTIMONIAL + STATS removed — add real quotes/metrics here once we have them -->
 
-  <!-- STATS -->
-  <section class="section">
-    <div class="wrap">
-      <div class="grid grid-4 center reveal">
-        <div><div class="stat-num"><em>40k+</em></div><div class="stat-label">Calls sent and confirmed</div></div>
-        <div><div class="stat-num"><em>1,200</em></div><div class="stat-label">Productions staged</div></div>
-        <div><div class="stat-num"><em>11</em><span style="font-size:.5em">hrs</span></div><div class="stat-label">Saved per week, on average</div></div>
-        <div><div class="stat-num"><em>4.9</em></div><div class="stat-label">Average rating from SMs</div></div>
-      </div>
-    </div>
-  </section>
 
   <!-- PRICING TEASER -->
   <section class="section" style="background:var(--bg-muted);border-top:1px solid var(--border)">
@@ -316,8 +279,8 @@ export const HOME_HTML = `
           <h2 class="title" style="font-size:clamp(28px,4vw,46px)">Your next production is <em>already late</em> to load in.</h2>
           <p class="lede" style="margin:18px auto 30px;max-width:52ch">Set up your show in five minutes. Invite the company in one. Run the room like you've used it for years.</p>
           <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
-            <a class="btn primary lg" href="#" data-noop>Start free</a>
-            <a class="btn ghost lg" href="#demo" data-noop>Book a demo</a>
+            <a class="btn primary lg" href="/signup">Start free</a>
+            <a class="btn ghost lg" href="/contact?reason=demo">Book a demo</a>
           </div>
         </div>
       </div>

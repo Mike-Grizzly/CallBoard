@@ -28,7 +28,7 @@ export const PRICING_HTML = `
           <div class="tier-desc">For your first show, or a small one-off production.</div>
           <div class="tier-price"><span class="amt">Free</span></div>
           <div class="tier-sub">Forever, one active show</div>
-          <a class="btn" href="#" data-noop>Start free</a>
+          <a class="btn" href="/signup">Start free</a>
           <ul class="tier-list">
             <li>${TICK} 1 active production</li>
             <li>${TICK} Unlimited people on the show</li>
@@ -44,7 +44,7 @@ export const PRICING_HTML = `
           <div class="tier-desc">Everything a production needs, from read-through to strike.</div>
           <div class="tier-price"><span class="amt" data-price data-production="$29" data-annual="$23">$29</span><span class="per" data-per>/ production</span></div>
           <div class="tier-sub" data-note data-production="One-time, per show" data-annual="Billed annually, per show">One-time, per show</div>
-          <a class="btn primary" href="#" data-noop>Start free trial</a>
+          <a class="btn primary" href="/signup">Start free trial</a>
           <ul class="tier-list">
             <li>${TICK} Unlimited productions</li>
             <li>${TICK} Script, blocking &amp; ground plans</li>
@@ -59,7 +59,7 @@ export const PRICING_HTML = `
           <div class="tier-desc">For theatres and programs running a full season.</div>
           <div class="tier-price"><span class="amt">Custom</span></div>
           <div class="tier-sub">Talk to us about your season</div>
-          <a class="btn" href="#demo" data-noop>Book a demo</a>
+          <a class="btn" href="/contact?reason=demo">Book a demo</a>
           <ul class="tier-list">
             <li>${TICK} Everything in Company</li>
             <li>${TICK} Season &amp; venue management</li>
@@ -70,7 +70,7 @@ export const PRICING_HTML = `
         </div>
       </div>
       <p class="center kicker" style="margin-top:26px">Students &amp; educators get Company free.
-        <a class="btn-link" href="#" data-noop style="display:inline-flex;vertical-align:middle">Verify your school <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+        <a class="btn-link" href="/contact?reason=school" style="display:inline-flex;vertical-align:middle">Verify your school <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
       </p>
     </div>
   </section>
@@ -117,7 +117,7 @@ export const PRICING_HTML = `
       </div>
       <div class="faq-mini reveal">
         <details class="qa"><summary>What counts as a "production"?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>One show, from pre-production through strike. Invite as many cast, crew, and designers as you like — there are never per-person fees. A production stays editable as an archive after you close.</p></details>
-        <details class="qa"><summary>Do I pay for everyone in my company?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Never. ProScene is priced per production, not per seat. Whether your show has a cast of four or forty, the price is the same.</p></details>
+        <details class="qa"><summary>Do I pay for everyone in my company?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Never. Proscene is priced per production, not per seat. Whether your show has a cast of four or forty, the price is the same.</p></details>
         <details class="qa"><summary>Can I try Company before paying?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Yes — every new production starts with a 14-day Company trial. No card required. When it ends you can keep the show on the free Understudy plan or upgrade to unlock script, blocking, and reports.</p></details>
         <details class="qa"><summary>Is there really a free plan for schools?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Students and educators get the full Company plan free on verified school productions. Verify with a .edu address or a quick note from your department.</p></details>
         <details class="qa"><summary>What happens to my data if I cancel?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Your productions are yours. Export everything to PDF and CSV at any time, and archived shows stay readable on the free plan. We never delete a closed production without telling you first.</p></details>
@@ -135,8 +135,8 @@ export const PRICING_HTML = `
           <h2 class="title" style="font-size:clamp(28px,4vw,46px)">Start free. Upgrade when <em>you load in.</em></h2>
           <p class="lede" style="margin:18px auto 30px;max-width:48ch">Your first production is on us — no card, no countdown clock.</p>
           <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
-            <a class="btn primary lg" href="#" data-noop>Start free</a>
-            <a class="btn ghost lg" href="#demo" data-noop>Book a demo</a>
+            <a class="btn primary lg" href="/signup">Start free</a>
+            <a class="btn ghost lg" href="/contact?reason=demo">Book a demo</a>
           </div>
         </div>
       </div>
