@@ -49,6 +49,26 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ## Product questions
 
+### Billing / monetization (see `feature-specs/18-billing-trial-gating.md`)
+
+The plan model is decided (1 free production, 60-day from-creation trial,
+day-30 15%-off upsell, day-55 warning, day-60 read-only lock). Still open:
+
+- **Billing provider integration is unspecified** — Stripe (or similar)
+  checkout, the webhook that flips `organizations.plan`, the "15% off first
+  term" coupon, proration, and discount-redeemed tracking are all undesigned.
+  The spec stops at entitlement state.
+- **Scheduled-job infra for the day-30/55 nudges** — they are time-based, not
+  event-based, so they need a daily cron (Vercel Cron?). The project has no
+  cron today; the mechanism must be chosen. (The day-60 lock needs no job — it
+  is derived live by `trialState`.)
+- **Downgrade/cancellation behavior** — what happens to a Company org with
+  several productions that cancels? Proposed: all read-only until re-subscribe.
+- **Per-org trial farming** — spinning up fresh orgs to re-trial is accepted
+  for now; revisit only if abused.
+- **Company plan pricing** (monthly vs annual) and whether the 15% applies to
+  both — not yet decided.
+
 - Steps 1–13 are complete. What is the next feature step?
 - Should rehearsal report departments be configurable per production, or remain fixed?
 - Should attendance tracking be added to rehearsal reports?

@@ -1441,3 +1441,41 @@ page `/settings/notifications`. Implemented but **not yet browser-verified**.
 5. **`RoleRow` gained `actorEmail?`**; `WizardPerson` is the launch-time flattened shape. The server contract (`createProductionFull` → `applyWizardTeam`, which assigns existing org members and invites new emails) was reused unchanged — the client just builds a richer `team` array and dedupes by email.
 
 **Impact:** No DB/env/server changes. People without an email are simply not added (no failed invites). Review step wording updated ("Team — N members"; unresolved shows "invite at launch"). New CSS under `.np-root` for `.team-row` and the `.np-modal*` / `.np-invite*` prompt.
+
+---
+
+## 2026-06-08 — Monetization: one free production, 60-day from-creation trial
+
+**Context:** The portal needs a monetization model that gives a new company a
+genuinely full first-show experience while still converting them. An early
+idea — gate the second production and lock a show to read-only at
+`closingDate + grace` — was found to be gameable: a company could set a
+closing date years out, or nudge it forward indefinitely, and run an unlimited
+sequence of shows out of a single production shell (also by recycling it in
+place: swapping cast/blocking/dates each cycle).
+
+**Decision:** Free tier = **one production, fully featured**, editable for a
+**fixed 60 days anchored to the creation of the org's first production** (not
+the closing date). Creating a second production requires the paid **Company**
+plan. Conversion funnel: **day 30** soft upsell ("15% off", first term only),
+**day 55** "trial ending" warning, **day 60** the production becomes read-only
+(viewable forever) and a second production requires Company.
+
+**Reason:** Anchoring the clock to first-production `createdAt` defeats both the
+far-out-closing-date and date-nudge exploits *by construction* — gating never
+reads the closing date, so there is nothing to push. The day-60 read-only lock
+also closes the in-place recycle exploit. 60 days comfortably covers the
+typical 5–6-week small-theatre rehearse-and-run cycle; the day-55 warning
+mitigates the one accepted trade-off (a show running past day 60 could be
+locked mid-run, so it is prompted to convert before performances).
+
+**Impact:** Adds `organizations.plan` (`'free'|'company'`) and a write-once
+`organizations.trial_started_at` (set on first production create; archiving the
+show does not reset it or free the slot). A new `features/billing/` module
+provides `trialState()` and a centralized `canMutate`/`assertCanMutate` mutate
+guard called from the shared action preamble (security) and mirrored in the UI
+(UX). Numbers live in `features/billing/constants.ts` (NOT a `"use server"`
+file, per CLAUDE.md rule #6). Billing-provider integration (Stripe checkout,
+webhooks, the coupon) and the daily cron driving the day-30/55 nudges are **not
+yet designed** — see `docs/feature-specs/18-billing-trial-gating.md` and
+open-questions. Status: **Planned**, no code yet.
