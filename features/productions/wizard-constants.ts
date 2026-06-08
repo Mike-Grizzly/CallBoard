@@ -89,6 +89,13 @@ export function appRoleForTeamLabel(label: string): Role {
   return TEAM_ROLE_BY_LABEL.get(label)?.appRole ?? "crew";
 }
 
+/** Team-role label used when a cast actor is added as a production member. */
+export function castTeamLabelForType(type: string): string {
+  return type === "Ensemble" || type === "Dance Core" || type === "Swing/Cover"
+    ? "Cast — Ensemble"
+    : "Cast — Principal";
+}
+
 // ─── Wizard payload shapes (client → server action) ───────────────────
 
 export type WizardRoleInput = {

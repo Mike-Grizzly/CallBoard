@@ -8,7 +8,8 @@ import {
   deleteBeatComment,
 } from "@/features/blocking/actions";
 import type { BeatCommentWithAuthor } from "@/features/blocking/actions";
-import { MentionTextarea, memberFullName } from "@/components/ui/mention-textarea";
+import { memberFullName } from "@/components/ui/mention-textarea";
+import { MentionInput } from "@/components/ui/mention-input";
 import { MentionBody } from "@/components/ui/mention-body";
 import type { MentionMember } from "@/components/ui/mention-textarea";
 import type { ProductionMember } from "@/features/members/queries";
@@ -181,13 +182,12 @@ export function BeatCommentSection({
 
       {/* Input area */}
       <div style={{ borderTop: "1px solid var(--border)", padding: "8px 8px 10px", flexShrink: 0 }}>
-        <MentionTextarea
+        <MentionInput
           value={body}
           onChange={setBody}
           onSubmit={handleSubmit}
           members={mentionMembers}
           placeholder="Add a comment… type @ to mention"
-          rows={2}
           disabled={submitting}
         />
         {error && (

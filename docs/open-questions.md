@@ -284,12 +284,24 @@ default in place today.
   the rail foot (it was originally built for a topbar; `placement="up"` flips
   it), (c) large-org fan-out performance (one `notifications` insert batch +
   Resend batch per ≤100 recipients).
-- **Push is modeled but inert.** The `notification_preferences.push` column and
-  the disabled settings toggle exist, but there is no delivery transport. Phase 2
-  = Web Push (PWA: manifest + service worker + VAPID + `push_subscriptions`).
-  Open: iOS requires "Add to Home Screen" before Web Push works at all — is that
-  acceptable, or is a native wrapper (Expo/Capacitor + APNs/FCM) eventually
-  needed for reliable phone alerts?
+- ~~**Push is modeled but inert.**~~ **SHIPPED 2026-06-04** — Web Push
+  implemented (service worker + VAPID + `push_subscriptions` + per-device toggle;
+  see `feature-specs/17-push-notifications.md`). Announcements now fan out to the
+  push channel. Not yet device-verified end to end. Still open: (a) iOS requires
+  "Add to Home Screen" before Web Push works at all — accepted for Phase 1;
+  (b) a native wrapper (Capacitor + APNs/FCM) remains the eventual path for the
+  most reliable phone alerts and reuses this same backend.
+  **Update 2026-06-04:** @mentions now push too (batched per-write; from reports,
+  notes, announcements, blocking). Onboarding added (first-dashboard dialog asks
+  email + push; in-app always on). Still open: per-write batching only (no
+  cross-write time-window debounce); mention pushes link to `/dashboard` rather
+  than deep-linking the exact context.
+- **Upcoming-rehearsal reminders (FUTURE, requested 2026-06-04).** Auto-notify
+  people the morning of a scheduled rehearsal, pulled from the calendar
+  (`calls`), via email (and push). Not built. Needs a scheduled trigger (cron /
+  Supabase scheduled function / Vercel cron) since it fires on a clock, not on a
+  user action. Rehearsal reports + these reminders are the "always both channels"
+  category the product wants; everything else follows the user's chosen channels.
 - **Email volume / opt-out.** Every announcement currently emails every audience
   member who hasn't turned email off. For a busy show this could feel spammy —
   consider per-production muting or digest batching before wide rollout.
@@ -419,3 +431,17 @@ the moment we go Pro:
   security) — checks new/changed passwords against HaveIBeenPwned. Flagged by
   the Supabase security advisor (2026-06-05); deliberately deferred per user
   decision until Pro.
+## Mentions questions (2026-06-04, PR #28)
+
+- **`mention-input.tsx` contenteditable not device-verified.** The inline chip
+  editor is hand-rolled (Selection/Range, caret placement, paste, serialize).
+  Verified in desktop preview; unverified on iOS/Android soft keyboards (IME
+  composition, autocorrect, caret-after-chip on touch). Test on real devices.
+- **Plain-text mention resolution is name/email-based.** `@{Full Name}` tokens
+  resolve to a user id by matching org members' full name or email at save time.
+  A member renamed between typing the mention and saving, or two members sharing
+  a full name, can mis-resolve or fail to notify (the chip still displays). The
+  rich-text (`data-id`) path is unaffected.
+- **Pre-existing report mentions weren't re-split.** Reports saved before the
+  per-section change keep their old single merged `report` row; only a re-save
+  rewrites them into per-section rows. No backfill was run.

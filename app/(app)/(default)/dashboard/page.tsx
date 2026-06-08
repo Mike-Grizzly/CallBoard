@@ -12,7 +12,7 @@ import {
   Pencil,
   CheckSquare,
 } from "lucide-react";
-import { requireCurrentUser } from "@/lib/auth";
+import { requireCurrentUser, markActiveAndGetPrevious } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getUserProductions } from "@/features/productions/queries";
 import {
@@ -25,6 +25,7 @@ import {
   getCallConfirmSummary,
 } from "@/features/calls/queries";
 import { getMentionsForUser } from "@/features/mentions/queries";
+import { hasNotificationPreferences } from "@/features/notifications/preferences";
 import { getPinsForUser, type PinRow } from "@/features/pins/queries";
 import { getCastForProductions } from "@/features/members/queries";
 import { type SerializedAnnouncement } from "./dashboard-announcements";
@@ -39,6 +40,7 @@ import {
   type MdPin,
   type MdTimelineItem,
 } from "./mobile-dashboard";
+import { OnboardingDialog } from "./onboarding-dialog";
 
 // Deterministic color per production — same palette as the left rail
 const PROD_COLORS = [
@@ -70,11 +72,83 @@ function initialsOf(
   return (email ?? "?").slice(0, 2).toUpperCase();
 }
 
-function getGreeting(hour: number): string {
-  if (hour < 5) return "Working late";
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
+function addDays(dateStr: string, n: number): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return d.toISOString().split("T")[0];
+}
+
+// Greeting. `greeting` is rendered as `{greeting}, {firstName}.`, so every
+// phrase reads naturally with a name appended; the optional `note` is a short
+// follow-up line shown beneath it. Theatre-aware: milestones from the
+// production calendar take priority over a plain time-of-day hello.
+type Greeting = { greeting: string; note?: string };
+
+function getContextualGreeting(opts: {
+  hour: number;
+  today: string;
+  productions: {
+    status: string;
+    openingDate: string | null;
+    closingDate: string | null;
+    firstRehearsalDate: string | null;
+    techStartDate: string | null;
+  }[];
+  hasCallToday: boolean;
+  /** Whole days since the user's previous visit; null for new/first visit. */
+  daysAway: number | null;
+}): Greeting {
+  const active = opts.productions.filter((p) => p.status !== "archived");
+  const isToday = (d: string | null) => !!d && d === opts.today;
+
+  // Exact-day milestones first (most specific).
+
+  // Opening night.
+  if (active.some((p) => isToday(p.openingDate))) {
+    return { greeting: "Break a leg" };
+  }
+
+  // Closing / last show.
+  if (active.some((p) => isToday(p.closingDate))) {
+    return { greeting: "Congratulations", note: "See you on the next one." };
+  }
+
+  // First day of rehearsal.
+  if (active.some((p) => isToday(p.firstRehearsalDate))) {
+    return { greeting: "First day of rehearsal" };
+  }
+
+  // Tech week — today falls in [techStart, opening); if no opening date is set,
+  // cap the window at two weeks so it can't run forever.
+  const inTech = active.some((p) => {
+    if (!p.techStartDate || opts.today < p.techStartDate) return false;
+    const end = p.openingDate ?? addDays(p.techStartDate, 14);
+    return opts.today < end;
+  });
+  if (inTech) return { greeting: "Welcome to tech week" };
+
+  // A call is on the calendar today.
+  if (opts.hasCallToday) return { greeting: "Ready for rehearsal" };
+
+  // Returning after a day or more away (and no milestone above stole the show).
+  if (opts.daysAway !== null && opts.daysAway >= 1) {
+    return { greeting: "Welcome back" };
+  }
+
+  // Day off — inside an active production's run/rehearsal window, but nothing
+  // scheduled today. (Outside any active window, fall through to time-of-day.)
+  const onBreak = active.some((p) => {
+    if (!p.firstRehearsalDate || opts.today < p.firstRehearsalDate) return false;
+    const end = p.closingDate ?? p.openingDate;
+    return !!end && opts.today <= end;
+  });
+  if (onBreak) return { greeting: "Enjoy your day off" };
+
+  // Plain time-of-day default.
+  if (opts.hour < 5) return { greeting: "Working late" };
+  if (opts.hour < 12) return { greeting: "Good morning" };
+  if (opts.hour < 17) return { greeting: "Good afternoon" };
+  return { greeting: "Good evening" };
 }
 
 function roleLabel(role: string): string {
@@ -166,6 +240,9 @@ export default async function DashboardPage() {
   const user = await requireCurrentUser();
   const canManage = can(user.role, "productions:manage");
 
+  // Stamp this visit and learn how long they were away (for "Welcome back").
+  const lastActiveAt = await markActiveAndGetPrevious(user.id);
+
   const myProductions = await getUserProductions(user.id);
   const prodIds = myProductions.map((p) => p.id);
 
@@ -180,23 +257,40 @@ export default async function DashboardPage() {
   weekEndDate.setDate(weekEndDate.getDate() + 13);
   const weekEnd = weekEndDate.toISOString().split("T")[0];
 
-  const [announcements, nextCallMap, mentionRows, pins, castMap, rangeCalls] =
-    await Promise.all([
-      getAnnouncementsForUser(user.id, user.organizationId, canManage),
-      getNextCallsForProductions(prodIds),
-      getMentionsForUser(user.id),
-      getPinsForUser(user.id),
-      getCastForProductions(prodIds),
-      getCallsForUserInRange({
-        userId: user.id,
-        organizationId: user.organizationId,
-        startDate: today,
-        endDate: weekEnd,
-        manageAll: canManage,
-      }),
-    ]);
+  const [
+    announcements,
+    nextCallMap,
+    mentionRows,
+    pins,
+    castMap,
+    rangeCalls,
+    hasNotifPrefs,
+  ] = await Promise.all([
+    getAnnouncementsForUser(user.id, user.organizationId, canManage),
+    getNextCallsForProductions(prodIds),
+    getMentionsForUser(user.id),
+    getPinsForUser(user.id),
+    getCastForProductions(prodIds),
+    getCallsForUserInRange({
+      userId: user.id,
+      organizationId: user.organizationId,
+      startDate: today,
+      endDate: weekEnd,
+      manageAll: canManage,
+    }),
+    hasNotificationPreferences(user.id),
+  ]);
 
-  const greeting = getGreeting(now.getHours());
+  const daysAway = lastActiveAt
+    ? Math.floor((todayMs - lastActiveAt.getTime()) / 86_400_000)
+    : null;
+  const { greeting, note: greetingNote } = getContextualGreeting({
+    hour: now.getHours(),
+    today,
+    productions: myProductions,
+    hasCallToday: rangeCalls.some((c) => c.callDate === today),
+    daysAway,
+  });
   const firstName = user.firstName || "";
   const todayLabel = now.toLocaleDateString("en-US", {
     weekday: "long",
@@ -295,7 +389,9 @@ export default async function DashboardPage() {
       else if (m.contextType === "announcement")
         href = `/productions/${m.productionSlug}/announcements`;
       else if (m.contextType === "blocking")
-        href = `/productions/${m.productionSlug}/blocking`;
+        href = m.beatId
+          ? `/productions/${m.productionSlug}/blocking?beat=${m.beatId}`
+          : `/productions/${m.productionSlug}/blocking`;
       else href = `/productions/${m.productionSlug}`;
     }
 
@@ -315,6 +411,9 @@ export default async function DashboardPage() {
       href,
     };
   });
+  // Surface unread mentions first so they're never hidden behind read ones in
+  // the capped dashboard lists (stable sort preserves recency within a group).
+  serializedMentions.sort((a, b) => Number(b.isUnread) - Number(a.isUnread));
 
   // Focal call props
   const focalProps =
@@ -413,6 +512,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="page-narrow home">
+      {!hasNotifPrefs && <OnboardingDialog />}
 
       {/* ════════════════════════════════════════════════════════════════
           DESKTOP COMMAND CENTER (hidden at phone widths)
@@ -437,6 +537,14 @@ export default async function DashboardPage() {
               ) : null}
               .
             </h1>
+            {greetingNote && (
+              <p
+                className="muted"
+                style={{ marginTop: 4, fontSize: 14 }}
+              >
+                {greetingNote}
+              </p>
+            )}
           </div>
           <div className="dd-chips">
             <div className="dd-chip" data-tone="accent">
@@ -730,6 +838,7 @@ export default async function DashboardPage() {
       <div className="dashboard-phone-only">
         <MobileDashboard
           greeting={greeting}
+          greetingNote={greetingNote}
           firstName={firstName}
           role={roleLabel(user.role)}
           todayLabel={todayLabel}

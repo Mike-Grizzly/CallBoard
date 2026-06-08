@@ -22,12 +22,35 @@ import {
   ROLE_TYPES,
   SEASONS,
   TEAM_ROLES,
+  castTeamLabelForType,
   type WizardOrgUser,
 } from "@/features/productions/wizard-constants";
 
 type FullProductionResultSkip = { email: string; reason: string };
 
-type RoleRow = { id: string; name: string; actor: string; type: string };
+// `actorEmail` is captured when the actor is chosen from the org autocomplete;
+// it marks them as an existing org member (vs a free-typed name to invite).
+type RoleRow = {
+  id: string;
+  name: string;
+  actor: string;
+  actorEmail?: string;
+  type: string;
+};
+
+// One person to resolve at launch: someone named in the wizard who may or may
+// not already be in the org.
+type WizardPerson = {
+  key: string;
+  name: string;
+  /** Email captured from the org autocomplete, if any. */
+  capturedEmail?: string;
+  /** Team-role label this person is assigned/invited under. */
+  roleLabel: string;
+  dept: string;
+  /** Where they came from, shown in the invite prompt (e.g. "Frederic · Principal"). */
+  context: string;
+};
 type TeamRow = {
   id: string;
   name: string;
@@ -117,10 +140,56 @@ export default function NewProductionWizard({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [launched, setLaunched] = useState<{ slug: string; summary: LaunchSummary } | null>(null);
+  // Non-org people awaiting an email before launch (null = prompt closed).
+  const [invitePrompt, setInvitePrompt] = useState<WizardPerson[] | null>(null);
 
   const set = (patch: Partial<WizardData>) =>
     setData((prev) => ({ ...prev, ...patch }));
   const step = STEPS[stepIdx];
+
+  // Resolve a name to an org member's email: exact (case-insensitive) match.
+  const orgByName = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const u of orgUsers) m.set(u.name.trim().toLowerCase(), u.email);
+    return m;
+  }, [orgUsers]);
+
+  // Everyone named in the wizard — cast actors + crew — flattened for launch.
+  const collectPeople = (): WizardPerson[] => {
+    const people: WizardPerson[] = [];
+    for (const r of data.roles) {
+      const name = r.actor.trim();
+      if (!name) continue;
+      people.push({
+        key: `role-${r.id}`,
+        name,
+        capturedEmail: r.actorEmail,
+        roleLabel: castTeamLabelForType(r.type),
+        dept: "cast",
+        context: [r.name.trim() || "Role", r.type].filter(Boolean).join(" · "),
+      });
+    }
+    for (const t of data.team) {
+      const name = t.name.trim();
+      if (!name) continue;
+      people.push({
+        key: `team-${t.id}`,
+        name,
+        capturedEmail: t.email,
+        roleLabel: t.role,
+        dept: t.dept,
+        context: t.role,
+      });
+    }
+    return people;
+  };
+
+  // The email we already know for a person (picked from the org, or an exact
+  // name match against the org directory); empty string if they're not in org.
+  const knownEmail = (p: WizardPerson): string =>
+    (p.capturedEmail ?? "").trim() ||
+    orgByName.get(p.name.toLowerCase()) ||
+    "";
 
   // Esc closes the overlay.
   useEffect(() => {
@@ -132,7 +201,14 @@ export default function NewProductionWizard({
     return () => document.removeEventListener("keydown", onKey);
   }, [overlay, onClose, pending]);
 
-  const submit = async (status: "draft" | "active") => {
+  // `extraEmails` carries addresses the user typed in the end-of-launch prompt,
+  // keyed by WizardPerson.key. Everyone with a resolvable email (org member or
+  // freshly entered) is sent to the server to be assigned or invited; people
+  // without one are simply not added (cast names still stay as role labels).
+  const submit = async (
+    status: "draft" | "active",
+    extraEmails: Record<string, string> = {},
+  ) => {
     if (!data.title.trim()) {
       setError("Add a title before saving.");
       setStepIdx(0);
@@ -140,6 +216,21 @@ export default function NewProductionWizard({
     }
     setPending(true);
     setError(null);
+
+    const seen = new Set<string>();
+    const team = collectPeople()
+      .map((p) => ({
+        name: p.name,
+        email: (knownEmail(p) || (extraEmails[p.key] ?? "").trim()).toLowerCase(),
+        role: p.roleLabel,
+        dept: p.dept,
+      }))
+      .filter((t) => {
+        if (!t.email || seen.has(t.email)) return false;
+        seen.add(t.email);
+        return true;
+      });
+
     const result = await createProductionFull({
       title: data.title,
       venue: data.venue,
@@ -153,13 +244,14 @@ export default function NewProductionWizard({
       rehearsalEnd: data.rehearsalEnd,
       depts: data.depts,
       roles: data.roles.map((r) => ({ name: r.name, actor: r.actor, type: r.type })),
-      team: data.team.map((t) => ({ name: t.name, email: t.email, role: t.role, dept: t.dept })),
+      team,
       status,
     });
     setPending(false);
 
     if (result.error) {
       setError(result.error);
+      setInvitePrompt(null);
       return;
     }
     if (status === "draft") {
@@ -171,9 +263,20 @@ export default function NewProductionWizard({
     setLaunched({ slug: result.slug!, summary: result.summary! });
   };
 
+  // Launch: if anyone named isn't in the org, prompt for their emails first;
+  // otherwise create straight away.
+  const attemptLaunch = () => {
+    const unresolved = collectPeople().filter((p) => !knownEmail(p));
+    if (unresolved.length > 0) {
+      setInvitePrompt(unresolved);
+      return;
+    }
+    void submit("active");
+  };
+
   const goNext = () => {
     if (stepIdx < STEPS.length - 1) setStepIdx(stepIdx + 1);
-    else void submit("active");
+    else attemptLaunch();
   };
   const goPrev = () => stepIdx > 0 && setStepIdx(stepIdx - 1);
 
@@ -228,7 +331,9 @@ export default function NewProductionWizard({
             {step.id === "calendar" && <StepCalendar data={data} set={set} />}
             {step.id === "depts" && <StepDepts data={data} set={set} />}
             {step.id === "roles" && <StepRoles data={data} set={set} orgUsers={orgUsers} />}
-            {step.id === "team" && <StepTeam data={data} set={set} />}
+            {step.id === "team" && (
+              <StepTeam data={data} set={set} orgUsers={orgUsers} />
+            )}
             {step.id === "review" && <StepReview data={data} jumpTo={setStepIdx} />}
           </div>
           {error && (
@@ -247,6 +352,15 @@ export default function NewProductionWizard({
           />
         </div>
       </div>
+
+      {invitePrompt && (
+        <InvitePrompt
+          people={invitePrompt}
+          pending={pending}
+          onCancel={() => setInvitePrompt(null)}
+          onLaunch={(emails) => void submit("active", emails)}
+        />
+      )}
     </div>
   );
 }
@@ -377,6 +491,85 @@ function Actions({
         <span>{pending ? "Working…" : last ? "Launch production" : "Continue"}</span>
         {!last && !pending && <Icon name="ChevronRight" size={14} />}
       </button>
+    </div>
+  );
+}
+
+// ─── End-of-launch invite prompt — people not yet in the org ──────────
+function InvitePrompt({
+  people,
+  pending,
+  onCancel,
+  onLaunch,
+}: {
+  people: WizardPerson[];
+  pending: boolean;
+  onCancel: () => void;
+  onLaunch: (emails: Record<string, string>) => void;
+}) {
+  const [emails, setEmails] = useState<Record<string, string>>({});
+  const filled = people.filter((p) => (emails[p.key] ?? "").trim()).length;
+
+  return (
+    <div
+      className="np-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Invite people not in your organization"
+    >
+      <div className="np-modal">
+        <h3 className="np-modal-title">A few people aren&apos;t in your org yet.</h3>
+        <p className="np-modal-sub">
+          Add an email to invite them — they&apos;ll join your organization and land
+          on this production. Leave any blank to skip; you can always invite people
+          later from the Team page.
+        </p>
+
+        <div className="np-invite-list">
+          {people.map((p) => (
+            <div key={p.key} className="np-invite-row">
+              <div className="np-invite-who">
+                <div className="np-invite-name">{p.name}</div>
+                <div className="np-invite-ctx">{p.context}</div>
+              </div>
+              <input
+                className="field"
+                type="email"
+                placeholder="name@theatre.com"
+                value={emails[p.key] ?? ""}
+                onChange={(e) =>
+                  setEmails((prev) => ({ ...prev, [p.key]: e.target.value }))
+                }
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="np-modal-actions">
+          <button className="btn ghost" onClick={onCancel} disabled={pending}>
+            Back to edit
+          </button>
+          <div className="spacer" />
+          <button
+            className="btn ghost"
+            onClick={() => onLaunch({})}
+            disabled={pending}
+          >
+            Skip &amp; launch
+          </button>
+          <button
+            className="btn accent"
+            onClick={() => onLaunch(emails)}
+            disabled={pending}
+          >
+            {pending
+              ? "Working…"
+              : filled > 0
+                ? `Invite ${filled} & launch`
+                : "Launch"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -667,10 +860,12 @@ function StepRoles({
               placeholder="Frederic"
               onChange={(e) => update(i, { name: e.target.value })}
             />
-            <ActorAutocomplete
+            <PersonAutocomplete
               value={r.actor}
               orgUsers={orgUsers}
-              onChange={(val) => update(i, { actor: val })}
+              onChange={(name, email) =>
+                update(i, { actor: name, actorEmail: email })
+              }
             />
             <select className="field" value={r.type} onChange={(e) => update(i, { type: e.target.value })}>
               {ROLE_TYPES.map((t) => (
@@ -717,15 +912,19 @@ function StepRoles({
   );
 }
 
-// ─── Actor autocomplete — typeahead over org members ──────────────────
-function ActorAutocomplete({
+// ─── Person autocomplete — typeahead over org members ─────────────────
+// `onChange(name, email?)` fires `email` only when a row is picked from the
+// dropdown, so callers can tell "chosen org member" from "free-typed name".
+function PersonAutocomplete({
   value,
   orgUsers,
+  placeholder,
   onChange,
 }: {
   value: string;
   orgUsers: WizardOrgUser[];
-  onChange: (val: string) => void;
+  placeholder?: string;
+  onChange: (name: string, email?: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -748,7 +947,7 @@ function ActorAutocomplete({
   }, []);
 
   const pick = (u: WizardOrgUser) => {
-    onChange(u.name);
+    onChange(u.name, u.email);
     setOpen(false);
   };
 
@@ -757,7 +956,7 @@ function ActorAutocomplete({
       <input
         className="field"
         value={value}
-        placeholder="Type a name…"
+        placeholder={placeholder ?? "Type a name…"}
         onChange={(e) => {
           onChange(e.target.value);
           setOpen(true);
@@ -816,7 +1015,15 @@ function ActorAutocomplete({
 }
 
 // ─── STEP 5 · Team / Invites ──────────────────────────────────────────
-function StepTeam({ data, set }: { data: WizardData; set: (p: Partial<WizardData>) => void }) {
+function StepTeam({
+  data,
+  set,
+  orgUsers,
+}: {
+  data: WizardData;
+  set: (p: Partial<WizardData>) => void;
+  orgUsers: WizardOrgUser[];
+}) {
   const update = (i: number, patch: Partial<TeamRow>) =>
     set({ team: data.team.map((r, j) => (j === i ? { ...r, ...patch } : r)) });
   const remove = (i: number) => set({ team: data.team.filter((_, j) => j !== i) });
@@ -851,8 +1058,9 @@ function StepTeam({ data, set }: { data: WizardData; set: (p: Partial<WizardData
     <>
       <h2 className="page-title">Invite your team.</h2>
       <div className="page-sub">
-        Add stage management, creatives, and cast. Everyone gets an email invite — they create an account
-        and land directly on this production with the right permissions.
+        Add stage management, creatives, and crew by name — start typing and pick
+        them from your organization. Anyone who isn&apos;t in your org yet, we&apos;ll
+        ask you to invite by email at the end.
       </div>
 
       <div className="banner success">
@@ -869,26 +1077,20 @@ function StepTeam({ data, set }: { data: WizardData; set: (p: Partial<WizardData
       </h3>
 
       <div className="row-list">
-        <div className="row-header cast-row">
+        <div className="row-header team-row">
           <span>Name</span>
-          <span>Email</span>
           <span>Role</span>
           <span></span>
         </div>
         {data.team.map((m, i) => (
-          <div key={m.id} className="row-item cast-row">
-            <input
-              className="field"
+          <div key={m.id} className="row-item team-row">
+            <PersonAutocomplete
               value={m.name}
+              orgUsers={orgUsers}
               placeholder="Full name"
-              onChange={(e) => update(i, { name: e.target.value })}
-            />
-            <input
-              className="field"
-              type="email"
-              value={m.email}
-              placeholder="name@theatre.com"
-              onChange={(e) => update(i, { email: e.target.value })}
+              onChange={(name, email) =>
+                update(i, { name, email: email ?? "" })
+              }
             />
             <select
               className="field"
@@ -1063,12 +1265,12 @@ function StepReview({ data, jumpTo }: { data: WizardData; jumpTo: (i: number) =>
           <h4>
             <Icon name="Users" size={12} />
             <span>
-              Team — {filledTeam.length} invite{filledTeam.length === 1 ? "" : "s"} ready
+              Team — {filledTeam.length} member{filledTeam.length === 1 ? "" : "s"}
             </span>
             <a onClick={() => jumpTo(4)}>Edit</a>
           </h4>
           {filledTeam.length === 0 ? (
-            <div className="hint">No invites added yet — you can add team members after launching.</div>
+            <div className="hint">No team added yet — you can add members after launching.</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
               {filledTeam.slice(0, 6).map((m, i) => (
@@ -1081,7 +1283,7 @@ function StepReview({ data, jumpTo }: { data: WizardData; jumpTo: (i: number) =>
                   </div>
                   <span style={{ fontWeight: 500 }}>{m.name || <span className="hint">unnamed</span>}</span>
                   <span style={{ color: "var(--ink-3)", fontFamily: "var(--font-mono)", fontSize: 12 }}>
-                    {m.email || "no email"}
+                    {m.email || "invite at launch"}
                   </span>
                   <span className="pill" data-c={m.c || ""}>
                     {m.role}

@@ -55,9 +55,10 @@
   --radius-l: 14px;
 
   /* font-family vars are populated by next/font in app/layout.tsx; these
-     fallbacks let the file stand alone if the layout vars are missing */
-  --font-display: "Newsreader", Georgia, serif;
-  --font-ui: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+     fallbacks let the file stand alone if the layout vars are missing.
+     Display headings now use Inter too (was Newsreader serif). */
+  --font-display: var(--font-ui, "Inter", ui-sans-serif, system-ui, sans-serif);
+  --font-ui: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
 
   --rail-w: 232px;
@@ -6224,7 +6225,7 @@ select.pp-field {
  * the dark / cool theme switch instead of pinning the light palette.
  * ============================================================ */
 .np-root {
-  --font-display: "Newsreader", Georgia, serif;
+  --font-display: var(--font-ui, "Inter", ui-sans-serif, system-ui, sans-serif);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -6744,6 +6745,73 @@ select.pp-field {
 }
 .np-root .cast-row {
   grid-template-columns: 1fr 1fr 160px 36px;
+}
+.np-root .team-row {
+  grid-template-columns: 1fr 160px 36px;
+}
+
+/* End-of-launch "invite people not in your org" modal */
+.np-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.np-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+}
+.np-modal-title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  margin: 0 0 6px;
+}
+.np-modal-sub {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+.np-invite-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.np-invite-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.np-invite-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+.np-invite-ctx {
+  font-size: 12px;
+  color: var(--ink-4);
+}
+.np-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+.np-modal-actions .spacer {
+  flex: 1;
 }
 .np-root .row-item .field {
   height: 34px;

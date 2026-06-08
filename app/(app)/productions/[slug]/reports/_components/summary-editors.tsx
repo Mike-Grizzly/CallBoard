@@ -1,6 +1,8 @@
 "use client";
 
 import { Icon } from "@/components/ui/icon";
+import { MentionInput } from "@/components/ui/mention-input";
+import type { MentionMember } from "@/components/ui/mention-textarea";
 import type {
   Break,
   BreakKind,
@@ -133,6 +135,7 @@ export function AttendanceEditor({
   onAbsentChange,
   onLateChange,
   onNotesChange,
+  members = [],
 }: {
   present: number;
   absent: number;
@@ -142,6 +145,7 @@ export function AttendanceEditor({
   onAbsentChange: (v: number) => void;
   onLateChange: (v: number) => void;
   onNotesChange: (next: AttendanceNote[]) => void;
+  members?: MentionMember[];
 }) {
   const update = (i: number, patch: Partial<AttendanceNote>) =>
     onNotesChange(notes.map((n, j) => (j === i ? { ...n, ...patch } : n)));
@@ -189,13 +193,13 @@ export function AttendanceEditor({
               className="field"
               style={{ width: 130, fontSize: 12.5 }}
             />
-            <input
-              type="text"
+            <MentionInput
               value={n.note}
-              placeholder="Excused, vocal rest…"
-              onChange={(e) => update(i, { note: e.target.value })}
-              className="field"
-              style={{ flex: 1, fontSize: 12.5 }}
+              onChange={(v) => update(i, { note: v })}
+              members={members}
+              placeholder="Excused, vocal rest… (@ to mention)"
+              singleLine
+              style={{ fontSize: 12.5 }}
             />
             <button
               type="button"

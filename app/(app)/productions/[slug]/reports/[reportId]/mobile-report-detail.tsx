@@ -1,5 +1,6 @@
 import { Icon } from "@/components/ui/icon";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { MentionText } from "@/components/ui/mention-text";
 import { DEPARTMENTS } from "@/features/reports/constants";
 import type { ReportDetail } from "@/features/reports/queries";
 import type { ProductionMember } from "@/features/members/queries";
@@ -240,7 +241,7 @@ export function MobileReportDetail({
                 <span className="mr-pill" data-c={s.c || ""}>
                   {s.who || "—"}
                 </span>
-                <span className="rd-change-what">{s.what || "—"}</span>
+                <span className="rd-change-what">{s.what ? <MentionText text={s.what} /> : "—"}</span>
               </div>
             ))}
           </div>
@@ -259,7 +260,7 @@ export function MobileReportDetail({
                   <div className="rd-line-cue">{l.line}</div>
                 ) : null}
                 {l.issue ? (
-                  <div className="rd-line-issue">{l.issue}</div>
+                  <div className="rd-line-issue"><MentionText text={l.issue} /></div>
                 ) : null}
               </div>
             ))}
@@ -282,7 +283,7 @@ export function MobileReportDetail({
                   ) : null}
                 </div>
                 {inj.text ? (
-                  <div className="rd-injury-text">{inj.text}</div>
+                  <div className="rd-injury-text"><MentionText text={inj.text} /></div>
                 ) : null}
               </div>
             ))}

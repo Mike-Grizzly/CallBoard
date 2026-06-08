@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { eq, and, asc } from "drizzle-orm";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { pushMentionNotifications } from "@/features/mentions/notify";
 
 export type BlockingActionResult = { error?: string };
 
@@ -389,6 +390,11 @@ export async function createBeatComment(
           snippet,
         })),
       );
+      await pushMentionNotifications({
+        mentionedById: user.id,
+        countsByUser: Object.fromEntries(recipients.map((id) => [id, 1])),
+        contextLabel: "a blocking note",
+      });
       revalidatePath("/dashboard");
     }
   }

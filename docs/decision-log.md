@@ -1453,3 +1453,70 @@ the app uses a server-side Postgres connection with the app-level checks above.
 No table RLS changes were made (changing them blind risks breakage and isn't
 needed). One WARN: leaked-password protection is disabled (enable in Supabase
 Auth; may need Pro).
+## 2026-06-04 — @Mentions extended to all report sections + blocking, with per-section notifications and inline chips (PR #27 + #28)
+
+**Context:** @mentions originally fired only from rich-text fields scanned for `data-id` (report General Notes, department notes, announcements, notes). Department-note mentions and the report's structured note fields (schedule changes, attendance, line notes, injuries) didn't notify; blocking beat-comment mentions were also unreliable.
+
+**Decisions:**
+1. **Two mention encodings, unified at write time.** Rich-text fields keep `data-id`; plain-text fields (the structured report note groups, blocking comments) use `@{Full Name}` tokens. `writeContextMentions()` accepts a list of `sources` (each `html` or `text` + optional `label`) and resolves `@{Name}` tokens to user ids by matching org members' full name/email. Reports call it via `reportMentionSources()`; the old `writeMentions(html, ctx)` remains for announcements/notes.
+2. **One notification per section, not per report.** A merged-per-report approach (first attempt) hid mentions: a person tagged in General Notes *and* a department note got a single row showing only the general-notes snippet. `writeContextMentions` now emits one row per (user, section), de-duped within a section, titled `Report <date> · <section>`. The author is excluded.
+3. **Keep the `@{Name}` plain-text storage format; fix the *rendering* instead.** Rather than migrate the structured fields to stored HTML/`data-id` (which would ripple into display and extraction), the token format stays. `components/ui/mention-input.tsx` (contenteditable) renders tokens as chips while editing and serializes back to `@{Name}`; `components/ui/mention-text.tsx` renders them as chips in read-only views. This kept the data model and server extraction unchanged — only the editor/display components changed.
+4. **Blocking mentions deep-link to the beat.** `contextId` stays the beat-comment id (precise delete cleanup); `getMentionsForUser` left-joins `beat_comments` to expose `beatId` for the dashboard href (`/blocking?beat=<id>`), and `blocking/page.tsx` validates `?beat=` against the production before opening it.
+5. **Dashboard: unread-first + View all + dismiss.** The capped mention lists hid unread items beyond the cap; unread now sort first, a View all toggle expands, and `dismissMention()` deletes a recipient's row.
+
+**Impact:** `writeContextMentions` is the report mention path; do not also call `writeMentions` for reports (it would delete-then-insert and wipe the per-section rows). Plain-text mention resolution is name/email-based, so renaming a member between mention and save could fail to resolve a token (acceptable; the chip still displays). `mention-input.tsx` is contenteditable — caret/serialization behavior is hand-rolled; test in a browser when changing it.
+
+---
+
+## 2026-06-04 — Web Push notifications via PWA (VAPID + service worker), not native wrapper for Phase 1
+
+**Context:** The `notification_preferences.push` channel had been modeled but inert since 2026-06-03 — no transport. The app is already an installable PWA (manifest + icons), but had no service worker, so it could install but not receive push. Decision needed on how to deliver phone alerts.
+
+**Decisions:**
+1. **Web Push first, native (Capacitor) later.** Implemented standard Web Push (VAPID keypair + `public/sw.js` service worker + `push_subscriptions` table) rather than a native wrapper. It is fully additive, deploys through Vercel with no extra build pipeline, and needs no app stores or Apple Developer account. A future Capacitor wrapper reuses the same `push_subscriptions` table and `sendPushToUsers()` helper, swapping only the channel to APNs/FCM — so this is not throwaway work.
+2. **Push is per-device, managed by the subscribe flow — not the channel-prefs form.** `savePushSubscription`/`deletePushSubscription` (`features/push/actions.ts`) own the `notification_preferences.push` flag (set true on first device, false when the last is removed). `updateNotificationPreferences` was changed to write only in-app/email — previously it would have silently flipped `push` off on every save once the disabled form toggle was removed.
+3. **`push_subscriptions` follows the RLS-on/no-policies convention.** An endpoint is a capability, so the table is server-only via the Drizzle pooler role; RLS is enabled manually after `db:push` (drizzle-kit doesn't manage RLS). Endpoint uniqueness is enforced in app code (delete-then-insert), not a DB constraint, per the drizzle-kit hang note.
+4. **Best-effort, self-healing delivery.** `sendPushToUsers` swallows its own errors (a dead device never fails announcement creation, mirroring email) and prunes subscriptions the push service reports as gone (404/410).
+5. **Announcements only, for now.** Fan-out (`features/notifications/announce.ts`) sends push at the spot previously marked TODO. Mentions/report notifications use a separate path and can call `sendPushToUsers` later.
+
+**Impact:** Requires three new env vars (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`) in Vercel + local, and creating `push_subscriptions` via the Supabase SQL editor/MCP with RLS enabled (NOT `db:push`, which is retired here — see current-status "Known limitations"). New dependency: `web-push`. iOS only delivers Web Push to a Home-Screen-installed PWA (accepted for Phase 1). Full setup + test steps in `docs/feature-specs/17-push-notifications.md`.
+
+---
+
+## 2026-06-04 — Push for @mentions (batched) + signup notification onboarding + in-app always on
+
+**Context:** Follow-up to the Web Push work. (1) @mentions were pull-only (dashboard bento) — no phone alert. (2) New users had no way to choose how they're notified. (3) Product decision: in-app should never be a toggle.
+
+**Decisions:**
+1. **@mentions now push, gated on `prefs.push`.** A shared best-effort helper `pushMentionNotifications()` (`features/mentions/notify.ts`) is called from all three mention-creation sites: `writeMentions` (announcements/notes), `writeContextMentions` (reports), and the direct insert in `features/blocking/actions.ts` (beat comments). It never throws, so a push failure can't fail the underlying save. Email is intentionally NOT added for mentions (push + the existing dashboard bento only).
+2. **Batching is per-write, not time-windowed.** `countsByUser` counts how many times each user was tagged in THIS save; >1 → a single "N new mentions" push instead of one per mention. This covers the stated case (multiple tags across one rehearsal report's sections) without a debounce/queue. Cross-write time-window batching is deferred (see open-questions).
+3. **Mention pushes link to `/dashboard`.** The write paths lack the slug/author context to build deep links cheaply; the dashboard Mentions list is always valid. Deep-linking is a future nicety (open-questions).
+4. **In-app is always on (not user-configurable).** Removed the in-app toggle from Settings (now a static "Always on" row); `updateNotificationPreferences` forces `in_app = true` and only writes the email choice. Push stays device-managed.
+5. **Signup onboarding via a first-dashboard dialog, no schema change.** `OnboardingDialog` shows when the user has no `notification_preferences` row (`hasNotificationPreferences`). It asks email (toggle) + push (per-device enable, reusing the new `usePushSubscription` hook); in-app shown as always-on. Finishing or skipping calls `completeOnboarding` which writes the row — which is also what stops it reappearing. Gating on row-absence avoids a `profiles` column / DDL.
+
+**Impact:** No new env vars or DB changes. The push-subscribe browser flow was extracted to `features/push/use-push-subscription.ts` and is shared by the Settings card and the onboarding dialog. "Upcoming rehearsal reminders" (auto email/push the morning of a scheduled call, pulled from the calendar) is a separately-scoped FUTURE feature — see open-questions; not built here. Rehearsal reports were intentionally left untouched (they're sent manually to chosen recipients).
+
+---
+
+## 2026-06-04 — UI font → Inter; theatre-aware dashboard greeting
+
+**Decisions:**
+1. **UI font is now Inter** (`--font-ui`, was Geist), loaded via `next/font/google` in `app/layout.tsx`. **Update (same day):** the **display/heading font is now Inter too** — Newsreader was removed entirely; `--font-display` points at `var(--font-ui)` (in `:root` and in the `.np-root` wizard scope that re-pinned it). Inter is loaded with `style: ["normal","italic"]` so the greeting's `<em>` name keeps true italics. Only **mono (Geist Mono)** remains a separate face. So the whole app is Inter + Geist Mono.
+2. **Contextual dashboard greeting.** `getContextualGreeting()` in the dashboard page replaces the time-of-day-only `getGreeting`. It returns `{ greeting, note? }`; `greeting` renders as `{greeting}, {firstName}.` and `note` is an optional follow-up line beneath. Priority (most specific first): opening night ("Break a leg") → last show ("Congratulations" + note "See you on the next one.") → first day of rehearsal ("First day of rehearsal") → tech week ("Welcome to tech week") → a call on today's calendar ("Ready for rehearsal") → returning after ≥1 day away ("Welcome back") → day off, i.e. inside an active production's window with nothing scheduled ("Enjoy your day off") → time-of-day default. "Welcome back" is driven by `profiles.last_active_at`: `markActiveAndGetPrevious()` (lib/auth.ts) reads the prior timestamp then stamps now on each dashboard visit, so `daysAway` reflects the gap since the previous visit (null on a first visit → no false welcome-back). Both desktop and mobile dashboards render the same computed `greeting`/`note`. Tech window = `[techStartDate, openingDate)` (capped at 14 days with no opening date); day-off window = `[firstRehearsalDate, closingDate ?? openingDate]`. `getUserProductions` now also selects `techStartDate` (it already returned `openingDate`/`closingDate`/`firstRehearsalDate`).
+
+**Impact:** Inter is fetched at build by Vercel (no local action). Greeting phrases are deliberately stable per request (no randomization) for predictability; adding rotating variety per category is an easy follow-up. No DB or env changes.
+
+---
+
+## 2026-06-04 — New Production wizard: name autocomplete for cast & crew + end-of-launch invite for non-org people
+
+**Context:** The wizard already autocompleted the cast step's *actor* field over org members (name only, never linked to a member/invite), while the crew/team step required manual email entry. Requested: type names with org typeahead on both spots; only ask for emails at the end, for people not already in the org.
+
+**Decisions (client-only — no server change):**
+1. **Shared `PersonAutocomplete`** (generalized from `ActorAutocomplete`). Its `onChange(name, email?)` passes `email` only when a row is *picked* from the dropdown, so callers can distinguish "chosen org member" from "free-typed name". Used by both the cast actor field and the crew name field.
+2. **Crew step drops the inline Email column** — name typeahead only (`.team-row` is the 3-col grid). Email for non-org crew is collected at the end. Bulk CSV (`Name, Email, Role`) still works and pre-fills emails.
+3. **Cast + crew both become members/invites.** At launch, `collectPeople()` flattens cast actors (mapped to `Cast — Principal/Ensemble` via `castTeamLabelForType`) and crew into a single people list. Each is resolved to an email by: captured autocomplete email → exact case-insensitive org-name match → else unresolved. Resolved org members are assigned to the production by the existing server path; the production's character roles still keep the actor *name* label too.
+4. **Skippable end-of-launch `InvitePrompt`.** If anyone is unresolved, launching opens a modal listing them (name + context) with email inputs. "Invite N & launch" sends those through the existing email-invite path; "Skip & launch" creates the production without them (cast names remain role labels). "Back to edit" returns to the wizard.
+5. **`RoleRow` gained `actorEmail?`**; `WizardPerson` is the launch-time flattened shape. The server contract (`createProductionFull` → `applyWizardTeam`, which assigns existing org members and invites new emails) was reused unchanged — the client just builds a richer `team` array and dedupes by email.
+
+**Impact:** No DB/env/server changes. People without an email are simply not added (no failed invites). Review step wording updated ("Team — N members"; unresolved shows "invite at launch"). New CSS under `.np-root` for `.team-row` and the `.np-modal*` / `.np-invite*` prompt.

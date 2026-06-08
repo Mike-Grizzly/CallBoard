@@ -75,6 +75,7 @@ export async function getUserProductions(userId: string) {
       openingDate: productions.openingDate,
       closingDate: productions.closingDate,
       firstRehearsalDate: productions.firstRehearsalDate,
+      techStartDate: productions.techStartDate,
       role: productionMemberships.role,
     })
     .from(productionMemberships)

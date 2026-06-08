@@ -215,6 +215,35 @@ export async function requireCurrentUser(): Promise<CurrentUser> {
 }
 
 /**
+ * Returns the user's previous `last_active_at` and stamps it to now in one go.
+ * Used by the dashboard to detect "welcome back" (a gap since the last visit).
+ * The read happens before the write, so the caller sees the prior timestamp.
+ * Best-effort: a failure here must never break the dashboard, so it swallows
+ * errors and returns null.
+ */
+export async function markActiveAndGetPrevious(
+  userId: string,
+): Promise<Date | null> {
+  try {
+    const [row] = await db
+      .select({ lastActiveAt: profiles.lastActiveAt })
+      .from(profiles)
+      .where(eq(profiles.id, userId))
+      .limit(1);
+    const previous = row?.lastActiveAt ?? null;
+
+    await db
+      .update(profiles)
+      .set({ lastActiveAt: new Date() })
+      .where(eq(profiles.id, userId));
+
+    return previous;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Whether the user may access a production's data. Two gates:
  *  1. Tenant boundary — the production must belong to the user's current
  *     organization. Without this, a `productions:manage` holder in one org

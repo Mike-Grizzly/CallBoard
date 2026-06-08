@@ -79,24 +79,36 @@ export function NotificationPreferencesForm({
         or a show you&apos;re in.
       </p>
 
-      <Toggle
-        name="in_app"
-        label="In-app"
-        hint="Show in the notification bell."
-        defaultChecked={initial.inApp}
-      />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 12,
+          padding: "12px 0",
+          borderTop: "1px solid var(--border)",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked
+          disabled
+          readOnly
+          style={{ marginTop: 3, width: 16, height: 16, flexShrink: 0 }}
+        />
+        <span>
+          <span style={{ display: "block", fontSize: 14, fontWeight: 500 }}>
+            In-app · Always on
+          </span>
+          <span style={{ display: "block", fontSize: 12, color: "var(--ink-3)" }}>
+            While you&apos;re in Proscene you&apos;ll always see the alert banner.
+          </span>
+        </span>
+      </div>
       <Toggle
         name="email"
         label="Email"
         hint="Send a copy to your email address."
         defaultChecked={initial.email}
-      />
-      <Toggle
-        name="push"
-        label="Push (coming soon)"
-        hint="Phone push isn't available yet — this turns on automatically once it ships."
-        defaultChecked={initial.push}
-        disabled
       />
 
       <button

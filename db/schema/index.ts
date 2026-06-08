@@ -20,6 +20,7 @@ export * from "./call-confirmations";
 export * from "./beat-comments";
 export * from "./notifications";
 export * from "./notification-preferences";
+export * from "./push-subscriptions";
 export * from "./custom-set-pieces";
 export * from "./beat-arrows";
 export * from "./mentions";

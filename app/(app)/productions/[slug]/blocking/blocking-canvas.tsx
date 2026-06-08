@@ -720,7 +720,12 @@ export function BlockingCanvas({
 
   const [currentBeatId, setCurrentBeatId] = useState<string | null>(initialBeatId);
   const [currentSceneId, setCurrentSceneId] = useState<string | null>(
-    scenesWithBeats[0]?.id ?? null,
+    () =>
+      scenesWithBeats.find((s) =>
+        s.beats.some((b) => b.id === initialBeatId),
+      )?.id ??
+      scenesWithBeats[0]?.id ??
+      null,
   );
   const [positions, setPositions] = useState<PositionMap>(
     () => positionRowsToMap(initialPositions),

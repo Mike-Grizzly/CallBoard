@@ -13,10 +13,13 @@ import { BlockingCanvas } from "./blocking-canvas";
 
 export default async function BlockingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ beat?: string }>;
 }) {
   const { slug } = await params;
+  const { beat: requestedBeatId } = await searchParams;
   const user = await requireCurrentUser();
   const production = await getProductionBySlug(user.organizationId, slug);
 
@@ -89,12 +92,19 @@ export default async function BlockingPage({
   // Pick the first beat across all scenes — `scenesWithBeats[0].beats[0]`
   // returns null when the first scene happens to be empty but a later
   // scene has beats, which left the canvas with no active beat selected.
-  const firstBeatId =
-    scenesWithBeats.flatMap((s) => s.beats)[0]?.id ?? null;
-  const [initialPositions, initialArrows] = firstBeatId
+  const allBeats = scenesWithBeats.flatMap((s) => s.beats);
+  // Deep-link: open the beat from `?beat=` (e.g. from a blocking @mention),
+  // but only if it actually exists in this production. Otherwise first beat.
+  const targetBeatId =
+    (requestedBeatId && allBeats.some((b) => b.id === requestedBeatId)
+      ? requestedBeatId
+      : null) ??
+    allBeats[0]?.id ??
+    null;
+  const [initialPositions, initialArrows] = targetBeatId
     ? await Promise.all([
-        getBlockingPositionsForBeat(firstBeatId),
-        getArrowsForBeat(firstBeatId),
+        getBlockingPositionsForBeat(targetBeatId),
+        getArrowsForBeat(targetBeatId),
       ])
     : [[], []];
 
@@ -109,7 +119,7 @@ export default async function BlockingPage({
       groundPlanImageUrl={groundPlanImageUrl}
       canEdit={can(user.role, "blocking:edit")}
       currentUserId={user.id}
-      initialBeatId={firstBeatId}
+      initialBeatId={targetBeatId}
       initialPositions={initialPositions}
       initialArrows={initialArrows}
       initialCustomSetPieces={initialCustomSetPieces}

@@ -36,3 +36,4 @@ Each feature spec must be updated when its feature changes. Status should reflec
 | `08-announcements.md` | Announcements | Implemented (not fully verified) |
 | `09-rehearsal-report-overhaul.md` | Rehearsal Report Overhaul | Planned |
 | `16-people-directory.md` | People Directory & Mass Upload | Implemented (not fully verified) |
+| `17-push-notifications.md` | Web Push Notifications (PWA) | Implemented (not fully verified) |
