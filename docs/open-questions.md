@@ -445,3 +445,29 @@ the moment we go Pro:
 - **Pre-existing report mentions weren't re-split.** Reports saved before the
   per-section change keep their old single merged `report` row; only a re-save
   rewrites them into per-section rows. No backfill was run.
+
+---
+
+## Marketing website — progress 2026-06-05 (branch `claude/magical-ride-usNEW`)
+
+**Done this session:** all "Start free" CTAs wired to `/signup`; new `/contact`
+page + Resend-backed form (honeypot, reason-aware) wired from Contact / Message
+support / "Talk to a human" / "Verify your school"; "Book a demo" →
+`/contact?reason=demo` (auto-upgrades to a scheduler link when
+`NEXT_PUBLIC_DEMO_SCHEDULER_URL` is set — recommend Cal.com); footer dead links
+fixed; brand "ProScene→Proscene" + `app.proscene.live→proscene.app`; removed
+fabricated homepage trust logos / testimonial / stats; Reviews page replaced
+with an honest "coming soon" and pulled from the nav.
+
+**Still open for the website:**
+- **Blog truthfulness:** posts still have invented authors and a fabricated
+  "Hart House" case study — soften/replace before promoting the blog.
+- **Social links** in the footer are still inert (no accounts yet).
+- **Newsletter signup** (blog page) has no provider wired — connect to Resend
+  audiences or remove.
+- **Demo scheduler:** set up Cal.com and add `NEXT_PUBLIC_DEMO_SCHEDULER_URL`.
+- **Contact delivery:** defaults to `feedback@proscene.app` (forwards to owner);
+  override with `CONTACT_EMAIL` if desired. Consider CAPTCHA if spam appears.
+- **Placeholder images** (blog cards, product mock) → real screenshots.
+- **CMS (Payload), GTM/tracking, Stripe checkout, repo split** — still pending
+  (see decision-log 2026-06-05).

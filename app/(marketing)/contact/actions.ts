@@ -53,10 +53,10 @@ export async function submitContactForm(
         `${message}\n`,
     });
     if (error) {
-      return { error: "Something went wrong sending that. Email us directly at hello@proscene.app." };
+      return { error: "Something went wrong sending that. Email us directly at feedback@proscene.app." };
     }
   } catch {
-    return { error: "Something went wrong sending that. Email us directly at hello@proscene.app." };
+    return { error: "Something went wrong sending that. Email us directly at feedback@proscene.app." };
   }
 
   return { ok: true };
