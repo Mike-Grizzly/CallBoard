@@ -1,4 +1,5 @@
-// Pricing page body — ported from pricing.html (links rewired to Next routes).
+// Pricing page body — split into fragments so the tier cards can be rendered
+// from Sanity (SanityTiers) when present, with this static version as fallback.
 const TICK =
   '<span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>';
 const CROSS =
@@ -6,7 +7,7 @@ const CROSS =
 const YES =
   '<td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td>';
 
-export const PRICING_HTML = `
+export const PRICING_HERO_HTML = `
   <section class="page-hero">
     <div class="wrap">
       <span class="eyebrow no-rule" style="justify-content:center">Pricing</span>
@@ -18,11 +19,12 @@ export const PRICING_HTML = `
       </div>
     </div>
   </section>
+`;
 
+export const PRICING_TIERS_HTML = `
   <section class="section" style="padding-top:36px">
     <div class="wrap">
       <div class="tiers reveal">
-        <!-- FREE -->
         <div class="tier">
           <div class="tier-name">Understudy</div>
           <div class="tier-desc">For your first show, or a small one-off production.</div>
@@ -37,7 +39,6 @@ export const PRICING_HTML = `
             <li class="off">${CROSS} Script, blocking &amp; reports</li>
           </ul>
         </div>
-        <!-- COMPANY -->
         <div class="tier" data-feat>
           <span class="tier-flag">Most popular</span>
           <div class="tier-name">Company</div>
@@ -53,7 +54,6 @@ export const PRICING_HTML = `
             <li>${TICK} PDF export &amp; calendar sync</li>
           </ul>
         </div>
-        <!-- RESIDENT -->
         <div class="tier">
           <div class="tier-name">Resident</div>
           <div class="tier-desc">For theatres and programs running a full season.</div>
@@ -74,8 +74,9 @@ export const PRICING_HTML = `
       </p>
     </div>
   </section>
+`;
 
-  <!-- COMPARISON -->
+export const PRICING_REST_HTML = `
   <section class="section" style="background:var(--bg-muted);border-top:1px solid var(--border)">
     <div class="wrap">
       <div class="section-head center reveal" style="text-align:center;margin-bottom:8px">
@@ -108,7 +109,6 @@ export const PRICING_HTML = `
     </div>
   </section>
 
-  <!-- PRICING FAQ -->
   <section class="section">
     <div class="wrap-narrow">
       <div class="section-head center reveal" style="text-align:center;margin:0 auto 36px">
@@ -126,7 +126,6 @@ export const PRICING_HTML = `
     </div>
   </section>
 
-  <!-- CTA -->
   <section class="section" style="padding-top:0">
     <div class="wrap">
       <div class="cta-band center reveal">
@@ -143,3 +142,6 @@ export const PRICING_HTML = `
     </div>
   </section>
 `;
+
+// Full static page (fallback when Sanity has no pricing tiers).
+export const PRICING_HTML = PRICING_HERO_HTML + PRICING_TIERS_HTML + PRICING_REST_HTML;

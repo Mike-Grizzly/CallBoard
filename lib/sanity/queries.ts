@@ -122,3 +122,37 @@ export async function getFaqItems(): Promise<FaqItem[]> {
     return [];
   }
 }
+
+export type PricingFeature = { text?: string; included?: boolean };
+export type PricingTier = {
+  _id: string;
+  name: string;
+  description?: string;
+  priceProduction?: string;
+  priceAnnual?: string;
+  period?: string;
+  noteProduction?: string;
+  noteAnnual?: string;
+  flag?: string;
+  featured?: boolean;
+  ctaLabel?: string;
+  ctaHref?: string;
+  features?: PricingFeature[];
+};
+
+export async function getPricingTiers(): Promise<PricingTier[]> {
+  try {
+    const rows = await sanityClient.fetch<PricingTier[]>(
+      `*[_type == "pricingTier"] | order(order asc, _createdAt asc) {
+        _id, name, description, priceProduction, priceAnnual, period,
+        noteProduction, noteAnnual, flag, featured, ctaLabel, ctaHref,
+        features[]{ text, included }
+      }`,
+      {},
+      { next: { revalidate: 60 } },
+    );
+    return rows ?? [];
+  } catch {
+    return [];
+  }
+}
