@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, boolean } from "drizzle-orm/pg-core";
 
 /**
  * Organizations are the top-level tenant in Show Portal.
@@ -16,6 +16,22 @@ export const organizations = pgTable("organizations", {
   // surfaces sign the URL on demand. Null = render the default building
   // glyph.
   logoUrl: text("logo_url"),
+
+  // ─── Billing (org-level subscription) ──────────────────────────────────
+  // Stripe linkage + status, synced from webhooks.
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  // 'trialing' | 'active' | 'past_due' | 'canceled' | null
+  subscriptionStatus: text("subscription_status"),
+  // The tier the org is on (v1 has one: 'company'); null = none.
+  plan: text("plan"),
+  // App-managed 60-day free trial from signup (independent of Stripe).
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+  // End of the current paid period (from Stripe), for access-after-cancel.
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  // Existing orgs at launch are grandfathered into full access forever.
+  grandfathered: boolean("grandfathered").notNull().default(false),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -1554,3 +1554,32 @@ the marketing site is split into its own repo.
 (localhost:3000 + proscene.app) in sanity.io/manage; `cd studio && npm install
 && npx sanity login && npx sanity deploy`; create/publish posts; rotate the
 read token that was shared in chat.
+
+---
+
+## 2026-06-05 — Billing model = org-level subscription (Stripe), v1
+
+**Decision:** Monetize via an **organization-level subscription** (the org pays
+monthly or annual and adds users under it), NOT the per-production model the
+marketing page currently shows. Tiered (middle tier most popular); **v1 ships
+one tier price** to validate the flow, then expands. **60-day free trial from
+signup**, app-managed (no card up front; counted from org creation,
+independent of Stripe). **All orgs existing at launch are grandfathered** into
+full access forever (`organizations.grandfathered = true`).
+
+**Schema (applied live 2026-06-05 via Supabase MCP `add_org_billing_columns`):**
+`organizations` gained `stripe_customer_id`, `stripe_subscription_id`,
+`subscription_status`, `plan`, `trial_ends_at`, `current_period_end`,
+`grandfathered` (bool, default false). The migration set `grandfathered = true`
+for every existing org. New orgs default to not-grandfathered + a 60-day trial.
+
+**Entitlement logic:** `lib/billing.ts` `billingState()` — grandfathered →
+access; else Stripe status (active/past_due/canceled-within-period) → access;
+else app trial (`trial_ends_at` in the future) → access; else no access.
+
+**Build approach:** entirely in Stripe TEST mode, verified on a Vercel preview
+before live keys. Stripe's API is unreachable from the web container (network
+policy), so all Stripe calls are verified on deploy, not here. Pending: Stripe
+client lib, Checkout + Customer Portal, webhook, `/settings/billing` page, the
+60-day trial stamp at org creation, a soft "trial ended" gate, and rewriting
+the pricing PAGE to match this model.
