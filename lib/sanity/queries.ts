@@ -100,3 +100,25 @@ export async function getLogos(): Promise<CompanyLogo[]> {
     return [];
   }
 }
+
+export type FaqItem = {
+  _id: string;
+  question: string;
+  answer: string;
+  category?: string;
+};
+
+export async function getFaqItems(): Promise<FaqItem[]> {
+  try {
+    const rows = await sanityClient.fetch<FaqItem[]>(
+      `*[_type == "faqItem"] | order(order asc, _createdAt asc) {
+        _id, question, answer, category
+      }`,
+      {},
+      { next: { revalidate: 60 } },
+    );
+    return rows ?? [];
+  } catch {
+    return [];
+  }
+}
