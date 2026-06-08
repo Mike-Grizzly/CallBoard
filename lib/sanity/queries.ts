@@ -156,3 +156,31 @@ export async function getPricingTiers(): Promise<PricingTier[]> {
     return [];
   }
 }
+
+export type HomePage = {
+  heroEyebrow?: string;
+  heroHeadline?: string;
+  heroSubhead?: string;
+  primaryCtaLabel?: string;
+  primaryCtaHref?: string;
+  secondaryCtaLabel?: string;
+  secondaryCtaHref?: string;
+  heroNote?: string;
+};
+
+export async function getHomePage(): Promise<HomePage | null> {
+  try {
+    const row = await sanityClient.fetch<HomePage | null>(
+      `*[_type == "homePage"][0] {
+        heroEyebrow, heroHeadline, heroSubhead,
+        primaryCtaLabel, primaryCtaHref, secondaryCtaLabel, secondaryCtaHref,
+        heroNote
+      }`,
+      {},
+      { next: { revalidate: 60 } },
+    );
+    return row ?? null;
+  } catch {
+    return null;
+  }
+}
