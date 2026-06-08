@@ -15,6 +15,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@portabletext/react": "^6.2.0",
     "@sanity/image-url": "^2.1.1",
+    "@sanity/vision": "^5.30.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.8",
     "@tiptap/extension-color": "^3.22.5",
@@ -43,6 +44,8 @@
     "react-dom": "19.2.4",
     "resend": "^6.12.3",
     "sanitize-html": "^2.17.4",
+    "sanity": "^5.30.0",
+    "styled-components": "^6.4.2",
     "tailwind-merge": "^2.6.0",
     "web-push": "^3.6.7"
   },

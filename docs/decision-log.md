@@ -1540,10 +1540,13 @@ the marketing site is split into its own repo.
   (`/blog`, `/blog/[slug]`) reads published posts and **falls back to the
   existing static content** when Sanity is empty/unreachable, so nothing breaks
   before content exists.
-- Editor: a **standalone Studio** in `studio/` (its own package.json, excluded
-  from the app's tsconfig/build) that the owner deploys to Sanity's hosting
-  (`dsciikio.sanity.studio`) — keeps the heavy editor packages out of the app
-  and avoids React-19 conflicts.
+- Editor: the Sanity **Studio is embedded in the app at `/studio`**
+  (`app/studio/[[...tool]]/page.tsx` + root `sanity.config.ts` + `sanity/schema/`).
+  Chosen over a standalone CLI-deployed studio because the owner has no local
+  dev environment — embedding means the editor deploys automatically with the
+  site and is used entirely in the browser (`proscene.app/studio`, Sanity
+  login) with zero terminal steps. Sanity v5 supports React 19, so there's no
+  dependency conflict; `/studio` is allow-listed in `proxy.ts`.
 - Config via env (`NEXT_PUBLIC_SANITY_PROJECT_ID`/`DATASET`, optional
   server-only `SANITY_API_READ_TOKEN`). Project `dsciikio`, dataset `production`.
 

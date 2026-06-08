@@ -24,6 +24,8 @@ const PUBLIC_ROUTES = [
   "/blog",
   "/faq",
   "/contact",
+  // Sanity Studio (content editor) — authenticates against Sanity, not the app.
+  "/studio",
 ];
 
 function isPublicRoute(pathname: string): boolean {
