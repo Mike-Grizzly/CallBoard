@@ -1520,3 +1520,34 @@ Auth; may need Pro).
 5. **`RoleRow` gained `actorEmail?`**; `WizardPerson` is the launch-time flattened shape. The server contract (`createProductionFull` → `applyWizardTeam`, which assigns existing org members and invites new emails) was reused unchanged — the client just builds a richer `team` array and dedupes by email.
 
 **Impact:** No DB/env/server changes. People without an email are simply not added (no failed invites). Review step wording updated ("Team — N members"; unresolved shows "invite at launch"). New CSS under `.np-root` for `.team-row` and the `.np-modal*` / `.np-invite*` prompt.
+
+---
+
+## 2026-06-05 — Marketing CMS = Sanity (hosted, decoupled), not Payload
+
+**Decision:** Use **Sanity** for the marketing blog CMS instead of the
+earlier Payload plan. Rationale: the marketing site currently lives inside the
+live production app, and a self-hosted CMS (Payload) would add an admin panel,
+its own tables in the production Supabase DB, a Next config/version bump, and
+React-19 dependency risk to the live app — none of which can be verified in the
+web container. Sanity is decoupled (content lives in Sanity's cloud, read via
+an API), adds no DB tables, keeps the app build light, and travels cleanly when
+the marketing site is split into its own repo.
+
+**Shape:**
+- App side: lightweight read only — `next-sanity` + `@sanity/image-url` +
+  `@portabletext/react`. `lib/sanity/{client,queries,image}.ts`. The blog
+  (`/blog`, `/blog/[slug]`) reads published posts and **falls back to the
+  existing static content** when Sanity is empty/unreachable, so nothing breaks
+  before content exists.
+- Editor: a **standalone Studio** in `studio/` (its own package.json, excluded
+  from the app's tsconfig/build) that the owner deploys to Sanity's hosting
+  (`dsciikio.sanity.studio`) — keeps the heavy editor packages out of the app
+  and avoids React-19 conflicts.
+- Config via env (`NEXT_PUBLIC_SANITY_PROJECT_ID`/`DATASET`, optional
+  server-only `SANITY_API_READ_TOKEN`). Project `dsciikio`, dataset `production`.
+
+**Owner action items:** add the env vars to Vercel; add CORS origins
+(localhost:3000 + proscene.app) in sanity.io/manage; `cd studio && npm install
+&& npx sanity login && npx sanity deploy`; create/publish posts; rotate the
+read token that was shared in chat.
