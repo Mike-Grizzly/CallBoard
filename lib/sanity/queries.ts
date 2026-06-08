@@ -57,3 +57,46 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
     return null;
   }
 }
+
+export type Testimonial = {
+  _id: string;
+  quote: string;
+  author: string;
+  role?: string;
+  avatar?: SanityImageSource;
+  featured?: boolean;
+};
+
+export async function getTestimonials(): Promise<Testimonial[]> {
+  try {
+    const rows = await sanityClient.fetch<Testimonial[]>(
+      `*[_type == "testimonial"] | order(featured desc, order asc, _createdAt asc) {
+        _id, quote, author, role, avatar, featured
+      }`,
+      {},
+      { next: { revalidate: 60 } },
+    );
+    return rows ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export type CompanyLogo = {
+  _id: string;
+  name: string;
+  logo?: SanityImageSource;
+};
+
+export async function getLogos(): Promise<CompanyLogo[]> {
+  try {
+    const rows = await sanityClient.fetch<CompanyLogo[]>(
+      `*[_type == "companyLogo"] | order(order asc, name asc) { _id, name, logo }`,
+      {},
+      { next: { revalidate: 60 } },
+    );
+    return rows ?? [];
+  } catch {
+    return [];
+  }
+}
