@@ -4,10 +4,10 @@ import { cookies } from "next/headers";
 import Script from "next/script";
 import "./globals.css";
 
-// Google Tag Manager — inert until NEXT_PUBLIC_GTM_ID is set (e.g. "GTM-XXXX").
-// Once set, all tracking tags / ad pixels / conversions are managed in the GTM
-// web UI, no code changes needed.
-const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID;
+// Google Tag Manager. Container ID is public (visible in page source). Loads
+// site-wide; all tracking tags / ad pixels / conversions are then managed in
+// the GTM web UI with no code changes. Overridable via NEXT_PUBLIC_GTM_ID.
+const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID || "GTM-PLR3RW32";
 
 const inter = Inter({
   subsets: ["latin"],
