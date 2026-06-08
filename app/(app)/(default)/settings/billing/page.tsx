@@ -51,7 +51,7 @@ export default async function BillingSettingsPage() {
   let detail = "";
   switch (state.status) {
     case "grandfathered":
-      detail = "Thanks for being here early. Your workspace has full access to every feature, with nothing to pay.";
+      detail = "Thanks for being here early — your workspace has full access to every feature, with nothing to pay. You're welcome to start a subscription below if you'd like, but you don't have to.";
       break;
     case "trialing":
       detail = `${state.daysLeftInTrial} day${state.daysLeftInTrial === 1 ? "" : "s"} left${state.trialEndsAt ? ` — your trial ends ${fmtDate(state.trialEndsAt)}.` : "."} Subscribe any time to keep your access after that.`;
@@ -95,12 +95,11 @@ export default async function BillingSettingsPage() {
           <p className="muted" style={{ fontSize: 13, marginTop: 12 }}>
             Online billing isn&apos;t available yet — check back soon.
           </p>
-        ) : state.status === "grandfathered" ? null : (
+        ) : (
           <BillingButtons
             hasMonthly={hasMonthly}
             hasAnnual={hasAnnual}
             showManage={isSubscribed}
-            subscribeLabel={state.status === "trialing" ? "Subscribe" : "Subscribe"}
           />
         )}
       </div>

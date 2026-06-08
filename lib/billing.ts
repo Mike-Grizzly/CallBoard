@@ -30,10 +30,8 @@ const DAY = 86_400_000;
 export function billingState(org: OrgBillingFields): BillingState {
   const now = Date.now();
 
-  if (org.grandfathered) {
-    return { hasAccess: true, status: "grandfathered", trialEndsAt: null, daysLeftInTrial: null };
-  }
-
+  // A live subscription takes display precedence — so a grandfathered org that
+  // chooses to subscribe still sees its real subscription state.
   switch (org.subscriptionStatus) {
     case "active":
       return { hasAccess: true, status: "active", trialEndsAt: null, daysLeftInTrial: null };
@@ -42,16 +40,19 @@ export function billingState(org: OrgBillingFields): BillingState {
       return { hasAccess: true, status: "past_due", trialEndsAt: null, daysLeftInTrial: null };
     case "canceled": {
       const inPeriod = !!org.currentPeriodEnd && org.currentPeriodEnd.getTime() > now;
-      return {
-        hasAccess: inPeriod,
-        status: inPeriod ? "canceled" : "none",
-        trialEndsAt: null,
-        daysLeftInTrial: null,
-      };
+      if (inPeriod) {
+        return { hasAccess: true, status: "canceled", trialEndsAt: null, daysLeftInTrial: null };
+      }
+      break; // lapsed → fall through to grandfathered / trial
     }
   }
 
-  // No active subscription → fall back to the app-managed trial.
+  // Grandfathered → full access (when not actively subscribed).
+  if (org.grandfathered) {
+    return { hasAccess: true, status: "grandfathered", trialEndsAt: null, daysLeftInTrial: null };
+  }
+
+  // No subscription / not grandfathered → fall back to the app-managed trial.
   if (org.trialEndsAt && org.trialEndsAt.getTime() > now) {
     return {
       hasAccess: true,
