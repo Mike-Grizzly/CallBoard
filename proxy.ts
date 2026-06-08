@@ -26,6 +26,8 @@ const PUBLIC_ROUTES = [
   "/contact",
   // Sanity Studio (content editor) — authenticates against Sanity, not the app.
   "/studio",
+  // Stripe webhook — server-to-server POST, verified by signature, no session.
+  "/api/stripe/webhook",
 ];
 
 function isPublicRoute(pathname: string): boolean {

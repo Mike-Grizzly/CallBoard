@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { db } from "@/db";
 import { organizations } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { newTrialEnd } from "@/lib/billing";
 
 function slugify(name: string): string {
   return name
@@ -39,7 +40,9 @@ export async function createOrganization(name: string) {
   const slug = await uniqueSlugFor(trimmed);
   const [org] = await db
     .insert(organizations)
-    .values({ name: trimmed, slug })
+    // New orgs start a 60-day free trial from signup (existing orgs were
+    // grandfathered and never get a trial gate).
+    .values({ name: trimmed, slug, trialEndsAt: newTrialEnd() })
     .returning();
   return org;
 }

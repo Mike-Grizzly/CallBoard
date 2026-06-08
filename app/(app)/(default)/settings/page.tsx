@@ -151,6 +151,17 @@ export default async function SettingsPage() {
             </Link>
           </li>
         )}
+        {canManage && (
+          <li>
+            <Link href="/settings/billing" className="more-item">
+              <span className="more-item-ico">
+                <Icon name="CreditCard" aria-hidden />
+              </span>
+              <span className="more-item-label">Plan &amp; billing</span>
+              <Icon name="ChevronRight" className="more-item-chev" aria-hidden />
+            </Link>
+          </li>
+        )}
         <li>
           <a
             href="mailto:feedback@proscene.app?subject=Proscene%20feedback"
