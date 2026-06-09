@@ -11,15 +11,8 @@ import {
   stripeConfigured,
   availablePaidPlans,
   STRIPE_PRICE_IDS,
-  type PaidPlanId,
 } from "@/lib/stripe";
 import { BillingButtons, type PlanOption } from "./billing-buttons";
-
-const PLAN_DISPLAY: Record<PaidPlanId, { label: string; priceLabel: string }> = {
-  season: { label: "Season", priceLabel: "$249/yr · $25/mo — 1 production" },
-  repertory: { label: "Repertory", priceLabel: "$499/yr · $49/mo — up to 3 productions" },
-  company: { label: "Company", priceLabel: "$799/yr · $79/mo — unlimited productions" },
-};
 
 function fmtDate(d: Date | null) {
   if (!d) return "";
@@ -57,8 +50,6 @@ export default async function BillingSettingsPage() {
   const state = billingState(org);
   const planOptions: PlanOption[] = availablePaidPlans().map((id) => ({
     id,
-    label: PLAN_DISPLAY[id].label,
-    priceLabel: PLAN_DISPLAY[id].priceLabel,
     hasMonthly: !!STRIPE_PRICE_IDS[id].monthly,
     hasAnnual: !!STRIPE_PRICE_IDS[id].annual,
   }));
