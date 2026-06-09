@@ -366,3 +366,17 @@ Record of durable project decisions. Add new entries at the bottom with date and
 - The `rls_disabled` critical advisory clears; the 8 tables now show only the benign INFO-level `rls_enabled_no_policy`, identical to the other 23.
 - Same future caveat: if data access ever moves to the Supabase JS client (anon key), policies must be written first.
 - Unrelated: the security advisor still reports a WARN for `auth_leaked_password_protection` (HaveIBeenPwned check disabled in Auth settings) — not addressed here.
+
+---
+
+## 2026-06-09 — Pricing strategy captured as a draft
+
+**Decision:** A full pricing-strategy document was added at `/docs/pricing-strategy.md` covering competitor research (2026), segment analysis, the recommended tier ladder (Performer / First Production / Season / Repertory / Company / Enterprise / Education), per-profile revenue modeling, unit economics, and the product gaps that gate higher tiers.
+
+**Reason:** Pricing was discussed in depth in a session. Without a durable doc, the reasoning (especially the freemium-trap analysis and the "two-different-constraints" framing) would have to be re-derived each session.
+
+**Impact:**
+- Future sessions can pull from `/docs/pricing-strategy.md` instead of restarting the discussion.
+- The doc is explicitly marked **Status: Draft** — numbers are recommendations grounded in competitor research, not final list prices. No engineering work is committed to billing/metering yet.
+- The doc names concrete `current-status.md` gaps that block Company and Enterprise tiers (multi-org, storage RLS, sanitization, tests, SSO, audit log).
+- An Open Pricing Questions section captures unresolved numbers (exact Season price, AI credit packs, nonprofit pricing, education price point) so they aren't re-litigated without new info.
