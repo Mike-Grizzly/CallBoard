@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { requireCurrentUser, markActiveAndGetPrevious } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getUserProductions } from "@/features/productions/queries";
+import { getVisibleProductions } from "@/features/productions/queries";
 import {
   getAnnouncementsForUser,
   getAckInfoForAnnouncements,
@@ -243,7 +243,7 @@ export default async function DashboardPage() {
   // Stamp this visit and learn how long they were away (for "Welcome back").
   const lastActiveAt = await markActiveAndGetPrevious(user.id);
 
-  const myProductions = await getUserProductions(user.id);
+  const myProductions = await getVisibleProductions(user);
   const prodIds = myProductions.map((p) => p.id);
 
   const now = new Date();

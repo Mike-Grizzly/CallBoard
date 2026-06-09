@@ -1,6 +1,6 @@
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getUserProductions } from "@/features/productions/queries";
+import { getVisibleProductions } from "@/features/productions/queries";
 import { getCallsForUserInRange } from "@/features/calls/queries";
 import {
   resolveProductionColorToken,
@@ -23,7 +23,7 @@ export default async function CalendarPage({
   // director, choreographer, stage_manager.
   const canEdit = can(user.role, "reports:create");
 
-  const userProductions = await getUserProductions(user.id);
+  const userProductions = await getVisibleProductions(user);
   if (userProductions.length === 0) {
     return <EmptyState />;
   }

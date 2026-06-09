@@ -7,6 +7,8 @@ import {
   profiles,
 } from "@/db/schema";
 import { and, eq, desc, isNull, isNotNull } from "drizzle-orm";
+import { can } from "@/lib/permissions";
+import type { Role } from "@/types/roles";
 import type { WizardOrgUser } from "./wizard-constants";
 
 /**
@@ -63,7 +65,10 @@ export const getProductionBySlug = cache(
   },
 );
 
-export async function getUserProductions(userId: string) {
+export async function getUserProductions(
+  userId: string,
+  organizationId: string,
+) {
   const rows = await db
     .select({
       id: productions.id,
@@ -86,6 +91,9 @@ export async function getUserProductions(userId: string) {
     .where(
       and(
         eq(productionMemberships.userId, userId),
+        // Scope to the CURRENT workspace — a user in several orgs must only see
+        // the active org's shows, never a mix across workspaces.
+        eq(productions.organizationId, organizationId),
         isNull(productions.archivedAt),
       ),
     )
@@ -103,6 +111,38 @@ export async function getUserProductions(userId: string) {
 export type UserProduction = Awaited<
   ReturnType<typeof getUserProductions>
 >[number];
+
+/**
+ * Productions the user should see in the rail / dashboard / calendar for their
+ * CURRENT workspace, by the Canva/Monday team model:
+ *   • managers (productions:manage) see every show in the org,
+ *   • everyone else sees only the shows they're cast/crewed on.
+ * Always scoped to the active org, so switching workspaces never leaks another
+ * org's productions.
+ */
+export async function getVisibleProductions(user: {
+  id: string;
+  organizationId: string;
+  role: Role;
+}): Promise<UserProduction[]> {
+  if (can(user.role, "productions:manage")) {
+    const rows = await getProductionsByOrganization(user.organizationId);
+    return rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      slug: r.slug,
+      status: r.status,
+      color: r.color,
+      venue: r.venue,
+      openingDate: r.openingDate,
+      closingDate: r.closingDate,
+      firstRehearsalDate: r.firstRehearsalDate,
+      techStartDate: r.techStartDate,
+      role: user.role,
+    }));
+  }
+  return getUserProductions(user.id, user.organizationId);
+}
 
 /**
  * Org members formatted for the wizard's actor autocomplete — anyone already

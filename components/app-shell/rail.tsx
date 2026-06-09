@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import { getUserProductions } from "@/features/productions/queries";
+import { getVisibleProductions } from "@/features/productions/queries";
 import { resolveProductionColor } from "@/features/productions/constants";
 import { getUserMemberships } from "@/features/workspace/queries";
 import { getSignedLogoUrl } from "@/lib/workspace-logo";
@@ -27,7 +27,7 @@ export async function Rail() {
 
   const [productions, memberships, logoUrl] = user
     ? await Promise.all([
-        getUserProductions(user.id),
+        getVisibleProductions(user),
         getUserMemberships(user.id),
         getSignedLogoUrl(user.organizationLogoUrl),
       ])
