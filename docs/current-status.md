@@ -1,6 +1,20 @@
 # Current Status
 
-**Last updated:** 2026-06-05
+**Last updated:** 2026-06-09
+
+**Session 2026-06-09 (Billing & monetization + multi-workspace polish — merged to `main`):** the full paid-product layer landed.
+- **Plans & trial:** `organizations.plan` (`free`|`season`|`repertory`|`company`, limits 1/1/3/∞) + write-once `trial_started_at`. The 60-day trial is anchored to the org's **first production** (not signup) and is ungameable (deleting/archiving the show or editing dates can't reset it). Concurrency gate blocks starting a show over the plan limit; grandfathered orgs (all pre-existing) bypass every gate.
+- **Graduated lock:** day 0–60 full → **60–90 "finish your run" grace** (reports/announcements/schedules/notes stay editable; scripts/blocking/scenes/uploads lock) → **90+ read-only**. Enforced via `features/billing/guard.ts` (`assertCanMutate` full-writes, `assertCanOperate` operational) wired across the mutating actions; `lib/billing.ts` `trialPhase()`/`mutationLevel()`.
+- **Stripe (org-level):** 3 products × monthly/annual via six `STRIPE_PRICE_<PLAN>_<INTERVAL>` env vars; `createCheckoutSession(plan, interval)`; signature-verified webhook maps price→plan. **Subscribing during the trial collects the card now but defers the first charge to day 60** (`subscription_data.trial_end`). Stripe `trialing` treated as subscribed. Customer Portal for manage/upgrade (needs "switch plans" enabled in Stripe).
+- **Lifecycle cron:** `vercel.json` daily `/api/cron/billing-lifecycle` (CRON_SECRET-gated) → milestone emails to **all org admins** (day 30 nudge, 55 warning, 90 read-only, 120/150/173 purge warnings) and the **day-180 file purge** (90 days after lock; removes storage objects only, scoped to the org's productions, never DB rows / other orgs / workspace logos). Idempotent via `organizations.billing_lifecycle_stage`.
+- **UI:** in-app trial banners (nudge/grace/read-only, dismissible), upper-right **trial countdown pill**, website-style **plan cards** on Settings → Billing, and a trial-start announcement on first-production launch.
+- **Signup individual-vs-org split:** "I run productions" (names a workspace) vs "I'm a participant" (personal "{First}'s workspace", no company to name). Participants never trigger billing — only orgs that create productions do.
+- **Marketing:** pricing page + homepage teaser + FAQ rewritten to the subscription tiers, "participants always free," and an Education section (manual verification via the contact form). Annual/monthly toggle; comparison checkmarks centered.
+- **Multi-workspace correctness:** fixed a cross-org leak — rail/dashboard/calendar listed productions across **all** orgs; now scoped to the active workspace via `getVisibleProductions(user)` (managers see all org shows, participants see only theirs — the Canva/Monday model). New **cross-org alert bubbles** on the org switcher (mentions + notifications since last switch-in; clears on switch, items stay unread within the org) — added `notifications.organization_id` + `organization_memberships.last_viewed_at`.
+- **Docs:** new `docs/admin-playbook.md` (comp/grandfather an org, recover an admin, extend a trial, lifetime deals, Stripe coupon durations) with confirmed-correct SQL.
+- **Live setup still owned by the user:** add `CRON_SECRET` in Vercel; enable "Customers can switch plans" + add products in the Stripe portal; confirm `RESEND_FROM_EMAIL` domain is verified for the lifecycle emails; (optional) create a Stripe coupon to automate the 15% nudge.
+
+**Last updated (prior):** 2026-06-05
 
 **Shipping to `main` 2026-06-05 (branch `claude/magical-ride-usNEW`):** the ProScene marketing site (root `/`, plus /features /pricing /reviews /blog /faq) and a multi-tenant authorization hardening pass (see the Marketing website port + decision-log/​open-questions entries below). Known follow-ups carried into the next session: wire the marketing CTAs to /signup, reconcile "ProScene"/`app.proscene.live` casing, and the live `attachments` Storage policy flip (code-ready). `main` was merged into the branch and the tree compiles (`next build`), tsc + eslint clean.
 

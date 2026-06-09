@@ -471,3 +471,25 @@ with an honest "coming soon" and pulled from the nav.
 - **Placeholder images** (blog cards, product mock) → real screenshots.
 - **CMS (Payload), GTM/tracking, Stripe checkout, repo split** — still pending
   (see decision-log 2026-06-05).
+
+---
+
+## 2026-06-09 — Billing & monetization (post-launch follow-ups)
+
+**Resolved this session:** CMS decision (Sanity, embedded Studio at `/studio` — not Payload); Stripe checkout/webhook/portal built (3 tiers); GTM live; trial/gating model and pricing PAGE both built. The pre-2026-06-09 "Still pending: CMS/GTM/Stripe" notes above are superseded.
+
+**Owner setup before/at go-live (not code):**
+- Add `CRON_SECRET` in Vercel (the lifecycle cron 503s without it).
+- Stripe Customer Portal → enable "Customers can switch plans" + add the 3 products (else "Manage billing" can't upgrade/downgrade).
+- Confirm `RESEND_FROM_EMAIL` domain is verified in Resend, or lifecycle/admin emails silently fail.
+- Swap Stripe test keys → live keys + a live webhook (use the `www` canonical URL) when ready to charge.
+- Rotate the Sanity API token (pasted in chat during setup).
+
+**Open product questions:**
+- **15%-off trial nudge** currently asks the admin to *reply* for a code. To make it self-serve, create a Stripe coupon and wire **per-org unique promotion codes** (restricted to the org's customer, single-use) into the day-30 email.
+- **AI tooling** is unbuilt but reserved as the headline Company differentiator — plan to meter it as **per-tier AI credits** (the one feature with real per-use cost). Don't advertise as live until built.
+- **Downgrade behavior** (e.g. Company→Season with 3 active shows): currently keeps all shows editable, only blocks *new* creation over the limit. Confirm before launch.
+- **Lifecycle nudge dedup** advances one milestone per cron run; if the cron is down for many days it sends only the latest milestone (skips intermediates) — acceptable, revisit if it matters.
+- **Cross-org alert bubble** counts "activity since last switch-in," so new activity arriving *while* you're in a workspace can show a bubble after you leave it. Matches the "clear on switch" spec; revisit if it feels off.
+
+**Deferred UI follow-ups (offered, not built):** one-click "Repertory after my trial" CTA in the trial banner; explicit in-app upgrade buttons (vs the Stripe portal); filtering `/productions` so participants don't see other shows' names.

@@ -1583,3 +1583,49 @@ policy), so all Stripe calls are verified on deploy, not here. Pending: Stripe
 client lib, Checkout + Customer Portal, webhook, `/settings/billing` page, the
 60-day trial stamp at org creation, a soft "trial ended" gate, and rewriting
 the pricing PAGE to match this model.
+
+---
+
+## 2026-06-09 — Monetization model: org-billed, participant-free, first-production-anchored trial
+
+**Decision:** The **organization** is the billable entity; **participants (cast/crew/designers) are always free**. Three paid tiers differ only by concurrent productions — **Season $249/yr ($25/mo, 1 prod), Repertory $499/yr ($49/mo, 3 prod, "most popular"), Company $799/yr ($79/mo, unlimited)** — every paid tier includes the full toolset (no per-feature gating in code; concurrency is the lever). A new org gets a **60-day free trial anchored to its first production's creation** (write-once `trial_started_at`), not signup.
+
+**Reason:** Cast/crew are mostly volunteers — never price per seat. Anchoring the trial to the first production (vs signup) means the clock never expires before the company has really begun, and keying it to an immutable org timestamp closes the "wipe the show / push the closing date / delete-and-recreate" farming exploits. Matches the competitive landscape (`docs/pricing-strategy.md`) which is price-anchored low with concurrency the natural gate.
+
+**Impact:** `features/billing/constants.ts` (plans, limits, day markers), `features/billing/guard.ts` (gates), `lib/billing.ts` (`billingState`/`trialPhase`/`mutationLevel`). All pre-existing orgs are `grandfathered = true` (full access forever).
+
+---
+
+## 2026-06-09 — Graduated "finish your run" lock instead of a hard day-60 cutoff
+
+**Decision:** After the 60-day trial: **day 60–90 grace** keeps the operational loop editable (rehearsal reports, announcements, schedules, director's notes) so a company in tech week can finish; scripts/blocking/scenes/uploads/settings lock immediately. **Day 90 → full read-only.** Uploaded files retained until **day 180** (90 days of read-only download window), then purged. Admins emailed before the purge (day 120/150/173).
+
+**Reason:** A hard paywall mid-tech is the worst moment to lose a near-converting customer. Time-boxing the grace (and keeping it keyed to the immutable trial anchor, not the closing date) keeps it generous but non-abusable. Day-180 purge frees storage cost without surprising anyone — the closing date is purely cosmetic and never affects billing.
+
+**Impact:** `assertCanMutate` (full) vs `assertCanOperate` (operational) gates; daily `vercel.json` cron `/api/cron/billing-lifecycle` (CRON_SECRET) drives emails + the purge; purge removes storage objects only (never DB rows, other orgs, or `org-logos/`), scoped by the org's production ids.
+
+---
+
+## 2026-06-09 — Card-on-file during trial defers first charge to day 60
+
+**Decision:** Subscribing **during** the free trial collects the card immediately but sets Stripe `subscription_data.trial_end` to the org's day-60, so the first charge fires automatically when the trial ends. Stripe `trialing` status is treated as fully subscribed in-app.
+
+**Reason:** Lets a company commit early ("add a card now") without losing their remaining free days, and converts the trial into a paying sub with zero further action. Honors the promised 60 free days regardless of when they subscribe.
+
+---
+
+## 2026-06-09 — Education pricing via manual verification, not a self-serve tier
+
+**Decision:** Education is **not** a self-serve Stripe product. The pricing page routes schools to the contact form ("Get education pricing"); the owner verifies by hand (department email / program site) and issues a Stripe **promotion code** (a `forever`-duration coupon for an ongoing rate). Lifetime deals = one-time payment + `grandfathered = true`.
+
+**Reason:** Automated `.edu` checks wrongly reject international / community-ed / K-12 / homeschool programs — the exact customers to keep. Manual verification is reliable at this volume and costs nothing; SheerID-style automation can come later. (See `docs/admin-playbook.md`.)
+
+---
+
+## 2026-06-09 — Multi-workspace visibility = Canva/Monday model
+
+**Decision:** All workspace-scoped views (rail, dashboard, calendar) show **only the active org's** productions, and within an org: **managers (`productions:manage`) see every show; participants see only the shows they're cast/crewed on**. Signup offers individual-vs-org; participants get a personal workspace and never trigger billing. Cross-org **alert bubbles** on the switcher count mentions + notifications since the user last switched into each workspace (clear on switch; items stay unread within the org).
+
+**Reason:** `getUserProductions` had no org filter, leaking a user's productions across all their orgs into every view. The fix matches how Canva/Monday teams work — join anyone's paid team and get its benefits scoped to that team, while your own free workspace only shows your own work.
+
+**Impact:** `getVisibleProductions(user)`; `notifications.organization_id` + `organization_memberships.last_viewed_at` (set on `switchOrganization`); bubbles in `WorkspaceRailBadge`.
