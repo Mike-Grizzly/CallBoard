@@ -62,7 +62,11 @@ export default async function BillingSettingsPage() {
     hasMonthly: !!STRIPE_PRICE_IDS[id].monthly,
     hasAnnual: !!STRIPE_PRICE_IDS[id].annual,
   }));
-  const isSubscribed = state.status === "active" || state.status === "past_due" || state.status === "canceled";
+  const isSubscribed =
+    org.subscriptionStatus === "active" ||
+    org.subscriptionStatus === "trialing" ||
+    org.subscriptionStatus === "past_due" ||
+    org.subscriptionStatus === "canceled";
 
   let detail = "";
   switch (state.status) {

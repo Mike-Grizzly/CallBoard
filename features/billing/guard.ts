@@ -152,44 +152,44 @@ export async function assertCanCreateProduction(
 }
 
 /**
- * After the first production is created, warn if its closing date runs past
- * the free-trial scope, so a company can decide to subscribe before the lock
- * hits mid-run. Returns null for grandfathered/subscribed orgs (no trial gate)
- * and for shows that finish comfortably inside the trial.
+ * Announcement shown on the launch screen when an org creates its FIRST
+ * production and its 60-day trial begins. Tells them the trial started and how
+ * to subscribe, and folds in a heads-up if the show's closing date runs past
+ * the trial. Returns null for grandfathered/subscribed orgs (no trial gate).
+ * The caller gates this on `startTrialIfFirstProduction` returning true.
  */
-export async function trialScopeWarning(
+export async function firstProductionTrialNotice(
   orgId: string,
   closingDate: string | null,
 ): Promise<string | null> {
-  if (!closingDate) return null;
   const org = await getOrgBilling(orgId);
   if (!org || org.grandfathered || !org.trialStartedAt) return null;
-  // Subscribed orgs have no trial lock.
-  if (org.subscriptionStatus === "active" || org.subscriptionStatus === "past_due") {
+  // Already subscribed / pre-authorized → no trial messaging.
+  if (["active", "past_due", "trialing"].includes(org.subscriptionStatus ?? "")) {
     return null;
   }
 
-  const close = new Date(closingDate).getTime();
-  const day60 = org.trialStartedAt.getTime() + TRIAL_DAYS * DAY;
-  const day90 = org.trialStartedAt.getTime() + LOCK_DAY * DAY;
+  let msg =
+    "Your 60-day free trial just started — you have full access to every " +
+    "feature. Subscribe any time from Settings → Billing. You can even add a " +
+    "card now and we'll start your plan automatically when the trial ends.";
 
-  if (close > day90) {
-    return (
-      "Heads up: this show closes after your free trial fully ends. Editing " +
-      "tools lock at day 60, and reports, announcements and scheduling lock " +
-      "at day 90 — so part of your run would be read-only. Subscribe any time " +
-      "to keep full access through closing."
-    );
+  if (closingDate) {
+    const close = new Date(closingDate).getTime();
+    const day60 = org.trialStartedAt.getTime() + TRIAL_DAYS * DAY;
+    const day90 = org.trialStartedAt.getTime() + LOCK_DAY * DAY;
+    if (close > day90) {
+      msg +=
+        " Heads up: this show closes after the trial fully ends, so part of " +
+        "your run would be read-only unless you subscribe.";
+    } else if (close > day60) {
+      msg +=
+        " Heads up: this show closes after day 60 — editing tools lock then, " +
+        "though reports and scheduling continue through day 90.";
+    }
   }
-  if (close > day60) {
-    return (
-      "Heads up: this show closes after your 60-day full trial. Editing tools " +
-      "(scripts, blocking) lock on day 60, but you'll keep reports, " +
-      "announcements and scheduling through day 90. Subscribe any time to keep " +
-      "everything unlocked."
-    );
-  }
-  return null;
+
+  return msg;
 }
 
 /**
@@ -198,9 +198,11 @@ export async function trialScopeWarning(
  * org's very first production stamps the anchor, and it's never moved
  * afterward (so deleting/archiving that production can't reset the trial).
  */
-export async function startTrialIfFirstProduction(orgId: string): Promise<void> {
+export async function startTrialIfFirstProduction(
+  orgId: string,
+): Promise<boolean> {
   const now = new Date();
-  await db
+  const rows = await db
     .update(organizations)
     .set({
       trialStartedAt: now,
@@ -212,5 +214,9 @@ export async function startTrialIfFirstProduction(orgId: string): Promise<void> 
         eq(organizations.id, orgId),
         isNull(organizations.trialStartedAt),
       ),
-    );
+    )
+    .returning({ id: organizations.id });
+  // Non-empty only when this call actually stamped the anchor — i.e. this was
+  // the org's very first production and the trial just began now.
+  return rows.length > 0;
 }

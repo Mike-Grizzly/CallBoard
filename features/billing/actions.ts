@@ -52,13 +52,27 @@ export async function createCheckoutSession(
       .where(eq(organizations.id, org.id));
   }
 
+  // If they subscribe DURING their free trial, collect the card now but defer
+  // the first charge to the end of the 60-day trial — so "add a card now"
+  // honors the remaining free days and auto-starts the plan at trial end.
+  // Stripe requires trial_end to be at least ~48h out; otherwise charge now.
+  const now = Date.now();
+  const trialEndMs = org.trialEndsAt ? org.trialEndsAt.getTime() : 0;
+  const deferToTrialEnd =
+    !org.grandfathered &&
+    !["active", "past_due", "trialing"].includes(org.subscriptionStatus ?? "") &&
+    trialEndMs > now + 48 * 3600 * 1000;
+
   const base = siteUrl();
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
     line_items: [{ price: priceId, quantity: 1 }],
     client_reference_id: org.id,
-    subscription_data: { metadata: { organizationId: org.id, plan } },
+    subscription_data: {
+      metadata: { organizationId: org.id, plan },
+      ...(deferToTrialEnd ? { trial_end: Math.floor(trialEndMs / 1000) } : {}),
+    },
     allow_promotion_codes: true,
     success_url: `${base}/settings/billing?checkout=success`,
     cancel_url: `${base}/settings/billing?checkout=cancel`,

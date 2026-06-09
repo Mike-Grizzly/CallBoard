@@ -31,12 +31,17 @@ export async function TrialBanner() {
   // Subscribed (in any state) or grandfathered → nothing to nudge here; the
   // settings → billing page covers those cases.
   if (org.grandfathered) return null;
-  if (["active", "past_due", "canceled"].includes(org.subscriptionStatus ?? "")) {
+  if (
+    ["active", "trialing", "past_due", "canceled"].includes(
+      org.subscriptionStatus ?? "",
+    )
+  ) {
     return null;
   }
 
   const { phase, daysRemaining, graceDaysRemaining } = trialPhase(org);
-  if (phase === "no_production" || phase === "active") return null;
+  // 'no_production' = trial hasn't started; nothing to show until they begin.
+  if (phase === "no_production") return null;
 
   const isAdmin = can(user.role, "settings:manage");
   const d = (n: number) => `${n} day${n === 1 ? "" : "s"}`;
@@ -46,6 +51,11 @@ export async function TrialBanner() {
   let dismissible = false;
 
   switch (phase) {
+    case "active":
+      tone = "info";
+      message = `You're on your 60-day free trial — full access to everything, ${d(daysRemaining)} left. Subscribe any time in Settings → Billing, or add a card now and we'll start your plan automatically when the trial ends.`;
+      dismissible = true;
+      break;
     case "nudge":
       tone = "info";
       message = `You're ${d(60 - daysRemaining)} into your free trial — ${d(daysRemaining)} left. Subscribe any time to lock in your access.`;

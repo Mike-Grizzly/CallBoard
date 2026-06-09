@@ -32,7 +32,7 @@ import { isValidEmail } from "@/features/members/validation";
 import {
   assertCanCreateProduction,
   startTrialIfFirstProduction,
-  trialScopeWarning,
+  firstProductionTrialNotice,
 } from "@/features/billing/guard";
 import { closingDateBeyondCap, MAX_RUN_MONTHS } from "./validation";
 
@@ -220,9 +220,13 @@ export async function createProductionFull(
   }
 
   await createDefaultFolders(productionId);
-  await startTrialIfFirstProduction(user.organizationId);
-  const trialWarning =
-    (await trialScopeWarning(user.organizationId, closing)) ?? undefined;
+  const trialJustStarted = await startTrialIfFirstProduction(
+    user.organizationId,
+  );
+  const trialWarning = trialJustStarted
+    ? (await firstProductionTrialNotice(user.organizationId, closing)) ??
+      undefined
+    : undefined;
 
   const teamResult = await applyWizardTeam({
     team: input.team ?? [],

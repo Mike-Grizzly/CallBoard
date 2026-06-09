@@ -42,6 +42,9 @@ export function billingState(org: OrgBillingFields): BillingState {
   // chooses to subscribe still sees its real subscription state.
   switch (org.subscriptionStatus) {
     case "active":
+    case "trialing":
+      // 'trialing' = they added a card during their free trial; Stripe defers
+      // the first charge to the trial end. Treat as subscribed (full access).
       return { hasAccess: true, status: "active", trialEndsAt: null, daysLeftInTrial: null };
     case "past_due":
       // Keep access during Stripe's dunning/retry window.
