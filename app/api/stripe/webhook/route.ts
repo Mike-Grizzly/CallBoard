@@ -3,7 +3,7 @@ import type Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { organizations } from "@/db/schema";
-import { stripe } from "@/lib/stripe";
+import { stripe, planForPriceId } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 
@@ -36,6 +36,19 @@ export async function POST(req: NextRequest) {
       sub.items?.data?.[0]?.current_period_end ??
       null;
 
+    // Derive the plan from the subscribed price (fall back to the checkout
+    // metadata). While the subscription is in a paying/trialing/dunning state
+    // the org sits on that plan; once it's truly gone (canceled, unpaid,
+    // expired) it drops back to 'free' so the concurrency limit reapplies —
+    // access during a canceled-but-not-yet-lapsed period is governed by
+    // subscriptionStatus + currentPeriodEnd in billingState, not by plan.
+    const priceId = sub.items?.data?.[0]?.price?.id;
+    const mapped = priceId ? planForPriceId(priceId) : null;
+    const metaPlan =
+      typeof sub.metadata?.plan === "string" ? sub.metadata.plan : null;
+    const activeish = ["active", "trialing", "past_due"].includes(sub.status);
+    const plan = activeish ? (mapped?.plan ?? metaPlan ?? "free") : "free";
+
     const where = orgId
       ? eq(organizations.id, orgId)
       : eq(organizations.stripeCustomerId, customerId);
@@ -46,7 +59,7 @@ export async function POST(req: NextRequest) {
         stripeSubscriptionId: sub.id,
         stripeCustomerId: customerId,
         subscriptionStatus: sub.status,
-        plan: "company",
+        plan,
         currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
         updatedAt: new Date(),
       })

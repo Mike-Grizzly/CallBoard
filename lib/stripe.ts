@@ -8,10 +8,62 @@ export const stripe = key ? new Stripe(key) : null;
 
 export const stripeConfigured = Boolean(key);
 
-// Recurring Price IDs (from the Stripe dashboard). Not secret.
-export const STRIPE_PRICES = {
-  monthly: process.env.STRIPE_PRICE_MONTHLY,
-  annual: process.env.STRIPE_PRICE_ANNUAL,
-} as const;
+export type BillingInterval = "monthly" | "annual";
+export type PaidPlanId = "season" | "repertory" | "company";
 
-export type BillingInterval = keyof typeof STRIPE_PRICES;
+const PAID_PLANS: PaidPlanId[] = ["season", "repertory", "company"];
+const INTERVALS: BillingInterval[] = ["monthly", "annual"];
+
+// Recurring Price IDs from the Stripe dashboard (not secret). Six total:
+// 3 plans × {monthly, annual}. Stored as env vars rather than in the CMS so
+// the money path never depends on Sanity content being populated, and the
+// webhook can reverse-map a price → plan cheaply.
+export const STRIPE_PRICE_IDS: Record<
+  PaidPlanId,
+  Record<BillingInterval, string | undefined>
+> = {
+  season: {
+    monthly: process.env.STRIPE_PRICE_SEASON_MONTHLY,
+    annual: process.env.STRIPE_PRICE_SEASON_ANNUAL,
+  },
+  repertory: {
+    monthly: process.env.STRIPE_PRICE_REPERTORY_MONTHLY,
+    annual: process.env.STRIPE_PRICE_REPERTORY_ANNUAL,
+  },
+  company: {
+    monthly: process.env.STRIPE_PRICE_COMPANY_MONTHLY,
+    annual: process.env.STRIPE_PRICE_COMPANY_ANNUAL,
+  },
+};
+
+export function isPaidPlanId(value: string): value is PaidPlanId {
+  return (PAID_PLANS as string[]).includes(value);
+}
+
+export function priceIdFor(
+  plan: PaidPlanId,
+  interval: BillingInterval,
+): string | undefined {
+  return STRIPE_PRICE_IDS[plan]?.[interval];
+}
+
+/** Reverse-map a Stripe price id back to our plan + interval (for the webhook). */
+export function planForPriceId(
+  priceId: string,
+): { plan: PaidPlanId; interval: BillingInterval } | null {
+  for (const plan of PAID_PLANS) {
+    for (const interval of INTERVALS) {
+      if (STRIPE_PRICE_IDS[plan][interval] === priceId) {
+        return { plan, interval };
+      }
+    }
+  }
+  return null;
+}
+
+/** Paid plans with at least one configured price — i.e. purchasable right now. */
+export function availablePaidPlans(): PaidPlanId[] {
+  return PAID_PLANS.filter(
+    (p) => STRIPE_PRICE_IDS[p].monthly || STRIPE_PRICE_IDS[p].annual,
+  );
+}

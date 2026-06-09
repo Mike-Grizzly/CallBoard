@@ -7,8 +7,19 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { Icon } from "@/components/ui/icon";
 import { billingState, type BillingStatus } from "@/lib/billing";
-import { stripeConfigured, STRIPE_PRICES } from "@/lib/stripe";
-import { BillingButtons } from "./billing-buttons";
+import {
+  stripeConfigured,
+  availablePaidPlans,
+  STRIPE_PRICE_IDS,
+  type PaidPlanId,
+} from "@/lib/stripe";
+import { BillingButtons, type PlanOption } from "./billing-buttons";
+
+const PLAN_DISPLAY: Record<PaidPlanId, { label: string; priceLabel: string }> = {
+  season: { label: "Season", priceLabel: "$249/yr · $25/mo — 1 production" },
+  repertory: { label: "Repertory", priceLabel: "$499/yr · $49/mo — up to 3 productions" },
+  company: { label: "Company", priceLabel: "$799/yr · $79/mo — unlimited productions" },
+};
 
 function fmtDate(d: Date | null) {
   if (!d) return "";
@@ -44,8 +55,13 @@ export default async function BillingSettingsPage() {
   if (!org) redirect("/dashboard");
 
   const state = billingState(org);
-  const hasMonthly = !!STRIPE_PRICES.monthly;
-  const hasAnnual = !!STRIPE_PRICES.annual;
+  const planOptions: PlanOption[] = availablePaidPlans().map((id) => ({
+    id,
+    label: PLAN_DISPLAY[id].label,
+    priceLabel: PLAN_DISPLAY[id].priceLabel,
+    hasMonthly: !!STRIPE_PRICE_IDS[id].monthly,
+    hasAnnual: !!STRIPE_PRICE_IDS[id].annual,
+  }));
   const isSubscribed = state.status === "active" || state.status === "past_due" || state.status === "canceled";
 
   let detail = "";
@@ -57,7 +73,7 @@ export default async function BillingSettingsPage() {
       detail = `${state.daysLeftInTrial} day${state.daysLeftInTrial === 1 ? "" : "s"} left${state.trialEndsAt ? ` — your trial ends ${fmtDate(state.trialEndsAt)}.` : "."} Subscribe any time to keep your access after that.`;
       break;
     case "active":
-      detail = "Your Company subscription is active. Manage your plan, payment method, or invoices below.";
+      detail = "Your subscription is active. Manage your plan, payment method, or invoices below.";
       break;
     case "past_due":
       detail = "We couldn't process your latest payment. Update your card to keep your access.";
@@ -71,7 +87,7 @@ export default async function BillingSettingsPage() {
       detail = "Subscribe to restore full access for your workspace.";
       break;
     default:
-      detail = "Subscribe to unlock Company features for your whole workspace.";
+      detail = "Subscribe to unlock full access for your whole workspace.";
   }
 
   return (
@@ -91,16 +107,12 @@ export default async function BillingSettingsPage() {
           {detail}
         </p>
 
-        {!stripeConfigured ? (
+        {!stripeConfigured || (planOptions.length === 0 && !isSubscribed) ? (
           <p className="muted" style={{ fontSize: 13, marginTop: 12 }}>
             Online billing isn&apos;t available yet — check back soon.
           </p>
         ) : (
-          <BillingButtons
-            hasMonthly={hasMonthly}
-            hasAnnual={hasAnnual}
-            showManage={isSubscribed}
-          />
+          <BillingButtons plans={planOptions} showManage={isSubscribed} />
         )}
       </div>
     </div>

@@ -5,12 +5,20 @@ import { db } from "@/db";
 import { organizations } from "@/db/schema";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { stripe, STRIPE_PRICES, type BillingInterval } from "@/lib/stripe";
+import {
+  stripe,
+  priceIdFor,
+  isPaidPlanId,
+  type BillingInterval,
+  type PaidPlanId,
+} from "@/lib/stripe";
 
-const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL ?? "https://proscene.app";
+const siteUrl = () =>
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.proscene.app";
 
 /** Start a subscription Checkout for the caller's org. Returns a redirect URL. */
 export async function createCheckoutSession(
+  plan: PaidPlanId,
   interval: BillingInterval,
 ): Promise<{ url?: string; error?: string }> {
   const user = await requireCurrentUser();
@@ -18,8 +26,9 @@ export async function createCheckoutSession(
     return { error: "Only an admin can manage billing." };
   }
   if (!stripe) return { error: "Billing isn't set up yet." };
+  if (!isPaidPlanId(plan)) return { error: "Unknown plan." };
 
-  const priceId = STRIPE_PRICES[interval];
+  const priceId = priceIdFor(plan, interval);
   if (!priceId) return { error: "That plan isn't available yet." };
 
   const [org] = await db
@@ -49,7 +58,7 @@ export async function createCheckoutSession(
     customer: customerId,
     line_items: [{ price: priceId, quantity: 1 }],
     client_reference_id: org.id,
-    subscription_data: { metadata: { organizationId: org.id } },
+    subscription_data: { metadata: { organizationId: org.id, plan } },
     allow_promotion_codes: true,
     success_url: `${base}/settings/billing?checkout=success`,
     cancel_url: `${base}/settings/billing?checkout=cancel`,

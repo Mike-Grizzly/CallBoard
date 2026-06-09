@@ -118,6 +118,15 @@ export async function assertCanCreateProduction(
   if (!org) return { error: "Organization not found." };
   if (org.grandfathered) return {}; // existing orgs: unlimited, never gated
 
+  // Past trial without an active subscription → no new productions, even if
+  // `plan` still names a paid tier from a now-lapsed subscription.
+  if (mutationLevel(org) !== "full") {
+    return {
+      error:
+        "Your access is read-only. Subscribe to start a new production.",
+    };
+  }
+
   const plan = planOf(org);
   const limit = PRODUCTION_LIMIT[plan];
   if (limit === null) return {}; // unlimited (Company)

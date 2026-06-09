@@ -2,26 +2,30 @@
 
 import { useState, useTransition } from "react";
 import { createCheckoutSession, createPortalSession } from "@/features/billing/actions";
-import type { BillingInterval } from "@/lib/stripe";
+import type { BillingInterval, PaidPlanId } from "@/lib/stripe";
 
-export function BillingButtons({
-  hasMonthly,
-  hasAnnual,
-  showManage,
-  subscribeLabel = "Subscribe",
-}: {
+export type PlanOption = {
+  id: PaidPlanId;
+  label: string;
+  priceLabel: string;
   hasMonthly: boolean;
   hasAnnual: boolean;
+};
+
+export function BillingButtons({
+  plans,
+  showManage,
+}: {
+  plans: PlanOption[];
   showManage: boolean;
-  subscribeLabel?: string;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const checkout = (interval: BillingInterval) =>
+  const checkout = (plan: PaidPlanId, interval: BillingInterval) =>
     startTransition(async () => {
       setError(null);
-      const res = await createCheckoutSession(interval);
+      const res = await createCheckoutSession(plan, interval);
       if (res.url) window.location.href = res.url;
       else setError(res.error ?? "Something went wrong.");
     });
@@ -34,31 +38,53 @@ export function BillingButtons({
       else setError(res.error ?? "Something went wrong.");
     });
 
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        {showManage ? (
+  if (showManage) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
+        <div>
           <button className="btn" onClick={portal} disabled={pending}>
             {pending ? "Opening…" : "Manage billing"}
           </button>
-        ) : (
-          <>
-            {hasMonthly && (
-              <button className="btn primary" onClick={() => checkout("monthly")} disabled={pending}>
-                {pending ? "…" : `${subscribeLabel} — monthly`}
-              </button>
-            )}
-            {hasAnnual && (
-              <button className="btn" onClick={() => checkout("annual")} disabled={pending}>
-                {pending ? "…" : `${subscribeLabel} — annual`}
-              </button>
-            )}
-          </>
-        )}
+        </div>
+        {error && <p style={{ color: "var(--accent-ink)", fontSize: 13, margin: 0 }}>{error}</p>}
       </div>
-      {error && (
-        <p style={{ color: "var(--accent-ink)", fontSize: 13, margin: 0 }}>{error}</p>
-      )}
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
+      {plans.map((plan) => (
+        <div
+          key={plan.id}
+          style={{ display: "flex", flexDirection: "column", gap: 6 }}
+        >
+          <div style={{ fontSize: 14, fontWeight: 600 }}>
+            {plan.label}{" "}
+            <span className="muted" style={{ fontWeight: 400 }}>{plan.priceLabel}</span>
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {plan.hasAnnual && (
+              <button
+                className="btn primary"
+                onClick={() => checkout(plan.id, "annual")}
+                disabled={pending}
+              >
+                {pending ? "…" : "Subscribe — yearly"}
+              </button>
+            )}
+            {plan.hasMonthly && (
+              <button
+                className="btn"
+                onClick={() => checkout(plan.id, "monthly")}
+                disabled={pending}
+              >
+                {pending ? "…" : "Subscribe — monthly"}
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+      {error && <p style={{ color: "var(--accent-ink)", fontSize: 13, margin: 0 }}>{error}</p>}
     </div>
   );
 }
