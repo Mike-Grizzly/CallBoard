@@ -1,6 +1,9 @@
-// Org billing/entitlement logic. The 60-day trial is app-managed (counted
-// from signup); a Stripe subscription takes over once the org subscribes.
-// Grandfathered orgs (everyone existing at launch) always have access.
+// Org billing/entitlement logic. The 60-day trial is app-managed and anchored
+// to the org's FIRST production (trialStartedAt), NOT signup; a Stripe
+// subscription takes over once the org subscribes. Grandfathered orgs
+// (everyone existing at launch) always have access.
+
+import { TRIAL_DAYS, NUDGE_DAY, WARNING_DAY } from "@/features/billing/constants";
 
 export type BillingStatus =
   | "grandfathered"
@@ -53,7 +56,14 @@ export function billingState(org: OrgBillingFields): BillingState {
   }
 
   // No subscription / not grandfathered → fall back to the app-managed trial.
-  if (org.trialEndsAt && org.trialEndsAt.getTime() > now) {
+  // trialEndsAt is null until the org creates its first production: a fresh
+  // free workspace that hasn't started a show yet has nothing to gate, so it
+  // keeps access (the concurrency gate, not the read-only lock, governs there).
+  if (!org.trialEndsAt) {
+    return { hasAccess: true, status: "none", trialEndsAt: null, daysLeftInTrial: null };
+  }
+
+  if (org.trialEndsAt.getTime() > now) {
     return {
       hasAccess: true,
       status: "trialing",
@@ -64,15 +74,50 @@ export function billingState(org: OrgBillingFields): BillingState {
 
   return {
     hasAccess: false,
-    status: org.trialEndsAt ? "trial_expired" : "none",
+    status: "trial_expired",
     trialEndsAt: org.trialEndsAt,
     daysLeftInTrial: 0,
   };
 }
 
-export const TRIAL_DAYS = 60;
+// ─── Trial phase (pure, for in-app banners / read-only lock UI) ─────────────
+// Derived live from the write-once anchor so the lock is correct the instant
+// the clock passes day 60 — no scheduled job required for the lock itself
+// (the day-30/55 nudges are what need a cron).
 
-/** Trial end for a brand-new org (now + 60 days). */
+export type TrialPhase =
+  | "no_production" // trial hasn't started (no first production yet)
+  | "active" // day 0–29
+  | "nudge" // day 30–54 — show 15%-off upsell
+  | "ending" // day 55–59 — show "N days left"
+  | "expired"; // day 60+ — read-only
+
+export type TrialState = {
+  phase: TrialPhase;
+  daysRemaining: number | null;
+};
+
+export function trialPhase(
+  org: { trialStartedAt: Date | null },
+  now: Date = new Date(),
+): TrialState {
+  if (!org.trialStartedAt) return { phase: "no_production", daysRemaining: null };
+
+  const dayN = Math.floor((now.getTime() - org.trialStartedAt.getTime()) / DAY);
+  const daysRemaining = Math.max(0, TRIAL_DAYS - dayN);
+
+  let phase: TrialPhase;
+  if (dayN >= TRIAL_DAYS) phase = "expired";
+  else if (dayN >= WARNING_DAY) phase = "ending";
+  else if (dayN >= NUDGE_DAY) phase = "nudge";
+  else phase = "active";
+
+  return { phase, daysRemaining };
+}
+
+export { TRIAL_DAYS };
+
+/** Trial end = anchor + 60 days. Stamped alongside trialStartedAt. */
 export function newTrialEnd(from: Date = new Date()): Date {
   return new Date(from.getTime() + TRIAL_DAYS * DAY);
 }

@@ -2,7 +2,6 @@ import { randomBytes } from "node:crypto";
 import { db } from "@/db";
 import { organizations } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { newTrialEnd } from "@/lib/billing";
 
 function slugify(name: string): string {
   return name
@@ -40,9 +39,11 @@ export async function createOrganization(name: string) {
   const slug = await uniqueSlugFor(trimmed);
   const [org] = await db
     .insert(organizations)
-    // New orgs start a 60-day free trial from signup (existing orgs were
-    // grandfathered and never get a trial gate).
-    .values({ name: trimmed, slug, trialEndsAt: newTrialEnd() })
+    // New orgs start on the free plan with NO trial clock yet — the 60-day
+    // trial is anchored to the org's first production (see
+    // features/billing/guard.ts → startTrialIfFirstProduction), not signup,
+    // so an empty workspace can sit at $0 indefinitely until it runs a show.
+    .values({ name: trimmed, slug })
     .returning();
   return org;
 }

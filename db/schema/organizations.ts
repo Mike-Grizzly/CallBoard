@@ -23,9 +23,16 @@ export const organizations = pgTable("organizations", {
   stripeSubscriptionId: text("stripe_subscription_id"),
   // 'trialing' | 'active' | 'past_due' | 'canceled' | null
   subscriptionStatus: text("subscription_status"),
-  // The tier the org is on (v1 has one: 'company'); null = none.
-  plan: text("plan"),
-  // App-managed 60-day free trial from signup (independent of Stripe).
+  // Entitlement source of truth: 'free' | 'season' | 'repertory' | 'company'.
+  // New orgs start on 'free'; the Stripe webhook flips this to the paid tier
+  // the org checks out on. See features/billing/constants.ts for limits.
+  plan: text("plan").notNull().default("free"),
+  // Write-once anchor for the app-managed 60-day trial. Set when the org
+  // creates its FIRST production (NOT at signup), and never cleared — so
+  // deleting/archiving that production cannot reset or farm the trial.
+  trialStartedAt: timestamp("trial_started_at", { withTimezone: true }),
+  // Derived convenience = trialStartedAt + 60 days, stamped alongside it so
+  // existing entitlement code can read a concrete end date.
   trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
   // End of the current paid period (from Stripe), for access-after-cancel.
   currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),

@@ -29,6 +29,10 @@ import {
 import { createDefaultFolders } from "@/features/documents/actions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isValidEmail } from "@/features/members/validation";
+import {
+  assertCanCreateProduction,
+  startTrialIfFirstProduction,
+} from "@/features/billing/guard";
 
 export type ProductionMutationResult = {
   error?: string;
@@ -56,6 +60,9 @@ export async function createProduction(
     return { errors };
   }
 
+  const gate = await assertCanCreateProduction(user.organizationId);
+  if (gate.error) return { error: gate.error };
+
   const [newProduction] = await db
     .insert(productions)
     .values({
@@ -70,6 +77,7 @@ export async function createProduction(
     .returning({ id: productions.id });
 
   await createDefaultFolders(newProduction.id);
+  await startTrialIfFirstProduction(user.organizationId);
 
   redirect("/productions");
 }
@@ -145,6 +153,9 @@ export async function createProductionFull(
     return { error: "Closing date cannot be before opening date." };
   }
 
+  const gate = await assertCanCreateProduction(user.organizationId);
+  if (gate.error) return { error: gate.error };
+
   const status = input.status === "draft" ? "draft" : "active";
   const slug = await generateUniqueSlug(user.organizationId, title);
 
@@ -199,6 +210,7 @@ export async function createProductionFull(
   }
 
   await createDefaultFolders(productionId);
+  await startTrialIfFirstProduction(user.organizationId);
 
   const teamResult = await applyWizardTeam({
     team: input.team ?? [],
@@ -416,6 +428,9 @@ export async function quickCreateProduction(
     return { error: "Title must be under 200 characters." };
   }
 
+  const gate = await assertCanCreateProduction(user.organizationId);
+  if (gate.error) return { error: gate.error };
+
   const slug = await generateUniqueSlug(user.organizationId, title);
 
   const [newProduction] = await db
@@ -430,6 +445,7 @@ export async function quickCreateProduction(
     .returning({ id: productions.id });
 
   await createDefaultFolders(newProduction.id);
+  await startTrialIfFirstProduction(user.organizationId);
 
   revalidatePath("/", "layout");
   revalidatePath("/productions");
