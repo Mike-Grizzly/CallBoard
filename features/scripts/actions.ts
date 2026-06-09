@@ -8,8 +8,9 @@ import {
   productionRoles,
   productionScenes,
   productionMemberships,
+  productions,
 } from "@/db/schema";
-import { and, eq, gte } from "drizzle-orm";
+import { and, eq, gte, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { assertCanMutate } from "@/features/billing/guard";
@@ -291,7 +292,14 @@ export async function applyScriptParse(
     .where(eq(scriptParses.id, parseId))
     .limit(1);
   if (!parse) return { error: "Analysis not found." };
-  if (!(await userCanAccessProduction(user, parse.productionId))) {
+  // A reviewable parse is always linked to a production + document by now
+  // (wizard parses get linked on launch via attachWizardScript).
+  if (!parse.productionId || !parse.documentId) {
+    return { error: "This analysis isn't linked to a production yet." };
+  }
+  const productionId = parse.productionId;
+  const documentId = parse.documentId;
+  if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have access to that production." };
   }
   const lock = await assertCanMutate(user.organizationId);
@@ -310,7 +318,7 @@ export async function applyScriptParse(
   if (roles.length > 0) {
     await db
       .insert(productionRoles)
-      .values(roles.map((r) => ({ productionId: parse.productionId, ...r })));
+      .values(roles.map((r) => ({ productionId, ...r })));
   }
 
   // Scenes — in reading order.
@@ -325,12 +333,12 @@ export async function applyScriptParse(
   if (scenes.length > 0) {
     await db
       .insert(productionScenes)
-      .values(scenes.map((s) => ({ productionId: parse.productionId, ...s })));
+      .values(scenes.map((s) => ({ productionId, ...s })));
   }
 
   // Bookmarks — seed the shared set onto every member's annotations for this
   // script, so cast members open the script already bookmarked.
-  await seedSharedBookmarks(parse.productionId, parse.documentId, result, user.id);
+  await seedSharedBookmarks(productionId, documentId, result, user.id);
 
   await db
     .update(scriptParses)
@@ -339,7 +347,7 @@ export async function applyScriptParse(
   await db
     .update(documents)
     .set({ processingStatus: "applied" })
-    .where(eq(documents.id, parse.documentId));
+    .where(eq(documents.id, documentId));
 
   revalidatePath("/productions");
   return { success: true };
@@ -423,20 +431,207 @@ export async function discardScriptParse(
     .select({
       productionId: scriptParses.productionId,
       documentId: scriptParses.documentId,
+      requestedBy: scriptParses.requestedBy,
     })
     .from(scriptParses)
     .where(eq(scriptParses.id, parseId))
     .limit(1);
   if (!parse) return { success: true };
-  if (!(await userCanAccessProduction(user, parse.productionId))) {
-    return { error: "You don't have access to that production." };
-  }
+  const authorized = parse.productionId
+    ? await userCanAccessProduction(user, parse.productionId)
+    : parse.requestedBy === user.id;
+  if (!authorized) return { error: "You don't have access to that analysis." };
 
   await db.delete(scriptParses).where(eq(scriptParses.id, parseId));
+  if (parse.documentId) {
+    await db
+      .update(documents)
+      .set({ processingStatus: "none" })
+      .where(eq(documents.id, parse.documentId));
+  }
+  return { success: true };
+}
+
+// ----- Wizard AI cast auto-fill (parse a script before the production exists) -----
+
+const WIZARD_PARSE_LIMIT = 5; // per user, per window
+const WIZARD_PARSE_WINDOW_DAYS = 30;
+
+/** Signed upload URL for a script uploaded during the new-production wizard. */
+export async function requestWizardScriptUpload(
+  fileName: string,
+  fileSize: number,
+  contentType: string,
+): Promise<{ error?: string; path?: string; token?: string }> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "productions:manage")) {
+    return { error: "You don't have permission to do that." };
+  }
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) {
+    return { error: "AI script setup is available on paid plans and during your free trial." };
+  }
+  if (contentType !== "application/pdf") {
+    return { error: "Upload a PDF script." };
+  }
+  if (!fileName || fileSize <= 0) return { error: "Please choose a file." };
+  if (fileSize > 25 * 1024 * 1024) return { error: "File must be under 25MB." };
+
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const storagePath = `wizard-scripts/${user.id}/${Date.now()}-${safeName}`;
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase.storage
+    .from("attachments")
+    .createSignedUploadUrl(storagePath);
+  if (error || !data) {
+    return { error: `Could not start upload: ${error?.message ?? "unknown error"}` };
+  }
+  return { path: data.path, token: data.token };
+}
+
+/** Stage a pre-production ("wizard") parse and return its id to kick the run route. */
+export async function startWizardScriptParse(
+  storagePath: string,
+): Promise<StartScriptParseResult> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "productions:manage")) {
+    return { error: "You don't have permission to do that." };
+  }
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) {
+    return { error: "AI script setup is available on paid plans and during your free trial." };
+  }
+  if (!storagePath.startsWith(`wizard-scripts/${user.id}/`)) {
+    return { error: "Upload could not be verified." };
+  }
+
+  // Per-user cost cap (there's no production to cap against yet).
+  const since = new Date(
+    Date.now() - WIZARD_PARSE_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+  );
+  const recent = await db
+    .select({ status: scriptParses.status })
+    .from(scriptParses)
+    .where(
+      and(
+        eq(scriptParses.requestedBy, user.id),
+        isNull(scriptParses.productionId),
+        gte(scriptParses.createdAt, since),
+      ),
+    );
+  if (recent.some((r) => r.status === "processing")) {
+    return { error: "An analysis is already running — give it a moment." };
+  }
+  if (recent.filter((r) => r.status !== "failed").length >= WIZARD_PARSE_LIMIT) {
+    return {
+      error: `You've reached the limit of ${WIZARD_PARSE_LIMIT} AI script analyses in ${WIZARD_PARSE_WINDOW_DAYS} days.`,
+    };
+  }
+
+  const [parse] = await db
+    .insert(scriptParses)
+    .values({ requestedBy: user.id, storagePath, status: "processing" })
+    .returning({ id: scriptParses.id });
+  return { parseId: parse.id };
+}
+
+/** Poll target keyed by parse id (works for both wizard and production parses). */
+export async function fetchScriptParseById(parseId: string) {
+  const user = await requireCurrentUser();
+  const [parse] = await db
+    .select({
+      id: scriptParses.id,
+      productionId: scriptParses.productionId,
+      requestedBy: scriptParses.requestedBy,
+      status: scriptParses.status,
+      result: scriptParses.result,
+      error: scriptParses.error,
+    })
+    .from(scriptParses)
+    .where(eq(scriptParses.id, parseId))
+    .limit(1);
+  if (!parse) return null;
+
+  const authorized = parse.productionId
+    ? await userCanAccessProduction(user, parse.productionId)
+    : parse.requestedBy === user.id;
+  if (!authorized) return null;
+
+  return { status: parse.status, result: parse.result, error: parse.error };
+}
+
+/**
+ * After the wizard launches a production, carry the uploaded script over as the
+ * production's default script document (so the user doesn't re-upload, and the
+ * full Script-tab AI is ready to run later). Idempotent + owner-gated.
+ */
+export async function attachWizardScript(input: {
+  parseId: string;
+  slug: string;
+  fileName: string;
+  fileSize: number;
+}): Promise<{ error?: string; success?: boolean }> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "productions:manage")) {
+    return { error: "You don't have permission to do that." };
+  }
+
+  const [parse] = await db
+    .select({
+      requestedBy: scriptParses.requestedBy,
+      storagePath: scriptParses.storagePath,
+      documentId: scriptParses.documentId,
+    })
+    .from(scriptParses)
+    .where(eq(scriptParses.id, input.parseId))
+    .limit(1);
+  if (!parse || parse.requestedBy !== user.id) return { success: true };
+  if (parse.documentId) return { success: true }; // already attached
+  if (!parse.storagePath) return { success: true };
+
+  const [prod] = await db
+    .select({ id: productions.id })
+    .from(productions)
+    .where(
+      and(
+        eq(productions.slug, input.slug),
+        eq(productions.organizationId, user.organizationId),
+      ),
+    )
+    .limit(1);
+  if (!prod) return { error: "Production not found." };
+
+  const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const newPath = `documents/${prod.id}/${Date.now()}-${safeName}`;
+  const supabase = createSupabaseAdminClient();
+  const { error: moveError } = await supabase.storage
+    .from("attachments")
+    .move(parse.storagePath, newPath);
+  if (moveError) return { error: "Could not attach the script file." };
+
+  const title = input.fileName.replace(/\.[^.]+$/, "") || "Script";
+  const [doc] = await db
+    .insert(documents)
+    .values({
+      productionId: prod.id,
+      uploadedBy: user.id,
+      title,
+      fileName: input.fileName,
+      fileSize: input.fileSize,
+      contentType: "application/pdf",
+      storagePath: newPath,
+      documentType: "script",
+      isDefaultScript: true,
+      processingStatus: "ready",
+    })
+    .returning({ id: documents.id });
+
   await db
-    .update(documents)
-    .set({ processingStatus: "none" })
-    .where(eq(documents.id, parse.documentId));
+    .update(scriptParses)
+    .set({ productionId: prod.id, documentId: doc.id, storagePath: null })
+    .where(eq(scriptParses.id, input.parseId));
+
+  revalidatePath("/productions");
   return { success: true };
 }
 

@@ -16,13 +16,19 @@ import { profiles } from "./users";
  */
 export const scriptParses = pgTable("script_parses", {
   id: uuid("id").primaryKey().defaultRandom(),
-  productionId: uuid("production_id")
-    .notNull()
-    .references(() => productions.id, { onDelete: "cascade" }),
-  // The script document that was analysed.
-  documentId: uuid("document_id")
-    .notNull()
-    .references(() => documents.id, { onDelete: "cascade" }),
+  // Nullable: a "wizard" parse runs during new-production setup, before the
+  // production (and its document) exist. Those rows are owned by `requestedBy`
+  // and carry `storagePath` instead; they're linked to a production later by
+  // `attachWizardScript`.
+  productionId: uuid("production_id").references(() => productions.id, {
+    onDelete: "cascade",
+  }),
+  documentId: uuid("document_id").references(() => documents.id, {
+    onDelete: "cascade",
+  }),
+  // Temp storage path of the uploaded PDF for a wizard parse (no document row
+  // yet). Null once a document_id is set.
+  storagePath: text("storage_path"),
   // processing → ready (awaiting review) → applied; or failed.
   status: text("status").notNull().default("processing"),
   // The model's proposal: { title, roles[], scenes[], bookmarks[] }.

@@ -23,6 +23,7 @@ export async function POST(
   const [parse] = await db
     .select({
       productionId: scriptParses.productionId,
+      requestedBy: scriptParses.requestedBy,
       status: scriptParses.status,
     })
     .from(scriptParses)
@@ -30,9 +31,13 @@ export async function POST(
     .limit(1);
 
   if (!parse) return new Response("Not found", { status: 404 });
-  if (!(await userCanAccessProduction(user, parse.productionId))) {
-    return new Response("Forbidden", { status: 403 });
-  }
+
+  // Production-scoped parse: gate on production access. Wizard parse (no
+  // production yet): gate on ownership.
+  const authorized = parse.productionId
+    ? await userCanAccessProduction(user, parse.productionId)
+    : parse.requestedBy === user.id;
+  if (!authorized) return new Response("Forbidden", { status: 403 });
   // Only kick a freshly-staged parse — guards against double-runs.
   if (parse.status !== "processing") {
     return new Response("Already processed", { status: 409 });

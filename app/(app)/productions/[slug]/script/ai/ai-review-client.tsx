@@ -29,7 +29,7 @@ import type {
 
 type ParseRow = {
   id: string;
-  documentId: string;
+  documentId: string | null;
   status: string;
   result: unknown;
   error: string | null;

@@ -18,6 +18,14 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { createProductionFull } from "@/features/productions/actions";
 import {
+  requestWizardScriptUpload,
+  startWizardScriptParse,
+  fetchScriptParseById,
+  attachWizardScript,
+} from "@/features/scripts/actions";
+import { uploadFileToSignedUrl } from "@/lib/storage-upload";
+import type { ScriptParseResult } from "@/features/scripts/constants";
+import {
   ALL_DEPTS,
   ROLE_TYPES,
   SEASONS,
@@ -25,6 +33,15 @@ import {
   castTeamLabelForType,
   type WizardOrgUser,
 } from "@/features/productions/wizard-constants";
+
+type AiParseState = {
+  status: "idle" | "uploading" | "processing" | "done" | "error";
+  parseId?: string;
+  fileName?: string;
+  fileSize?: number;
+  count?: number;
+  error?: string;
+};
 
 type FullProductionResultSkip = { email: string; reason: string };
 
@@ -147,6 +164,78 @@ export default function NewProductionWizard({
     setData((prev) => ({ ...prev, ...patch }));
   const step = STEPS[stepIdx];
 
+  // ── AI cast auto-fill ──────────────────────────────────────────────
+  // Lives at wizard level (not in StepRoles, which unmounts on step change) so
+  // the parse keeps running and pre-fills even if the user moves on.
+  const [aiParse, setAiParse] = useState<AiParseState>({ status: "idle" });
+
+  const startAiParse = async (file: File) => {
+    if (file.type !== "application/pdf") {
+      setAiParse({ status: "error", error: "Please upload a PDF script." });
+      return;
+    }
+    setAiParse({ status: "uploading", fileName: file.name, fileSize: file.size });
+    const up = await requestWizardScriptUpload(file.name, file.size, file.type);
+    if (up.error || !up.path || !up.token) {
+      setAiParse({ status: "error", error: up.error ?? "Upload failed." });
+      return;
+    }
+    const sent = await uploadFileToSignedUrl(up.path, up.token, file);
+    if (sent.error) {
+      setAiParse({ status: "error", error: sent.error });
+      return;
+    }
+    const started = await startWizardScriptParse(up.path);
+    if (started.error || !started.parseId) {
+      setAiParse({ status: "error", error: started.error ?? "Could not start analysis." });
+      return;
+    }
+    fetch(`/api/scripts/${started.parseId}/run`, { method: "POST" }).catch(() => {});
+    setAiParse({
+      status: "processing",
+      parseId: started.parseId,
+      fileName: file.name,
+      fileSize: file.size,
+    });
+  };
+
+  useEffect(() => {
+    if (aiParse.status !== "processing" || !aiParse.parseId) return;
+    let active = true;
+    const parseId = aiParse.parseId;
+    const interval = setInterval(async () => {
+      const latest = await fetchScriptParseById(parseId);
+      if (!active || !latest) return;
+      if (latest.status === "ready") {
+        const result = latest.result as ScriptParseResult | null;
+        const aiRoles = (result?.roles ?? []).filter((r) => r.name?.trim());
+        setData((d) => ({
+          ...d,
+          roles: [
+            ...d.roles.filter((r) => r.name.trim()),
+            ...aiRoles.map((r, i) => ({
+              id: `ai-${Date.now()}-${i}`,
+              name: r.name.trim(),
+              actor: "",
+              type: r.type,
+            })),
+          ],
+        }));
+        setAiParse((s) => ({ ...s, status: "done", count: aiRoles.length }));
+      } else if (latest.status === "failed") {
+        setAiParse((s) => ({
+          ...s,
+          status: "error",
+          error: latest.error ?? "Couldn't read the script automatically.",
+        }));
+      }
+    }, 2500);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [aiParse.status, aiParse.parseId]);
+
   // Resolve a name to an org member's email: exact (case-insensitive) match.
   const orgByName = useMemo(() => {
     const m = new Map<string, string>();
@@ -254,6 +343,17 @@ export default function NewProductionWizard({
       setInvitePrompt(null);
       return;
     }
+
+    // Carry an AI-uploaded script over as the new production's default script.
+    if (aiParse.parseId && aiParse.fileName && aiParse.fileSize && result.slug) {
+      await attachWizardScript({
+        parseId: aiParse.parseId,
+        slug: result.slug,
+        fileName: aiParse.fileName,
+        fileSize: aiParse.fileSize,
+      });
+    }
+
     if (status === "draft") {
       // Drafts drop straight into the production hub to keep editing.
       router.push(`/productions/${result.slug}`);
@@ -331,7 +431,15 @@ export default function NewProductionWizard({
             {step.id === "basics" && <StepBasics data={data} set={set} />}
             {step.id === "calendar" && <StepCalendar data={data} set={set} />}
             {step.id === "depts" && <StepDepts data={data} set={set} />}
-            {step.id === "roles" && <StepRoles data={data} set={set} orgUsers={orgUsers} />}
+            {step.id === "roles" && (
+              <StepRoles
+                data={data}
+                set={set}
+                orgUsers={orgUsers}
+                aiParse={aiParse}
+                onUploadScript={startAiParse}
+              />
+            )}
             {step.id === "team" && (
               <StepTeam data={data} set={set} orgUsers={orgUsers} />
             )}
@@ -805,11 +913,17 @@ function StepRoles({
   data,
   set,
   orgUsers,
+  aiParse,
+  onUploadScript,
 }: {
   data: WizardData;
   set: (p: Partial<WizardData>) => void;
   orgUsers: WizardOrgUser[];
+  aiParse: AiParseState;
+  onUploadScript: (file: File) => void;
 }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const busy = aiParse.status === "uploading" || aiParse.status === "processing";
   const update = (i: number, patch: Partial<RoleRow>) =>
     set({ roles: data.roles.map((r, j) => (j === i ? { ...r, ...patch } : r)) });
   const remove = (i: number) => set({ roles: data.roles.filter((_, j) => j !== i) });
@@ -840,6 +954,87 @@ function StepRoles({
       <div className="page-sub">
         Add the roles in your show. You can leave actor names blank for now and assign them later as you
         cast — or invite cast directly in the next step.
+      </div>
+
+      <div
+        style={{
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+          padding: 16,
+          margin: "4px 0 22px",
+          background: "var(--bg-elev)",
+        }}
+      >
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/pdf"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onUploadScript(f);
+            e.target.value = "";
+          }}
+        />
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <Icon name="Sparkles" size={18} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>
+              Auto-fill your cast from the script
+            </div>
+            {aiParse.status === "idle" && (
+              <div className="hint" style={{ margin: "4px 0 12px" }}>
+                Upload your script (PDF) and AI will read out the characters for
+                you. Optional — you can skip this and add the cast by hand, or do
+                it later from the production&apos;s Script tab anytime.
+              </div>
+            )}
+            {busy && (
+              <div className="hint" style={{ margin: "4px 0 12px" }}>
+                Reading {aiParse.fileName ?? "your script"}… this takes a minute
+                or two. Keep building — characters will drop in automatically
+                when it&apos;s done.
+              </div>
+            )}
+            {aiParse.status === "done" && (
+              <div
+                className="hint"
+                style={{ margin: "4px 0 12px", color: "var(--accent)" }}
+              >
+                Added {aiParse.count ?? 0} character
+                {aiParse.count === 1 ? "" : "s"} from {aiParse.fileName}. Edit
+                anything below.
+              </div>
+            )}
+            {aiParse.status === "error" && (
+              <div
+                className="hint"
+                style={{ margin: "4px 0 12px", color: "var(--c-clay)" }}
+              >
+                {aiParse.error ?? "Couldn't read that script."} You can still add
+                the cast manually below.
+              </div>
+            )}
+            <button
+              className="btn sm primary"
+              onClick={() => fileRef.current?.click()}
+              disabled={busy}
+            >
+              {busy ? (
+                <span className="pdf-spinner" style={{ width: 13, height: 13 }} />
+              ) : (
+                <Icon name="Sparkles" size={12} />
+              )}
+              <span>
+                {busy
+                  ? "Reading…"
+                  : aiParse.status === "done"
+                    ? "Upload a different script"
+                    : "Upload script & auto-fill"}
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <h3 className="sec">

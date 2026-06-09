@@ -1644,3 +1644,17 @@ the pricing PAGE to match this model.
 - **Phase 1 only.** Per-role script highlighting (the 4th envisioned output) deferred — it needs per-line pixel coordinates and is highly script-format-dependent.
 
 **Impact:** new `lib/anthropic.ts`, `db/schema/script-parses.ts` (RLS-on/no-policies, live via Supabase MCP), `features/scripts/parse.ts` + extended actions/queries/constants, the run route, the review page, a Documents row-menu affordance, `sendScriptParseReady`. New env var `ANTHROPIC_API_KEY` (optional — feature degrades gracefully when unset).
+
+---
+
+## 2026-06-09 — AI cast auto-fill in the new-production wizard + plan gating
+
+**Decision:** Added a pre-production AI entry point on the wizard's Roles step (upload script → pre-fill characters), and settled how AI is plan-gated.
+
+**Key choices:**
+- **Plan gating = the existing `assertCanMutate` gate.** "Paid-tier perk, but trial users get it during their trial" is *exactly* what `assertCanMutate` already encodes (passes for subscribed/trialing/pre-trial, blocks post-trial grace/locked). So both AI entry points reuse it — no new plan primitive. (Cast/crew never parse anyway; that's role-gated.)
+- **Generalized the parse pipeline for pre-production parses.** `script_parses.production_id`/`document_id` made nullable + a `storage_path` column; a "wizard parse" is owned by `requested_by`, uploads to a temp `wizard-scripts/{userId}/…` path, is capped per-user (5/30 days), and reuses the same async run route (auth falls back to ownership). New poll-by-id action `fetchScriptParseById`.
+- **Carry the uploaded script over** (`attachWizardScript`): on launch, move the PDF into the production and create its **default script** document, so the user doesn't re-upload and the full Script-tab AI is ready later. Roles flow in through the wizard's normal role-creation; scenes/bookmarks are left for the later Script-tab run.
+- **Optional + non-blocking** step copy: skip and add cast by hand, or upload later from the Script tab.
+
+**Impact:** generalized `features/scripts/parse.ts` + the run route; new actions `requestWizardScriptUpload`/`startWizardScriptParse`/`fetchScriptParseById`/`attachWizardScript`; wizard-level AI state + `StepRoles` upload card in `new-production-wizard.tsx`; `Sparkles` added to the `Icon` registry. Known edge: orphan temp files if the wizard is abandoned (see open-questions).

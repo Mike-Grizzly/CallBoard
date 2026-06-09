@@ -92,6 +92,7 @@ export async function runScriptParse(parseId: string): Promise<void> {
       id: scriptParses.id,
       productionId: scriptParses.productionId,
       documentId: scriptParses.documentId,
+      storagePath: scriptParses.storagePath,
       requestedBy: scriptParses.requestedBy,
     })
     .from(scriptParses)
@@ -108,24 +109,33 @@ export async function runScriptParse(parseId: string): Promise<void> {
       );
     }
 
-    const [doc] = await db
-      .select({
-        storagePath: documents.storagePath,
-        contentType: documents.contentType,
-      })
-      .from(documents)
-      .where(eq(documents.id, parse.documentId))
-      .limit(1);
-
-    if (!doc) throw new Error("Script document no longer exists.");
-    if (doc.contentType !== "application/pdf") {
-      throw new Error("AI analysis currently supports PDF scripts only.");
+    // Resolve the PDF source: a production document (Documents flow) or a temp
+    // upload path (new-production wizard, before the production exists).
+    let storagePath: string;
+    if (parse.documentId) {
+      const [doc] = await db
+        .select({
+          storagePath: documents.storagePath,
+          contentType: documents.contentType,
+        })
+        .from(documents)
+        .where(eq(documents.id, parse.documentId))
+        .limit(1);
+      if (!doc) throw new Error("Script document no longer exists.");
+      if (doc.contentType !== "application/pdf") {
+        throw new Error("AI analysis currently supports PDF scripts only.");
+      }
+      storagePath = doc.storagePath;
+    } else if (parse.storagePath) {
+      storagePath = parse.storagePath;
+    } else {
+      throw new Error("No script file is attached to this analysis.");
     }
 
     const supabase = createSupabaseAdminClient();
     const { data: signed } = await supabase.storage
       .from("attachments")
-      .createSignedUrl(doc.storagePath, 600);
+      .createSignedUrl(storagePath, 600);
     if (!signed?.signedUrl) throw new Error("Could not read the script file.");
 
     const res = await fetch(signed.signedUrl);
@@ -176,12 +186,17 @@ export async function runScriptParse(parseId: string): Promise<void> {
         updatedAt: new Date(),
       })
       .where(eq(scriptParses.id, parseId));
-    await db
-      .update(documents)
-      .set({ processingStatus: "ready" })
-      .where(eq(documents.id, parse.documentId));
+    if (parse.documentId) {
+      await db
+        .update(documents)
+        .set({ processingStatus: "ready" })
+        .where(eq(documents.id, parse.documentId));
+    }
 
-    if (parse.requestedBy) {
+    // Notify only for production-scoped (Documents flow) parses. A wizard parse
+    // has no production and the user is watching it live, so there's no one to
+    // route a notification to.
+    if (parse.requestedBy && parse.productionId) {
       await sendScriptParseReady({
         userId: parse.requestedBy,
         productionId: parse.productionId,
@@ -196,9 +211,11 @@ export async function runScriptParse(parseId: string): Promise<void> {
       .update(scriptParses)
       .set({ status: "failed", error: messageText, updatedAt: new Date() })
       .where(eq(scriptParses.id, parseId));
-    await db
-      .update(documents)
-      .set({ processingStatus: "failed" })
-      .where(eq(documents.id, parse.documentId));
+    if (parse.documentId) {
+      await db
+        .update(documents)
+        .set({ processingStatus: "failed" })
+        .where(eq(documents.id, parse.documentId));
+    }
   }
 }

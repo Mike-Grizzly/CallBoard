@@ -62,11 +62,41 @@ the production's real tables automatically.
    `script_annotations` for that script (idempotent via stable `ai-*` ids).
    **Discard** deletes the parse.
 
+## Wizard cast auto-fill (new-production setup)
+
+A second, **pre-production** entry point lives on the wizard's Roles step
+(`StepRoles` in `new-production-wizard.tsx`). The wizard runs before any
+production/document exists, so the parse pipeline was generalized:
+
+- `script_parses.production_id` / `document_id` are now **nullable**, plus a
+  `storage_path` column. A "wizard parse" is owned by `requested_by` and points
+  at a temp upload (`wizard-scripts/{userId}/…`).
+- **Flow:** upload PDF straight to storage (`requestWizardScriptUpload` →
+  `uploadFileToSignedUrl`) → `startWizardScriptParse` (per-**user** cap: 5 / 30
+  days, since there's no production to cap) → kick the same
+  `POST /api/scripts/[parseId]/run` route (its auth falls back to
+  `requested_by` when there's no production) → poll `fetchScriptParseById` →
+  on ready, **append the characters into the wizard's editable roles list**
+  (blank seed rows are dropped). The parse state lives at the wizard level so it
+  survives step navigation.
+- **Carry-over:** on launch, `attachWizardScript` moves the uploaded PDF into
+  the new production (`documents/{productionId}/…`), creates a **default script**
+  document, and links the parse row — so the user doesn't re-upload and the full
+  Script-tab AI (scenes/bookmarks) is ready to run later.
+- **Optional + non-blocking:** the step copy says they can skip and add cast by
+  hand, or upload later from the Script tab.
+
 ## Permissions
 
 Gated on `documents:upload` (admin/producer/director/choreographer/stage_manager
-hold it — directors included, which is the point). Non-managers still need a
-production membership. Billing `assertCanMutate` applies to start + apply.
+hold it — directors included, which is the point); the wizard path gates on
+`productions:manage` (only admin/producer reach the wizard). Non-managers still
+need a production membership. Cast/crew never parse (role-gated).
+
+**Plan gating:** AI is a paid-tier perk that trial users also get. This is
+exactly the existing `assertCanMutate` gate — it passes for subscribed,
+trialing, and pre-trial orgs and blocks post-trial grace/locked orgs — so both
+entry points call it and no new plan logic was needed (decision 2026-06-09).
 
 ## Cost & abuse guardrails
 
