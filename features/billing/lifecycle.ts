@@ -175,7 +175,19 @@ async function gatherStoragePaths(orgId: string): Promise<string[]> {
  * org's download links simply 404; it was warned three times first.
  */
 export async function purgeOrgFiles(orgId: string): Promise<number> {
-  const paths = await gatherStoragePaths(orgId);
+  const raw = await gatherStoragePaths(orgId);
+  // Defense-in-depth. Every path here already came from this org's own upload
+  // tables (scoped by its production ids), but before deleting anything we:
+  //   • dedupe,
+  //   • drop empty/null paths,
+  //   • never touch workspace logos (org-logos/…) — they're not gathered, but
+  //     this guarantees branding survives even if a stray path ever slipped in.
+  // So the worst case is "removed a file we already meant to remove"; it can
+  // never reach another org or any app/system data (the app's code, schema,
+  // and config live in the repo/DB, not this bucket).
+  const paths = [...new Set(raw)].filter(
+    (p) => typeof p === "string" && p.length > 0 && !p.startsWith("org-logos/"),
+  );
   if (paths.length === 0) return 0;
   const supabase = createSupabaseAdminClient();
   for (let i = 0; i < paths.length; i += 100) {
