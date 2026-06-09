@@ -2,7 +2,10 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { getVisibleProductions } from "@/features/productions/queries";
 import { resolveProductionColor } from "@/features/productions/constants";
-import { getUserMemberships } from "@/features/workspace/queries";
+import {
+  getUserMemberships,
+  getWorkspaceAlertCounts,
+} from "@/features/workspace/queries";
 import { getSignedLogoUrl } from "@/lib/workspace-logo";
 import { can } from "@/lib/permissions";
 import { Icon } from "@/components/ui/icon";
@@ -25,13 +28,14 @@ export async function Rail() {
   const role = user?.role ?? "cast";
   const themePref = await getThemePref();
 
-  const [productions, memberships, logoUrl] = user
+  const [productions, memberships, logoUrl, alertCounts] = user
     ? await Promise.all([
         getVisibleProductions(user),
         getUserMemberships(user.id),
         getSignedLogoUrl(user.organizationLogoUrl),
+        getWorkspaceAlertCounts(user.id),
       ])
-    : [[], [], null];
+    : [[], [], null, {}];
 
   // Workspace items follow NAV_ITEMS order, gated by capability.
   // We exclude "Productions" since the productions section below covers it.
@@ -56,6 +60,7 @@ export async function Rail() {
           currentOrgName={user.organizationName}
           currentOrgLogoUrl={logoUrl}
           memberships={memberships}
+          alertCounts={alertCounts}
         />
       )}
 

@@ -3,8 +3,10 @@ import {
   organizationMemberships,
   organizations,
   profiles,
+  mentions,
+  notifications,
 } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, count, eq, gt, sql } from "drizzle-orm";
 import type { Role } from "@/types/roles";
 
 export type UserMembership = {
@@ -13,6 +15,53 @@ export type UserMembership = {
   organizationSlug: string;
   role: Role;
 };
+
+/**
+ * Per-workspace "new activity" counts for the cross-org switcher bubbles:
+ * mentions + notifications addressed to the user that arrived since they last
+ * switched into that workspace (organization_memberships.last_viewed_at).
+ * Returns a map of organizationId → count (only orgs with a non-zero count).
+ */
+export async function getWorkspaceAlertCounts(
+  userId: string,
+): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  const add = (orgId: string, n: number) => {
+    counts[orgId] = (counts[orgId] ?? 0) + n;
+  };
+
+  const mentionRows = await db
+    .select({ orgId: organizationMemberships.organizationId, n: count() })
+    .from(organizationMemberships)
+    .innerJoin(
+      mentions,
+      and(
+        eq(mentions.organizationId, organizationMemberships.organizationId),
+        eq(mentions.mentionedUserId, organizationMemberships.userId),
+        gt(mentions.createdAt, organizationMemberships.lastViewedAt),
+      ),
+    )
+    .where(eq(organizationMemberships.userId, userId))
+    .groupBy(organizationMemberships.organizationId);
+  for (const r of mentionRows) add(r.orgId, Number(r.n));
+
+  const notifRows = await db
+    .select({ orgId: organizationMemberships.organizationId, n: count() })
+    .from(organizationMemberships)
+    .innerJoin(
+      notifications,
+      and(
+        eq(notifications.organizationId, organizationMemberships.organizationId),
+        eq(notifications.recipientId, organizationMemberships.userId),
+        gt(notifications.createdAt, organizationMemberships.lastViewedAt),
+      ),
+    )
+    .where(eq(organizationMemberships.userId, userId))
+    .groupBy(organizationMemberships.organizationId);
+  for (const r of notifRows) add(r.orgId, Number(r.n));
+
+  return counts;
+}
 
 /**
  * Every active membership the user belongs to. Drives the workspace

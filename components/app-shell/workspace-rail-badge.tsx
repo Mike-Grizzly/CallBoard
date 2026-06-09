@@ -14,13 +14,39 @@ type Props = {
   currentOrgName: string;
   currentOrgLogoUrl: string | null;
   memberships: UserMembership[];
+  alertCounts: Record<string, number>;
 };
+
+function Bubble({ n }: { n: number }) {
+  if (n <= 0) return null;
+  return (
+    <span
+      aria-label={`${n} new`}
+      style={{
+        minWidth: 16,
+        height: 16,
+        padding: "0 4px",
+        borderRadius: 999,
+        background: "#e5484d",
+        color: "#fff",
+        fontSize: 10.5,
+        fontWeight: 700,
+        lineHeight: "16px",
+        textAlign: "center",
+        flexShrink: 0,
+      }}
+    >
+      {n > 99 ? "99+" : n}
+    </span>
+  );
+}
 
 export function WorkspaceRailBadge({
   currentOrgId,
   currentOrgName,
   currentOrgLogoUrl,
   memberships,
+  alertCounts,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -105,9 +131,21 @@ export function WorkspaceRailBadge({
   };
 
   const others = memberships.filter((m) => m.organizationId !== currentOrgId);
+  const otherAlertTotal = others.reduce(
+    (sum, m) => sum + (alertCounts[m.organizationId] ?? 0),
+    0,
+  );
 
   return (
-    <div className="workspace-badge" ref={ref}>
+    <div className="workspace-badge" ref={ref} style={{ position: "relative" }}>
+      {!open && otherAlertTotal > 0 && (
+        <span
+          aria-hidden
+          style={{ position: "absolute", top: -4, right: -4, zIndex: 2 }}
+        >
+          <Bubble n={otherAlertTotal} />
+        </span>
+      )}
       <button
         type="button"
         className="workspace-badge-button"
@@ -115,7 +153,11 @@ export function WorkspaceRailBadge({
         aria-haspopup="listbox"
         aria-expanded={open}
         disabled={pending}
-        title={currentOrgName}
+        title={
+          otherAlertTotal > 0
+            ? `${currentOrgName} — ${otherAlertTotal} new in other workspaces`
+            : currentOrgName
+        }
       >
         {currentOrgLogoUrl ? (
           // Signed URL — `<img>` is fine, see logo-uploader for rationale.
@@ -156,9 +198,13 @@ export function WorkspaceRailBadge({
                 disabled={pending}
                 role="option"
                 aria-selected={false}
+                style={{ display: "flex", alignItems: "center", gap: 8 }}
               >
                 <Icon name="Building2" size={13} aria-hidden />
-                <span className="truncate">{m.organizationName}</span>
+                <span className="truncate" style={{ flex: 1 }}>
+                  {m.organizationName}
+                </span>
+                <Bubble n={alertCounts[m.organizationId] ?? 0} />
               </button>
             ))
           ) : (

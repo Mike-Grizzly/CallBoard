@@ -325,6 +325,7 @@ export async function postComment(
       await db.insert(notifications).values(
         recipientIds.map((recipientId) => ({
           recipientId,
+          organizationId: user.organizationId,
           type: "mention",
           title: `${authorName} mentioned you`,
           body: `In a comment on "${doc[0].title}"`,

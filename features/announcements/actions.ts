@@ -94,6 +94,7 @@ export async function createAnnouncement(
 
   await fanoutAnnouncement({
     announcementId: row.id,
+    organizationId: user.organizationId,
     title,
     body,
     productionSlug,

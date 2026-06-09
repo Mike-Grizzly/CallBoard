@@ -11,6 +11,11 @@ export const organizationMemberships = pgTable("organization_memberships", {
     .notNull()
     .references(() => organizations.id, { onDelete: "cascade" }),
   role: text("role").notNull().default("cast"),
+  // When the user last switched into this workspace — used to clear the
+  // cross-org alert bubble (count = activity since this timestamp).
+  lastViewedAt: timestamp("last_viewed_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

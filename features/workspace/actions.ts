@@ -303,6 +303,18 @@ export async function switchOrganization(
     .set({ selectedOrganizationId: organizationId, updatedAt: new Date() })
     .where(eq(profiles.id, user.id));
 
+  // Switching INTO a workspace clears its cross-org alert bubble — but leaves
+  // the individual mentions/notifications unread within the org.
+  await db
+    .update(organizationMemberships)
+    .set({ lastViewedAt: new Date() })
+    .where(
+      and(
+        eq(organizationMemberships.userId, user.id),
+        eq(organizationMemberships.organizationId, organizationId),
+      ),
+    );
+
   revalidatePath("/", "layout");
   return { success: true };
 }

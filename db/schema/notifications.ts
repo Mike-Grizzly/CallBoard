@@ -6,6 +6,9 @@ export const notifications = pgTable("notifications", {
   recipientId: uuid("recipient_id")
     .notNull()
     .references(() => profiles.id, { onDelete: "cascade" }),
+  // Org this alert belongs to, so it can be counted per workspace for the
+  // cross-org switcher bubbles. Nullable for legacy rows.
+  organizationId: uuid("organization_id"),
   type: text("type").notNull(),
   title: text("title").notNull(),
   body: text("body"),

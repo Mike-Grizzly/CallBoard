@@ -13,6 +13,7 @@ export type AnnouncementAudienceMember = {
 
 type FanoutInput = {
   announcementId: string;
+  organizationId: string;
   title: string;
   body: string;
   productionSlug: string | null;
@@ -62,6 +63,7 @@ export async function fanoutAnnouncement(input: FanoutInput): Promise<void> {
     .filter((r) => prefs[r.userId]?.inApp)
     .map((r) => ({
       recipientId: r.userId,
+      organizationId: input.organizationId,
       type: "announcement",
       title: `New announcement: ${input.title}`,
       body: `${input.authorName} posted to ${scopeLabel}`,
