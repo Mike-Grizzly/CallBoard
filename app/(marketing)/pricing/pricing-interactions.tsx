@@ -19,7 +19,7 @@ export function PricingInteractions() {
         el.textContent = el.dataset[period] ?? el.textContent;
       });
       root.querySelectorAll<HTMLElement>("[data-per]").forEach((el) => {
-        el.textContent = period === "annual" ? "/ production / yr" : "/ production";
+        el.textContent = period === "annual" ? "/ yr" : "/ mo";
       });
     };
 

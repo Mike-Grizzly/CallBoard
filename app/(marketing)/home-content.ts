@@ -242,26 +242,26 @@ export const HOME_HTML = `
   <section class="section" style="background:var(--bg-muted);border-top:1px solid var(--border)">
     <div class="wrap">
       <div class="section-head center reveal" style="text-align:center">
-        <span class="eyebrow no-rule">Simple, per-production pricing</span>
-        <h2 class="title" style="margin-top:16px">Pay for the <em>shows you're running.</em></h2>
-        <p class="lede" style="margin-left:auto;margin-right:auto">Start free, invite the whole company at no extra cost, and only pay when you're producing.</p>
+        <span class="eyebrow no-rule">Simple, honest pricing</span>
+        <h2 class="title" style="margin-top:16px">Pay for the <em>shows you run.</em></h2>
+        <p class="lede" style="margin-left:auto;margin-right:auto">Unlimited cast and crew on every plan — only the company that runs the show pays. Start with a 60-day free trial.</p>
       </div>
       <div class="ptease reveal" style="margin-top:48px">
         <div class="ptier">
-          <div class="tname">Understudy</div>
-          <div class="tprice">Free</div>
-          <div class="tdesc">One active production. The essentials for a single show.</div>
+          <div class="tname">Season</div>
+          <div class="tprice">$249<small> / yr</small></div>
+          <div class="tdesc">One show at a time, with the full toolset.</div>
         </div>
         <div class="ptier" data-feat>
           <span class="pill" data-c="accent" style="align-self:flex-start;margin-bottom:6px"><span class="dot"></span>Most popular</span>
-          <div class="tname">Company</div>
-          <div class="tprice">$29<small> / production</small></div>
-          <div class="tdesc">Unlimited people, reports, and storage for your season.</div>
+          <div class="tname">Repertory</div>
+          <div class="tprice">$499<small> / yr</small></div>
+          <div class="tdesc">Up to 3 productions at once for busy companies.</div>
         </div>
         <div class="ptier">
-          <div class="tname">Resident</div>
-          <div class="tprice">Custom</div>
-          <div class="tdesc">For theatres running many shows a year. SSO and support.</div>
+          <div class="tname">Company</div>
+          <div class="tprice">$799<small> / yr</small></div>
+          <div class="tdesc">Unlimited productions for a full season.</div>
         </div>
       </div>
       <div class="center" style="margin-top:32px">
@@ -509,26 +509,26 @@ export const HOME_REST_HTML = `
   <section class="section" style="background:var(--bg-muted);border-top:1px solid var(--border)">
     <div class="wrap">
       <div class="section-head center reveal" style="text-align:center">
-        <span class="eyebrow no-rule">Simple, per-production pricing</span>
-        <h2 class="title" style="margin-top:16px">Pay for the <em>shows you're running.</em></h2>
-        <p class="lede" style="margin-left:auto;margin-right:auto">Start free, invite the whole company at no extra cost, and only pay when you're producing.</p>
+        <span class="eyebrow no-rule">Simple, honest pricing</span>
+        <h2 class="title" style="margin-top:16px">Pay for the <em>shows you run.</em></h2>
+        <p class="lede" style="margin-left:auto;margin-right:auto">Unlimited cast and crew on every plan — only the company that runs the show pays. Start with a 60-day free trial.</p>
       </div>
       <div class="ptease reveal" style="margin-top:48px">
         <div class="ptier">
-          <div class="tname">Understudy</div>
-          <div class="tprice">Free</div>
-          <div class="tdesc">One active production. The essentials for a single show.</div>
+          <div class="tname">Season</div>
+          <div class="tprice">$249<small> / yr</small></div>
+          <div class="tdesc">One show at a time, with the full toolset.</div>
         </div>
         <div class="ptier" data-feat>
           <span class="pill" data-c="accent" style="align-self:flex-start;margin-bottom:6px"><span class="dot"></span>Most popular</span>
-          <div class="tname">Company</div>
-          <div class="tprice">$29<small> / production</small></div>
-          <div class="tdesc">Unlimited people, reports, and storage for your season.</div>
+          <div class="tname">Repertory</div>
+          <div class="tprice">$499<small> / yr</small></div>
+          <div class="tdesc">Up to 3 productions at once for busy companies.</div>
         </div>
         <div class="ptier">
-          <div class="tname">Resident</div>
-          <div class="tprice">Custom</div>
-          <div class="tdesc">For theatres running many shows a year. SSO and support.</div>
+          <div class="tname">Company</div>
+          <div class="tprice">$799<small> / yr</small></div>
+          <div class="tdesc">Unlimited productions for a full season.</div>
         </div>
       </div>
       <div class="center" style="margin-top:32px">

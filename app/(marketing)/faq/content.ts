@@ -65,7 +65,7 @@ export const FAQ_HTML = `
             )}
             ${qa(
               "Can guest directors or designers join just one show?",
-              "Absolutely. Add anyone to a single production with the access they need, and remove them when the show closes. Resident plans keep a shared company directory across all your shows."
+              "Absolutely. Add anyone to a single production with the access they need, and remove them when the show closes. Your workspace keeps a shared company directory across all your shows."
             )}
             ${qa(
               "How do emergency contacts work?",
@@ -98,16 +98,24 @@ export const FAQ_HTML = `
             <h2>Billing</h2>
             <p class="gsub">Plans, trials, and how we charge.</p>
             ${qa(
-              "How does per-production pricing work?",
-              "You pay once per show on the Company plan — never per person. Run one show a year or ten; you only pay for the productions you actually open."
+              "How does pricing work?",
+              "The organization running the show subscribes — never the people in it. Plans differ only by how many productions you run at once: Season (1), Repertory (3), and Company (unlimited). Every plan includes the full toolset and unlimited cast and crew."
             )}
             ${qa(
               "Is there a free trial?",
-              "Yes — 14 days of the full Company plan on your first production, no card required. After that, stay free on Understudy or upgrade for script, blocking, and reports."
+              "Yes — 60 days free, and the clock starts when you create your first production, not the day you sign up, so it never runs out before you've begun. No card required."
             )}
             ${qa(
-              "Do students really get it free?",
-              "Verified students and educators get the Company plan free for school productions. Verify with a .edu email or a note from your department."
+              "What happens when the trial ends?",
+              "We won't pull the rug out mid-tech: you keep sending rehearsal reports, announcements, and schedules for a grace period to finish your run, and you can always view and export everything. The script and blocking tools pause until you subscribe."
+            )}
+            ${qa(
+              "Do participants pay?",
+              "Never. Cast, crew, designers, and stage managers join the shows they're invited to for free — only the company that runs the production pays."
+            )}
+            ${qa(
+              "Is there pricing for schools?",
+              "Yes — drama departments and university programs get discounted education pricing for the school year. Get in touch and we'll verify your program by hand and set you up."
             )}
           </div>
 
