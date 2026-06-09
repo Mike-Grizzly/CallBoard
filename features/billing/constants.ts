@@ -32,7 +32,36 @@ export const TRIAL_DISCOUNT_PCT = 15; // first term only
 // production settings incl. the closing date) lock immediately at day 60.
 // At LOCK_DAY everything goes fully read-only and uploaded files are purged.
 export const GRACE_DAYS = 30;
-export const LOCK_DAY = TRIAL_DAYS + GRACE_DAYS; // day 90 — also the file-purge date
+export const LOCK_DAY = TRIAL_DAYS + GRACE_DAYS; // day 90 — full read-only
+
+// After the read-only lock, uploaded files are retained 90 more days (so a
+// read-only org can still download everything) and purged at day 180. Admins
+// are warned 60 / 30 / 7 days before the purge.
+export const PURGE_DAY = 180;
+
+// Post-trial lifecycle milestones the daily cron drives, in order. `stage` is
+// the integer stored on organizations.billing_lifecycle_stage; `day` is the
+// day-from-first-production it fires on. PURGE is terminal (deletes files).
+export const LIFECYCLE = {
+  NONE: 0,
+  NUDGE: 1, // day 30 — "loving it? subscribe (15% off)"
+  WARNING: 2, // day 55 — "trial ends in N days"
+  READ_ONLY: 3, // day 90 — "your workspace is now read-only"
+  PURGE_WARN_60: 4, // day 120 — "files removed in 60 days"
+  PURGE_WARN_30: 5, // day 150 — "files removed in 30 days"
+  PURGE_WARN_7: 6, // day 173 — "files removed in 7 days"
+  PURGED: 7, // day 180 — files deleted
+} as const;
+
+export const LIFECYCLE_DAY: Record<number, number> = {
+  [LIFECYCLE.NUDGE]: NUDGE_DAY,
+  [LIFECYCLE.WARNING]: WARNING_DAY,
+  [LIFECYCLE.READ_ONLY]: LOCK_DAY,
+  [LIFECYCLE.PURGE_WARN_60]: PURGE_DAY - 60,
+  [LIFECYCLE.PURGE_WARN_30]: PURGE_DAY - 30,
+  [LIFECYCLE.PURGE_WARN_7]: PURGE_DAY - 7,
+  [LIFECYCLE.PURGED]: PURGE_DAY,
+};
 
 // ─── Production concurrency limits ──────────────────────────────────────────
 // Cast/crew are always free — we never charge per seat. The lever is how many

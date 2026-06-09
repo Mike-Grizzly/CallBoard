@@ -61,13 +61,28 @@ below are live. Superseded details from the original draft are noted inline.
   member-invite gating in particular is debatable (a real show may add a
   replacement mid-run). Decide before launch.
 
+### Also built (later in the session)
+
+- **Graduated lock**: day 60–90 "finish your run" grace (operational writes
+  only) then day-90 read-only; the closing-date cap is bound to opening date
+  and TBD runs are supported.
+- **Stripe 3-tier checkout** (season/repertory/company × monthly/annual) via six
+  `STRIPE_PRICE_<PLAN>_<INTERVAL>` env vars; webhook maps price → plan.
+- **In-app trial banners** (nudge/warning/grace/read-only) in the app shell.
+- **Signup individual-vs-org split** + personal "Your workspace".
+- **Lifecycle cron** (`/api/cron/billing-lifecycle`, daily via `vercel.json`,
+  `CRON_SECRET`-gated): milestone emails to all org admins (day 30 nudge, 55
+  warning, 90 read-only, 120/150/173 purge warnings) and the **day-180 file
+  purge** (90 days after the read-only lock). Idempotent via
+  `organizations.billing_lifecycle_stage`. Purge removes storage objects only,
+  not DB rows.
+
 ### Still to build
 
-- In-app upsell/warning banners reading `trialPhase()` (day-30 15%-off, day-55,
-  grace) and a settings/billing surface showing the phase.
-- Stripe 3-tier checkout (price ids per plan/interval) + webhook → flip `plan`.
-- Day-30/55 + grace email nudges and the day-90 file purge (need Vercel Cron).
-- Signup individual-vs-org split + personal "Your workspace".
+- The 15%-off nudge currently asks the admin to reply for a code — wire a real
+  Stripe coupon / promotion code if you want it self-serve at checkout.
+- A few low-stakes ungated sub-actions (blocking comments/arrows, member
+  invites) — see the "Not yet wired" list above.
 
 ---
 

@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, boolean, integer } from "drizzle-orm/pg-core";
 
 /**
  * Organizations are the top-level tenant in Show Portal.
@@ -38,6 +38,10 @@ export const organizations = pgTable("organizations", {
   currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
   // Existing orgs at launch are grandfathered into full access forever.
   grandfathered: boolean("grandfathered").notNull().default(false),
+  // How far through the post-trial email/purge lifecycle this org has been
+  // taken — the daily cron uses it to send each milestone once and purge once.
+  // See features/billing/lifecycle.ts.
+  billingLifecycleStage: integer("billing_lifecycle_stage").notNull().default(0),
 
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
