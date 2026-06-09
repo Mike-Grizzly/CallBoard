@@ -9,7 +9,7 @@ import {
   productionScenes,
   productionMemberships,
 } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { assertCanMutate } from "@/features/billing/guard";
@@ -181,6 +181,12 @@ export async function dismissStaleBanner(
 
 // ----- AI script analysis -----
 
+// Cost guardrails. Each parse is a real per-token Anthropic charge, so cap how
+// often the feature can run for one production. The window is generous enough
+// for legitimate re-uploads but kills runaway loops.
+const PARSE_LIMIT_PER_PRODUCTION = 5;
+const PARSE_WINDOW_DAYS = 30;
+
 export type StartScriptParseResult = { error?: string; parseId?: string };
 
 /**
@@ -218,6 +224,29 @@ export async function startScriptParse(
   if (!doc) return { error: "Script not found for this production." };
   if (doc.contentType !== "application/pdf") {
     return { error: "AI analysis supports PDF scripts only." };
+  }
+
+  // Cost guardrails: one parse at a time per production, and a rolling cap.
+  const since = new Date(Date.now() - PARSE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const recent = await db
+    .select({ status: scriptParses.status })
+    .from(scriptParses)
+    .where(
+      and(
+        eq(scriptParses.productionId, productionId),
+        gte(scriptParses.createdAt, since),
+      ),
+    );
+  if (recent.some((r) => r.status === "processing")) {
+    return { error: "An analysis is already running for this production — give it a minute." };
+  }
+  // Count only parses that actually ran (failed-before-the-model rows are free
+  // and shouldn't burn quota).
+  const used = recent.filter((r) => r.status !== "failed").length;
+  if (used >= PARSE_LIMIT_PER_PRODUCTION) {
+    return {
+      error: `You've reached the limit of ${PARSE_LIMIT_PER_PRODUCTION} AI analyses for this production in ${PARSE_WINDOW_DAYS} days.`,
+    };
   }
 
   const [parse] = await db

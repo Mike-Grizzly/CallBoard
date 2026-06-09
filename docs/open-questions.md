@@ -27,6 +27,12 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
   full set of `production_roles`/`production_scenes` (only bookmarks are
   idempotent). Acceptable for a one-time setup step, but worth guarding if
   re-runs become common.
+- **Cost guardrails: RESOLVED (basic).** Concurrency lock + per-production cap
+  (5 / 30 days) + token logging now ship (`startScriptParse`,
+  `runScriptParse`). Open: no org-level monthly quota yet (chosen to defer the
+  per-tier quota until there's real token data); the per-production cap is the
+  only ceiling, so a `company`-tier org with many productions is effectively
+  uncapped org-wide.
 - **Phase 2 (per-role highlighting)** is the deferred moonshot — needs per-line
   pixel coordinates from the PDF and is highly script-format-dependent.
 

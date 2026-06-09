@@ -52,6 +52,8 @@ export async function getLatestScriptParse(productionId: string) {
       status: scriptParses.status,
       result: scriptParses.result,
       error: scriptParses.error,
+      inputTokens: scriptParses.inputTokens,
+      outputTokens: scriptParses.outputTokens,
       createdAt: scriptParses.createdAt,
       documentTitle: documents.title,
     })

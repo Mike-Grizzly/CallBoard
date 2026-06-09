@@ -68,6 +68,29 @@ Gated on `documents:upload` (admin/producer/director/choreographer/stage_manager
 hold it — directors included, which is the point). Non-managers still need a
 production membership. Billing `assertCanMutate` applies to start + apply.
 
+## Cost & abuse guardrails
+
+Each parse is a real per-token Anthropic charge to the org that owns the
+`ANTHROPIC_API_KEY` (≈$0.30–$0.50 for a typical script; up to ~$1 for very long
+ones). It is **not** billed through Stripe to end users. Guardrails in
+`startScriptParse`:
+
+- **Concurrency lock** — a new parse is refused while one is already
+  `processing` for that production.
+- **Rolling cap** — max `PARSE_LIMIT_PER_PRODUCTION` (5) parses per
+  `PARSE_WINDOW_DAYS` (30) per production. Failed-before-the-model rows
+  (e.g. non-PDF) don't count against the quota.
+- **Billing guard** — `assertCanMutate` already blocks read-only/expired orgs.
+
+**Token logging** — `runScriptParse` records `input_tokens` / `output_tokens`
+on the `script_parses` row from the model's `usage`, surfaced as a muted line
+on the review page, so real cost is observable per parse.
+
+**No pricing-tier change** was made (decision 2026-06-09): per-parse cost is low
+and this is a setup-time action, so caps cover the economics without a new SKU.
+A per-tier monthly quota (free 5 / repertory 20 / company ∞) is the natural
+future lever if AI usage becomes material — deferred until there's token data.
+
 ## Setup the user owns
 
 - Set `ANTHROPIC_API_KEY` in Vercel (and local `.env`). `.env.example` documents

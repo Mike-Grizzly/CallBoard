@@ -167,7 +167,14 @@ export async function runScriptParse(parseId: string): Promise<void> {
 
     await db
       .update(scriptParses)
-      .set({ status: "ready", result, error: null, updatedAt: new Date() })
+      .set({
+        status: "ready",
+        result,
+        error: null,
+        inputTokens: message.usage?.input_tokens ?? null,
+        outputTokens: message.usage?.output_tokens ?? null,
+        updatedAt: new Date(),
+      })
       .where(eq(scriptParses.id, parseId));
     await db
       .update(documents)

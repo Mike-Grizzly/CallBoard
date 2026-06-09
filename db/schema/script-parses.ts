@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, jsonb, integer, timestamp } from "drizzle-orm/pg-core";
 import { productions } from "./productions";
 import { documents } from "./documents";
 import { profiles } from "./users";
@@ -29,6 +29,9 @@ export const scriptParses = pgTable("script_parses", {
   result: jsonb("result"),
   // Failure detail when status = 'failed'.
   error: text("error"),
+  // Anthropic token usage for this parse — for cost visibility and monitoring.
+  inputTokens: integer("input_tokens"),
+  outputTokens: integer("output_tokens"),
   requestedBy: uuid("requested_by").references(() => profiles.id, {
     onDelete: "set null",
   }),

@@ -33,6 +33,8 @@ type ParseRow = {
   status: string;
   result: unknown;
   error: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
   documentTitle: string;
 };
 
@@ -121,6 +123,20 @@ export function AiReviewClient({
           }
           onDiscarded={() => router.push(`/productions/${slug}/documents`)}
         />
+      )}
+
+      {(parse?.inputTokens != null || parse?.outputTokens != null) && (
+        <p
+          style={{
+            fontSize: 11,
+            color: "var(--ink-3)",
+            marginTop: 20,
+            textAlign: "right",
+          }}
+        >
+          Analysis used {(parse.inputTokens ?? 0).toLocaleString()} input +{" "}
+          {(parse.outputTokens ?? 0).toLocaleString()} output tokens.
+        </p>
       )}
     </div>
   );
