@@ -15,6 +15,23 @@ export type ProductionFormErrors = {
   closing_date?: string;
 };
 
+// Hard sanity cap on how far out a closing date may be set. The free-trial
+// operational lock at day 90 already caps free usage regardless of the closing
+// date (it's keyed to the immutable trial anchor, not the show dates), so this
+// is purely data hygiene — it blocks absurd values (e.g. a 2099 closing), and
+// no real production ever approaches it.
+export const MAX_CLOSING_MONTHS = 18;
+
+export function closingDateBeyondCap(
+  closingDate: string | null,
+  from: Date = new Date(),
+): boolean {
+  if (!closingDate) return false;
+  const cap = new Date(from);
+  cap.setMonth(cap.getMonth() + MAX_CLOSING_MONTHS);
+  return new Date(closingDate).getTime() > cap.getTime();
+}
+
 export type ProductionFormData = {
   title: string;
   slug: string;
@@ -45,6 +62,8 @@ export function validateProductionForm(formData: FormData): {
 
   if (openingDate && closingDate && openingDate > closingDate) {
     errors.closing_date = "Closing date cannot be before opening date.";
+  } else if (closingDateBeyondCap(closingDate)) {
+    errors.closing_date = `Closing date can't be more than ${MAX_CLOSING_MONTHS} months out.`;
   }
 
   if (Object.keys(errors).length > 0) {

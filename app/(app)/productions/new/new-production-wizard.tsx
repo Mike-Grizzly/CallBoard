@@ -139,7 +139,7 @@ export default function NewProductionWizard({
 
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [launched, setLaunched] = useState<{ slug: string; summary: LaunchSummary } | null>(null);
+  const [launched, setLaunched] = useState<{ slug: string; summary: LaunchSummary; trialWarning?: string } | null>(null);
   // Non-org people awaiting an email before launch (null = prompt closed).
   const [invitePrompt, setInvitePrompt] = useState<WizardPerson[] | null>(null);
 
@@ -260,7 +260,7 @@ export default function NewProductionWizard({
       router.refresh();
       return;
     }
-    setLaunched({ slug: result.slug!, summary: result.summary! });
+    setLaunched({ slug: result.slug!, summary: result.summary!, trialWarning: result.trialWarning });
   };
 
   // Launch: if anyone named isn't in the org, prompt for their emails first;
@@ -288,6 +288,7 @@ export default function NewProductionWizard({
           overlay={overlay}
           slug={launched.slug}
           summary={launched.summary}
+          trialWarning={launched.trialWarning}
           onClose={onClose}
         />
       </div>
@@ -1314,12 +1315,14 @@ function LaunchScreen({
   overlay,
   slug,
   summary,
+  trialWarning,
   onClose,
 }: {
   data: WizardData;
   overlay: boolean;
   slug: string;
   summary: LaunchSummary;
+  trialWarning?: string;
   onClose?: () => void;
 }) {
   return (
@@ -1335,6 +1338,12 @@ function LaunchScreen({
               : "Your dashboard is ready."}{" "}
             Schedule your first rehearsal and start tracking from day one.
           </p>
+          {trialWarning && (
+            <div className="banner" style={{ textAlign: "left", maxWidth: 480, margin: "0 auto 28px" }}>
+              <Icon name="Info" size={16} />
+              <div>{trialWarning}</div>
+            </div>
+          )}
           {summary.skipped.length > 0 && (
             <div className="banner" style={{ textAlign: "left", maxWidth: 480, margin: "0 auto 28px" }}>
               <Icon name="Info" size={16} />

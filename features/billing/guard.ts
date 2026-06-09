@@ -23,10 +23,14 @@ import {
   PRODUCTION_LIMIT,
   PLAN_LABELS,
   PLANS,
+  TRIAL_DAYS,
+  LOCK_DAY,
   isPlanId,
   limitCountsArchived,
   type PlanId,
 } from "./constants";
+
+const DAY = 86_400_000;
 
 type OrgBillingRow = OrgBillingFields & {
   plan: string;
@@ -145,6 +149,47 @@ export async function assertCanCreateProduction(
       limit === 1 ? "production" : "productions"
     }. Upgrade your plan to run more at once.`,
   };
+}
+
+/**
+ * After the first production is created, warn if its closing date runs past
+ * the free-trial scope, so a company can decide to subscribe before the lock
+ * hits mid-run. Returns null for grandfathered/subscribed orgs (no trial gate)
+ * and for shows that finish comfortably inside the trial.
+ */
+export async function trialScopeWarning(
+  orgId: string,
+  closingDate: string | null,
+): Promise<string | null> {
+  if (!closingDate) return null;
+  const org = await getOrgBilling(orgId);
+  if (!org || org.grandfathered || !org.trialStartedAt) return null;
+  // Subscribed orgs have no trial lock.
+  if (org.subscriptionStatus === "active" || org.subscriptionStatus === "past_due") {
+    return null;
+  }
+
+  const close = new Date(closingDate).getTime();
+  const day60 = org.trialStartedAt.getTime() + TRIAL_DAYS * DAY;
+  const day90 = org.trialStartedAt.getTime() + LOCK_DAY * DAY;
+
+  if (close > day90) {
+    return (
+      "Heads up: this show closes after your free trial fully ends. Editing " +
+      "tools lock at day 60, and reports, announcements and scheduling lock " +
+      "at day 90 — so part of your run would be read-only. Subscribe any time " +
+      "to keep full access through closing."
+    );
+  }
+  if (close > day60) {
+    return (
+      "Heads up: this show closes after your 60-day full trial. Editing tools " +
+      "(scripts, blocking) lock on day 60, but you'll keep reports, " +
+      "announcements and scheduling through day 90. Subscribe any time to keep " +
+      "everything unlocked."
+    );
+  }
+  return null;
 }
 
 /**

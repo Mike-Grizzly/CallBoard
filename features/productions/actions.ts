@@ -32,7 +32,9 @@ import { isValidEmail } from "@/features/members/validation";
 import {
   assertCanCreateProduction,
   startTrialIfFirstProduction,
+  trialScopeWarning,
 } from "@/features/billing/guard";
+import { closingDateBeyondCap, MAX_CLOSING_MONTHS } from "./validation";
 
 export type ProductionMutationResult = {
   error?: string;
@@ -115,6 +117,9 @@ const toDate = (value: string | undefined | null): string | null => {
 export type FullProductionResult = {
   error?: string;
   slug?: string;
+  // Soft, non-blocking notice shown after launch (e.g. closing date runs past
+  // the free trial). The production is still created.
+  trialWarning?: string;
   summary?: {
     departments: number;
     roles: number;
@@ -151,6 +156,11 @@ export async function createProductionFull(
   const closing = toDate(input.closing);
   if (opening && closing && opening > closing) {
     return { error: "Closing date cannot be before opening date." };
+  }
+  if (closingDateBeyondCap(closing)) {
+    return {
+      error: `Closing date can't be more than ${MAX_CLOSING_MONTHS} months out.`,
+    };
   }
 
   const gate = await assertCanCreateProduction(user.organizationId);
@@ -211,6 +221,8 @@ export async function createProductionFull(
 
   await createDefaultFolders(productionId);
   await startTrialIfFirstProduction(user.organizationId);
+  const trialWarning =
+    (await trialScopeWarning(user.organizationId, closing)) ?? undefined;
 
   const teamResult = await applyWizardTeam({
     team: input.team ?? [],
@@ -227,6 +239,7 @@ export async function createProductionFull(
 
   return {
     slug,
+    trialWarning,
     summary: {
       departments: enabledDepts.length,
       roles: roles.length,
