@@ -31,6 +31,17 @@ function fallbackOrgName(firstName: string, lastName: string, email: string) {
   return `${label}'s organization`;
 }
 
+/**
+ * Personal workspace name for a participant (individual) self-signup. They
+ * weren't asked to name a company, so we name it for them. Functionally it's
+ * still a free org with the user as admin — it just never triggers billing
+ * unless they create a production, which is what "participants are free" means.
+ */
+function personalWorkspaceName(firstName: string, email: string) {
+  const label = firstName.trim() || email.split("@")[0] || "My";
+  return `${label}'s workspace`;
+}
+
 async function resolveActiveMembership(
   userId: string,
   selectedOrgId: string | null,
@@ -102,9 +113,13 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     const firstName = (meta.first_name as string) || "";
     const lastName = (meta.last_name as string) || "";
     const email = authUser.email ?? "";
+    const accountType = (meta.account_type as string) || "organization";
     const requestedOrgName = ((meta.organization_name as string) || "").trim();
     const orgName =
-      requestedOrgName || fallbackOrgName(firstName, lastName, email);
+      requestedOrgName ||
+      (accountType === "individual"
+        ? personalWorkspaceName(firstName, email)
+        : fallbackOrgName(firstName, lastName, email));
 
     const org = await createOrganization(orgName);
 

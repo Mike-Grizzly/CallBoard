@@ -40,6 +40,10 @@ export async function signup(
   const password = formData.get("password") as string;
   const firstName = formData.get("first_name") as string;
   const lastName = formData.get("last_name") as string;
+  const accountType =
+    (formData.get("account_type") as string) === "individual"
+      ? "individual"
+      : "organization";
   const organizationName = (
     (formData.get("organization_name") as string) || ""
   ).trim();
@@ -48,7 +52,10 @@ export async function signup(
     return { error: "Email and password are required." };
   }
 
-  if (!organizationName) {
+  // Only people setting up a company workspace name it; participants get a
+  // personal workspace (named for them in lib/auth.ts) and join the shows
+  // they're invited to.
+  if (accountType === "organization" && !organizationName) {
     return { error: "Workspace name is required." };
   }
 
@@ -61,7 +68,9 @@ export async function signup(
       data: {
         first_name: firstName || "",
         last_name: lastName || "",
-        organization_name: organizationName,
+        account_type: accountType,
+        organization_name:
+          accountType === "organization" ? organizationName : "",
       },
     },
   });
