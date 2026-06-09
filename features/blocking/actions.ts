@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { eq, and, asc } from "drizzle-orm";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { assertCanMutate } from "@/features/billing/guard";
 import { pushMentionNotifications } from "@/features/mentions/notify";
 
 export type BlockingActionResult = { error?: string };
@@ -63,6 +64,8 @@ export async function requestGroundPlanImageUpload(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have permission to configure the stage." };
   }
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   const storagePath = `ground-plans/${productionId}/${Date.now()}.jpg`;
   const supabase = createSupabaseAdminClient();
@@ -146,6 +149,8 @@ export async function saveStageConfiguration(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have permission to configure the stage." };
   }
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   const existing = await db
     .select({ id: stageConfigurations.id })
@@ -213,6 +218,8 @@ export async function saveBlockingPosition(
   if (!(await userCanAccessProduction(user, beat.productionId))) {
     return { error: "You don't have permission to edit blocking." };
   }
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   const existing = await db
     .select({ id: blockingPositions.id })
@@ -496,6 +503,8 @@ export async function requestCustomSetPieceUpload(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have permission to upload set pieces." };
   }
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
   if (!fileName || fileSize <= 0) return { error: "No file selected." };
 
   const allowed = ["image/svg+xml", "image/png", "image/jpeg"];

@@ -6,6 +6,7 @@ import { eq, and, isNotNull, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { assertCanMutate } from "@/features/billing/guard";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_FOLDERS } from "./constants";
 
@@ -50,6 +51,9 @@ export async function createFolder(
     return { error: "You don't have access to this production." };
   }
 
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
+
   const existing = await db
     .select({ id: documentFolders.id })
     .from(documentFolders)
@@ -81,6 +85,10 @@ export async function requestDocumentUpload(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have access to this production." };
   }
+
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
+
   if (!fileName || fileSize <= 0) {
     return { error: "Please select a file to upload." };
   }

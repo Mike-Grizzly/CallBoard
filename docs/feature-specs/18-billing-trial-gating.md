@@ -20,8 +20,58 @@ clock, the conversion funnel, and exactly where the gate is enforced.
 
 ## Status
 
-**Planned** — not implemented. This is a design spec for sign-off. No billing,
-schema, or gate code exists yet.
+**Partially implemented (2026-06-09).** The trial anchor, plan model, and gates
+below are live. Superseded details from the original draft are noted inline.
+
+### Implemented
+
+- **Plans:** `free | season | repertory | company` (not just `free | company`).
+  Concurrency limits 1 / 1 / 3 / unlimited. Free counts all-time productions
+  (archived included, anti-farming); paid plans count only active ones.
+  See `features/billing/constants.ts`.
+- **Trial anchor:** write-once `organizations.trial_started_at`, stamped on the
+  org's first production via `startTrialIfFirstProduction` (race-safe
+  `WHERE trial_started_at IS NULL`). Migration `add_trial_started_at_and_plan_default`.
+- **Graduated lock (refinement on the original hard day-60 lock):**
+  - Day 0–60: full access.
+  - **Day 60–90 "finish your run" grace:** the daily operational loop stays
+    editable (rehearsal reports, announcements, call/rehearsal schedules,
+    director's notes) so a company in tech week can complete its run; scripts,
+    blocking, scenes, uploads, and settings lock immediately.
+  - Day 90+ (`LOCK_DAY`): full read-only. Also the file-purge date.
+- **Two gates** in `features/billing/guard.ts`: `assertCanOperate` (operational
+  loop, open through grace) and `assertCanMutate` (full writes, locked at day
+  60). `lib/billing.ts` exposes `trialPhase()` and pure `mutationLevel()`.
+- **Concurrency gate** `assertCanCreateProduction` wired into all three create
+  paths. Grandfathered orgs bypass every gate.
+
+### Wired into actions
+
+- Operational (`assertCanOperate`): reports create/update, announcements create,
+  calls create/update, notes create/update.
+- Full-lock (`assertCanMutate`): report attachment upload; document folder +
+  upload; blocking stage config / save position / ground-plan + set-piece
+  uploads; scripts set-default + save annotations; all scene/beat writes.
+
+### Not yet wired (follow-up — low-stakes, no storage cost)
+
+- Remaining blocking sub-actions: beat comments, beat arrows, remove-position,
+  set-piece finalize/delete.
+- Workspace settings (rename, logo upload) and member invites — judgment calls;
+  member-invite gating in particular is debatable (a real show may add a
+  replacement mid-run). Decide before launch.
+
+### Still to build
+
+- In-app upsell/warning banners reading `trialPhase()` (day-30 15%-off, day-55,
+  grace) and a settings/billing surface showing the phase.
+- Stripe 3-tier checkout (price ids per plan/interval) + webhook → flip `plan`.
+- Day-30/55 + grace email nudges and the day-90 file purge (need Vercel Cron).
+- Signup individual-vs-org split + personal "Your workspace".
+
+---
+
+_Original design spec follows (some specifics superseded by the above)._
 
 ## The model (decided)
 

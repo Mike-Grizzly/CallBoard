@@ -10,6 +10,7 @@ import {
   type CurrentUser,
 } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { assertCanOperate } from "@/features/billing/guard";
 import {
   validateReportForm,
   type ReportFormErrors,
@@ -97,6 +98,9 @@ export async function createReport(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have access to this production." };
   }
+
+  const lock = await assertCanOperate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   const production = await db
     .select({ slug: productions.slug })
@@ -217,6 +221,9 @@ export async function updateReport(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have access to this production." };
   }
+
+  const lock = await assertCanOperate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   const production = await db
     .select({ slug: productions.slug })

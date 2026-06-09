@@ -25,6 +25,15 @@ export const NUDGE_DAY = 30; // in-app "15% off" upsell appears
 export const WARNING_DAY = 55; // "trial ends soon" warning appears
 export const TRIAL_DISCOUNT_PCT = 15; // first term only
 
+// "Finish your run" grace: after the trial ends, the daily operational loop
+// (rehearsal reports, announcements, schedules, director's notes) stays
+// editable for GRACE_DAYS so a company in tech week can complete its run,
+// while creative/config/storage features (scripts, blocking, uploads, scenes,
+// production settings incl. the closing date) lock immediately at day 60.
+// At LOCK_DAY everything goes fully read-only and uploaded files are purged.
+export const GRACE_DAYS = 30;
+export const LOCK_DAY = TRIAL_DAYS + GRACE_DAYS; // day 90 — also the file-purge date
+
 // ─── Production concurrency limits ──────────────────────────────────────────
 // Cast/crew are always free — we never charge per seat. The lever is how many
 // productions an org can run. `null` = unlimited.

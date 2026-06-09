@@ -6,6 +6,7 @@ import { calls, productions, callConfirmations } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
+import { assertCanOperate } from "@/features/billing/guard";
 import { can } from "@/lib/permissions";
 import { getProductionBySlug } from "@/features/productions/queries";
 import {
@@ -98,6 +99,9 @@ export async function createCall(
     return { error: "You don't have access to this production." };
   }
 
+  const lock = await assertCanOperate(user.organizationId);
+  if (lock.error) return { error: lock.error };
+
   await db.insert(calls).values({
     productionId,
     createdBy: user.id,
@@ -145,6 +149,9 @@ export async function updateCall(
   if (!(await userCanAccessProduction(user, callRows[0].productionId))) {
     return { error: "You don't have access to this production." };
   }
+
+  const lock = await assertCanOperate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   await db
     .update(calls)

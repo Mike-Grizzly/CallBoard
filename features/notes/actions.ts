@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { assertCanOperate } from "@/features/billing/guard";
 import { writeMentions } from "@/features/mentions/write";
 
 type ActionResult = { error?: string; success?: boolean; id?: string };
@@ -22,6 +23,9 @@ export async function createNote(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have access to this production." };
   }
+
+  const lock = await assertCanOperate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -74,6 +78,9 @@ export async function updateNote(
   if (!(await userCanAccessProduction(user, note[0].productionId))) {
     return { error: "You don't have access to this production." };
   }
+
+  const lock = await assertCanOperate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   // Only the author or tag managers can edit
   if (

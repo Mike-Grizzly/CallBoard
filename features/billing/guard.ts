@@ -4,7 +4,8 @@
 // Two distinct gates:
 //   1. assertCanCreateProduction — concurrency limit per plan (the monetization
 //      lever). Also where the trial clock is started, set-once.
-//   2. assertCanMutate / canMutate — the read-only lock after the trial expires.
+//   2. assertCanMutate (full writes) / assertCanOperate (daily run loop) — the
+//      graduated read-only lock after the trial expires (grace then locked).
 //
 // Both layer ON TOP of role capabilities: billing never grants a capability a
 // role lacks, and a role never bypasses the billing gate. Preamble order in an
@@ -14,7 +15,7 @@ import { and, count, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { organizations, productions } from "@/db/schema";
 import {
-  billingState,
+  mutationLevel,
   newTrialEnd,
   type OrgBillingFields,
 } from "@/lib/billing";
@@ -66,28 +67,42 @@ async function countProductions(
   return row?.n ?? 0;
 }
 
-/** UI-facing boolean: may this org create/edit, or is it in the read-only lock? */
-export function canMutate(org: OrgBillingFields): boolean {
-  return billingState(org).hasAccess;
-}
+const FULL_LOCK_MSG =
+  "Your free trial has ended. You can still send rehearsal reports, " +
+  "announcements and schedules to finish your run, but scripts, blocking, " +
+  "uploads and settings need a subscription.";
+
+const READ_ONLY_MSG =
+  "This workspace is read-only. Subscribe to edit again — you can still " +
+  "view and download everything.";
 
 /**
- * The read-only lock. Returns a typed `{ error }` (never throws — actions
- * return typed results) when the org's trial has expired and it isn't
- * subscribed or grandfathered. Viewing/downloading is unaffected; only writes
- * call this.
+ * Full-access gate — for creative/config/storage writes (scripts, blocking,
+ * scenes, document & report uploads, production/workspace settings, member
+ * invites). Blocked the instant the trial expires (grace and locked phases).
  */
 export async function assertCanMutate(
   orgId: string,
 ): Promise<{ error?: string }> {
   const org = await getOrgBilling(orgId);
   if (!org) return { error: "Organization not found." };
-  if (!billingState(org).hasAccess) {
-    return {
-      error:
-        "Your free trial has ended. Subscribe to keep editing — you can still view and download everything.",
-    };
-  }
+  const level = mutationLevel(org);
+  if (level === "full") return {};
+  return { error: level === "locked" ? READ_ONLY_MSG : FULL_LOCK_MSG };
+}
+
+/**
+ * Operational gate — for the daily "run the show" loop (rehearsal reports,
+ * announcements, call/rehearsal schedules, director's notes). Stays open
+ * through the grace window so a company in tech week can finish its run;
+ * blocked only once fully locked (day 90+).
+ */
+export async function assertCanOperate(
+  orgId: string,
+): Promise<{ error?: string }> {
+  const org = await getOrgBilling(orgId);
+  if (!org) return { error: "Organization not found." };
+  if (mutationLevel(org) === "locked") return { error: READ_ONLY_MSG };
   return {};
 }
 

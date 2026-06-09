@@ -6,6 +6,7 @@ import { productionScenes, sceneBeats, blockingPositions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { assertCanMutate } from "@/features/billing/guard";
 import { validateSceneForm, validateBeatForm } from "./validation";
 
 export type SceneActionResult = { error?: string };
@@ -25,6 +26,9 @@ export async function createScene(
   if (!(await userCanAccessProduction(user, data!.productionId))) {
     return { error: "You don't have permission to manage scenes." };
   }
+
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   await db.insert(productionScenes).values({
     productionId: data!.productionId,
@@ -62,6 +66,9 @@ export async function updateScene(
     return { error: "You don't have permission to manage scenes." };
   }
 
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
+
   await db
     .update(productionScenes)
     .set({
@@ -98,6 +105,9 @@ export async function deleteScene(
     return { error: "You don't have permission to manage scenes." };
   }
 
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
+
   await db.delete(productionScenes).where(eq(productionScenes.id, sceneId));
 
   revalidatePath(`/productions`);
@@ -125,6 +135,9 @@ export async function createBeat(
   if (!(await userCanAccessProduction(user, scene.productionId))) {
     return { error: "You don't have permission to manage beats." };
   }
+
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   await db.insert(sceneBeats).values({
     sceneId: data!.sceneId,
@@ -160,6 +173,9 @@ export async function updateBeat(
     return { error: "You don't have permission to manage beats." };
   }
 
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
+
   await db
     .update(sceneBeats)
     .set({ label })
@@ -192,6 +208,9 @@ export async function deleteBeat(
     return { error: "You don't have permission to manage beats." };
   }
 
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
+
   await db.delete(sceneBeats).where(eq(sceneBeats.id, beatId));
 
   revalidatePath(`/productions`);
@@ -216,6 +235,9 @@ export async function saveBeatNotes(
   if (!(await userCanAccessProduction(user, beat.productionId))) {
     return { error: "You don't have permission to edit beat notes." };
   }
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
+
   await db.update(sceneBeats).set({ notes }).where(eq(sceneBeats.id, beatId));
   revalidatePath(`/productions`);
   return {};
@@ -308,6 +330,9 @@ export async function captureNextBeat(
   if (!(await userCanAccessProduction(user, scene.productionId))) {
     return { error: "You don't have permission to manage beats." };
   }
+
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   const [newBeat] = await db
     .insert(sceneBeats)

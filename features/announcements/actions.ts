@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { assertCanOperate } from "@/features/billing/guard";
 import { writeMentions } from "@/features/mentions/write";
 import {
   getOrganizationMembers,
@@ -43,6 +44,9 @@ export async function createAnnouncement(
   if (productionId && !(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have access to that production." };
   }
+
+  const lock = await assertCanOperate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   const [row] = await db
     .insert(announcements)

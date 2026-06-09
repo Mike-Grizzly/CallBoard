@@ -3,7 +3,12 @@
 // subscription takes over once the org subscribes. Grandfathered orgs
 // (everyone existing at launch) always have access.
 
-import { TRIAL_DAYS, NUDGE_DAY, WARNING_DAY } from "@/features/billing/constants";
+import {
+  TRIAL_DAYS,
+  NUDGE_DAY,
+  WARNING_DAY,
+  LOCK_DAY,
+} from "@/features/billing/constants";
 
 export type BillingStatus =
   | "grandfathered"
@@ -90,29 +95,56 @@ export type TrialPhase =
   | "active" // day 0–29
   | "nudge" // day 30–54 — show 15%-off upsell
   | "ending" // day 55–59 — show "N days left"
-  | "expired"; // day 60+ — read-only
+  | "grace" // day 60–89 — "finish your run": operational writes only
+  | "locked"; // day 90+ — full read-only, files purged
 
 export type TrialState = {
   phase: TrialPhase;
-  daysRemaining: number | null;
+  // Days left in the current trial (until day 60). 0 once in grace/locked.
+  daysRemaining: number;
+  // Days left in the grace window (until day 90). 0 outside grace.
+  graceDaysRemaining: number;
 };
 
 export function trialPhase(
   org: { trialStartedAt: Date | null },
   now: Date = new Date(),
 ): TrialState {
-  if (!org.trialStartedAt) return { phase: "no_production", daysRemaining: null };
+  if (!org.trialStartedAt) {
+    return { phase: "no_production", daysRemaining: TRIAL_DAYS, graceDaysRemaining: 0 };
+  }
 
   const dayN = Math.floor((now.getTime() - org.trialStartedAt.getTime()) / DAY);
   const daysRemaining = Math.max(0, TRIAL_DAYS - dayN);
+  const graceDaysRemaining =
+    dayN >= TRIAL_DAYS ? Math.max(0, LOCK_DAY - dayN) : 0;
 
   let phase: TrialPhase;
-  if (dayN >= TRIAL_DAYS) phase = "expired";
+  if (dayN >= LOCK_DAY) phase = "locked";
+  else if (dayN >= TRIAL_DAYS) phase = "grace";
   else if (dayN >= WARNING_DAY) phase = "ending";
   else if (dayN >= NUDGE_DAY) phase = "nudge";
   else phase = "active";
 
-  return { phase, daysRemaining };
+  return { phase, daysRemaining, graceDaysRemaining };
+}
+
+// ─── Mutation level (pure) ──────────────────────────────────────────────────
+// Collapses subscription + grandfather + trial clock into the three write
+// tiers the app enforces. Pure so client components can mirror the server gate.
+//
+//   full        — subscribed / grandfathered / trialing / pre-trial: edit all.
+//   operational — grace (day 60–89): daily run loop (reports, announcements,
+//                 schedules, notes) only; scripts/blocking/uploads/settings off.
+//   locked      — day 90+: full read-only.
+
+export type MutationLevel = "full" | "operational" | "locked";
+
+export function mutationLevel(
+  org: OrgBillingFields & { trialStartedAt: Date | null },
+): MutationLevel {
+  if (billingState(org).hasAccess) return "full";
+  return trialPhase(org).phase === "locked" ? "locked" : "operational";
 }
 
 export { TRIAL_DAYS };

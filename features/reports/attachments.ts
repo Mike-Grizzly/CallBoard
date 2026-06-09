@@ -5,6 +5,7 @@ import { reportAttachments, rehearsalReports } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { assertCanMutate } from "@/features/billing/guard";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
@@ -24,6 +25,9 @@ export async function requestReportAttachmentUpload(
   if (!can(user.role, "reports:create")) {
     return { error: "You don't have permission to upload attachments." };
   }
+
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   if (!reportId) return { error: "Missing report." };
   if (!fileName || fileSize <= 0) return { error: "Please select a file." };

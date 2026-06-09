@@ -5,6 +5,7 @@ import { documents, scriptAnnotations } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
+import { assertCanMutate } from "@/features/billing/guard";
 import { can } from "@/lib/permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -29,6 +30,8 @@ export async function setDefaultScript(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have access to that production." };
   }
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   // Verify the document belongs to this production
   const [doc] = await db
@@ -101,6 +104,8 @@ export async function saveAnnotations(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have access to that production." };
   }
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
 
   const annotations = JSON.parse(annotationsJson || "[]");
   const bookmarks = JSON.parse(bookmarksJson || "[]");
