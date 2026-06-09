@@ -15,20 +15,23 @@ export type ProductionFormErrors = {
   closing_date?: string;
 };
 
-// Hard sanity cap on how far out a closing date may be set. The free-trial
-// operational lock at day 90 already caps free usage regardless of the closing
-// date (it's keyed to the immutable trial anchor, not the show dates), so this
-// is purely data hygiene — it blocks absurd values (e.g. a 2099 closing), and
-// no real production ever approaches it.
-export const MAX_CLOSING_MONTHS = 18;
+// Sanity limit on how long after OPENING a closing date may sit. This is pure
+// typo protection (catching a fat-fingered 2099), NOT a billing lever: the
+// closing date doesn't affect the trial at all, which is anchored to
+// first-production creation and locks at day 90 regardless of show dates.
+//
+// Open-ended / TBD runs are fully supported — leave the closing date blank and
+// nothing here fires. The limit only applies when BOTH dates are set, and it's
+// generous enough (18 months past opening) that no real production trips it.
+export const MAX_RUN_MONTHS = 18;
 
 export function closingDateBeyondCap(
+  openingDate: string | null,
   closingDate: string | null,
-  from: Date = new Date(),
 ): boolean {
-  if (!closingDate) return false;
-  const cap = new Date(from);
-  cap.setMonth(cap.getMonth() + MAX_CLOSING_MONTHS);
+  if (!openingDate || !closingDate) return false;
+  const cap = new Date(openingDate);
+  cap.setMonth(cap.getMonth() + MAX_RUN_MONTHS);
   return new Date(closingDate).getTime() > cap.getTime();
 }
 
@@ -62,8 +65,8 @@ export function validateProductionForm(formData: FormData): {
 
   if (openingDate && closingDate && openingDate > closingDate) {
     errors.closing_date = "Closing date cannot be before opening date.";
-  } else if (closingDateBeyondCap(closingDate)) {
-    errors.closing_date = `Closing date can't be more than ${MAX_CLOSING_MONTHS} months out.`;
+  } else if (closingDateBeyondCap(openingDate, closingDate)) {
+    errors.closing_date = `Closing date can't be more than ${MAX_RUN_MONTHS} months after opening.`;
   }
 
   if (Object.keys(errors).length > 0) {
