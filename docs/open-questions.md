@@ -479,11 +479,11 @@ with an honest "coming soon" and pulled from the nav.
 **Resolved this session:** CMS decision (Sanity, embedded Studio at `/studio` — not Payload); Stripe checkout/webhook/portal built (3 tiers); GTM live; trial/gating model and pricing PAGE both built. The pre-2026-06-09 "Still pending: CMS/GTM/Stripe" notes above are superseded.
 
 **Owner setup before/at go-live (not code):**
-- Add `CRON_SECRET` in Vercel (the lifecycle cron 503s without it).
-- Stripe Customer Portal → enable "Customers can switch plans" + add the 3 products (else "Manage billing" can't upgrade/downgrade).
-- Confirm `RESEND_FROM_EMAIL` domain is verified in Resend, or lifecycle/admin emails silently fail.
-- Swap Stripe test keys → live keys + a live webhook (use the `www` canonical URL) when ready to charge.
-- Rotate the Sanity API token (pasted in chat during setup).
+- ~~Add `CRON_SECRET` in Vercel~~ — **DONE 2026-06-09.**
+- ~~Stripe Customer Portal → enable "Customers can switch plans" + add the 3 products~~ — **DONE 2026-06-09.**
+- ~~Confirm `RESEND_FROM_EMAIL` domain is verified in Resend~~ — **DONE 2026-06-09** (`proscene.app` verified).
+- **Pending — swap Stripe test keys → live keys + a live webhook** (use the `www` canonical URL) when ready to charge.
+- **Pending (cleanliness, non-urgent) — rotate the Sanity API token** pasted in chat: sanity.io/manage → project `dsciikio` → API → Tokens → revoke the old `sk…`. Nothing in the app depends on it (reads are public/published; Studio uses your login), so revoking breaks nothing.
 
 **Open product questions:**
 - **15%-off trial nudge** currently asks the admin to *reply* for a code. To make it self-serve, create a Stripe coupon and wire **per-org unique promotion codes** (restricted to the org's customer, single-use) into the day-30 email.
@@ -492,4 +492,6 @@ with an honest "coming soon" and pulled from the nav.
 - **Lifecycle nudge dedup** advances one milestone per cron run; if the cron is down for many days it sends only the latest milestone (skips intermediates) — acceptable, revisit if it matters.
 - **Cross-org alert bubble** counts "activity since last switch-in," so new activity arriving *while* you're in a workspace can show a bubble after you leave it. Matches the "clear on switch" spec; revisit if it feels off.
 
-**Deferred UI follow-ups (offered, not built):** one-click "Repertory after my trial" CTA in the trial banner; explicit in-app upgrade buttons (vs the Stripe portal); filtering `/productions` so participants don't see other shows' names.
+**Deferred UI follow-ups:**
+- **Decided NOT to build:** one-click "Repertory after my trial" CTA (2026-06-09); filtering `/productions` so participants don't see other shows' names — **intentionally left as-is** (cast may see all org show titles but can only open shows they're assigned to; the rail/dashboard/calendar are already scoped to their own shows).
+- **Still available if wanted:** explicit in-app upgrade buttons (vs routing through the Stripe portal); per-org unique 15%-off promo codes auto-wired into the day-30 nudge; the AI-credits Company model when AI tooling is built.
