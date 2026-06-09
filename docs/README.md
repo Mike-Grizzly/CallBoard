@@ -44,5 +44,6 @@ These docs **must** be updated whenever:
 | `launch-roadmap.md` | Phased plan to take the MVP to a soft launch (testing site + testers) and on to public launch |
 | `ui-port-roadmap.md` | Roadmap for porting the HTML demo UI tab-by-tab onto the existing features |
 | `decision-log.md` | Record of durable project decisions |
+| `admin-playbook.md` | Owner ops: comp/grandfather an org, recover an admin, extend a trial, lifetime deals, discounts (SQL + Stripe) |
 | `open-questions.md` | Unresolved questions, risks, and concerns |
 | `feature-specs/` | Per-feature specifications (one file per vertical slice) |
