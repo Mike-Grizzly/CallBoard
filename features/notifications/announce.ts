@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { db } from "@/db";
-import { notifications } from "@/db/schema";
+import { notifications, productions } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { getPreferencesForUsers } from "./preferences";
 import { sendPushToUsers } from "@/features/push/send";
 
@@ -91,6 +92,54 @@ export async function fanoutAnnouncement(input: FanoutInput): Promise<void> {
       url: link,
       tag: `announcement-${input.announcementId}`,
     });
+  }
+}
+
+/**
+ * Tell the requester their AI script analysis is ready to review. Delivered
+ * in-app and via push (respecting prefs); no email — this is a setup-time,
+ * one-to-self alert, not an announcement. Best-effort throughout, so a parse
+ * is never marked failed just because notifying failed.
+ */
+export async function sendScriptParseReady(input: {
+  userId: string;
+  productionId: string;
+  roleCount: number;
+  sceneCount: number;
+}): Promise<void> {
+  try {
+    const [prod] = await db
+      .select({ slug: productions.slug, organizationId: productions.organizationId })
+      .from(productions)
+      .where(eq(productions.id, input.productionId))
+      .limit(1);
+    if (!prod) return;
+
+    const link = `/productions/${prod.slug}/script/ai`;
+    const body = `Found ${input.roleCount} characters and ${input.sceneCount} scenes — review and apply.`;
+    const prefs = await getPreferencesForUsers([input.userId]);
+
+    if (prefs[input.userId]?.inApp ?? true) {
+      await db.insert(notifications).values({
+        recipientId: input.userId,
+        organizationId: prod.organizationId,
+        type: "script_analysis",
+        title: "Script analysis ready",
+        body,
+        link,
+      });
+    }
+
+    if (prefs[input.userId]?.push) {
+      await sendPushToUsers([input.userId], {
+        title: "Script analysis ready",
+        body,
+        url: link,
+        tag: `script-parse-${input.productionId}`,
+      });
+    }
+  } catch (err) {
+    console.error("Failed to send script-parse-ready notification:", err);
   }
 }
 

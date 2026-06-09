@@ -85,3 +85,34 @@ export type Bookmark = {
   title: string;
   createdAt: string;
 };
+
+// ----- AI script analysis (the model's proposal, pre-review) -----
+
+/** Character/role types the analyser may assign. Mirrors the wizard's set. */
+export const PARSE_ROLE_TYPES = ["Principal", "Supporting", "Ensemble"] as const;
+
+export type ParsedRole = {
+  name: string;
+  type: string;
+};
+
+export type ParsedScene = {
+  actNumber: number;
+  sceneNumber: number;
+  title: string;
+};
+
+export type ParsedBookmark = {
+  page: number;
+  title: string;
+  kind: "scene" | "song";
+};
+
+export type ScriptParseResult = {
+  title: string;
+  roles: ParsedRole[];
+  scenes: ParsedScene[];
+  bookmarks: ParsedBookmark[];
+};
+
+export type ScriptParseStatus = "processing" | "ready" | "applied" | "failed";

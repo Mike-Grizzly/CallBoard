@@ -1629,3 +1629,18 @@ the pricing PAGE to match this model.
 **Reason:** `getUserProductions` had no org filter, leaking a user's productions across all their orgs into every view. The fix matches how Canva/Monday teams work — join anyone's paid team and get its benefits scoped to that team, while your own free workspace only shows your own work.
 
 **Impact:** `getVisibleProductions(user)`; `notifications.organization_id` + `organization_memberships.last_viewed_at` (set on `switchOrganization`); bubbles in `WorkspaceRailBadge`.
+
+---
+
+## 2026-06-09 — AI Script Analysis: SDK, async model, and human-in-the-loop
+
+**Decision:** First AI feature. Added `@anthropic-ai/sdk` (model `claude-opus-4-8`) to parse uploaded PDF scripts into a cast list, scene breakdown, and bookmarks. (User approved the new dependency and model.)
+
+**Key choices:**
+- **Staging, not direct writes.** Model output lands in a server-only `script_parses` table and is only written into `production_roles`/`production_scenes`/`script_annotations` after a human reviews and approves it (`applyScriptParse`). Trust + correctness; AI never silently mutates a production.
+- **Async + notify, not synchronous.** A full parse can take 30s–minutes (model + PDF extraction), risking Vercel function timeouts. The slow work runs in `POST /api/scripts/[parseId]/run` (`runtime=nodejs`, `maxDuration=300`) via `after()`, so it survives the client navigating away; the requester gets a notification/push when ready, and the review page polls meanwhile.
+- **JSON-prompt, not structured outputs.** `output_config.format` is beta-only in SDK 0.103.0; rather than depend on the beta surface we pin the JSON shape in the system prompt and parse the reply (`extractJson`). Adaptive thinking keeps reasoning out of the visible JSON.
+- **Server-side per-page PDF text** via `pdfjs-dist/legacy/build/pdf.mjs` (Node-safe), page-tagged so bookmark page numbers are accurate.
+- **Phase 1 only.** Per-role script highlighting (the 4th envisioned output) deferred — it needs per-line pixel coordinates and is highly script-format-dependent.
+
+**Impact:** new `lib/anthropic.ts`, `db/schema/script-parses.ts` (RLS-on/no-policies, live via Supabase MCP), `features/scripts/parse.ts` + extended actions/queries/constants, the run route, the review page, a Documents row-menu affordance, `sendScriptParseReady`. New env var `ANTHROPIC_API_KEY` (optional — feature degrades gracefully when unset).

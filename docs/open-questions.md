@@ -4,6 +4,34 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
+## AI Script Analysis (Feature 19, Phase 1 — added 2026-06-09)
+
+- **Not live-verified.** No real script has been parsed end-to-end — needs
+  `ANTHROPIC_API_KEY` set. Parse quality (role classification, page-number
+  accuracy for bookmarks) is unproven on real, irregularly-formatted scripts.
+- **Long-script timeout.** The run route caps at `maxDuration=300`. A very long
+  script (model latency + extraction) could exceed it; needs Vercel Fluid
+  compute for a higher ceiling, or chunking. No retry/resume if it times out
+  (the row just stays `processing` — should it auto-fail after a deadline?).
+- **`after()` durability.** Relies on Vercel keeping the function alive for the
+  deferred work. If the platform reclaims it early, the parse stalls in
+  `processing` with no watchdog. Consider a sweep that flips stale
+  `processing` rows to `failed`.
+- **Scanned PDFs.** Image-only/scanned scripts have no text layer and are
+  rejected with a message — no OCR path.
+- **Bookmark seeding scale.** `applyScriptParse` writes one `script_annotations`
+  row per production member; fine for small casts, unbounded for large ones.
+  Also: members who join *after* apply won't get the seeded bookmarks (seeding
+  is a point-in-time action, not a shared/default set).
+- **Re-apply duplicates roles/scenes.** Applying a second time appends another
+  full set of `production_roles`/`production_scenes` (only bookmarks are
+  idempotent). Acceptable for a one-time setup step, but worth guarding if
+  re-runs become common.
+- **Phase 2 (per-role highlighting)** is the deferred moonshot — needs per-line
+  pixel coordinates from the PDF and is highly script-format-dependent.
+
+---
+
 ## Mobile / iOS questions
 
 - **iOS auto-zoom persists into the app after sign-in (PARKED 2026-05-27).**

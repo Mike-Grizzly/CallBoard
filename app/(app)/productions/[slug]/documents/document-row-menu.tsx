@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { MoreVertical, Download, Link2, Trash2, Check, Star } from "lucide-react";
+import { MoreVertical, Download, Link2, Trash2, Check, Star, Sparkles } from "lucide-react";
 import { deleteDocument, getDocumentDownloadUrl } from "@/features/documents/actions";
-import { setDefaultScript } from "@/features/scripts/actions";
+import { setDefaultScript, startScriptParse } from "@/features/scripts/actions";
 import { useRouter } from "next/navigation";
 
 interface Props {
@@ -132,6 +132,25 @@ export function DocumentRowMenu({
     });
   }
 
+  function handleAnalyze(e: React.MouseEvent) {
+    e.stopPropagation();
+    setPos(null);
+    const formData = new FormData();
+    formData.set("document_id", documentId);
+    formData.set("production_id", productionId);
+    startTransition(async () => {
+      const res = await startScriptParse(formData);
+      if (res.error || !res.parseId) {
+        alert(res.error ?? "Could not start analysis.");
+        return;
+      }
+      // Kick the background run; the route returns immediately and continues
+      // the work via after(), so we don't await it.
+      fetch(`/api/scripts/${res.parseId}/run`, { method: "POST" }).catch(() => {});
+      router.push(`/productions/${slug}/script/ai`);
+    });
+  }
+
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
     setPos(null);
@@ -207,6 +226,13 @@ export function DocumentRowMenu({
                 icon={<Star size={14} />}
                 label="Set as default script"
                 onClick={handleSetDefault}
+              />
+            )}
+            {documentType === "script" && (
+              <MenuItem
+                icon={<Sparkles size={14} />}
+                label="Analyze with AI"
+                onClick={handleAnalyze}
               />
             )}
             <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
