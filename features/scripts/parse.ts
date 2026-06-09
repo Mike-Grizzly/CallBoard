@@ -12,31 +12,16 @@ import type { ScriptParseResult } from "./constants";
 const MAX_TEXT_CHARS = 600_000;
 
 /**
- * Extract the text of each page of a PDF, returned one string per page (index 0
- * = page 1). Runs server-side in the Node runtime using pdfjs's legacy build,
- * which does not require a browser worker.
+ * Extract the text of each page of a PDF, one string per page (index 0 = page
+ * 1). Uses `unpdf`, which ships a serverless-safe pdfjs build — no browser
+ * globals (DOMMatrix etc.), so it runs on Vercel's Node runtime.
  */
 async function extractPdfPages(data: Uint8Array): Promise<string[]> {
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const doc = await pdfjs.getDocument({ data }).promise;
-
-  const pages: string[] = [];
-  for (let i = 1; i <= doc.numPages; i++) {
-    const page = await doc.getPage(i);
-    const content = await page.getTextContent();
-    let text = "";
-    for (const item of content.items) {
-      if ("str" in item) {
-        text += item.str;
-        if (item.hasEOL) text += "\n";
-        else text += " ";
-      }
-    }
-    pages.push(text.replace(/[ \t]+/g, " ").trim());
-    page.cleanup();
-  }
-  await doc.cleanup();
-  return pages;
+  const { getDocumentProxy, extractText } = await import("unpdf");
+  const pdf = await getDocumentProxy(data);
+  const { text } = await extractText(pdf, { mergePages: false });
+  const pages = Array.isArray(text) ? text : [text];
+  return pages.map((t) => (t ?? "").replace(/[ \t]+/g, " ").trim());
 }
 
 /** Join per-page text into a single page-tagged document for the model. */

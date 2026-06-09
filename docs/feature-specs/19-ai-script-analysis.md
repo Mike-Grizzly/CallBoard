@@ -40,9 +40,10 @@ the production's real tables automatically.
   work survives the client navigating away. Chosen over a synchronous parse
   because a full script takes 30s–minutes (Vercel function-timeout risk).
 - **PDF text:** `features/scripts/parse.ts` extracts per-page text with
-  `pdfjs-dist/legacy/build/pdf.mjs` (Node-safe, no browser worker), tagged with
-  `===== PAGE N =====` so the model can cite accurate page numbers. Capped at
-  ~600k chars (~150k tokens) as a guard.
+  **`unpdf`** (a serverless-safe pdfjs build — no browser globals like
+  `DOMMatrix`, which broke the original `pdfjs-dist/legacy` attempt on Vercel's
+  Node runtime), tagged with `===== PAGE N =====` so the model can cite accurate
+  page numbers. Capped at ~600k chars (~150k tokens) as a guard.
 - **Document status:** the long-scaffolded `documents.processingStatus` column
   is now driven (`processing`/`ready`/`failed`/`applied`).
 
