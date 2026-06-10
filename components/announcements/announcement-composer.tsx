@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   Megaphone,
@@ -227,7 +228,13 @@ function ComposerModal({
 
   const bodyText = stripHtml(body);
 
-  return (
+  // Portal to <body> so the fixed backdrop escapes the page's transformed
+  // ancestors (e.g. `.anim-in`, which keeps a transform via `animation-fill:
+  // both` and would otherwise trap the overlay inside the content column —
+  // clipping the blur and letting the trial banner sit on top).
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div
       className="ac-backdrop"
       onMouseDown={(e) => {
@@ -586,6 +593,7 @@ function ComposerModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

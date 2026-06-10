@@ -11122,7 +11122,7 @@ textarea.cform-field {
 .ac-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 300;
+  z-index: 1200;
   background: color-mix(in oklch, var(--ink) 38%, transparent);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
