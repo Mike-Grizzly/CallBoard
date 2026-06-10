@@ -4,6 +4,49 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
+## AI Script Analysis (Feature 19, Phase 1 — added 2026-06-09)
+
+- **Not live-verified.** No real script has been parsed end-to-end — needs
+  `ANTHROPIC_API_KEY` set. Parse quality (role classification, page-number
+  accuracy for bookmarks) is unproven on real, irregularly-formatted scripts.
+- **Long-script timeout.** The run route caps at `maxDuration=300`. A very long
+  script (model latency + extraction) could exceed it; needs Vercel Fluid
+  compute for a higher ceiling, or chunking. No retry/resume if it times out
+  (the row just stays `processing` — should it auto-fail after a deadline?).
+- **`after()` durability.** Relies on Vercel keeping the function alive for the
+  deferred work. If the platform reclaims it early, the parse stalls in
+  `processing` with no watchdog. Consider a sweep that flips stale
+  `processing` rows to `failed`.
+- **Scanned PDFs.** Image-only/scanned scripts have no text layer and are
+  rejected with a message — no OCR path.
+- **Bookmark seeding scale.** `applyScriptParse` writes one `script_annotations`
+  row per production member; fine for small casts, unbounded for large ones.
+  Also: members who join *after* apply won't get the seeded bookmarks (seeding
+  is a point-in-time action, not a shared/default set).
+- **Re-apply duplicates roles/scenes.** Applying a second time appends another
+  full set of `production_roles`/`production_scenes` (only bookmarks are
+  idempotent). Acceptable for a one-time setup step, but worth guarding if
+  re-runs become common.
+- **Cost guardrails: RESOLVED (basic).** Concurrency lock + per-production cap
+  (5 / 30 days) + token logging now ship (`startScriptParse`,
+  `runScriptParse`). Open: no org-level monthly quota yet (chosen to defer the
+  per-tier quota until there's real token data); the per-production cap is the
+  only ceiling, so a `company`-tier org with many productions is effectively
+  uncapped org-wide.
+- **Phase 2 (per-role highlighting)** is the deferred moonshot — needs per-line
+  pixel coordinates from the PDF and is highly script-format-dependent.
+- **Wizard auto-fill (added 2026-06-09):** parses a script during new-production
+  setup to pre-fill the cast, then carries the PDF over as the default script on
+  launch (`attachWizardScript`). Open edges: (1) **orphan temp files** — if a
+  user uploads in the wizard but abandons it (never launches), the
+  `wizard-scripts/{userId}/…` object is never moved or cleaned up; needs a sweep.
+  (2) The wizard parse runs the **full** analysis (scenes/bookmarks too) but only
+  the roles are used at wizard time — the rest is discarded (the user re-runs from
+  the Script tab later). Minor wasted tokens. (3) If the user launches *before* the
+  wizard parse finishes, the carry-over still happens but the cast isn't pre-filled.
+
+---
+
 ## Mobile / iOS questions
 
 - **iOS auto-zoom persists into the app after sign-in (PARKED 2026-05-27).**

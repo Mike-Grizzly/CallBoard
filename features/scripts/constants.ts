@@ -84,4 +84,38 @@ export type Bookmark = {
   page: number;
   title: string;
   createdAt: string;
+  // Set for AI-seeded bookmarks so the reader can tag/colour them. Absent on
+  // bookmarks a user adds by hand.
+  kind?: "scene" | "song";
 };
+
+// ----- AI script analysis (the model's proposal, pre-review) -----
+
+/** Character/role types the analyser may assign. Mirrors the wizard's set. */
+export const PARSE_ROLE_TYPES = ["Principal", "Supporting", "Ensemble"] as const;
+
+export type ParsedRole = {
+  name: string;
+  type: string;
+};
+
+export type ParsedScene = {
+  actNumber: number;
+  sceneNumber: number;
+  title: string;
+};
+
+export type ParsedBookmark = {
+  page: number;
+  title: string;
+  kind: "scene" | "song";
+};
+
+export type ScriptParseResult = {
+  title: string;
+  roles: ParsedRole[];
+  scenes: ParsedScene[];
+  bookmarks: ParsedBookmark[];
+};
+
+export type ScriptParseStatus = "processing" | "ready" | "applied" | "failed";

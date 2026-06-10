@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { documents, scriptAnnotations, profiles } from "@/db/schema";
-import { and, eq, isNull } from "drizzle-orm";
+import { documents, scriptAnnotations, scriptParses, profiles } from "@/db/schema";
+import { and, desc, eq, isNull } from "drizzle-orm";
 
 export async function getDefaultScript(productionId: string) {
   const rows = await db
@@ -42,6 +42,33 @@ export async function getScriptAnnotations(scriptId: string, userId: string) {
 
   return rows[0] ?? null;
 }
+
+/** Most recent AI analysis for a production (any status), for the review page. */
+export async function getLatestScriptParse(productionId: string) {
+  const rows = await db
+    .select({
+      id: scriptParses.id,
+      documentId: scriptParses.documentId,
+      status: scriptParses.status,
+      result: scriptParses.result,
+      error: scriptParses.error,
+      inputTokens: scriptParses.inputTokens,
+      outputTokens: scriptParses.outputTokens,
+      createdAt: scriptParses.createdAt,
+      documentTitle: documents.title,
+    })
+    .from(scriptParses)
+    .innerJoin(documents, eq(scriptParses.documentId, documents.id))
+    .where(eq(scriptParses.productionId, productionId))
+    .orderBy(desc(scriptParses.createdAt))
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+export type LatestScriptParse = NonNullable<
+  Awaited<ReturnType<typeof getLatestScriptParse>>
+>;
 
 export type DefaultScript = NonNullable<Awaited<ReturnType<typeof getDefaultScript>>>;
 export type ScriptAnnotationRow = NonNullable<Awaited<ReturnType<typeof getScriptAnnotations>>>;

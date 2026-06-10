@@ -1629,3 +1629,32 @@ the pricing PAGE to match this model.
 **Reason:** `getUserProductions` had no org filter, leaking a user's productions across all their orgs into every view. The fix matches how Canva/Monday teams work — join anyone's paid team and get its benefits scoped to that team, while your own free workspace only shows your own work.
 
 **Impact:** `getVisibleProductions(user)`; `notifications.organization_id` + `organization_memberships.last_viewed_at` (set on `switchOrganization`); bubbles in `WorkspaceRailBadge`.
+
+---
+
+## 2026-06-09 — AI Script Analysis: SDK, async model, and human-in-the-loop
+
+**Decision:** First AI feature. Added `@anthropic-ai/sdk` (model `claude-opus-4-8`) to parse uploaded PDF scripts into a cast list, scene breakdown, and bookmarks. (User approved the new dependency and model.)
+
+**Key choices:**
+- **Staging, not direct writes.** Model output lands in a server-only `script_parses` table and is only written into `production_roles`/`production_scenes`/`script_annotations` after a human reviews and approves it (`applyScriptParse`). Trust + correctness; AI never silently mutates a production.
+- **Async + notify, not synchronous.** A full parse can take 30s–minutes (model + PDF extraction), risking Vercel function timeouts. The slow work runs in `POST /api/scripts/[parseId]/run` (`runtime=nodejs`, `maxDuration=300`) via `after()`, so it survives the client navigating away; the requester gets a notification/push when ready, and the review page polls meanwhile.
+- **JSON-prompt, not structured outputs.** `output_config.format` is beta-only in SDK 0.103.0; rather than depend on the beta surface we pin the JSON shape in the system prompt and parse the reply (`extractJson`). Adaptive thinking keeps reasoning out of the visible JSON.
+- **Server-side per-page PDF text** via `pdfjs-dist/legacy/build/pdf.mjs` (Node-safe), page-tagged so bookmark page numbers are accurate.
+- **Phase 1 only.** Per-role script highlighting (the 4th envisioned output) deferred — it needs per-line pixel coordinates and is highly script-format-dependent.
+
+**Impact:** new `lib/anthropic.ts`, `db/schema/script-parses.ts` (RLS-on/no-policies, live via Supabase MCP), `features/scripts/parse.ts` + extended actions/queries/constants, the run route, the review page, a Documents row-menu affordance, `sendScriptParseReady`. New env var `ANTHROPIC_API_KEY` (optional — feature degrades gracefully when unset).
+
+---
+
+## 2026-06-09 — AI cast auto-fill in the new-production wizard + plan gating
+
+**Decision:** Added a pre-production AI entry point on the wizard's Roles step (upload script → pre-fill characters), and settled how AI is plan-gated.
+
+**Key choices:**
+- **Plan gating = the existing `assertCanMutate` gate.** "Paid-tier perk, but trial users get it during their trial" is *exactly* what `assertCanMutate` already encodes (passes for subscribed/trialing/pre-trial, blocks post-trial grace/locked). So both AI entry points reuse it — no new plan primitive. (Cast/crew never parse anyway; that's role-gated.)
+- **Generalized the parse pipeline for pre-production parses.** `script_parses.production_id`/`document_id` made nullable + a `storage_path` column; a "wizard parse" is owned by `requested_by`, uploads to a temp `wizard-scripts/{userId}/…` path, is capped per-user (5/30 days), and reuses the same async run route (auth falls back to ownership). New poll-by-id action `fetchScriptParseById`.
+- **Carry the uploaded script over** (`attachWizardScript`): on launch, move the PDF into the production and create its **default script** document, so the user doesn't re-upload and the full Script-tab AI is ready later. Roles flow in through the wizard's normal role-creation; scenes/bookmarks are left for the later Script-tab run.
+- **Optional + non-blocking** step copy: skip and add cast by hand, or upload later from the Script tab.
+
+**Impact:** generalized `features/scripts/parse.ts` + the run route; new actions `requestWizardScriptUpload`/`startWizardScriptParse`/`fetchScriptParseById`/`attachWizardScript`; wizard-level AI state + `StepRoles` upload card in `new-production-wizard.tsx`; `Sparkles` added to the `Icon` registry. Known edge: orphan temp files if the wizard is abandoned (see open-questions).
