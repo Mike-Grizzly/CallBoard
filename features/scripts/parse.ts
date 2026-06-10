@@ -1,6 +1,7 @@
+import { createHash } from "crypto";
 import type Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/db";
-import { documents, scriptParses } from "@/db/schema";
+import { documents, scriptParses, scriptCache } from "@/db/schema";
 import { and, desc, eq, isNotNull, ne } from "drizzle-orm";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getAnthropicClient, SCRIPT_PARSE_MODEL } from "@/lib/anthropic";
@@ -178,12 +179,59 @@ export async function runScriptParse(parseId: string): Promise<void> {
     const bytes = new Uint8Array(await res.arrayBuffer());
 
     const pages = await extractPdfPages(bytes);
-    const tagged = buildTaggedScript(pages);
-    if (tagged.trim().length < 200) {
+    const fullText = pages.join("\n");
+    if (fullText.trim().length < 200) {
       throw new Error(
         "Couldn't read enough text from this PDF — it may be a scan or image-only file.",
       );
     }
+
+    // Content fingerprint → global cache. An exact-file match reuses a
+    // previously human-verified breakdown (instant, free, no model call).
+    // Skipped for a re-analysis, where the point is a fresh take.
+    const fingerprint = createHash("sha256")
+      .update(normalizeText(fullText))
+      .digest("hex");
+
+    if (!parse.notes) {
+      const [hit] = await db
+        .select({ result: scriptCache.result })
+        .from(scriptCache)
+        .where(eq(scriptCache.fingerprint, fingerprint))
+        .limit(1);
+      const cached = hit?.result as ScriptParseResult | undefined;
+      if (cached && ((cached.roles?.length ?? 0) > 0 || (cached.scenes?.length ?? 0) > 0)) {
+        await db
+          .update(scriptParses)
+          .set({
+            status: "ready",
+            result: cached,
+            fingerprint,
+            error: null,
+            inputTokens: 0,
+            outputTokens: 0,
+            updatedAt: new Date(),
+          })
+          .where(eq(scriptParses.id, parseId));
+        if (parse.documentId) {
+          await db
+            .update(documents)
+            .set({ processingStatus: "ready" })
+            .where(eq(documents.id, parse.documentId));
+        }
+        if (parse.requestedBy && parse.productionId) {
+          await sendScriptParseReady({
+            userId: parse.requestedBy,
+            productionId: parse.productionId,
+            roleCount: cached.roles.length,
+            sceneCount: cached.scenes.length,
+          });
+        }
+        return;
+      }
+    }
+
+    const tagged = buildTaggedScript(pages);
 
     // On a re-analysis, prepend the director's corrections and (if available)
     // the previous result so the model fixes the specific problems.
@@ -260,6 +308,7 @@ export async function runScriptParse(parseId: string): Promise<void> {
       .set({
         status: "ready",
         result,
+        fingerprint,
         error: null,
         inputTokens: message.usage?.input_tokens ?? null,
         outputTokens: message.usage?.output_tokens ?? null,

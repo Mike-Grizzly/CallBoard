@@ -142,8 +142,9 @@ export function AiReviewClient({
             textAlign: "right",
           }}
         >
-          Analysis used {(parse.inputTokens ?? 0).toLocaleString()} input +{" "}
-          {(parse.outputTokens ?? 0).toLocaleString()} output tokens.
+          {parse.inputTokens === 0 && parse.outputTokens === 0
+            ? "Reused a previously verified breakdown of this script — no AI tokens used."
+            : `Analysis used ${(parse.inputTokens ?? 0).toLocaleString()} input + ${(parse.outputTokens ?? 0).toLocaleString()} output tokens.`}
         </p>
       )}
     </div>

@@ -38,6 +38,8 @@ export const scriptParses = pgTable("script_parses", {
   // Director's free-text corrections for a re-analysis (drives the re-parse
   // prompt). Null for a first parse.
   notes: text("notes"),
+  // Content fingerprint of the extracted text — keys the global script cache.
+  fingerprint: text("fingerprint"),
   // Anthropic token usage for this parse — for cost visibility and monitoring.
   inputTokens: integer("input_tokens"),
   outputTokens: integer("output_tokens"),

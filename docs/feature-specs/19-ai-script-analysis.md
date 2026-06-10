@@ -107,6 +107,30 @@ scenes). Root cause: the model was being asked to *recall* page numbers across a
   previous result** back to the model for a targeted revision. Counts against the
   per-production cap; the review page flips back to processing and polls.
 
+## Script-recognition cache (global, cross-org)
+
+A `script_cache` table (server-only, RLS-on/no-policies, **no org column** — it's
+intentionally global) keyed by a **content fingerprint** (SHA-256 of the
+normalized extracted text). Flow:
+
+- `runScriptParse` computes the fingerprint after extraction. On a **first** parse
+  (not a re-analysis), if a cache entry matches the identical file, it reuses that
+  result — status straight to `ready`, **no model call** (instant + free; the
+  review page shows "Reused a previously verified breakdown… no AI tokens used").
+- `applyScriptParse` **populates** the cache (upsert by fingerprint) with the
+  human-verified, possibly-edited result. So the cache only ever holds breakdowns
+  a person reviewed and applied, and improves as people correct.
+- Licensing houses (MTI/Concord/…) ship the **same PDF** to every company, so
+  identical-file matches happen across orgs — a popular show gets parsed once and
+  every later production of it inherits the breakdown.
+
+**Privacy boundary (enforced by what's stored):** `script_cache.result` holds
+ONLY the structural breakdown `{ title, roles, scenes, bookmarks }`. It never
+contains personal annotations (highlights/notes/cues/ink — those live per-user in
+`script_annotations`), casting (the breakdown has character names + types only,
+no actors), production data, or the script text. That structural breakdown is the
+only thing shared across orgs.
+
 ## Permissions
 
 Gated on `documents:upload` (admin/producer/director/choreographer/stage_manager

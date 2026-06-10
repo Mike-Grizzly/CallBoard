@@ -5,6 +5,7 @@ import {
   documents,
   scriptAnnotations,
   scriptParses,
+  scriptCache,
   productionRoles,
   productionScenes,
   productionMemberships,
@@ -363,6 +364,7 @@ export async function applyScriptParse(
       productionId: scriptParses.productionId,
       documentId: scriptParses.documentId,
       status: scriptParses.status,
+      fingerprint: scriptParses.fingerprint,
     })
     .from(scriptParses)
     .where(eq(scriptParses.id, parseId))
@@ -424,6 +426,28 @@ export async function applyScriptParse(
     .update(documents)
     .set({ processingStatus: "applied" })
     .where(eq(documents.id, documentId));
+
+  // Populate the global cache with this human-verified breakdown so the next
+  // production that uploads the identical file reuses it. Stores ONLY the
+  // structural result (title/roles/scenes/bookmarks) — never annotations,
+  // casting, or production data.
+  if (parse.fingerprint && (result.roles.length > 0 || result.scenes.length > 0)) {
+    await db
+      .insert(scriptCache)
+      .values({
+        fingerprint: parse.fingerprint,
+        title: (result.title ?? "").trim() || null,
+        result,
+      })
+      .onConflictDoUpdate({
+        target: scriptCache.fingerprint,
+        set: {
+          title: (result.title ?? "").trim() || null,
+          result,
+          updatedAt: new Date(),
+        },
+      });
+  }
 
   revalidatePath("/productions");
   return { success: true };
