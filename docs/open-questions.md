@@ -4,6 +4,28 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
+## Script tool: blank-page render for some valid PDFs (reported 2026-06-10 — PINNED, awaiting file)
+
+- **Symptom:** A tester's uploaded script showed the correct page count and the
+  page-shaped white rectangles in the **Script tool**, but the pages were blank
+  (no content). The *same file* displayed fine in the **Documents** PDF viewer.
+- **Root cause (narrowed):** The two viewers render differently. Documents uses
+  `<iframe src={url}>` → the browser's native PDF engine (PDFium), which is
+  tolerant. The Script tool uses the `pdfjs-dist` *library* drawing to `<canvas>`
+  (`lib/pdf.ts` → `loadPdfDocument`, rendered in `script-viewer.tsx` /
+  `mobile-script-reader.tsx`). For this file, `page.render()` resolves but paints
+  nothing. The blocking tool uses the same pdf.js pipeline and works, so the
+  worker setup is sound globally — this is file-specific.
+- **Likely culprits (unconfirmed without the file):** content on an optional-
+  content layer (OCG) pdf.js treats as hidden-by-default; content only in a
+  form/annotation layer not painted to the page canvas; or an image codec pdf.js
+  can't decode.
+- **Status:** Holding for the actual PDF (tester is sending it). Candidate fixes
+  once reproduced: (a) detect a blank render and fall back to the native iframe
+  engine, and/or (b) force all OCG layers visible before render. Note: pdf.js
+  render *rejections* leave the viewer stuck on "Loading script…", not blank — so
+  blank specifically means render resolved with no paint.
+
 ## AI Script Analysis (Feature 19, Phase 1 — added 2026-06-09)
 
 - **Not live-verified.** No real script has been parsed end-to-end — needs
