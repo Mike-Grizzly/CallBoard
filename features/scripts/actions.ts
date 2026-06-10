@@ -365,6 +365,7 @@ export async function applyScriptParse(
       documentId: scriptParses.documentId,
       status: scriptParses.status,
       fingerprint: scriptParses.fingerprint,
+      modelResult: scriptParses.result,
     })
     .from(scriptParses)
     .where(eq(scriptParses.id, parseId))
@@ -427,23 +428,31 @@ export async function applyScriptParse(
     .set({ processingStatus: "applied" })
     .where(eq(documents.id, documentId));
 
-  // Populate the global cache with this human-verified breakdown so the next
-  // production that uploads the identical file reuses it. Stores ONLY the
-  // structural result (title/roles/scenes/bookmarks) — never annotations,
+  // Populate the global, cross-org cache so the next production that uploads
+  // the identical file reuses this breakdown. Cache the SERVER-STORED model
+  // result (what runScriptParse wrote on the row), not the client-supplied
+  // `result` payload — the apply payload is trusted only for this caller's own
+  // production, and must not be propagated to other orgs as-is. Stores ONLY the
+  // structural breakdown (title/roles/scenes/bookmarks) — never annotations,
   // casting, or production data.
-  if (parse.fingerprint && (result.roles.length > 0 || result.scenes.length > 0)) {
+  const cacheResult = parse.modelResult as ScriptParseResult | null;
+  if (
+    parse.fingerprint &&
+    cacheResult &&
+    ((cacheResult.roles?.length ?? 0) > 0 || (cacheResult.scenes?.length ?? 0) > 0)
+  ) {
     await db
       .insert(scriptCache)
       .values({
         fingerprint: parse.fingerprint,
-        title: (result.title ?? "").trim() || null,
-        result,
+        title: (cacheResult.title ?? "").trim() || null,
+        result: cacheResult,
       })
       .onConflictDoUpdate({
         target: scriptCache.fingerprint,
         set: {
-          title: (result.title ?? "").trim() || null,
-          result,
+          title: (cacheResult.title ?? "").trim() || null,
+          result: cacheResult,
           updatedAt: new Date(),
         },
       });

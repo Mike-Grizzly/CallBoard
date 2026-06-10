@@ -150,9 +150,12 @@ normalized extracted text). Flow:
   (not a re-analysis), if a cache entry matches the identical file, it reuses that
   result — status straight to `ready`, **no model call** (instant + free; the
   review page shows "Reused a previously verified breakdown… no AI tokens used").
-- `applyScriptParse` **populates** the cache (upsert by fingerprint) with the
-  human-verified, possibly-edited result. So the cache only ever holds breakdowns
-  a person reviewed and applied, and improves as people correct.
+- `applyScriptParse` **populates** the cache (upsert by fingerprint) when a parse
+  is applied. For cross-tenant safety it caches the **server-stored model result**
+  (`scriptParses.result`), not the client-supplied apply payload — a user's review
+  edits are trusted for their own production but are never propagated to other orgs
+  via the global cache. So the cache only holds model output for files someone has
+  actually applied.
 - Licensing houses (MTI/Concord/…) ship the **same PDF** to every company, so
   identical-file matches happen across orgs — a popular show gets parsed once and
   every later production of it inherits the breakdown.
