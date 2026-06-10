@@ -348,14 +348,14 @@ export function MobileDashboard(props: MobileDashboardProps) {
                 <div className="md-ann-top">
                   <span
                     className="md-ann-scope"
-                    data-s={a.isOrgWide ? "org" : "prod"}
+                    data-s={a.scope}
                   >
-                    {a.isOrgWide ? (
-                      <Layers size={10} aria-hidden />
-                    ) : (
+                    {a.scope === "prod" ? (
                       <Hash size={10} aria-hidden />
+                    ) : (
+                      <Layers size={10} aria-hidden />
                     )}
-                    {a.isOrgWide ? "All productions" : a.productionTitle}
+                    {a.scopeLabel}
                   </span>
                   <span className="md-ann-time">{a.relativeTime}</span>
                 </div>

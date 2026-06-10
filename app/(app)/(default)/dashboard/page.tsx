@@ -18,6 +18,7 @@ import { getVisibleProductions } from "@/features/productions/queries";
 import {
   getAnnouncementsForUser,
   getAckInfoForAnnouncements,
+  announcementScope,
 } from "@/features/announcements/queries";
 import {
   getNextCallsForProductions,
@@ -352,23 +353,33 @@ export default async function DashboardPage() {
   );
   const serializedAnnouncements: SerializedAnnouncement[] = announcements
     .slice(0, 10)
-    .map((a) => ({
-      id: a.id,
-      title: a.title,
-      body: stripHtml(a.body),
-      pinned: a.pinned,
-      productionId: a.productionId,
-      productionTitle: a.productionTitle,
-      authorName:
-        [a.authorFirstName, a.authorLastName].filter(Boolean).join(" ") ||
-        a.authorEmail,
-      relativeTime: formatRelativeTime(a.createdAt),
-      isOrgWide: !a.productionId,
-      railColor: (a.pinned ? "amber" : !a.productionId ? "dusk" : "sage") as
-        | "amber"
-        | "dusk"
-        | "sage",
-    }));
+    .map((a) => {
+      const scope = announcementScope(a.orgWide, a.targets.length);
+      const scopeLabel =
+        scope === "org"
+          ? "All productions"
+          : scope === "multi"
+            ? `${a.targets.length} productions`
+            : (a.targets[0]?.title ?? "Production");
+      return {
+        id: a.id,
+        title: a.title,
+        body: stripHtml(a.body),
+        pinned: a.pinned,
+        scope,
+        scopeLabel,
+        priority: a.priority as "normal" | "important" | "urgent",
+        authorName:
+          [a.authorFirstName, a.authorLastName].filter(Boolean).join(" ") ||
+          a.authorEmail,
+        relativeTime: formatRelativeTime(a.createdAt),
+        railColor: (a.pinned
+          ? "amber"
+          : scope === "org"
+            ? "dusk"
+            : "sage") as "amber" | "dusk" | "sage",
+      };
+    });
 
   // Serialize mentions
   const serializedMentions: SerializedMention[] = mentionRows.map((m) => {
@@ -797,14 +808,14 @@ export default async function DashboardPage() {
                       <div className="dd-ann-top">
                         <span
                           className="dd-ann-scope"
-                          data-s={a.isOrgWide ? "org" : "prod"}
+                          data-s={a.scope}
                         >
-                          {a.isOrgWide ? (
-                            <Layers size={10} aria-hidden />
-                          ) : (
+                          {a.scope === "prod" ? (
                             <Hash size={10} aria-hidden />
+                          ) : (
+                            <Layers size={10} aria-hidden />
                           )}
-                          {a.isOrgWide ? "All productions" : a.productionTitle}
+                          {a.scopeLabel}
                         </span>
                         <span className="dd-ann-time mono">{a.relativeTime}</span>
                       </div>

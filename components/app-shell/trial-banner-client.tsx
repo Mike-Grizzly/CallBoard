@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 
 export type TrialTone = "info" | "warn" | "lock";
@@ -10,6 +10,21 @@ const TONE_STYLE: Record<TrialTone, { bg: string; fg: string; border: string }> 
   warn: { bg: "#fff7e6", fg: "#7a4e00", border: "#f1d9a8" },
   lock: { bg: "#fdecec", fg: "#8a1f1f", border: "#f1c2c2" },
 };
+
+// Re-surface the banner as an occasional reminder: closing it hides it for a
+// day (per phase, so an escalation to a more urgent phase shows immediately),
+// rather than nagging on every page load.
+const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const dismissKey = (phase: string) => `trial-banner-dismissed:${phase}`;
+const noopSubscribe = () => () => {};
+
+function isWithinCooldown(phase: string): boolean {
+  if (typeof window === "undefined") return false;
+  const raw = window.localStorage.getItem(dismissKey(phase));
+  if (!raw) return false;
+  const ts = Number(raw);
+  return Number.isFinite(ts) && Date.now() - ts < COOLDOWN_MS;
+}
 
 export function TrialBannerClient({
   phase,
@@ -24,14 +39,17 @@ export function TrialBannerClient({
   dismissible: boolean;
   isAdmin: boolean;
 }) {
-  const [dismissed, setDismissed] = useState(false);
-  const key = `trial-banner-dismissed:${phase}`;
+  // Read the per-phase dismissal from localStorage in a hydration-safe way:
+  // the server snapshot is always "show", the client reads the cooldown after
+  // hydration (no setState-in-effect, no mismatch).
+  const withinCooldown = useSyncExternalStore(
+    noopSubscribe,
+    () => (dismissible ? isWithinCooldown(phase) : false),
+    () => false,
+  );
+  const [closed, setClosed] = useState(false);
 
-  useEffect(() => {
-    if (dismissible && sessionStorage.getItem(key) === "1") setDismissed(true);
-  }, [dismissible, key]);
-
-  if (dismissed) return null;
+  if (withinCooldown || closed) return null;
 
   const s = TONE_STYLE[tone];
 
@@ -71,8 +89,8 @@ export function TrialBannerClient({
           <button
             type="button"
             onClick={() => {
-              sessionStorage.setItem(key, "1");
-              setDismissed(true);
+              localStorage.setItem(dismissKey(phase), String(Date.now()));
+              setClosed(true);
             }}
             aria-label="Dismiss"
             style={{

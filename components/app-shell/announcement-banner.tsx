@@ -25,10 +25,8 @@ export async function AnnouncementBanner() {
   const items = rows.map((r) => ({
     id: r.id,
     title: r.title,
-    scope: r.productionTitle ?? "Company-wide",
-    href: r.productionSlug
-      ? `/productions/${r.productionSlug}/announcements`
-      : "/announcements",
+    scope: r.scopeLabel,
+    href: r.href,
   }));
 
   return <AnnouncementBannerClient items={items} />;
