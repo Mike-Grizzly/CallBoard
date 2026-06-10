@@ -18,6 +18,7 @@ import {
   applyScriptParse,
   discardScriptParse,
   fetchLatestScriptParse,
+  reparseWithNotes,
 } from "@/features/scripts/actions";
 import { ROLE_TYPES } from "@/features/productions/wizard-constants";
 import type {
@@ -122,6 +123,13 @@ export function AiReviewClient({
             setParse((p) => (p ? { ...p, status: "applied" } : p))
           }
           onDiscarded={() => router.push(`/productions/${slug}/documents`)}
+          onReanalyze={(newId) =>
+            setParse((p) =>
+              p
+                ? { ...p, id: newId, status: "processing", result: null, error: null }
+                : p,
+            )
+          }
         />
       )}
 
@@ -262,13 +270,16 @@ function ReviewForm({
   slug,
   onApplied,
   onDiscarded,
+  onReanalyze,
 }: {
   parseId: string;
   result: ScriptParseResult;
   slug: string;
   onApplied: () => void;
   onDiscarded: () => void;
+  onReanalyze: (newParseId: string) => void;
 }) {
+  const [notes, setNotes] = useState("");
   const [roles, setRoles] = useState<RoleEdit[]>(
     (result?.roles ?? []).map((r) => ({ ...r, key: nextKey() })),
   );
@@ -313,6 +324,23 @@ function ReviewForm({
     startTransition(async () => {
       await discardScriptParse(parseId);
       onDiscarded();
+    });
+  }
+
+  function reanalyze() {
+    setError(null);
+    if (!notes.trim()) {
+      setError("Add a note describing what to fix.");
+      return;
+    }
+    startTransition(async () => {
+      const res = await reparseWithNotes(parseId, notes.trim());
+      if (res.error || !res.parseId) {
+        setError(res.error ?? "Could not re-analyze.");
+        return;
+      }
+      fetch(`/api/scripts/${res.parseId}/run`, { method: "POST" }).catch(() => {});
+      onReanalyze(res.parseId);
     });
   }
 
@@ -457,6 +485,45 @@ function ReviewForm({
             setBookmarks={setBookmarks}
           />
         )}
+      </Card>
+
+      {/* Re-analyze with corrections */}
+      <Card>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Sparkles size={16} style={{ color: "var(--accent)" }} />
+          <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>
+            Not quite right?
+          </h2>
+        </div>
+        <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: "6px 0 0" }}>
+          Tell the AI what was wrong and re-run it — e.g. &ldquo;songs are
+          misnumbered after page 30, use the printed &lsquo;No.&nbsp;X&rsquo;
+          labels&rdquo; or &ldquo;page 45 isn&apos;t a new scene.&rdquo;
+        </p>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="What should the AI fix on the next pass?"
+          rows={3}
+          style={{
+            ...textInput,
+            width: "100%",
+            marginTop: 12,
+            resize: "vertical",
+            fontFamily: "inherit",
+          }}
+        />
+        <button
+          onClick={reanalyze}
+          disabled={isPending || !notes.trim()}
+          style={{ ...ghostBtn, marginTop: 10 }}
+        >
+          <Sparkles size={14} /> Re-analyze with notes
+        </button>
+        <p style={{ fontSize: 11, color: "var(--ink-3)", margin: "8px 0 0" }}>
+          Re-running starts a fresh analysis (counts toward your limit) and
+          replaces what&apos;s above.
+        </p>
       </Card>
 
       {error && (

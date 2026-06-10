@@ -263,6 +263,82 @@ export async function startScriptParse(
   return { parseId: parse.id };
 }
 
+/**
+ * Re-run the analysis for a production's script with the director's free-text
+ * corrections, so the model fixes specific problems (e.g. "songs are misnumbered
+ * after p.30 — use the printed labels"). Stages a fresh parse carrying the notes;
+ * `runScriptParse` feeds them + the previous result back to the model.
+ */
+export async function reparseWithNotes(
+  parseId: string,
+  notes: string,
+): Promise<StartScriptParseResult> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "documents:upload")) {
+    return { error: "You don't have permission to analyse scripts." };
+  }
+  const trimmed = (notes ?? "").trim();
+  if (!trimmed) return { error: "Add a note describing what to fix." };
+  if (trimmed.length > 2000) return { error: "Keep corrections under 2000 characters." };
+
+  const [prev] = await db
+    .select({
+      productionId: scriptParses.productionId,
+      documentId: scriptParses.documentId,
+    })
+    .from(scriptParses)
+    .where(eq(scriptParses.id, parseId))
+    .limit(1);
+  if (!prev || !prev.productionId || !prev.documentId) {
+    return { error: "Re-analysis is available once the script is on a production." };
+  }
+  const productionId = prev.productionId;
+  const documentId = prev.documentId;
+
+  if (!(await userCanAccessProduction(user, productionId))) {
+    return { error: "You don't have access to that production." };
+  }
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
+
+  const since = new Date(Date.now() - PARSE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const recent = await db
+    .select({ status: scriptParses.status })
+    .from(scriptParses)
+    .where(
+      and(
+        eq(scriptParses.productionId, productionId),
+        gte(scriptParses.createdAt, since),
+      ),
+    );
+  if (recent.some((r) => r.status === "processing")) {
+    return { error: "An analysis is already running for this production — give it a minute." };
+  }
+  if (recent.filter((r) => r.status !== "failed").length >= PARSE_LIMIT_PER_PRODUCTION) {
+    return {
+      error: `You've reached the limit of ${PARSE_LIMIT_PER_PRODUCTION} AI analyses for this production in ${PARSE_WINDOW_DAYS} days.`,
+    };
+  }
+
+  const [row] = await db
+    .insert(scriptParses)
+    .values({
+      productionId,
+      documentId,
+      requestedBy: user.id,
+      status: "processing",
+      notes: trimmed,
+    })
+    .returning({ id: scriptParses.id });
+
+  await db
+    .update(documents)
+    .set({ processingStatus: "processing" })
+    .where(eq(documents.id, documentId));
+
+  return { parseId: row.id };
+}
+
 export type ApplyScriptParseResult = { error?: string; success?: boolean };
 
 /**

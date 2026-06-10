@@ -35,6 +35,9 @@ export const scriptParses = pgTable("script_parses", {
   result: jsonb("result"),
   // Failure detail when status = 'failed'.
   error: text("error"),
+  // Director's free-text corrections for a re-analysis (drives the re-parse
+  // prompt). Null for a first parse.
+  notes: text("notes"),
   // Anthropic token usage for this parse — for cost visibility and monitoring.
   inputTokens: integer("input_tokens"),
   outputTokens: integer("output_tokens"),

@@ -87,6 +87,26 @@ production/document exists, so the parse pipeline was generalized:
 - **Optional + non-blocking:** the step copy says they can skip and add cast by
   hand, or upload later from the Script tab.
 
+## Accuracy & refinement (2026-06-09, after first real-script test)
+
+First real parse: cast + scene breakdown were ~100% accurate; **bookmarks drifted
+after ~20–30 pages** (page numbers off, song numbers invented, some spurious
+scenes). Root cause: the model was being asked to *recall* page numbers across a
+100+ page document — the one thing LLMs are bad at. Two fixes:
+
+- **Anchor-based page resolution.** The model no longer returns page numbers.
+  For each bookmark it returns a short **verbatim anchor** (the heading/song-title
+  line as printed); `resolveBookmarks()` in `parse.ts` finds the page by locating
+  that anchor in the per-page text (falls back to the title). Deterministic, zero
+  drift. Bookmarks whose anchor can't be found are **dropped**, which also filters
+  hallucinated scenes. Prompt also tells it to copy printed song numbers verbatim
+  and never renumber.
+- **Corrective re-parse loop.** The review page has a "Not quite right?" box:
+  type what was wrong → **Re-analyze with notes** (`reparseWithNotes`). It stages
+  a fresh parse carrying the `notes`; `runScriptParse` feeds the notes **and the
+  previous result** back to the model for a targeted revision. Counts against the
+  per-production cap; the review page flips back to processing and polls.
+
 ## Permissions
 
 Gated on `documents:upload` (admin/producer/director/choreographer/stage_manager

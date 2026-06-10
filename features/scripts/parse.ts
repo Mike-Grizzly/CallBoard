@@ -1,11 +1,16 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/db";
 import { documents, scriptParses } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull, ne } from "drizzle-orm";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getAnthropicClient, SCRIPT_PARSE_MODEL } from "@/lib/anthropic";
 import { sendScriptParseReady } from "@/features/notifications/announce";
-import type { ScriptParseResult } from "./constants";
+import type {
+  ScriptParseResult,
+  ParsedRole,
+  ParsedScene,
+  ParsedBookmark,
+} from "./constants";
 
 // Guard against a pathological PDF blowing the context budget. ~600k chars is
 // roughly 150k tokens — comfortably inside Opus's 1M window with headroom.
@@ -39,8 +44,52 @@ const OUTPUT_SHAPE = `{
   "title": string,                       // the show's title, "" if unknown
   "roles":  [{ "name": string, "type": "Principal" | "Supporting" | "Ensemble" }],
   "scenes": [{ "actNumber": integer, "sceneNumber": integer, "title": string }],
-  "bookmarks": [{ "page": integer, "title": string, "kind": "scene" | "song" }]
+  "bookmarks": [{ "kind": "scene" | "song", "title": string, "anchor": string }]
 }`;
+
+/** Normalize text for anchor matching: lowercase, alnum + single spaces. */
+function normalizeText(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Resolve each bookmark's page deterministically by locating its verbatim
+ * anchor (falling back to the title) in the per-page text. This removes the
+ * model's page-number drift over long scripts, and drops any bookmark whose
+ * anchor can't be found — which also filters hallucinated scene markers.
+ */
+function resolveBookmarks(
+  raw: { kind?: string; title?: string; anchor?: string }[],
+  pages: string[],
+): ParsedBookmark[] {
+  const pagesNorm = pages.map(normalizeText);
+  const out: ParsedBookmark[] = [];
+  const seen = new Set<string>();
+  for (const b of raw) {
+    const anchor = normalizeText(b.anchor ?? "");
+    const title = normalizeText(b.title ?? "");
+    let page = -1;
+    if (anchor.length >= 4) page = pagesNorm.findIndex((p) => p.includes(anchor));
+    if (page === -1 && title.length >= 4) {
+      page = pagesNorm.findIndex((p) => p.includes(title));
+    }
+    if (page === -1) continue; // unfindable → likely spurious, drop
+    const key = `${page}|${(b.title ?? "").trim().toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      page: page + 1,
+      title: (b.title ?? "").trim() || `Page ${page + 1}`,
+      kind: b.kind === "song" ? "song" : "scene",
+    });
+  }
+  out.sort((a, b) => a.page - b.page);
+  return out;
+}
 
 /** Pull the JSON object out of the model's reply, tolerating stray fences/prose. */
 function extractJson(text: string): string {
@@ -57,9 +106,9 @@ const SYSTEM_PROMPT = `You analyse theatrical scripts and musical-theatre libret
 Produce four things:
 1. roles — every named speaking/singing character. Classify each as Principal (large role, drives the plot, sings/speaks frequently), Supporting (named role with meaningful but smaller presence), or Ensemble (chorus, named groups, or one-scene bit parts). Use the character name as it appears in the script (e.g. "Frederic", not "FREDERIC:"). Do not invent characters; do not list stage directions, narrators of headings, or props as characters. Each character appears once.
 2. scenes — the Act/Scene structure in reading order. actNumber and sceneNumber are 1-based integers; for a single-act play use actNumber 1 throughout. title is a short scene label (the script's own scene heading if present, otherwise a brief setting like "The town square").
-3. bookmarks — navigational markers with the PAGE NUMBER they begin on (the N from the page marker). Include every scene start (kind "scene") and every musical number / song (kind "song"). title is the scene name or song title.
+3. bookmarks — one entry per scene start (kind "scene") and per musical number / song (kind "song"). Do NOT return a page number. Instead return an "anchor": a short, EXACT, verbatim quote (3–8 words) copied character-for-character from the script at that point — the scene heading or the song's title/number line as printed (e.g. "No. 7 — Poor Wandering One" or "ACT II, SCENE 1"). The anchor MUST appear verbatim in the script text so it can be located; if you can't quote it exactly, omit that bookmark. For song titles and numbers, copy the script's own printed label exactly — never renumber, re-letter, or invent a sequence. Only mark genuine scene/song starts, not every page or stage direction.
 
-Be accurate about page numbers — use only the page where the item actually begins. If the script is not actually a script (e.g. a contract or a flyer), return empty arrays.
+If the script is not actually a script (e.g. a contract or a flyer), return empty arrays.
 
 Respond with ONLY a single JSON object in this exact shape — no markdown, no code fences, no commentary:
 ${OUTPUT_SHAPE}`;
@@ -79,6 +128,7 @@ export async function runScriptParse(parseId: string): Promise<void> {
       documentId: scriptParses.documentId,
       storagePath: scriptParses.storagePath,
       requestedBy: scriptParses.requestedBy,
+      notes: scriptParses.notes,
     })
     .from(scriptParses)
     .where(eq(scriptParses.id, parseId))
@@ -135,6 +185,36 @@ export async function runScriptParse(parseId: string): Promise<void> {
       );
     }
 
+    // On a re-analysis, prepend the director's corrections and (if available)
+    // the previous result so the model fixes the specific problems.
+    let preface = "";
+    if (parse.notes) {
+      let prior: unknown = null;
+      if (parse.documentId) {
+        const [prev] = await db
+          .select({ result: scriptParses.result })
+          .from(scriptParses)
+          .where(
+            and(
+              eq(scriptParses.documentId, parse.documentId),
+              ne(scriptParses.id, parseId),
+              isNotNull(scriptParses.result),
+            ),
+          )
+          .orderBy(desc(scriptParses.createdAt))
+          .limit(1);
+        prior = prev?.result ?? null;
+      }
+      preface =
+        "This is a RE-ANALYSIS. A previous analysis was reviewed by the director, " +
+        "who gave these corrections — apply them precisely:\n\"\"\"\n" +
+        `${parse.notes}\n"""\n` +
+        (prior
+          ? `\nThe previous analysis (to correct, not to copy) was:\n${JSON.stringify(prior)}\n`
+          : "") +
+        "\nNow re-analyse the script and produce a corrected result.\n\n";
+    }
+
     const stream = client.messages.stream({
       model: SCRIPT_PARSE_MODEL,
       max_tokens: 16000,
@@ -143,7 +223,7 @@ export async function runScriptParse(parseId: string): Promise<void> {
       messages: [
         {
           role: "user",
-          content: `Analyse this script (${pages.length} pages):\n${tagged}`,
+          content: `${preface}Analyse this script (${pages.length} pages):\n${tagged}`,
         },
       ],
     });
@@ -154,11 +234,26 @@ export async function runScriptParse(parseId: string): Promise<void> {
       .map((b) => b.text)
       .join("");
 
-    const result = JSON.parse(extractJson(text)) as ScriptParseResult;
-    if (!Array.isArray(result.roles) || !Array.isArray(result.scenes)) {
+    const raw = JSON.parse(extractJson(text)) as {
+      title?: string;
+      roles?: ParsedRole[];
+      scenes?: ParsedScene[];
+      bookmarks?: { kind?: string; title?: string; anchor?: string }[];
+    };
+    if (!Array.isArray(raw.roles) || !Array.isArray(raw.scenes)) {
       throw new Error("The analysis came back in an unexpected format.");
     }
-    result.bookmarks = Array.isArray(result.bookmarks) ? result.bookmarks : [];
+    const result: ScriptParseResult = {
+      title: raw.title ?? "",
+      roles: raw.roles,
+      scenes: raw.scenes,
+      // Page numbers are resolved in code from anchors, not trusted from the
+      // model — this is what fixes long-script bookmark drift.
+      bookmarks: resolveBookmarks(
+        Array.isArray(raw.bookmarks) ? raw.bookmarks : [],
+        pages,
+      ),
+    };
 
     await db
       .update(scriptParses)
