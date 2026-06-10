@@ -1,23 +1,54 @@
 "use server";
 
 import { db } from "@/db";
-import { announcements, announcementAcks, productions } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import {
+  announcements,
+  announcementProductions,
+  announcementAcks,
+  productions,
+} from "@/db/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import type { AnnouncementPriority } from "@/db/schema";
 import { assertCanOperate } from "@/features/billing/guard";
 import { writeMentions } from "@/features/mentions/write";
-import {
-  getOrganizationMembers,
-  getProductionMembers,
-} from "@/features/members/queries";
-import {
-  fanoutAnnouncement,
-  type AnnouncementAudienceMember,
-} from "@/features/notifications/announce";
-import { getAnnouncementDetailForUser } from "./queries";
+import { fanoutAnnouncement } from "@/features/notifications/announce";
+import { getAnnouncementDetailForUser, getFanoutAudience } from "./queries";
 import type { AnnouncementDetail } from "./queries";
+
+const PRIORITIES: ReadonlySet<AnnouncementPriority> = new Set([
+  "normal",
+  "important",
+  "urgent",
+]);
+
+/** Parse the audience picker payload: org-wide flag + selected production ids. */
+function parseAudience(formData: FormData): {
+  orgWide: boolean;
+  productionIds: string[];
+} {
+  const orgWide = formData.get("org_wide") === "1";
+  let productionIds: string[] = [];
+  const raw = formData.get("production_ids");
+  if (typeof raw === "string" && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        productionIds = [
+          ...new Set(parsed.filter((v): v is string => typeof v === "string")),
+        ];
+      }
+    } catch {
+      // Fall back to a comma-separated list.
+      productionIds = [
+        ...new Set(raw.split(",").map((s) => s.trim()).filter(Boolean)),
+      ];
+    }
+  }
+  return { orgWide, productionIds: orgWide ? [] : productionIds };
+}
 
 export type AnnouncementResult = {
   error?: string;
@@ -35,34 +66,97 @@ export async function createAnnouncement(
 
   const title = (formData.get("title") as string)?.trim();
   const body = (formData.get("body") as string) ?? "";
-  const productionId = (formData.get("production_id") as string) || null;
+  const { orgWide, productionIds } = parseAudience(formData);
+
+  const priorityRaw = (formData.get("priority") as string) ?? "normal";
+  const priority: AnnouncementPriority = PRIORITIES.has(
+    priorityRaw as AnnouncementPriority,
+  )
+    ? (priorityRaw as AnnouncementPriority)
+    : "normal";
+  const requireAck = formData.get("require_ack") === "1";
+  const wantPin = formData.get("pin") === "1";
 
   if (!title) {
     return { error: "Title is required." };
   }
 
-  if (productionId && !(await userCanAccessProduction(user, productionId))) {
-    return { error: "You don't have access to that production." };
+  const canManage = can(user.role, "productions:manage");
+
+  if (orgWide) {
+    // Org-wide broadcasts reach everyone, so they're limited to managers.
+    if (!canManage) {
+      return {
+        error:
+          "Only admins and producers can broadcast to the whole company.",
+      };
+    }
+  } else {
+    if (productionIds.length === 0) {
+      return { error: "Choose at least one production, or post company-wide." };
+    }
+    // Every targeted production must exist in the org and be one the user can
+    // post to.
+    const owned = await db
+      .select({ id: productions.id })
+      .from(productions)
+      .where(
+        and(
+          eq(productions.organizationId, user.organizationId),
+          inArray(productions.id, productionIds),
+        ),
+      );
+    if (owned.length !== productionIds.length) {
+      return { error: "One or more productions are invalid." };
+    }
+    for (const id of productionIds) {
+      if (!(await userCanAccessProduction(user, id))) {
+        return { error: "You don't have access to one of those productions." };
+      }
+    }
   }
+
+  // Only managers can pin.
+  const pinned = wantPin && canManage;
 
   const lock = await assertCanOperate(user.organizationId);
   if (lock.error) return { error: lock.error };
+
+  // Keep the legacy production_id meaningful for the common single-target case;
+  // null for org-wide and multi (the join table is the source of truth).
+  const legacyProductionId =
+    !orgWide && productionIds.length === 1 ? productionIds[0] : null;
 
   const [row] = await db
     .insert(announcements)
     .values({
       organizationId: user.organizationId,
-      productionId,
+      productionId: legacyProductionId,
       createdBy: user.id,
       title,
       body,
+      priority,
+      requireAck,
+      orgWide,
+      pinned,
     })
     .returning({ id: announcements.id });
+
+  if (!orgWide && productionIds.length > 0) {
+    await db.insert(announcementProductions).values(
+      productionIds.map((productionId) => ({
+        announcementId: row.id,
+        productionId,
+      })),
+    );
+  }
 
   if (body) {
     await writeMentions(body, {
       organizationId: user.organizationId,
-      productionId,
+      // Scope mentions to the single targeted production when there is one;
+      // org-wide / multi posts use the org scope (null).
+      productionId: legacyProductionId,
       mentionedById: user.id,
       contextType: "announcement",
       contextId: row.id,
@@ -70,24 +164,26 @@ export async function createAnnouncement(
     });
   }
 
-  // Notify the announcement's audience (scope-based fan-out): org members for
-  // org-wide, production members for production-scoped. The author is excluded
-  // inside fanoutAnnouncement.
+  // Notify the announcement's audience (deduped union across its scope). The
+  // author is excluded inside fanoutAnnouncement. Single-target posts deep-link
+  // to that show; org-wide / multi link to /announcements.
   let productionSlug: string | null = null;
   let productionTitle: string | null = null;
-  let audience: AnnouncementAudienceMember[];
-  if (productionId) {
+  if (legacyProductionId) {
     const [prod] = await db
       .select({ slug: productions.slug, title: productions.title })
       .from(productions)
-      .where(eq(productions.id, productionId))
+      .where(eq(productions.id, legacyProductionId))
       .limit(1);
     productionSlug = prod?.slug ?? null;
     productionTitle = prod?.title ?? null;
-    audience = await getProductionMembers(productionId);
-  } else {
-    audience = await getOrganizationMembers(user.organizationId);
   }
+
+  const audience = await getFanoutAudience(
+    orgWide,
+    user.organizationId,
+    productionIds,
+  );
 
   const authorName =
     `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email;
@@ -101,16 +197,12 @@ export async function createAnnouncement(
     productionTitle,
     authorId: user.id,
     authorName,
-    audience: audience.map((m) => ({
-      userId: m.userId,
-      email: m.email,
-      firstName: m.firstName,
-      lastName: m.lastName,
-    })),
+    audience,
   });
 
   revalidatePath("/announcements");
   revalidatePath("/productions", "layout");
+  revalidatePath("/dashboard");
 
   return { success: true };
 }

@@ -15,8 +15,16 @@ A bulletin board for the company and individual productions. Lets authorized use
 
 **Implemented + live in production.** Base announcements plus scope-based
 notifications (acknowledge banner + email) shipped via PR #25 (2026-06-03).
-Acknowledge-banner flow verified on the Vercel preview; phone push deferred
-(Phase 2).
+
+**Broadcast redesign (2026-06-10).** Reworked into a multi-audience broadcast
+tool matching the design prototype: send to the whole company **or any set of
+productions at once** (new join table), with **priority** (normal / important /
+urgent), an explicit **require-acknowledgement** flag, and a composer modal with
+a live preview + reach counts. Desktop "Announcements Center" and the
+production-scoped page now share one client surface
+(`components/announcements/announcements-center.tsx`). The composer is
+responsive (preview pane collapses on ≤840px). Migration applied to the
+production Supabase project (additive + backfill; legacy `production_id` kept).
 
 ## Data model
 
@@ -26,13 +34,29 @@ Acknowledge-banner flow verified on the Vercel preview; phone push deferred
 |--------|------|-------|
 | `id` | uuid | PK |
 | `organization_id` | uuid | FK → organizations (cascade) |
-| `production_id` | uuid (nullable) | FK → productions (cascade); null = org-wide |
+| `production_id` | uuid (nullable) | **Legacy.** Superseded by `org_wide` + the join table. Still written for single-target posts (null for org-wide/multi); not read for audience resolution. |
 | `created_by` | uuid | FK → profiles (cascade) |
 | `title` | text | Required |
 | `body` | text | Rich text HTML, optional |
+| `priority` | text | `normal` \| `important` \| `urgent` (CHECK), default `normal` |
+| `require_ack` | boolean | Default false. Drives the Acknowledge action + the unacked banner. |
+| `org_wide` | boolean | Default false. true = everyone in the org; false = the productions in the join table. **Source of truth** for audience. |
 | `pinned` | boolean | Default false |
 | `created_at` | timestamptz | — |
 | `updated_at` | timestamptz | — |
+
+### `announcement_productions` table (new — multi-audience join)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid | PK |
+| `announcement_id` | uuid | FK → announcements (cascade) |
+| `production_id` | uuid | FK → productions (cascade) |
+| `created_at` | timestamptz | — |
+
+Unique on `(announcement_id, production_id)`. An announcement is **org-wide**
+(`org_wide = true`, no rows here) or scoped to the **set** of productions listed
+here. Reach/ack audience = the deduped union of those productions' members.
 
 ## Routes / pages
 
@@ -45,16 +69,21 @@ Acknowledge-banner flow verified on the Vercel preview; phone push deferred
 
 | File | Type | Purpose |
 |------|------|---------|
-| `app/(app)/announcements/page.tsx` | Server | Global announcements page |
-| `app/(app)/announcements/announcement-form.tsx` | Client | Org-wide create form |
-| `app/(app)/announcements/announcement-delete-button.tsx` | Client | Delete button |
-| `app/(app)/announcements/announcement-pin-button.tsx` | Client | Pin/unpin toggle |
-| `app/(app)/productions/[slug]/announcements/page.tsx` | Server | Production announcements page |
-| `app/(app)/productions/[slug]/announcements/announcement-form.tsx` | Client | Production create form |
-| `app/(app)/productions/[slug]/announcements/announcement-delete-button.tsx` | Client | Delete button |
-| `app/(app)/productions/[slug]/announcements/announcement-pin-button.tsx` | Client | Pin/unpin toggle |
-| `features/announcements/queries.ts` | — | DB queries |
-| `features/announcements/actions.ts` | Server actions | create, delete, togglePin |
+| `app/(app)/(default)/announcements/page.tsx` | Server | Global page — serializes data → `AnnouncementsCenter` |
+| `app/(app)/(default)/announcements/announcement-delete-button.tsx` | Client | Delete button (shared by the Center) |
+| `app/(app)/(default)/announcements/announcement-pin-button.tsx` | Client | Pin/unpin toggle (shared by the Center) |
+| `app/(app)/productions/[slug]/announcements/page.tsx` | Server | Production page — same Center, composer locked to the show |
+| `components/announcements/announcements-center.tsx` | Client | Header, permission banner, filter pills, card list, toast |
+| `components/announcements/announcement-composer.tsx` | Client | Composer modal: audience picker, priority, toggles, live preview |
+| `components/announcements/announcement-detail-drawer.tsx` | Client | Title trigger → detail drawer + ack roster |
+| `app/(app)/(default)/dashboard/announcement-ack-button.tsx` | Client | Acknowledge toggle + progress (reused in cards) |
+| `features/announcements/queries.ts` | — | DB queries (audience via `org_wide` + join table) |
+| `features/announcements/actions.ts` | Server actions | create (multi-audience), delete, togglePin, acknowledge, getDetail |
+| `features/announcements/format.ts` | — | Shared presentation helpers (avatar colour, initials, relative time, role label) |
+
+The old inline create forms (`announcement-form.tsx` on both pages) and the
+production-folder pin/delete buttons were removed — superseded by the shared
+composer + Center.
 
 ## Permissions
 
@@ -62,15 +91,17 @@ Acknowledge-banner flow verified on the Vercel preview; phone push deferred
 |--------|-----|
 | View announcements | All roles (`announcements:view`) |
 | Create announcement | admin, producer, director (`announcements:create`) |
+| **Broadcast company-wide** | admin, producer only (`productions:manage`) — enforced in `createAnnouncement` |
+| Post to a production | A creator with access to that production (`userCanAccessProduction`) |
 | Delete announcement | Author OR admin/producer (`productions:manage`) |
 | Pin/unpin | admin, producer only (`productions:manage`) |
 
 ## Scope rules
 
-- **Org-wide:** `production_id IS NULL` — visible to all org members on `/announcements`
-- **Production-scoped:** `production_id IS SET` — visible on that production's announcements page and on `/announcements` for members of that production
-- `/announcements` shows: org-wide + all productions user is in (or ALL productions for admin/producer)
-- `/productions/[slug]/announcements` shows: that production's announcements + org-wide
+- **Org-wide:** `org_wide = true` — visible to all org members on `/announcements`
+- **Production-scoped:** `org_wide = false` + one or more rows in `announcement_productions` — visible on each targeted production's page, and on `/announcements` for members of any targeted production
+- `/announcements` shows: org-wide + announcements targeting any production the user is in (or ALL for admin/producer)
+- `/productions/[slug]/announcements` shows: announcements targeting that production + org-wide
 
 ## Architecture notes
 

@@ -9,11 +9,13 @@ export type SerializedAnnouncement = {
   title: string;
   body: string;
   pinned: boolean;
-  productionId: string | null;
-  productionTitle: string | null;
+  /** org-wide, several productions, or a single production. */
+  scope: "org" | "multi" | "prod";
+  /** Display label for the scope chip ("All productions" / a show title / "N productions"). */
+  scopeLabel: string;
+  priority: "normal" | "important" | "urgent";
   authorName: string;
   relativeTime: string;
-  isOrgWide: boolean;
   railColor: "amber" | "dusk" | "sage";
 };
 
@@ -28,9 +30,9 @@ export function DashboardAnnouncements({
 
   const filtered =
     filter === "org"
-      ? items.filter((a) => a.isOrgWide)
+      ? items.filter((a) => a.scope === "org")
       : filter === "prod"
-        ? items.filter((a) => !a.isOrgWide)
+        ? items.filter((a) => a.scope !== "org")
         : items;
 
   return (
@@ -87,11 +89,9 @@ export function DashboardAnnouncements({
                     <div className="ann-meta">
                       <span
                         className="pill"
-                        data-c={a.isOrgWide ? "accent" : "sage"}
+                        data-c={a.scope === "org" ? "accent" : "sage"}
                       >
-                        {a.isOrgWide
-                          ? "All productions"
-                          : (a.productionTitle ?? "Production")}
+                        {a.scope === "org" ? "All productions" : a.scopeLabel}
                       </span>
                       <span className="muted">·</span>
                       <span className="muted">{a.relativeTime}</span>

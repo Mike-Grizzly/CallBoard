@@ -48,23 +48,23 @@ export async function TrialBanner() {
 
   let tone: TrialTone;
   let message: string;
-  let dismissible = false;
+  // Every phase is dismissible — the banner is a reminder, not a blocker. The
+  // client re-surfaces it after a cooldown (and immediately when the phase
+  // escalates), and the always-on countdown pill keeps the state visible.
+  const dismissible = true;
 
   switch (phase) {
     case "active":
       tone = "info";
       message = `You're on your 60-day free trial — full access to everything, ${d(daysRemaining)} left. Subscribe any time in Settings → Billing, or add a card now and we'll start your plan automatically when the trial ends.`;
-      dismissible = true;
       break;
     case "nudge":
       tone = "info";
       message = `You're ${d(60 - daysRemaining)} into your free trial — ${d(daysRemaining)} left. Subscribe any time to lock in your access.`;
-      dismissible = true;
       break;
     case "ending":
       tone = "warn";
       message = `Your free trial ends in ${d(daysRemaining)}. Subscribe to keep full access.`;
-      dismissible = true;
       break;
     case "grace":
       tone = "warn";

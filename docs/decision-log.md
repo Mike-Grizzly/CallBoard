@@ -1658,3 +1658,20 @@ the pricing PAGE to match this model.
 - **Optional + non-blocking** step copy: skip and add cast by hand, or upload later from the Script tab.
 
 **Impact:** generalized `features/scripts/parse.ts` + the run route; new actions `requestWizardScriptUpload`/`startWizardScriptParse`/`fetchScriptParseById`/`attachWizardScript`; wizard-level AI state + `StepRoles` upload card in `new-production-wizard.tsx`; `Sparkles` added to the `Icon` registry. Known edge: orphan temp files if the wizard is abandoned (see open-questions).
+
+---
+
+## 2026-06-10 — Announcements: multi-audience via a join table (+ priority, require-ack)
+
+**Decision:** Redesigned announcements into a broadcast tool. An announcement is now either **org-wide** (`announcements.org_wide = true`) or scoped to a **set** of productions via a new join table **`announcement_productions`** `(announcement_id, production_id)` (unique). Added `priority` (`normal|important|urgent`, CHECK) and an explicit `require_ack` flag. The legacy single `announcements.production_id` column was **kept but demoted** — still written for single-target posts (null for org-wide/multi), no longer read for audience resolution.
+
+**Reason:** The prototype's headline feature is sending one notice to several productions at once, which the single nullable `production_id` couldn't represent. A join table gives a true combined audience (one ack rollup across the deduped union of members) matching the design, vs. fanning out to N duplicate rows. Keeping `production_id` made the migration additive/non-destructive on the production DB and preserves a safety net for any path not yet migrated.
+
+**How applied:** hand-written SQL via Supabase MCP `apply_migration` (NOT `drizzle-kit push` — the new unique constraint would risk the known `db:push` hang; see the 2026-05-05 membership-constraint decision). Backfill: `org_wide = (production_id IS NULL)`; mirrored each existing scoped row into the join. Drizzle schema synced afterward so the ORM matches.
+
+**Secondary decisions:**
+- **Acknowledge is now opt-in per announcement.** The unacked banner only surfaces posts with `require_ack = true`, so informational notices no longer nag. Existing rows defaulted to `false`.
+- **Company-wide requires `productions:manage`.** Org-wide reaches everyone, so it's limited to admins/producers; other creators (e.g. directors) may target only productions they can access. Enforced in `createAnnouncement` (matches the prototype's permission banner).
+- **Reach/ack totals use the deduped union** of the targeted productions' members (`countDistinct`), since a person can be in several targeted shows.
+
+**Impact:** `features/announcements/queries.ts` + `actions.ts` rewritten around `org_wide` + the join table; new shared client UI (`components/announcements/announcements-center.tsx`, `announcement-composer.tsx`) used by both the global and production-scoped pages; old inline forms removed; `ac-*` styles added to `app/globals.css`. Dashboard announcement cards updated to the scope/priority shape. `tsc`/`eslint`/`next build` clean. Not yet device-verified.
