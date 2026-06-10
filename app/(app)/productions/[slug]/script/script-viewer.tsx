@@ -2143,6 +2143,25 @@ function BookmarksPanel({
               >
                 p.{bm.page}
               </span>
+              {bm.kind && (
+                <span
+                  title={bm.kind === "song" ? "Song / musical number" : "Scene"}
+                  style={{
+                    fontSize: 9.5,
+                    fontWeight: 700,
+                    letterSpacing: ".03em",
+                    textTransform: "uppercase",
+                    padding: "1px 5px",
+                    borderRadius: 4,
+                    flexShrink: 0,
+                    background:
+                      bm.kind === "song" ? "var(--c-plum-soft)" : "var(--c-dusk-soft)",
+                    color: bm.kind === "song" ? "var(--c-plum)" : "var(--c-dusk)",
+                  }}
+                >
+                  {bm.kind === "song" ? "Song" : "Scene"}
+                </span>
+              )}
               <span
                 style={{
                   flex: 1,

@@ -121,6 +121,16 @@ scenes). Root cause: the model was being asked to *recall* page numbers across a
   preserving any bookmark a user added themselves. So re-analyzing re-bookmarks
   from scratch instead of piling onto stale markers.
 
+## Bookmark kind tags & accuracy note
+
+- AI-seeded bookmarks carry their `kind` (`"scene"` | `"song"`) onto the stored
+  `Bookmark` (optional — hand-added bookmarks have none). The desktop bookmarks
+  panel shows a colour-coded tag per row: **Song** (plum) / **Scene** (dusk). The
+  AI review page already lists songs and scenes in separate groups.
+- The AI Setup page shows an amber caveat: results vary with script formatting
+  (modern, clearly-labelled scripts read best; songs are usually spot-on, scenes
+  can blend in) — review and use "Not quite right?" to refine.
+
 ## Refining without re-uploading
 
 The `/productions/{slug}/script/ai` page is a persistent home for the breakdown.

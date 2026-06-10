@@ -466,6 +466,7 @@ async function seedSharedBookmarks(
       id: `ai-${b.page}-${i}`,
       page: Math.trunc(b.page),
       title: (b.title ?? "").trim() || `Page ${Math.trunc(b.page)}`,
+      kind: b.kind === "song" ? ("song" as const) : ("scene" as const),
       createdAt: now,
     }));
   if (shared.length === 0) return;

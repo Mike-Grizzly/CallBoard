@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Users,
   ListTree,
+  Info,
   Bookmark as BookmarkIcon,
 } from "lucide-react";
 import {
@@ -104,11 +105,32 @@ export function AiReviewClient({
           AI Script Setup
         </h1>
       </div>
-      <p style={{ color: "var(--ink-3)", fontSize: 14, margin: "0 0 24px" }}>
+      <p style={{ color: "var(--ink-3)", fontSize: 14, margin: "0 0 12px" }}>
         Claude reads your script and proposes a cast list, scene breakdown, and
         bookmarks. Review and edit below — nothing is saved to the production
         until you apply it.
       </p>
+      <div
+        style={{
+          display: "flex",
+          gap: 9,
+          alignItems: "flex-start",
+          padding: "10px 12px",
+          margin: "0 0 24px",
+          borderRadius: 8,
+          background: "var(--c-amber-soft)",
+          border: "1px solid color-mix(in oklch, var(--c-amber) 35%, transparent)",
+        }}
+      >
+        <Info size={15} style={{ color: "var(--c-amber)", flexShrink: 0, marginTop: 1 }} />
+        <p style={{ fontSize: 12.5, color: "var(--ink-2)", margin: 0, lineHeight: 1.5 }}>
+          Results vary with how a script is formatted. Modern scripts that clearly
+          label songs and scene headings read best; older or lightly-formatted PDFs
+          may need a tweak or two — songs are usually spot-on, scenes can blend in.
+          Always give it a quick review, and use <strong>“Not quite right?”</strong>{" "}
+          below to refine without re-uploading.
+        </p>
+      </div>
 
       {!parse && <EmptyState slug={slug} />}
       {parse?.status === "processing" && <Processing />}

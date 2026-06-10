@@ -84,6 +84,9 @@ export type Bookmark = {
   page: number;
   title: string;
   createdAt: string;
+  // Set for AI-seeded bookmarks so the reader can tag/colour them. Absent on
+  // bookmarks a user adds by hand.
+  kind?: "scene" | "song";
 };
 
 // ----- AI script analysis (the model's proposal, pre-review) -----
