@@ -167,6 +167,32 @@ contains personal annotations (highlights/notes/cues/ink — those live per-user
 no actors), production data, or the script text. That structural breakdown is the
 only thing shared across orgs.
 
+## Scanned scripts (OCR via vision)
+
+Theatre scripts are often distributed as scans or photocopies with no embedded
+text layer. `runScriptParse` detects this (extracted text < 200 chars) and, instead
+of failing, switches to a **vision path**:
+
+- The PDF is handed to Claude's native PDF/vision pipeline (which renders each
+  page to an image and OCRs it) by passing the existing Supabase **signed URL**
+  as a `{ type: "url" }` `document` content block — no base64 (which would
+  inflate ~33% and risk the 32 MB request ceiling) and no Files API upload.
+- A **separate system prompt** (`VISION_SYSTEM_PROMPT`) asks for the same
+  roles/scenes, but bookmarks return a **`page` integer** instead of a text
+  anchor — there is no extracted-text layer to anchor against on a scan.
+  `resolveVisionBookmarks` validates each page is within the document and
+  de-dupes. **Bookmarks on scans are best-effort** (model-estimated pages); cast
+  and scenes are unaffected.
+- **Page cap:** `MAX_SCANNED_PAGES = 250`. Each scanned page costs image + text
+  tokens, so a very long scan would overflow even the 1M window; beyond the cap
+  the parse fails with a "split it into acts" message.
+- **Cache safety:** the global script cache is fingerprinted on the **raw file
+  bytes** for scans (the extracted text is empty and would otherwise collide
+  across different scans, poisoning the cross-org cache). Text PDFs keep the
+  normalized-text fingerprint. Both are SHA-256 hex in the same column.
+- The wizard auto-fill path benefits automatically — it runs the same
+  `runScriptParse`.
+
 ## Permissions
 
 Gated on `documents:upload` (admin/producer/director/choreographer/stage_manager
@@ -210,7 +236,9 @@ future lever if AI usage becomes material — deferred until there's token data.
 ## Known limitations / risks (see open-questions)
 
 - **No live verification yet** — needs the API key + a real script.
-- **Scanned/image-only PDFs** are rejected (no OCR) with a clear message.
+- **Scanned/image-only PDFs** are now read via Claude's vision/PDF pipeline (see
+  "Scanned scripts" below) — bookmarks on scans are best-effort. Capped at 250
+  pages.
 - **Very long scripts** may exceed `maxDuration=300`; needs Vercel Fluid compute
   for the higher ceiling.
 - **Position classification** (lead/supporting) is a model estimate from line

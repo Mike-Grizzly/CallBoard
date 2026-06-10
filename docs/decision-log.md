@@ -1658,3 +1658,18 @@ the pricing PAGE to match this model.
 - **Optional + non-blocking** step copy: skip and add cast by hand, or upload later from the Script tab.
 
 **Impact:** generalized `features/scripts/parse.ts` + the run route; new actions `requestWizardScriptUpload`/`startWizardScriptParse`/`fetchScriptParseById`/`attachWizardScript`; wizard-level AI state + `StepRoles` upload card in `new-production-wizard.tsx`; `Sparkles` added to the `Icon` registry. Known edge: orphan temp files if the wizard is abandoned (see open-questions).
+
+---
+
+## 2026-06-10 — Scanned/image-only scripts analysed via Claude's vision/PDF pipeline
+
+**Decision:** When an uploaded script has no usable embedded text (`runScriptParse` extracts < 200 chars), instead of rejecting it, hand the PDF to Claude's native vision/PDF pipeline, which OCRs each page. The PDF is passed as a `{ type: "url" }` `document` content block using the Supabase signed URL we already mint — not base64 (which inflates ~33% and would risk the 32 MB request ceiling) and not a Files API upload (extra round-trip + cleanup).
+
+**Reason:** Theatre scripts are frequently scans/photocopies with no text layer; previously these failed outright. The same blank-page class of file was also a pain point reported by a tester. Claude Opus 4.8 supports PDF input (600-page limit on a 1M-context model, 32 MB request limit) and OCRs image-only pages via vision, so no separate OCR engine (Tesseract etc.) is needed.
+
+**Impact:**
+- A separate `VISION_SYSTEM_PROMPT` + `OUTPUT_SHAPE_VISION` ask for the same cast/scenes, but bookmarks return a **`page` integer** (no extracted text to anchor against on a scan). `resolveVisionBookmarks` validates the page is within the document and de-dupes — bookmarks on scans are **best-effort**, cast/scenes unaffected.
+- **Page cap** `MAX_SCANNED_PAGES = 250` (each scanned page costs image + text tokens; a longer scan would overflow the context window) — beyond it the parse fails with a "split into acts" message.
+- **Cache fingerprint** for scans is the **raw file bytes** SHA-256, not the normalized text (empty text would collide across different scans and poison the cross-org `script_cache`). Text PDFs keep the text fingerprint; both are hex in the same column.
+- Cost on scans is higher (~$1–2/script: image + text tokens per page), bounded by the existing per-production/per-user caps. The wizard auto-fill path inherits this for free (same `runScriptParse`).
+- Files touched: `features/scripts/parse.ts` (vision branch, prompts, `resolveVisionBookmarks`, `textFromMessage`, `MAX_SCANNED_PAGES`); AI-setup caveat copy in `script/ai/ai-review-client.tsx`.

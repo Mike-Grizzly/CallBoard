@@ -39,8 +39,15 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
   deferred work. If the platform reclaims it early, the parse stalls in
   `processing` with no watchdog. Consider a sweep that flips stale
   `processing` rows to `failed`.
-- **Scanned PDFs.** Image-only/scanned scripts have no text layer and are
-  rejected with a message — no OCR path.
+- **Scanned PDFs: RESOLVED (2026-06-10).** Image-only/scanned scripts are now
+  read via Claude's vision/PDF pipeline (`runScriptParse` vision path — sends the
+  signed URL as a `document` block). Open edges: (1) **bookmark pages on scans are
+  model-estimated** (no text layer to anchor against), so less reliable than the
+  anchor-resolved text path; (2) capped at `MAX_SCANNED_PAGES = 250` — a longer
+  scan fails with a "split it" message rather than chunking; (3) **cost is higher**
+  on scans (image + text tokens per page, ~$1–2 for a full script) — covered by
+  the existing per-production/per-user caps but not separately metered; (4) not yet
+  live-verified against a real scanned script.
 - **Bookmark seeding scale.** `applyScriptParse` writes one `script_annotations`
   row per production member; fine for small casts, unbounded for large ones.
   Also: members who join *after* apply won't get the seeded bookmarks (seeding
