@@ -1770,6 +1770,32 @@ textarea.field {
   color: var(--c-clay);
   border-color: var(--c-clay);
 }
+/* Delete (trash) sits just left of the archive icon, same reveal-on-hover. */
+.prod-card-wrap .prod-card-delete {
+  position: absolute;
+  top: 10px;
+  right: 44px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--ink-3);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s, border-color 0.12s;
+}
+.prod-card-wrap:hover .prod-card-delete,
+.prod-card-wrap .prod-card-delete:focus-visible {
+  opacity: 1;
+}
+.prod-card-wrap .prod-card-delete:hover {
+  color: var(--c-clay);
+  border-color: var(--c-clay);
+}
 .prod-card {
   position: relative;
   background: var(--bg-elev);

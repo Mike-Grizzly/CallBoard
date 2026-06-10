@@ -2,24 +2,31 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
   getArchivedProductionsByOrganization,
+  getDeletedProductionsByOrganization,
   getProductionsByOrganization,
   getOrgUsersForWizard,
 } from "@/features/productions/queries";
 import { getUserProductionIds } from "@/features/members/queries";
 import { ProductionList } from "./production-list";
 import { ArchivedSection } from "./archived-section";
+import { DeletedSection } from "./deleted-section";
 import { NewProductionTrigger } from "./new-production-trigger";
 
 export default async function ProductionsPage() {
   const user = await requireCurrentUser();
   const canManage = can(user.role, "productions:manage");
+  // Delete (trash) is more destructive than archive — admins only.
+  const canDelete = can(user.role, "settings:manage");
 
-  const [productionsList, assignedIds, archivedList, orgUsers] =
+  const [productionsList, assignedIds, archivedList, deletedList, orgUsers] =
     await Promise.all([
       getProductionsByOrganization(user.organizationId),
       canManage ? Promise.resolve(null) : getUserProductionIds(user.id),
       canManage
         ? getArchivedProductionsByOrganization(user.organizationId)
+        : Promise.resolve([]),
+      canDelete
+        ? getDeletedProductionsByOrganization(user.organizationId)
         : Promise.resolve([]),
       canManage
         ? getOrgUsersForWizard(user.organizationId)
@@ -44,9 +51,11 @@ export default async function ProductionsPage() {
           productions={productionsList}
           accessibleIds={assignedIds}
           canManage={canManage}
+          canDelete={canDelete}
         />
 
         {canManage && <ArchivedSection productions={archivedList} />}
+        {canDelete && <DeletedSection productions={deletedList} />}
       </div>
     </div>
   );

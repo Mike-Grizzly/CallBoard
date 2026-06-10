@@ -12,7 +12,7 @@ import {
   organizations,
   profiles,
 } from "@/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
@@ -522,6 +522,73 @@ export async function unarchiveProduction(
   const result = await db
     .update(productions)
     .set({ archivedAt: null, updatedAt: new Date() })
+    .where(
+      and(
+        eq(productions.id, productionId),
+        eq(productions.organizationId, user.organizationId),
+      ),
+    )
+    .returning({ id: productions.id });
+
+  if (result.length === 0) {
+    return { error: "Production not found in this workspace." };
+  }
+
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+/**
+ * Soft-delete ("trash") a production — distinct from archiving. Admin-only
+ * (more destructive than archive). Sets `deletedAt`; the row drops out of
+ * every list and access check but is restorable from the "Recently deleted"
+ * view for 30 days. We never hard-delete here (downstream history is kept);
+ * the eventual purge is a deferred, separately-built step.
+ */
+export async function deleteProduction(
+  productionId: string,
+): Promise<ProductionMutationResult> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "settings:manage")) {
+    return { error: "Only workspace admins can delete productions." };
+  }
+  if (!productionId) return { error: "Missing production." };
+
+  const result = await db
+    .update(productions)
+    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .where(
+      and(
+        eq(productions.id, productionId),
+        eq(productions.organizationId, user.organizationId),
+        isNull(productions.deletedAt),
+      ),
+    )
+    .returning({ id: productions.id });
+
+  if (result.length === 0) {
+    return { error: "Production not found in this workspace." };
+  }
+
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+/** Restore a soft-deleted production from the "Recently deleted" view. */
+export async function restoreDeletedProduction(
+  productionId: string,
+): Promise<ProductionMutationResult> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "settings:manage")) {
+    return { error: "Only workspace admins can restore productions." };
+  }
+  if (!productionId) return { error: "Missing production." };
+
+  const result = await db
+    .update(productions)
+    .set({ deletedAt: null, updatedAt: new Date() })
     .where(
       and(
         eq(productions.id, productionId),

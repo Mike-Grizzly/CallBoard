@@ -1675,3 +1675,47 @@ the pricing PAGE to match this model.
 - **Reach/ack totals use the deduped union** of the targeted productions' members (`countDistinct`), since a person can be in several targeted shows.
 
 **Impact:** `features/announcements/queries.ts` + `actions.ts` rewritten around `org_wide` + the join table; new shared client UI (`components/announcements/announcements-center.tsx`, `announcement-composer.tsx`) used by both the global and production-scoped pages; old inline forms removed; `ac-*` styles added to `app/globals.css`. Dashboard announcement cards updated to the scope/priority shape. `tsc`/`eslint`/`next build` clean. Not yet device-verified.
+
+---
+
+## 2026-06-10 — Soft-delete model for productions and organizations
+
+**Decision:** Both productions and organizations get a nullable `deleted_at`
+column (`timestamptz`, applied live via Supabase MCP `apply_migration`),
+**separate from** productions' existing `archived_at`. Semantics:
+
+- **Archive** (`archived_at`) = a legitimate "this season is over, keep it"
+  state — restorable from the Archived view, kept forever.
+- **Delete** (`deleted_at`) = "trash": hidden from every list and from
+  production access checks (`userCanAccessProduction`, `getProductionBySlug`),
+  recoverable for 30 days, then (eventually) purged.
+
+**Permissioning:** delete/restore are **admin-only** (`settings:manage`),
+deliberately stricter than archive (`productions:manage`, i.e. producers too),
+because deletion is more destructive. Org deletion additionally requires a
+**type-the-workspace-name** confirmation (re-checked server-side in
+`deleteWorkspace`, not just the UI).
+
+**Recovery split (per product owner):**
+- **Productions** are **self-serve recoverable** — a "Recently deleted" section
+  on `/productions` (admins) with a Restore button, surfacing the 30-day window.
+- **Organizations** are **support-recoverable** — the delete confirmation tells
+  the user it's recoverable via support for 30 days; an operator restores it by
+  clearing `deleted_at` (see admin-playbook). No self-serve org-restore UI, to
+  keep the auth-resolution surface small. Deleting your current workspace moves
+  you to another membership (or auth spins up a fresh personal workspace).
+
+**Deferred:** the destructive **hard purge** after 30 days is NOT built yet —
+soft-deleted rows simply stay hidden past the window. Nothing is irreversibly
+lost until a careful, separately-tested purge step (likely an extension of the
+billing-lifecycle cron) lands. Tracked in open-questions.
+
+**Impact:** new `deleted_at` on `db/schema/{productions,organizations}.ts`;
+`deleteProduction`/`restoreDeletedProduction` (`features/productions/actions.ts`)
++ `getDeletedProductionsByOrganization` and `deleted_at` filters across
+`features/productions/queries.ts`; `deleteWorkspace` (`features/workspace/actions.ts`)
++ deleted-org filters in `lib/auth.ts` (`resolveActiveMembership`,
+`userCanAccessProduction`) and `features/workspace/queries.ts`
+(`getUserMemberships`); UI: `DeleteProductionButton`/`RestoreDeletedProductionButton`
+(`archive-buttons.tsx`), `deleted-section.tsx`, `delete-workspace-form.tsx`.
+`tsc`/`eslint` clean; columns verified live. Not yet device-verified.

@@ -42,6 +42,10 @@ export const organizations = pgTable("organizations", {
   // taken — the daily cron uses it to send each milestone once and purge once.
   // See features/billing/lifecycle.ts.
   billingLifecycleStage: integer("billing_lifecycle_stage").notNull().default(0),
+  // Soft-delete. Null = live, non-null = deleted: removed from the workspace
+  // switcher and never resolved as a user's active org, but retained for 30
+  // days so support can restore it. Hard purge is deferred.
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

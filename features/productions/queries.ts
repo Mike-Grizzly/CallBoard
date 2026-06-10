@@ -23,6 +23,7 @@ export async function getProductionsByOrganization(organizationId: string) {
       and(
         eq(productions.organizationId, organizationId),
         isNull(productions.archivedAt),
+        isNull(productions.deletedAt),
       ),
     )
     .orderBy(desc(productions.createdAt));
@@ -38,9 +39,29 @@ export async function getArchivedProductionsByOrganization(
       and(
         eq(productions.organizationId, organizationId),
         isNotNull(productions.archivedAt),
+        isNull(productions.deletedAt),
       ),
     )
     .orderBy(desc(productions.archivedAt));
+}
+
+/**
+ * Soft-deleted ("trashed") productions for the org's "Recently deleted"
+ * view. Restorable by an admin for 30 days; hard purge is deferred.
+ */
+export async function getDeletedProductionsByOrganization(
+  organizationId: string,
+) {
+  return db
+    .select()
+    .from(productions)
+    .where(
+      and(
+        eq(productions.organizationId, organizationId),
+        isNotNull(productions.deletedAt),
+      ),
+    )
+    .orderBy(desc(productions.deletedAt));
 }
 
 /**
@@ -57,6 +78,7 @@ export const getProductionBySlug = cache(
         and(
           eq(productions.organizationId, organizationId),
           eq(productions.slug, slug),
+          isNull(productions.deletedAt),
         ),
       )
       .limit(1);
@@ -95,6 +117,7 @@ export async function getUserProductions(
         // the active org's shows, never a mix across workspaces.
         eq(productions.organizationId, organizationId),
         isNull(productions.archivedAt),
+        isNull(productions.deletedAt),
       ),
     )
     .orderBy(desc(productions.createdAt));

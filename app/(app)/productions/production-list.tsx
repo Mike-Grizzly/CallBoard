@@ -2,7 +2,10 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import type { Production } from "@/db/schema";
 import { resolveProductionColor } from "@/features/productions/constants";
-import { ArchiveProductionButton } from "./archive-buttons";
+import {
+  ArchiveProductionButton,
+  DeleteProductionButton,
+} from "./archive-buttons";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
@@ -38,10 +41,12 @@ export function ProductionList({
   productions,
   accessibleIds,
   canManage,
+  canDelete = false,
 }: {
   productions: Production[];
   accessibleIds: Set<string> | null;
   canManage: boolean;
+  canDelete?: boolean;
 }) {
   if (productions.length === 0) {
     return (
@@ -132,6 +137,12 @@ export function ProductionList({
             </Link>
             {canManage && (
               <ArchiveProductionButton
+                productionId={production.id}
+                productionTitle={production.title}
+              />
+            )}
+            {canDelete && (
+              <DeleteProductionButton
                 productionId={production.id}
                 productionTitle={production.title}
               />

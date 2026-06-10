@@ -4,6 +4,25 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
+## Soft-delete: deferred hard purge (added 2026-06-10)
+
+- **No 30-day hard purge exists.** Productions and organizations soft-delete via
+  `deleted_at`, recoverable for 30 days — but nothing actually removes them after
+  that. Rows past the window just stay hidden. Need a careful, tested purge step
+  (likely an extension of the billing-lifecycle cron) that cascades through child
+  records + Storage objects, scoped strictly to the deleted entity. Until then,
+  "permanently removed after 30 days" (shown in the delete UIs) is aspirational.
+- **Storage isn't reclaimed on delete.** Deleting a workspace/production leaves
+  its uploaded files in the `attachments` bucket. The purge step should remove
+  them; the existing billing file-purge logic is a reference.
+- **Member alert counts ignore deleted orgs.** `getWorkspaceAlertCounts` joins
+  memberships→mentions/notifications without filtering `organizations.deleted_at`.
+  Harmless today (the switcher hides deleted orgs so bubbles never render), but
+  worth tidying if that query is reused elsewhere.
+- **Deleting a paid workspace doesn't touch Stripe.** Soft-deleting an org with
+  an active subscription doesn't cancel it. Decide whether delete should cancel
+  at period end, or whether that's an operator step.
+
 ## AI Script Analysis (Feature 19, Phase 1 — added 2026-06-09)
 
 - **Not live-verified.** No real script has been parsed end-to-end — needs
