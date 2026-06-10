@@ -24,6 +24,7 @@ import {
   attachWizardScript,
 } from "@/features/scripts/actions";
 import { uploadFileToSignedUrl } from "@/lib/storage-upload";
+import { PRODUCTION_COLOR_PALETTE } from "@/features/productions/constants";
 import type { ScriptParseResult } from "@/features/scripts/constants";
 import {
   ALL_DEPTS,
@@ -91,6 +92,7 @@ type WizardData = {
   depts: Record<string, boolean>;
   roles: RoleRow[];
   team: TeamRow[];
+  color: string;
 };
 
 const STEPS = [
@@ -152,6 +154,7 @@ export default function NewProductionWizard({
       { id: "r3", name: "", actor: "", type: "Ensemble" },
     ],
     team: SEED_TEAM.map((t, i) => ({ ...t, id: `t-seed-${i}` })),
+    color: "clay",
   });
 
   const [pending, setPending] = useState(false);
@@ -335,6 +338,7 @@ export default function NewProductionWizard({
       roles: data.roles.map((r) => ({ name: r.name, actor: r.actor, type: r.type })),
       team,
       status,
+      color: data.color,
     });
     setPending(false);
 
@@ -727,6 +731,37 @@ function StepBasics({ data, set }: { data: WizardData; set: (p: Partial<WizardDa
             ))}
           </select>
           <div className="hint">Used to group productions in your archive.</div>
+        </div>
+        <div className="field-group" style={{ gridColumn: "1 / -1" }}>
+          <label className="label">Color</label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 2 }}>
+            {PRODUCTION_COLOR_PALETTE.map((c) => {
+              const selected = data.color === c.token;
+              return (
+                <button
+                  key={c.token}
+                  type="button"
+                  title={c.label}
+                  aria-label={c.label}
+                  aria-pressed={selected}
+                  onClick={() => set({ color: c.token })}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 999,
+                    background: c.cssVar,
+                    cursor: "pointer",
+                    padding: 0,
+                    boxShadow: selected
+                      ? "0 0 0 2px var(--bg), 0 0 0 4px var(--ink)"
+                      : "inset 0 0 0 1px rgba(0,0,0,0.12)",
+                    border: "none",
+                  }}
+                />
+              );
+            })}
+          </div>
+          <div className="hint">Used for this show&apos;s badge across the calendar and dashboard.</div>
         </div>
       </div>
     </>

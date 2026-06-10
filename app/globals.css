@@ -45,6 +45,18 @@
   --c-sand-soft: oklch(0.95 0.025 90);
   --c-plum: oklch(0.55 0.1 320);
   --c-plum-soft: oklch(0.94 0.03 320);
+  --c-teal: oklch(0.68 0.1 195);
+  --c-teal-soft: oklch(0.94 0.03 195);
+  --c-rose: oklch(0.68 0.13 10);
+  --c-rose-soft: oklch(0.94 0.04 10);
+  --c-indigo: oklch(0.52 0.13 285);
+  --c-indigo-soft: oklch(0.93 0.03 285);
+  --c-moss: oklch(0.6 0.09 130);
+  --c-moss-soft: oklch(0.94 0.03 130);
+  --c-ocean: oklch(0.62 0.12 240);
+  --c-ocean-soft: oklch(0.94 0.03 240);
+  --c-berry: oklch(0.55 0.14 350);
+  --c-berry-soft: oklch(0.94 0.04 350);
 
   --shadow-1: 0 1px 2px rgba(40, 30, 15, 0.04), 0 1px 1px rgba(40, 30, 15, 0.03);
   --shadow-2: 0 6px 20px rgba(40, 30, 15, 0.06), 0 2px 6px rgba(40, 30, 15, 0.04);

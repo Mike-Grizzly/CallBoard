@@ -47,14 +47,23 @@ type BookmarkEdit = ParsedBookmark & { key: string };
 let keySeq = 0;
 const nextKey = () => `k${keySeq++}`;
 
+type ParseUsage = {
+  used: number;
+  limit: number;
+  remaining: number;
+  windowDays: number;
+};
+
 export function AiReviewClient({
   slug,
   productionId,
   initialParse,
+  usage,
 }: {
   slug: string;
   productionId: string;
   initialParse: ParseRow | null;
+  usage: ParseUsage;
 }) {
   const router = useRouter();
   const [parse, setParse] = useState<ParseRow | null>(initialParse);
@@ -93,17 +102,28 @@ export function AiReviewClient({
         <ArrowLeft size={14} /> Documents
       </Link>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-        <Sparkles size={20} style={{ color: "var(--accent)" }} />
-        <h1
-          style={{
-            fontFamily: "var(--font-display, Newsreader), serif",
-            fontSize: 26,
-            margin: 0,
-          }}
-        >
-          AI Script Setup
-        </h1>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          marginBottom: 4,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Sparkles size={20} style={{ color: "var(--accent)" }} />
+          <h1
+            style={{
+              fontFamily: "var(--font-display, Newsreader), serif",
+              fontSize: 26,
+              margin: 0,
+            }}
+          >
+            AI Script Setup
+          </h1>
+        </div>
+        <ParseQuota usage={usage} />
       </div>
       <p style={{ color: "var(--ink-3)", fontSize: 14, margin: "0 0 12px" }}>
         Claude reads your script and proposes a cast list, scene breakdown, and
@@ -182,6 +202,40 @@ export function AiReviewClient({
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * Small pill showing how many AI analyses remain for this production in the
+ * rolling window, so directors aren't surprised when they hit the cap.
+ */
+function ParseQuota({ usage }: { usage: ParseUsage }) {
+  const out = usage.remaining <= 0;
+  const low = !out && usage.remaining <= 1;
+  const fg = out ? "var(--c-clay)" : low ? "var(--c-amber)" : "var(--ink-3)";
+  return (
+    <span
+      title={`${usage.used} of ${usage.limit} AI analyses used in the last ${usage.windowDays} days`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        flexShrink: 0,
+        fontSize: 12,
+        fontWeight: 600,
+        color: fg,
+        background: "var(--bg-muted)",
+        border: "1px solid var(--border)",
+        borderRadius: 999,
+        padding: "4px 11px",
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      <Sparkles size={13} />
+      {out
+        ? `0 of ${usage.limit} analyses left`
+        : `${usage.remaining} of ${usage.limit} analyses left`}
+    </span>
   );
 }
 

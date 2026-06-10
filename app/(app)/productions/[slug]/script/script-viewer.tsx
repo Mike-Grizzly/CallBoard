@@ -1841,7 +1841,7 @@ function drawAnnotationOnCanvas(
     const bottomY = ry + rh;
     const isLeft = ann.leaderSide === "left";
     const lineStartX = isLeft ? rx : rx + rw;
-    const MARGIN_OFFSET = 6;
+    const MARGIN_OFFSET = 14;
     const labelX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
 
     ctx.globalAlpha = 0.08;
@@ -1862,11 +1862,11 @@ function drawAnnotationOnCanvas(
     ctx.fill();
     ctx.fillStyle = CUE_STROKE;
     ctx.textAlign = isLeft ? "left" : "right";
-    ctx.font = "bold 11px system-ui, sans-serif";
-    ctx.fillText(ann.cueNumber, isLeft ? labelX + 5 : labelX - 5, bottomY - 3);
+    ctx.font = "bold 13px system-ui, sans-serif";
+    ctx.fillText(ann.cueNumber, isLeft ? labelX + 6 : labelX - 6, bottomY - 4);
     if (ann.cueDescription) {
-      ctx.font = "10px system-ui, sans-serif";
-      ctx.fillText(ann.cueDescription, isLeft ? labelX + 5 : labelX - 5, bottomY + 13);
+      ctx.font = "11px system-ui, sans-serif";
+      ctx.fillText(ann.cueDescription, isLeft ? labelX + 6 : labelX - 6, bottomY + 14);
     }
   }
 
@@ -1961,7 +1961,7 @@ function AnnotationShape({
     const bottomY = ry + rh;
     const isLeft = annotation.leaderSide === "left";
     const lineStartX = isLeft ? rx : rx + rw;
-    const MARGIN_OFFSET = 6;
+    const MARGIN_OFFSET = 14;
     const labelX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
     const textAnchor = isLeft ? "start" : "end";
 
@@ -1990,10 +1990,10 @@ function AnnotationShape({
         <circle cx={labelX} cy={bottomY} r="3" fill={CUE_STROKE} />
         {/* Cue number */}
         <text
-          x={isLeft ? labelX + 5 : labelX - 5}
-          y={bottomY - 3}
+          x={isLeft ? labelX + 6 : labelX - 6}
+          y={bottomY - 4}
           textAnchor={textAnchor}
-          fontSize="11"
+          fontSize="13"
           fill={CUE_STROKE}
           fontWeight="700"
           fontFamily="system-ui, sans-serif"
@@ -2003,10 +2003,10 @@ function AnnotationShape({
         {/* Cue description */}
         {annotation.cueDescription && (
           <text
-            x={isLeft ? labelX + 5 : labelX - 5}
-            y={bottomY + 13}
+            x={isLeft ? labelX + 6 : labelX - 6}
+            y={bottomY + 14}
             textAnchor={textAnchor}
-            fontSize="10"
+            fontSize="11"
             fill={CUE_STROKE}
             fontFamily="system-ui, sans-serif"
           >

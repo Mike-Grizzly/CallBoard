@@ -3,7 +3,10 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
-import { getLatestScriptParse } from "@/features/scripts/queries";
+import {
+  getLatestScriptParse,
+  getProductionParseUsage,
+} from "@/features/scripts/queries";
 import { AiReviewClient } from "./ai-review-client";
 
 export default async function ScriptAiPage({
@@ -25,13 +28,17 @@ export default async function ScriptAiPage({
     if (!membership) redirect("/productions");
   }
 
-  const parse = await getLatestScriptParse(production.id);
+  const [parse, usage] = await Promise.all([
+    getLatestScriptParse(production.id),
+    getProductionParseUsage(production.id),
+  ]);
 
   return (
     <AiReviewClient
       slug={slug}
       productionId={production.id}
       initialParse={parse}
+      usage={usage}
     />
   );
 }

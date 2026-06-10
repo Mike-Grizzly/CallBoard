@@ -89,6 +89,12 @@ export type Bookmark = {
   kind?: "scene" | "song";
 };
 
+// Cost guardrails for AI analysis. Each parse is a real per-token Anthropic
+// charge, so cap how often the feature can run for one production. The window
+// is generous enough for legitimate re-uploads but kills runaway loops.
+export const PARSE_LIMIT_PER_PRODUCTION = 5;
+export const PARSE_WINDOW_DAYS = 30;
+
 // ----- AI script analysis (the model's proposal, pre-review) -----
 
 /** Character/role types the analyser may assign. Mirrors the wizard's set. */

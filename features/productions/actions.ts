@@ -26,6 +26,7 @@ import {
   type FullProductionInput,
   type QuickProductionInput,
 } from "./wizard-constants";
+import { isValidProductionColor } from "./constants";
 import { createDefaultFolders } from "@/features/documents/actions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isValidEmail } from "@/features/members/validation";
@@ -191,6 +192,7 @@ export async function createProductionFull(
       rehearsalDays,
       rehearsalStart: (input.rehearsalStart ?? "").trim() || null,
       rehearsalEnd: (input.rehearsalEnd ?? "").trim() || null,
+      color: isValidProductionColor(input.color) ? input.color : null,
     })
     .returning({ id: productions.id });
 

@@ -19,6 +19,8 @@ import { can } from "@/lib/permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   PARSE_ROLE_TYPES,
+  PARSE_LIMIT_PER_PRODUCTION,
+  PARSE_WINDOW_DAYS,
   type Bookmark,
   type ScriptParseResult,
 } from "./constants";
@@ -182,12 +184,6 @@ export async function dismissStaleBanner(
 }
 
 // ----- AI script analysis -----
-
-// Cost guardrails. Each parse is a real per-token Anthropic charge, so cap how
-// often the feature can run for one production. The window is generous enough
-// for legitimate re-uploads but kills runaway loops.
-const PARSE_LIMIT_PER_PRODUCTION = 5;
-const PARSE_WINDOW_DAYS = 30;
 
 export type StartScriptParseResult = { error?: string; parseId?: string };
 
