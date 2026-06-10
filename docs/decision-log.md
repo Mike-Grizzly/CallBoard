@@ -1676,14 +1676,16 @@ the pricing PAGE to match this model.
 
 ---
 
-## 2026-06-10 — AI script-parse reliability: stale-parse watchdog + idempotent apply
+## 2026-06-10 — AI script-parse reliability: watchdog, idempotent apply, late-joiner seeding
 
-**Decision:** Two self-contained reliability fixes to the AI script-analysis feature, both in `features/scripts/actions.ts`.
+**Decision:** Three self-contained reliability fixes to the AI script-analysis feature, all in `features/scripts/actions.ts`.
 
 1. **Stalled-parse watchdog (lazy, no cron).** The async run worker can die (Vercel reclaims the function, or work exceeds `maxDuration=300s`) without ever flipping the row off `processing`, which previously (a) spun the review page forever and (b) blocked all future parses via the concurrency lock. A row still `processing` past `STALE_PARSE_MS` (8 min) is now treated as dead: the poll paths (`fetchLatestScriptParse`/`fetchScriptParseById`) flip it to `failed` (`failIfStale`) so the UI shows a timeout, and the three concurrency locks (`startScriptParse`/`reparseWithNotes`/`startWizardScriptParse`) ignore stale rows (`hasLiveProcessing`). Chose lazy detection over a cron sweep because the poll already happens every 3s — the user watching gets immediate feedback with zero new infra.
 
 2. **Idempotent apply.** `applyScriptParse` blindly inserted roles + scenes, so a double-click or a re-parse re-apply piled up duplicates (only bookmarks were idempotent). Now: re-applying an already-`applied` parse is a no-op (status guard), and roles/scenes are inserted **additively but de-duplicated** against what the production already has (roles by name, scenes by act/scene number).
 
-**Reason:** The feature isn't live-verified yet; these are the difference between an impressive demo and something trustworthy in production. Both are small and contained to the scripts feature.
+3. **Late-joiner bookmark seeding.** `seedSharedBookmarks` only seeds members present at apply time, so anyone who joins later (invite, bulk-assign, wizard) saw no AI bookmarks. They're now seeded **lazily on first Script-tab open** by `ensureMemberBookmarks` (reads the applied parse's bookmarks — the canonical set — and writes the user's `ai-*` set if missing). Chose the script-open chokepoint over hooking every member-add path, and gated it on `documents.processingStatus === "applied"` so productions without a breakdown pay no extra query. Fits the codebase's lazy-write convention (auto-profile creation).
 
-**Impact:** No schema change. Apply is **additive** by design — it never deletes, because `production_scenes` is shared with the blocking tool and roles can be hand-added/wizard-created, so there's no safe blanket "replace AI rows" without an AI-vs-manual marker column. A re-parse that drops/renames a role or scene leaves the old row for the director to remove in the review form. Late-joiner bookmark seeding (members who join after apply) is still open — tracked in open-questions.
+**Reason:** The feature isn't live-verified yet; these are the difference between an impressive demo and something trustworthy in production. All three are small and contained to the scripts feature.
+
+**Impact:** No schema change (added `processingStatus` to the `getDefaultScript` projection). Apply is **additive** by design — it never deletes, because `production_scenes` is shared with the blocking tool and roles can be hand-added/wizard-created, so there's no safe blanket "replace AI rows" without an AI-vs-manual marker column. A re-parse that drops/renames a role or scene leaves the old row for the director to remove in the review form. Late-joiner seeding is a write-on-render: two simultaneous first-opens by the same user could double-insert an annotation row (no unique constraint on `script_annotations`; `limit(1)` on read) — same class as the existing apply-time seeding.

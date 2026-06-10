@@ -244,6 +244,12 @@ future lever if AI usage becomes material — deferred until there's token data.
   duplicates. It never *deletes* (scenes are shared with the blocking tool, and
   roles can be hand-added) — a re-parse that drops a role/scene leaves the old row
   for manual removal.
+- **Late-joiner bookmark seeding.** `seedSharedBookmarks` only seeds members
+  present at apply time. Members who join later are seeded **lazily on first
+  Script-tab open** by `ensureMemberBookmarks` (reads the applied parse's bookmarks
+  — the canonical set — and writes the user's `ai-*` set if missing). Gated by
+  `documents.processingStatus === "applied"` + the member lacking an AI set, so
+  there's no extra query for productions without an AI breakdown.
 
 ## Setup the user owns
 

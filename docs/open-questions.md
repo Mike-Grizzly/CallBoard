@@ -63,12 +63,17 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
   live-verified against a real scanned script.
 - **Bookmark seeding scale.** `applyScriptParse` writes one `script_annotations`
   row per production member; fine for small casts, unbounded for large ones.
-  Also: members who join *after* apply won't get the seeded bookmarks (seeding
-  is a point-in-time action, not a shared/default set).
-- **Re-apply duplicates roles/scenes.** Applying a second time appends another
-  full set of `production_roles`/`production_scenes` (only bookmarks are
-  idempotent). Acceptable for a one-time setup step, but worth guarding if
-  re-runs become common.
+  **Late-joiner gap RESOLVED (2026-06-10):** members who join *after* apply are now
+  seeded lazily on first Script-tab open via `ensureMemberBookmarks` (reads the
+  applied parse's bookmarks, the canonical set). Residual edges: (1) it's a
+  write-on-render, so two simultaneous first-opens by the same user could insert
+  two annotation rows (`script_annotations` has no unique constraint — same class
+  as the existing apply-time seeding; `getScriptAnnotations` uses `limit(1)`);
+  (2) the per-member row-explosion for very large casts is unchanged.
+- **Re-apply duplicates roles/scenes: RESOLVED (2026-06-10)** — see the
+  watchdog/idempotent-apply entry above. Apply is now a no-op on an already-applied
+  parse and de-duplicates roles/scenes against existing rows; it stays additive
+  (never deletes), so a re-parse that drops a role/scene needs manual cleanup.
 - **Cost guardrails: RESOLVED (basic).** Concurrency lock + per-production cap
   (5 / 30 days) + token logging now ship (`startScriptParse`,
   `runScriptParse`). Open: no org-level monthly quota yet (chosen to defer the

@@ -11,7 +11,7 @@ import {
   productionMemberships,
   productions,
 } from "@/db/schema";
-import { and, eq, gte, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { assertCanMutate } from "@/features/billing/guard";
@@ -543,14 +543,10 @@ export async function applyScriptParse(
   return { success: true };
 }
 
-async function seedSharedBookmarks(
-  productionId: string,
-  scriptId: string,
-  result: ScriptParseResult,
-  requesterId: string,
-) {
+/** The shared, AI-seeded bookmark set derived from a parse result (stable `ai-*` ids). */
+function aiBookmarksFromResult(result: ScriptParseResult): Bookmark[] {
   const now = new Date().toISOString();
-  const shared: Bookmark[] = result.bookmarks
+  return result.bookmarks
     .filter((b) => Number.isFinite(b.page) && b.page >= 1)
     .map((b, i) => ({
       id: `ai-${b.page}-${i}`,
@@ -559,6 +555,15 @@ async function seedSharedBookmarks(
       kind: b.kind === "song" ? ("song" as const) : ("scene" as const),
       createdAt: now,
     }));
+}
+
+async function seedSharedBookmarks(
+  productionId: string,
+  scriptId: string,
+  result: ScriptParseResult,
+  requesterId: string,
+) {
+  const shared = aiBookmarksFromResult(result);
   if (shared.length === 0) return;
 
   const members = await db
@@ -607,6 +612,74 @@ async function seedSharedBookmarks(
       }
     }
   }
+}
+
+/**
+ * Lazily seed a member with the production's AI bookmark set when they open the
+ * script. `seedSharedBookmarks` only seeds the members present at apply time, so
+ * anyone who joins later (invite, bulk-assign, wizard) would otherwise see no
+ * bookmarks. This is the single chokepoint — every viewer hits the Script tab —
+ * and follows the codebase's lazy-write convention (auto-profile creation).
+ *
+ * Self-securing (callable as a server action): the user is the session user, and
+ * production access is gated. Returns the merged bookmark set if it seeded (so
+ * the page can show it this render), or null if there was nothing to do.
+ */
+export async function ensureMemberBookmarks(
+  scriptId: string,
+  productionId: string,
+): Promise<Bookmark[] | null> {
+  const user = await requireCurrentUser();
+  if (!(await userCanAccessProduction(user, productionId))) return null;
+
+  // The applied parse is the canonical AI breakdown for this document.
+  const [applied] = await db
+    .select({ result: scriptParses.result })
+    .from(scriptParses)
+    .where(
+      and(
+        eq(scriptParses.documentId, scriptId),
+        eq(scriptParses.status, "applied"),
+      ),
+    )
+    .orderBy(desc(scriptParses.updatedAt))
+    .limit(1);
+  const result = applied?.result as ScriptParseResult | undefined;
+  if (!result) return null;
+  const ai = aiBookmarksFromResult(result);
+  if (ai.length === 0) return null;
+
+  const [row] = await db
+    .select({ bookmarks: scriptAnnotations.bookmarks })
+    .from(scriptAnnotations)
+    .where(
+      and(
+        eq(scriptAnnotations.scriptId, scriptId),
+        eq(scriptAnnotations.userId, user.id),
+      ),
+    )
+    .limit(1);
+  const current = (row?.bookmarks as Bookmark[] | undefined) ?? [];
+  // Already seeded (the caller usually pre-checks this, but be safe).
+  if (current.some((b) => b.id?.startsWith("ai-"))) return null;
+
+  const merged = [...current.filter((b) => !b.id?.startsWith("ai-")), ...ai];
+  if (row) {
+    await db
+      .update(scriptAnnotations)
+      .set({ bookmarks: merged, updatedAt: new Date() })
+      .where(
+        and(
+          eq(scriptAnnotations.scriptId, scriptId),
+          eq(scriptAnnotations.userId, user.id),
+        ),
+      );
+  } else {
+    await db
+      .insert(scriptAnnotations)
+      .values({ scriptId, userId: user.id, productionId, bookmarks: merged });
+  }
+  return merged;
 }
 
 /** Poll target for the review page while a parse is processing. */
