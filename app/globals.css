@@ -10507,6 +10507,22 @@ textarea.cform-field {
  * Top-of-content strip surfacing unacknowledged announcements. Appears
  * only when there's something to act on; clears as each is acknowledged.
  * Lives in the content column so it also shows on phones. */
+/* Wrapper around the top-of-content banner stack; its height is published to
+   `--app-banner-h` (see banner-slot.tsx) so the fixed countdown can dodge it. */
+.app-banner-slot {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Trial countdown pill — fixed top-right, shifted below any visible banners. */
+.trial-countdown {
+  position: fixed;
+  top: calc(var(--app-banner-h, 0px) + 12px);
+  right: 16px;
+  z-index: 60;
+  transition: top 0.2s ease;
+}
+
 .ann-banner {
   display: flex;
   align-items: center;

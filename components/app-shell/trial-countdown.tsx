@@ -54,11 +54,8 @@ export async function TrialCountdown() {
     <Link
       href="/settings/billing"
       title="View billing"
+      className="trial-countdown"
       style={{
-        position: "fixed",
-        top: 12,
-        right: 16,
-        zIndex: 60,
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
