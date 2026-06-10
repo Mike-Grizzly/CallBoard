@@ -80,8 +80,16 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
   per-tier quota until there's real token data); the per-production cap is the
   only ceiling, so a `company`-tier org with many productions is effectively
   uncapped org-wide.
-- **Phase 2 (per-role highlighting)** is the deferred moonshot — needs per-line
-  pixel coordinates from the PDF and is highly script-format-dependent.
+- **Phase 2 (per-role line highlighting): SCOPED as a beta (2026-06-10), not
+  built.** Decided to ship it as a **render-only, client-side, opt-in** overlay
+  (no DB writes, no schema, no tokens) so it's reversible by construction — the
+  user's bookmarks/notations are never touched; "off" is the fallback. The viewer
+  detects a chosen character's speeches from the existing pdfjs text layer (cue-
+  based). Full design in the feature spec. Open: text-PDF-only (no client text
+  layer on scans); format-dependent accuracy (two-column, same-line cues, cross-
+  page speeches); mobile-reader parity is a fast-follow; persistence (for PDF
+  export) + auto-select-by-`character_name` + a server AI-assisted engine are
+  later iterations; plan-gating of visibility is undecided (it's free to run).
 - **Wizard auto-fill (added 2026-06-09):** parses a script during new-production
   setup to pre-fill the cast, then carries the PDF over as the default script on
   launch (`attachWizardScript`). Open edges: (1) **orphan temp files** — if a

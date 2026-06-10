@@ -1,7 +1,7 @@
 # Feature 19 — AI Script Analysis
 
 **Status:** Phase 1 IMPLEMENTED (branch `claude/serene-cray-kmpjry`, not yet merged, not live-verified).
-**Phase 2 (per-role highlighting):** NOT BUILT.
+**Phase 2 (per-role line highlighting):** SCOPED as a beta (2026-06-10) — render-only, client-side, opt-in. Not built yet. See "Phase 2 — per-role line highlighting (Beta)" below.
 
 ## Goal
 
@@ -16,7 +16,7 @@ the production's real tables automatically.
 | 1 | Cast/characters + Principal/Supporting/Ensemble | `production_roles` | 1 ✅ |
 | 2 | Act/Scene breakdown | `production_scenes` | 1 ✅ |
 | 3 | Bookmarks for scenes + musical numbers (page-accurate) | `script_annotations.bookmarks` (per-user, seeded for all members) | 1 ✅ |
-| 4 | Pre-highlight each lead/supporting role's lines | `script_annotations.annotations` | 2 ⛔ (needs per-line pixel coords; format-dependent) |
+| 4 | Pre-highlight each lead/supporting role's lines | (render-only overlay — nothing persisted) | 2 🅱 SCOPED beta (see below) |
 
 ## Architecture
 
@@ -192,6 +192,44 @@ of failing, switches to a **vision path**:
   normalized-text fingerprint. Both are SHA-256 hex in the same column.
 - The wizard auto-fill path benefits automatically — it runs the same
   `runScriptParse`.
+
+## Phase 2 — per-role line highlighting (Beta, SCOPED 2026-06-10, not built)
+
+**Goal:** an actor opens the script and sees **their character's lines highlighted**, so they can scan their part at a glance. This was output #4 of the original director's vision.
+
+**Beta positioning.** This is shipped as an explicitly-labelled **Beta** because line detection is format-dependent: it works well on cleanly-formatted text PDFs and degrades on irregular ones. It is **opt-in and off by default**, so it can never silently change anyone's experience. Messaging on the control tells the user that if the result looks wrong they just switch it off — their bookmarks and notations are unaffected.
+
+### Reversibility (the load-bearing decision)
+AI line-highlights are a **separate, render-only overlay** — they are **never written into `script_annotations`**. The user's own highlights/notes/cues/ink and the AI bookmarks are never read or mutated by this feature. Consequences:
+- "Fall back to the previous parsed version with only bookmarks + my notations" is the **default state** — there is literally nothing to undo, because nothing was ever written.
+- No DB writes, no schema changes, no new server actions, zero token cost.
+
+### How it works (client-side, cue-based)
+The desktop viewer (`script-viewer.tsx`) already builds a positioned text layer from `pdfjs` (`getTextContent()` → per-item x/y/width). The beta engine reuses it:
+1. The viewer is given the production's **cast names** (from `production_roles`; works whether they came from the AI parse or were hand-entered).
+2. The user picks a character from a **"Highlight lines (Beta)"** dropdown (default: Off).
+3. A pure client util (`features/scripts/line-highlights.ts`) walks each page's text items, groups them into lines by y-position, finds the chosen character's **cue lines** (the cast name as printed — `FREDERIC.` / `FREDERIC:` / `FREDERIC (aside):`), and boxes each line of the speech from the cue until the next cue / stage direction / scene heading. Anchoring on the known cast name (not a generic ALL-CAPS heuristic) keeps false positives down.
+4. Rects are emitted in the same normalized 0–1 coordinate space as existing annotations and rendered as a **non-interactive** SVG group **below** the user's annotation layer (so user highlights stay clickable), only for the current page. Results are cached per `(page, character)` in a module map so page-flips are instant.
+
+Selection is remembered in **localStorage** (client-only — still no server write).
+
+### Limitations (state them in the UI)
+- **Text PDFs only.** Scanned/OCR scripts have no client text layer, so highlighting is unavailable there (consistent with the OCR caveat).
+- **Format-dependent.** Two-column scripts, dialogue on the same line as the cue, names with spaces/abbreviations, and speeches that continue across a page break are imperfect (a continuation page has no cue, so its lines won't highlight).
+- Requires the cast to be set up (roles exist). If none, the control shows a "set up the cast first" hint.
+
+### Beta slice vs. later iterations
+- **Beta v1 (this scope):** desktop `ScriptViewer` — the dropdown + render-only overlay + the `line-highlights.ts` util + passing role names from `script/page.tsx`. No DB/schema/server changes.
+- **Fast follow:** the same overlay in the **mobile reader** (`mobile-script-reader.tsx`) — actors read on phones, so this is high-value.
+- **Later:** opt-in **persistence** as a separate AI-owned layer (distinct id prefix, still revert-by-clearing) so highlights appear in the "Download annotated PDF" export; **auto-select** the viewer's own character via `production_memberships.character_name`; and a **server-side / AI-assisted** coordinate engine for irregular scripts (accurate but token-costly).
+
+### Files (when built)
+- New `features/scripts/line-highlights.ts` (pure, client-safe: pdfjs textContent + character name → rects; unit-testable).
+- `script-viewer.tsx` (control + overlay layer), `script/page.tsx` (fetch + pass role names), optional `constants.ts` (highlight style token).
+- No schema, no server actions, no new dependency.
+
+### Open decisions (deferred)
+- **Plan gating:** the beta is client-side and free to run, so it isn't naturally covered by `assertCanMutate`. Decide later whether to gate *visibility* by plan (cosmetic) — recommend showing it to anyone who can view the script until/unless the costly server engine lands.
 
 ## Permissions
 
