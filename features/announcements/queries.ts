@@ -1,52 +1,134 @@
 import { db } from "@/db";
 import {
   announcements,
+  announcementProductions,
   profiles,
   productions,
   productionMemberships,
   organizationMemberships,
   announcementAcks,
 } from "@/db/schema";
-import { eq, desc, and, or, isNull, inArray, count, ne, gte } from "drizzle-orm";
+import {
+  eq,
+  desc,
+  and,
+  or,
+  inArray,
+  count,
+  countDistinct,
+  ne,
+  gte,
+  sql,
+} from "drizzle-orm";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { can } from "@/lib/permissions";
 import type { Role } from "@/types/roles";
+import type { AnnouncementPriority } from "@/db/schema";
 import {
   getOrganizationMembers,
-  getProductionMembers,
   getUserProductionIds,
 } from "@/features/members/queries";
 
-const announcementFields = {
+/** A production an announcement is broadcast to (for the scope chip + picker). */
+export type AnnouncementTarget = {
+  id: string;
+  title: string;
+  slug: string;
+  color: string | null;
+};
+
+/** Scope derived from the audience: org-wide, several shows, or one show. */
+export type AnnouncementScope = "org" | "multi" | "prod";
+
+export function announcementScope(
+  orgWide: boolean,
+  targetCount: number,
+): AnnouncementScope {
+  if (orgWide) return "org";
+  return targetCount > 1 ? "multi" : "prod";
+}
+
+const announcementCore = {
   id: announcements.id,
   title: announcements.title,
   body: announcements.body,
   pinned: announcements.pinned,
+  priority: announcements.priority,
+  requireAck: announcements.requireAck,
+  orgWide: announcements.orgWide,
   createdAt: announcements.createdAt,
-  productionId: announcements.productionId,
   createdById: announcements.createdBy,
   authorFirstName: profiles.firstName,
   authorLastName: profiles.lastName,
   authorEmail: profiles.email,
-  productionTitle: productions.title,
 };
 
-export async function getAnnouncementsByProduction(productionId: string, orgId: string) {
+/**
+ * Attach each announcement's target productions (the join-table audience).
+ * Org-wide announcements have no targets. Done in a single batched query so
+ * the list views stay O(1) round-trips.
+ */
+async function attachTargets<T extends { id: string; orgWide: boolean }>(
+  rows: T[],
+): Promise<(T & { targets: AnnouncementTarget[] })[]> {
+  if (rows.length === 0) return [];
+  const ids = rows.map((r) => r.id);
+  const links = await db
+    .select({
+      announcementId: announcementProductions.announcementId,
+      id: productions.id,
+      title: productions.title,
+      slug: productions.slug,
+      color: productions.color,
+    })
+    .from(announcementProductions)
+    .innerJoin(
+      productions,
+      eq(announcementProductions.productionId, productions.id),
+    )
+    .where(inArray(announcementProductions.announcementId, ids))
+    .orderBy(productions.title);
+
+  const map = new Map<string, AnnouncementTarget[]>();
+  for (const l of links) {
+    const arr = map.get(l.announcementId) ?? [];
+    arr.push({ id: l.id, title: l.title, slug: l.slug, color: l.color });
+    map.set(l.announcementId, arr);
+  }
+  return rows.map((r) => ({ ...r, targets: map.get(r.id) ?? [] }));
+}
+
+/** Announcement ids whose audience includes any of the given productions. */
+function announcementIdsTargeting(productionIds: string[]) {
   return db
-    .select(announcementFields)
+    .select({ id: announcementProductions.announcementId })
+    .from(announcementProductions)
+    .where(inArray(announcementProductions.productionId, productionIds));
+}
+
+/**
+ * Announcements visible on a production page — org-wide ones plus any whose
+ * audience includes this production.
+ */
+export async function getAnnouncementsByProduction(
+  productionId: string,
+  orgId: string,
+) {
+  const rows = await db
+    .select(announcementCore)
     .from(announcements)
     .innerJoin(profiles, eq(announcements.createdBy, profiles.id))
-    .leftJoin(productions, eq(announcements.productionId, productions.id))
     .where(
       and(
         eq(announcements.organizationId, orgId),
         or(
-          eq(announcements.productionId, productionId),
-          isNull(announcements.productionId),
+          eq(announcements.orgWide, true),
+          inArray(announcements.id, announcementIdsTargeting([productionId])),
         ),
       ),
     )
     .orderBy(desc(announcements.pinned), desc(announcements.createdAt));
+  return attachTargets(rows);
 }
 
 /**
@@ -64,8 +146,8 @@ export async function getAnnouncementCountByProduction(
       and(
         eq(announcements.organizationId, orgId),
         or(
-          eq(announcements.productionId, productionId),
-          isNull(announcements.productionId),
+          eq(announcements.orgWide, true),
+          inArray(announcements.id, announcementIdsTargeting([productionId])),
         ),
       ),
     );
@@ -78,43 +160,39 @@ export async function getAnnouncementsForUser(
   canManageProductions: boolean,
 ) {
   if (canManageProductions) {
-    return db
-      .select(announcementFields)
+    const rows = await db
+      .select(announcementCore)
       .from(announcements)
       .innerJoin(profiles, eq(announcements.createdBy, profiles.id))
-      .leftJoin(productions, eq(announcements.productionId, productions.id))
       .where(eq(announcements.organizationId, orgId))
       .orderBy(desc(announcements.pinned), desc(announcements.createdAt));
+    return attachTargets(rows);
   }
 
-  const memberships = await db
-    .select({ productionId: productionMemberships.productionId })
-    .from(productionMemberships)
-    .where(eq(productionMemberships.userId, userId));
+  const productionIds = [...(await getUserProductionIds(userId))];
 
-  const productionIds = memberships.map((m) => m.productionId);
+  const audience =
+    productionIds.length > 0
+      ? or(
+          eq(announcements.orgWide, true),
+          inArray(announcements.id, announcementIdsTargeting(productionIds)),
+        )
+      : eq(announcements.orgWide, true);
 
-  return db
-    .select(announcementFields)
+  const rows = await db
+    .select(announcementCore)
     .from(announcements)
     .innerJoin(profiles, eq(announcements.createdBy, profiles.id))
-    .leftJoin(productions, eq(announcements.productionId, productions.id))
-    .where(
-      and(
-        eq(announcements.organizationId, orgId),
-        productionIds.length > 0
-          ? or(isNull(announcements.productionId), inArray(announcements.productionId, productionIds))
-          : isNull(announcements.productionId),
-      ),
-    )
+    .where(and(eq(announcements.organizationId, orgId), audience))
     .orderBy(desc(announcements.pinned), desc(announcements.createdAt));
+  return attachTargets(rows);
 }
 
 /**
- * Announcements in the user's audience that they haven't acknowledged yet —
- * powers the acknowledge banner. Excludes the user's own posts and anything
- * older than 30 days (so enabling acks doesn't resurface ancient notices).
- * Audience = org-wide (null production) plus productions the user is in.
+ * Announcements in the user's audience that REQUIRE acknowledgement and that
+ * they haven't acknowledged yet — powers the acknowledge banner. Excludes the
+ * user's own posts and anything older than 30 days. Audience = org-wide plus
+ * announcements targeting a production the user is in.
  */
 export async function getUnacknowledgedAnnouncements(
   userId: string,
@@ -124,24 +202,21 @@ export async function getUnacknowledgedAnnouncements(
   const audience =
     productionIds.length > 0
       ? or(
-          isNull(announcements.productionId),
-          inArray(announcements.productionId, productionIds),
+          eq(announcements.orgWide, true),
+          inArray(announcements.id, announcementIdsTargeting(productionIds)),
         )
-      : isNull(announcements.productionId);
+      : eq(announcements.orgWide, true);
 
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  return db
+  const rows = await db
     .select({
       id: announcements.id,
       title: announcements.title,
-      productionId: announcements.productionId,
-      productionTitle: productions.title,
-      productionSlug: productions.slug,
+      orgWide: announcements.orgWide,
       createdAt: announcements.createdAt,
     })
     .from(announcements)
-    .leftJoin(productions, eq(announcements.productionId, productions.id))
     .leftJoin(
       announcementAcks,
       and(
@@ -152,14 +227,29 @@ export async function getUnacknowledgedAnnouncements(
     .where(
       and(
         eq(announcements.organizationId, orgId),
+        eq(announcements.requireAck, true),
         ne(announcements.createdBy, userId),
         audience,
-        isNull(announcementAcks.id),
+        sql`${announcementAcks.id} is null`,
         gte(announcements.createdAt, since),
       ),
     )
     .orderBy(desc(announcements.createdAt))
     .limit(10);
+
+  const withTargets = await attachTargets(rows);
+  return withTargets.map((r) => {
+    const scopeLabel = r.orgWide
+      ? "Company-wide"
+      : r.targets.length === 1
+        ? r.targets[0].title
+        : `${r.targets.length} productions`;
+    const href =
+      !r.orgWide && r.targets.length === 1
+        ? `/productions/${r.targets[0].slug}/announcements`
+        : "/announcements";
+    return { id: r.id, title: r.title, scopeLabel, href };
+  });
 }
 
 export type AnnouncementWithMeta = Awaited<
@@ -169,7 +259,8 @@ export type AnnouncementWithMeta = Awaited<
 export type AnnouncementAckInfo = {
   /** How many people have acknowledged. */
   acked: number;
-  /** Audience size: org members (org-wide) or production members (scoped). */
+  /** Audience size: org members (org-wide) or the deduped union of the
+   *  targeted productions' members. */
   total: number;
   /** Whether the current user has acknowledged. */
   mine: boolean;
@@ -178,8 +269,8 @@ export type AnnouncementAckInfo = {
 /**
  * Acknowledgement rollup for a set of announcements: per-announcement acked
  * count, audience size, and whether the current user has acknowledged. The
- * audience is the org's members for org-wide announcements (null production)
- * and the production's members for production-scoped ones.
+ * audience is the org's members for org-wide announcements and the deduped
+ * union of the targeted productions' members for scoped ones.
  */
 export async function getAckInfoForAnnouncements(
   announcementIds: string[],
@@ -192,7 +283,7 @@ export async function getAckInfoForAnnouncements(
     db
       .select({
         id: announcements.id,
-        productionId: announcements.productionId,
+        orgWide: announcements.orgWide,
       })
       .from(announcements)
       .where(inArray(announcements.id, announcementIds)),
@@ -219,20 +310,27 @@ export async function getAckInfoForAnnouncements(
       .where(eq(organizationMemberships.organizationId, orgId)),
   ]);
 
-  const productionIds = [
-    ...new Set(scopes.map((s) => s.productionId).filter((p): p is string => !!p)),
-  ];
-  const prodTotals: Record<string, number> = {};
-  if (productionIds.length > 0) {
+  const scopedIds = scopes.filter((s) => !s.orgWide).map((s) => s.id);
+
+  // Deduped union of members across each scoped announcement's productions.
+  const scopedTotals: Record<string, number> = {};
+  if (scopedIds.length > 0) {
     const rows = await db
       .select({
-        productionId: productionMemberships.productionId,
-        value: count(),
+        announcementId: announcementProductions.announcementId,
+        value: countDistinct(productionMemberships.userId),
       })
-      .from(productionMemberships)
-      .where(inArray(productionMemberships.productionId, productionIds))
-      .groupBy(productionMemberships.productionId);
-    for (const r of rows) prodTotals[r.productionId] = r.value;
+      .from(announcementProductions)
+      .innerJoin(
+        productionMemberships,
+        eq(
+          productionMemberships.productionId,
+          announcementProductions.productionId,
+        ),
+      )
+      .where(inArray(announcementProductions.announcementId, scopedIds))
+      .groupBy(announcementProductions.announcementId);
+    for (const r of rows) scopedTotals[r.announcementId] = r.value;
   }
 
   const orgTotal = orgRow?.value ?? 0;
@@ -243,7 +341,7 @@ export async function getAckInfoForAnnouncements(
   for (const s of scopes) {
     out[s.id] = {
       acked: ackedMap.get(s.id) ?? 0,
-      total: s.productionId ? prodTotals[s.productionId] ?? 0 : orgTotal,
+      total: s.orgWide ? orgTotal : (scopedTotals[s.id] ?? 0),
       mine: mineSet.has(s.id),
     };
   }
@@ -263,8 +361,11 @@ export type AnnouncementDetail = {
   id: string;
   title: string;
   bodyHtml: string;
+  priority: AnnouncementPriority;
+  requireAck: boolean;
+  scope: AnnouncementScope;
   scopeLabel: string;
-  scopeTone: "amber" | "dusk";
+  scopeTone: "amber" | "dusk" | "plum";
   authorName: string;
   createdAtIso: string;
   mineAcked: boolean;
@@ -281,11 +382,40 @@ function nameInitials(name: string): string {
 }
 
 /**
+ * Members in an announcement's audience: org members for org-wide, otherwise
+ * the deduped union of the targeted productions' members.
+ */
+async function getAudienceMembers(
+  orgWide: boolean,
+  orgId: string,
+  productionIds: string[],
+): Promise<
+  { userId: string; firstName: string | null; lastName: string | null; email: string }[]
+> {
+  if (orgWide) {
+    return getOrganizationMembers(orgId);
+  }
+  if (productionIds.length === 0) return [];
+  const rows = await db
+    .selectDistinct({
+      userId: profiles.id,
+      firstName: profiles.firstName,
+      lastName: profiles.lastName,
+      email: profiles.email,
+    })
+    .from(productionMemberships)
+    .innerJoin(profiles, eq(productionMemberships.userId, profiles.id))
+    .where(inArray(productionMemberships.productionId, productionIds));
+  return rows;
+}
+
+/**
  * Full announcement plus its acknowledgement roster, for the detail drawer.
  * Returns null if the announcement doesn't exist, isn't in the user's org, or
  * the user isn't in its audience. The roster is the audience (org members for
- * org-wide, production members for scoped) minus the author, each flagged
- * acked/not with a timestamp, acknowledged first.
+ * org-wide, the deduped union of the targeted productions' members for scoped)
+ * minus the author, each flagged acked/not with a timestamp, acknowledged
+ * first.
  */
 export async function getAnnouncementDetailForUser(
   userId: string,
@@ -298,37 +428,39 @@ export async function getAnnouncementDetailForUser(
       id: announcements.id,
       title: announcements.title,
       body: announcements.body,
-      productionId: announcements.productionId,
+      priority: announcements.priority,
+      requireAck: announcements.requireAck,
+      orgWide: announcements.orgWide,
       createdBy: announcements.createdBy,
       createdAt: announcements.createdAt,
       organizationId: announcements.organizationId,
       authorFirst: profiles.firstName,
       authorLast: profiles.lastName,
       authorEmail: profiles.email,
-      productionTitle: productions.title,
     })
     .from(announcements)
     .innerJoin(profiles, eq(announcements.createdBy, profiles.id))
-    .leftJoin(productions, eq(announcements.productionId, productions.id))
     .where(eq(announcements.id, announcementId))
     .limit(1);
 
   if (!row || row.organizationId !== orgId) return null;
 
+  const targetIds = row.orgWide
+    ? []
+    : (
+        await db
+          .select({ productionId: announcementProductions.productionId })
+          .from(announcementProductions)
+          .where(eq(announcementProductions.announcementId, announcementId))
+      ).map((r) => r.productionId);
+
   const canManage = can(role, "productions:manage");
-  if (row.productionId && !canManage) {
+  if (!row.orgWide && !canManage) {
     const prodIds = await getUserProductionIds(userId);
-    if (!prodIds.has(row.productionId)) return null;
+    if (!targetIds.some((id) => prodIds.has(id))) return null;
   }
 
-  const members: {
-    userId: string;
-    firstName: string | null;
-    lastName: string | null;
-    email: string;
-  }[] = row.productionId
-    ? await getProductionMembers(row.productionId)
-    : await getOrganizationMembers(orgId);
+  const members = await getAudienceMembers(row.orgWide, orgId, targetIds);
 
   const acks = await db
     .select({
@@ -366,14 +498,35 @@ export async function getAnnouncementDetailForUser(
     `${row.authorFirst ?? ""} ${row.authorLast ?? ""}`.trim() ||
     row.authorEmail;
 
+  const scope = announcementScope(row.orgWide, targetIds.length);
+  let scopeLabel: string;
+  let scopeTone: "amber" | "dusk" | "plum";
+  if (scope === "org") {
+    scopeLabel = "Company-wide";
+    scopeTone = "amber";
+  } else if (scope === "multi") {
+    scopeLabel = `${targetIds.length} productions`;
+    scopeTone = "plum";
+  } else {
+    // Single production — look up its title for the label.
+    const [prod] = await db
+      .select({ title: productions.title })
+      .from(productions)
+      .where(eq(productions.id, targetIds[0]))
+      .limit(1);
+    scopeLabel = prod?.title ?? "Production";
+    scopeTone = "dusk";
+  }
+
   return {
     id: row.id,
     title: row.title,
     bodyHtml: row.body ? sanitizeHtml(row.body) : "",
-    scopeLabel: row.productionId
-      ? (row.productionTitle ?? "Production")
-      : "Company-wide",
-    scopeTone: row.productionId ? "dusk" : "amber",
+    priority: row.priority as AnnouncementPriority,
+    requireAck: row.requireAck,
+    scope,
+    scopeLabel,
+    scopeTone,
     authorName,
     createdAtIso: row.createdAt.toISOString(),
     mineAcked: ackMap.has(userId),
@@ -381,4 +534,77 @@ export async function getAnnouncementDetailForUser(
     total: roster.length,
     roster,
   };
+}
+
+/** A targetable production for the composer audience picker. */
+export type ComposerProduction = {
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+  color: string | null;
+  members: number;
+};
+
+/**
+ * Active (non-archived) productions with member counts, for the composer's
+ * audience picker, plus the org's distinct member count (the org-wide reach).
+ */
+export async function getComposerAudience(orgId: string): Promise<{
+  productions: ComposerProduction[];
+  orgMemberCount: number;
+}> {
+  const [prods, [orgRow]] = await Promise.all([
+    db
+      .select({
+        id: productions.id,
+        title: productions.title,
+        slug: productions.slug,
+        status: productions.status,
+        color: productions.color,
+        members: count(productionMemberships.id),
+      })
+      .from(productions)
+      .leftJoin(
+        productionMemberships,
+        eq(productionMemberships.productionId, productions.id),
+      )
+      .where(
+        and(
+          eq(productions.organizationId, orgId),
+          sql`${productions.archivedAt} is null`,
+        ),
+      )
+      .groupBy(productions.id)
+      .orderBy(desc(productions.createdAt)),
+    db
+      .select({ value: count() })
+      .from(organizationMemberships)
+      .where(eq(organizationMemberships.organizationId, orgId)),
+  ]);
+
+  return {
+    productions: prods,
+    orgMemberCount: orgRow?.value ?? 0,
+  };
+}
+
+/**
+ * Deduped audience members for the post-time notification fan-out: org members
+ * for org-wide, otherwise the union of the targeted productions' members.
+ */
+export async function getFanoutAudience(
+  orgWide: boolean,
+  orgId: string,
+  productionIds: string[],
+): Promise<
+  { userId: string; email: string; firstName: string | null; lastName: string | null }[]
+> {
+  const members = await getAudienceMembers(orgWide, orgId, productionIds);
+  return members.map((m) => ({
+    userId: m.userId,
+    email: m.email,
+    firstName: m.firstName,
+    lastName: m.lastName,
+  }));
 }
