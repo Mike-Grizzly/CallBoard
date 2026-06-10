@@ -33,12 +33,25 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
   accuracy for bookmarks) is unproven on real, irregularly-formatted scripts.
 - **Long-script timeout.** The run route caps at `maxDuration=300`. A very long
   script (model latency + extraction) could exceed it; needs Vercel Fluid
-  compute for a higher ceiling, or chunking. No retry/resume if it times out
-  (the row just stays `processing` — should it auto-fail after a deadline?).
-- **`after()` durability.** Relies on Vercel keeping the function alive for the
-  deferred work. If the platform reclaims it early, the parse stalls in
-  `processing` with no watchdog. Consider a sweep that flips stale
-  `processing` rows to `failed`.
+  compute for a higher ceiling, or chunking. No retry/resume if it times out.
+- **Stalled-parse watchdog: RESOLVED (2026-06-10).** A parse whose worker dies
+  (Vercel reclaims the function, or it exceeds `maxDuration`) no longer spins the
+  review page forever or blocks new parses. Anything `processing` past
+  `STALE_PARSE_MS` (8 min) is treated as dead: the poll paths
+  (`fetchLatestScriptParse`/`fetchScriptParseById`) flip it to `failed` via
+  `failIfStale`, and the concurrency locks (`startScriptParse`/`reparseWithNotes`/
+  `startWizardScriptParse`) ignore stale rows via `hasLiveProcessing`. Residual
+  cosmetic edge: a parse nobody polls and nobody supersedes keeps the document's
+  `processingStatus` at `processing` until something touches it — no functional
+  impact (no longer blocks). A daily cron sweep could tidy this if it matters.
+- **Re-apply duplicates roles/scenes: RESOLVED (2026-06-10).** `applyScriptParse`
+  is now safe to re-apply: re-applying the same parse is a no-op (status guard),
+  and roles/scenes are de-duplicated against what the production already has
+  (roles by name, scenes by act/scene number). Note: it is **additive** — a
+  re-parse that *removes* or *renames* a role/scene won't delete the old row
+  (there's no AI-vs-hand-added marker, and `production_scenes` is shared with the
+  blocking tool, so blind deletion is unsafe). The director curates removals in
+  the review form / members page.
 - **Scanned PDFs: RESOLVED (2026-06-10).** Image-only/scanned scripts are now
   read via Claude's vision/PDF pipeline (`runScriptParse` vision path — sends the
   signed URL as a `document` block). Open edges: (1) **bookmark pages on scans are

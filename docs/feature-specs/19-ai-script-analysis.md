@@ -228,6 +228,23 @@ and this is a setup-time action, so caps cover the economics without a new SKU.
 A per-tier monthly quota (free 5 / repertory 20 / company ∞) is the natural
 future lever if AI usage becomes material — deferred until there's token data.
 
+## Reliability (added 2026-06-10)
+
+- **Stalled-parse watchdog.** If the async run worker dies (Vercel reclaim, or
+  work > `maxDuration=300s`) the row would sit in `processing` forever — spinning
+  the review page and blocking new parses via the concurrency lock. A row
+  `processing` past `STALE_PARSE_MS` (8 min) is now treated as dead: the poll
+  actions (`fetchLatestScriptParse`/`fetchScriptParseById`) flip it to `failed`
+  (`failIfStale`), and all three concurrency locks skip it (`hasLiveProcessing`).
+  Lazy — no cron, since the review page polls every 3s.
+- **Idempotent apply.** `applyScriptParse` re-applying an already-`applied` parse
+  is a no-op (status guard); roles/scenes are inserted additively but
+  **de-duplicated** against the production's existing rows (roles by name, scenes
+  by act/scene number), so a double-click or an overlapping re-parse won't pile up
+  duplicates. It never *deletes* (scenes are shared with the blocking tool, and
+  roles can be hand-added) — a re-parse that drops a role/scene leaves the old row
+  for manual removal.
+
 ## Setup the user owns
 
 - Set `ANTHROPIC_API_KEY` in Vercel (and local `.env`). `.env.example` documents

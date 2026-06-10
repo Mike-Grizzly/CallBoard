@@ -1673,3 +1673,17 @@ the pricing PAGE to match this model.
 - **Cache fingerprint** for scans is the **raw file bytes** SHA-256, not the normalized text (empty text would collide across different scans and poison the cross-org `script_cache`). Text PDFs keep the text fingerprint; both are hex in the same column.
 - Cost on scans is higher (~$1–2/script: image + text tokens per page), bounded by the existing per-production/per-user caps. The wizard auto-fill path inherits this for free (same `runScriptParse`).
 - Files touched: `features/scripts/parse.ts` (vision branch, prompts, `resolveVisionBookmarks`, `textFromMessage`, `MAX_SCANNED_PAGES`); AI-setup caveat copy in `script/ai/ai-review-client.tsx`.
+
+---
+
+## 2026-06-10 — AI script-parse reliability: stale-parse watchdog + idempotent apply
+
+**Decision:** Two self-contained reliability fixes to the AI script-analysis feature, both in `features/scripts/actions.ts`.
+
+1. **Stalled-parse watchdog (lazy, no cron).** The async run worker can die (Vercel reclaims the function, or work exceeds `maxDuration=300s`) without ever flipping the row off `processing`, which previously (a) spun the review page forever and (b) blocked all future parses via the concurrency lock. A row still `processing` past `STALE_PARSE_MS` (8 min) is now treated as dead: the poll paths (`fetchLatestScriptParse`/`fetchScriptParseById`) flip it to `failed` (`failIfStale`) so the UI shows a timeout, and the three concurrency locks (`startScriptParse`/`reparseWithNotes`/`startWizardScriptParse`) ignore stale rows (`hasLiveProcessing`). Chose lazy detection over a cron sweep because the poll already happens every 3s — the user watching gets immediate feedback with zero new infra.
+
+2. **Idempotent apply.** `applyScriptParse` blindly inserted roles + scenes, so a double-click or a re-parse re-apply piled up duplicates (only bookmarks were idempotent). Now: re-applying an already-`applied` parse is a no-op (status guard), and roles/scenes are inserted **additively but de-duplicated** against what the production already has (roles by name, scenes by act/scene number).
+
+**Reason:** The feature isn't live-verified yet; these are the difference between an impressive demo and something trustworthy in production. Both are small and contained to the scripts feature.
+
+**Impact:** No schema change. Apply is **additive** by design — it never deletes, because `production_scenes` is shared with the blocking tool and roles can be hand-added/wizard-created, so there's no safe blanket "replace AI rows" without an AI-vs-manual marker column. A re-parse that drops/renames a role or scene leaves the old row for the director to remove in the review form. Late-joiner bookmark seeding (members who join after apply) is still open — tracked in open-questions.
