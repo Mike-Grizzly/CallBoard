@@ -18,6 +18,8 @@ type Props = {
   initialBookmarks: Bookmark[];
   initialPageOverrides: PageOverrides;
   initialHasStalePages: boolean;
+  slug: string;
+  canManage: boolean;
 };
 
 /**

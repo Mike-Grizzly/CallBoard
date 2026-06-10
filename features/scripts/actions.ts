@@ -495,9 +495,15 @@ async function seedSharedBookmarks(
         bookmarks: shared,
       });
     } else {
-      const have = new Set(current.map((b) => b.id));
-      const merged = [...current, ...shared.filter((b) => !have.has(b.id))];
-      if (merged.length !== current.length) {
+      // Replace the previous AI-seeded set (ids prefixed "ai-") with the new
+      // one, but preserve any bookmarks the user added themselves. This means a
+      // re-parse re-bookmarks from scratch instead of piling onto stale markers.
+      const userOwned = current.filter((b) => !b.id.startsWith("ai-"));
+      const merged = [...userOwned, ...shared];
+      const changed =
+        merged.length !== current.length ||
+        merged.some((b, i) => current[i]?.id !== b.id);
+      if (changed) {
         await db
           .update(scriptAnnotations)
           .set({ bookmarks: merged, updatedAt: new Date() })

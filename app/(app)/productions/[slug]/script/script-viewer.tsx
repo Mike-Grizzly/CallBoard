@@ -29,7 +29,9 @@ import {
   Pencil,
   BookOpen,
   Maximize2,
+  Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 import { saveAnnotations, dismissStaleBanner } from "@/features/scripts/actions";
 import {
   ANNOTATION_COLORS,
@@ -64,6 +66,8 @@ interface Props {
   initialBookmarks: Bookmark[];
   initialPageOverrides: PageOverrides;
   initialHasStalePages: boolean;
+  slug: string;
+  canManage: boolean;
 }
 
 type PendingAnnotation =
@@ -78,6 +82,8 @@ export function ScriptViewer({
   initialBookmarks,
   initialPageOverrides,
   initialHasStalePages,
+  slug,
+  canManage,
 }: Props) {
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
@@ -1039,6 +1045,17 @@ export function ScriptViewer({
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {canManage && (
+              <Link
+                href={`/productions/${slug}/script/ai`}
+                className="btn ghost"
+                style={{ fontSize: 12, height: 28, gap: 5, textDecoration: "none" }}
+                title="Set up or refine the AI cast / scene / bookmark breakdown"
+              >
+                <Sparkles size={13} />
+                <span>AI setup</span>
+              </Link>
+            )}
             <button
               className="btn ghost"
               onClick={() => {
@@ -2089,7 +2106,7 @@ function BookmarksPanel({
           No matching bookmarks.
         </p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 1, marginBottom: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 1, marginBottom: 8, maxHeight: "min(340px, 42vh)", overflowY: "auto" }}>
           {filtered.map((bm) => (
             <div
               key={bm.id}

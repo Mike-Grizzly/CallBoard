@@ -107,6 +107,29 @@ scenes). Root cause: the model was being asked to *recall* page numbers across a
   previous result** back to the model for a targeted revision. Counts against the
   per-production cap; the review page flips back to processing and polls.
 
+## Index-page handling & bookmark replacement
+
+- **Index/contents pages are not bookmarked.** Scripts open with a table of
+  contents / "Musical Numbers" / synopsis listing every song & scene. Since those
+  titles appear there *first*, a naive first-match resolved every bookmark to the
+  index. `resolveBookmarks` now detects index pages (named index sections, or any
+  page containing ≥4 distinct bookmark anchors) and resolves each anchor to its
+  first occurrence in the **body**, skipping index pages. The prompt also tells
+  the model those pages are reference-only.
+- **Re-parse replaces AI bookmarks, keeps personal ones.** `seedSharedBookmarks`
+  drops the prior AI-seeded set (ids prefixed `ai-`) and writes the new set, while
+  preserving any bookmark a user added themselves. So re-analyzing re-bookmarks
+  from scratch instead of piling onto stale markers.
+
+## Refining without re-uploading
+
+The `/productions/{slug}/script/ai` page is a persistent home for the breakdown.
+The "Not quite right?" re-analyze box (free-text notes → `reparseWithNotes`, runs
+on the **existing** uploaded file) is shown both while reviewing a fresh parse and
+in the **applied** state, so a director can keep refining after applying without
+re-uploading. The desktop script reader has a manager-only **"AI setup"** toolbar
+link to this page (`documents:upload` capability).
+
 ## Script-recognition cache (global, cross-org)
 
 A `script_cache` table (server-only, RLS-on/no-policies, **no org column** — it's

@@ -113,7 +113,19 @@ export function AiReviewClient({
       {!parse && <EmptyState slug={slug} />}
       {parse?.status === "processing" && <Processing />}
       {parse?.status === "failed" && <Failed error={parse.error} slug={slug} />}
-      {parse?.status === "applied" && <Applied slug={slug} />}
+      {parse?.status === "applied" && (
+        <Applied
+          slug={slug}
+          parseId={parse.id}
+          onReanalyze={(newId) =>
+            setParse((p) =>
+              p
+                ? { ...p, id: newId, status: "processing", result: null, error: null }
+                : p,
+            )
+          }
+        />
+      )}
       {parse?.status === "ready" && (
         <ReviewForm
           parseId={parse.id}
@@ -225,42 +237,123 @@ function Failed({ error, slug }: { error: string | null; slug: string }) {
   );
 }
 
-function Applied({ slug }: { slug: string }) {
+function Applied({
+  slug,
+  parseId,
+  onReanalyze,
+}: {
+  slug: string;
+  parseId: string;
+  onReanalyze: (newParseId: string) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <Card>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+          <span
+            style={{
+              display: "grid",
+              placeItems: "center",
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: "color-mix(in oklch, var(--accent) 16%, transparent)",
+              color: "var(--accent)",
+            }}
+          >
+            <Check size={18} />
+          </span>
+          <p style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
+            Applied to your production
+          </p>
+        </div>
+        <p style={{ fontSize: 13, color: "var(--ink-3)", margin: "0 0 16px" }}>
+          The cast list and scene breakdown are now set up, and bookmarks have
+          been added to the script for everyone on the team.
+        </p>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Link href={`/productions/${slug}/members`} style={primaryLink}>
+            Assign actors
+          </Link>
+          <Link href={`/productions/${slug}/script`} style={ghostLink}>
+            Open script
+          </Link>
+          <Link href={`/productions/${slug}/blocking`} style={ghostLink}>
+            Blocking
+          </Link>
+        </div>
+      </Card>
+
+      <ReanalyzeBox
+        parseId={parseId}
+        onReanalyze={onReanalyze}
+        intro="Re-run the analysis on the same script — no need to re-upload. Applying again refreshes the cast, scenes, and AI bookmarks (your own bookmarks are kept)."
+      />
+    </div>
+  );
+}
+
+/**
+ * Re-run the analysis on the existing (already-uploaded) script with free-text
+ * corrections. Used both while reviewing a fresh parse and after one has been
+ * applied, so the AI page is a persistent home for refining the breakdown.
+ */
+function ReanalyzeBox({
+  parseId,
+  onReanalyze,
+  intro,
+}: {
+  parseId: string;
+  onReanalyze: (newParseId: string) => void;
+  intro?: string;
+}) {
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function run() {
+    setError(null);
+    if (!notes.trim()) {
+      setError("Add a note describing what to fix.");
+      return;
+    }
+    startTransition(async () => {
+      const res = await reparseWithNotes(parseId, notes.trim());
+      if (res.error || !res.parseId) {
+        setError(res.error ?? "Could not re-analyze.");
+        return;
+      }
+      fetch(`/api/scripts/${res.parseId}/run`, { method: "POST" }).catch(() => {});
+      onReanalyze(res.parseId);
+    });
+  }
+
   return (
     <Card>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-        <span
-          style={{
-            display: "grid",
-            placeItems: "center",
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            background: "color-mix(in oklch, var(--accent) 16%, transparent)",
-            color: "var(--accent)",
-          }}
-        >
-          <Check size={18} />
-        </span>
-        <p style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
-          Applied to your production
-        </p>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <Sparkles size={16} style={{ color: "var(--accent)" }} />
+        <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Not quite right?</h2>
       </div>
-      <p style={{ fontSize: 13, color: "var(--ink-3)", margin: "0 0 16px" }}>
-        The cast list and scene breakdown are now set up, and bookmarks have
-        been added to the script for everyone on the team.
+      <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: "6px 0 0" }}>
+        {intro ??
+          "Tell the AI what was wrong and re-run it — e.g. “songs are misnumbered after page 30, use the printed ‘No. X’ labels” or “page 45 isn’t a new scene.”"}
       </p>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Link href={`/productions/${slug}/members`} style={primaryLink}>
-          Assign actors
-        </Link>
-        <Link href={`/productions/${slug}/script`} style={ghostLink}>
-          Open script
-        </Link>
-        <Link href={`/productions/${slug}/blocking`} style={ghostLink}>
-          Blocking
-        </Link>
-      </div>
+      <textarea
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="What should the AI fix on the next pass?"
+        rows={3}
+        style={{ ...textInput, width: "100%", marginTop: 12, resize: "vertical", fontFamily: "inherit" }}
+      />
+      <button onClick={run} disabled={isPending || !notes.trim()} style={{ ...ghostBtn, marginTop: 10 }}>
+        <Sparkles size={14} /> Re-analyze with notes
+      </button>
+      <p style={{ fontSize: 11, color: "var(--ink-3)", margin: "8px 0 0" }}>
+        Re-running starts a fresh analysis (counts toward your limit).
+      </p>
+      {error && (
+        <p style={{ color: "var(--c-clay)", fontSize: 13, margin: "8px 0 0" }}>{error}</p>
+      )}
     </Card>
   );
 }
@@ -280,7 +373,6 @@ function ReviewForm({
   onDiscarded: () => void;
   onReanalyze: (newParseId: string) => void;
 }) {
-  const [notes, setNotes] = useState("");
   const [roles, setRoles] = useState<RoleEdit[]>(
     (result?.roles ?? []).map((r) => ({ ...r, key: nextKey() })),
   );
@@ -325,23 +417,6 @@ function ReviewForm({
     startTransition(async () => {
       await discardScriptParse(parseId);
       onDiscarded();
-    });
-  }
-
-  function reanalyze() {
-    setError(null);
-    if (!notes.trim()) {
-      setError("Add a note describing what to fix.");
-      return;
-    }
-    startTransition(async () => {
-      const res = await reparseWithNotes(parseId, notes.trim());
-      if (res.error || !res.parseId) {
-        setError(res.error ?? "Could not re-analyze.");
-        return;
-      }
-      fetch(`/api/scripts/${res.parseId}/run`, { method: "POST" }).catch(() => {});
-      onReanalyze(res.parseId);
     });
   }
 
@@ -488,44 +563,8 @@ function ReviewForm({
         )}
       </Card>
 
-      {/* Re-analyze with corrections */}
-      <Card>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Sparkles size={16} style={{ color: "var(--accent)" }} />
-          <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>
-            Not quite right?
-          </h2>
-        </div>
-        <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: "6px 0 0" }}>
-          Tell the AI what was wrong and re-run it — e.g. &ldquo;songs are
-          misnumbered after page 30, use the printed &lsquo;No.&nbsp;X&rsquo;
-          labels&rdquo; or &ldquo;page 45 isn&apos;t a new scene.&rdquo;
-        </p>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="What should the AI fix on the next pass?"
-          rows={3}
-          style={{
-            ...textInput,
-            width: "100%",
-            marginTop: 12,
-            resize: "vertical",
-            fontFamily: "inherit",
-          }}
-        />
-        <button
-          onClick={reanalyze}
-          disabled={isPending || !notes.trim()}
-          style={{ ...ghostBtn, marginTop: 10 }}
-        >
-          <Sparkles size={14} /> Re-analyze with notes
-        </button>
-        <p style={{ fontSize: 11, color: "var(--ink-3)", margin: "8px 0 0" }}>
-          Re-running starts a fresh analysis (counts toward your limit) and
-          replaces what&apos;s above.
-        </p>
-      </Card>
+      {/* Re-analyze with corrections — same flow, runs on the existing file */}
+      <ReanalyzeBox parseId={parseId} onReanalyze={onReanalyze} />
 
       {error && (
         <p style={{ color: "var(--c-clay)", fontSize: 13, margin: 0 }}>{error}</p>

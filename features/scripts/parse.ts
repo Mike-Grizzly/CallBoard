@@ -68,17 +68,41 @@ function resolveBookmarks(
   pages: string[],
 ): ParsedBookmark[] {
   const pagesNorm = pages.map(normalizeText);
+
+  // Identify front-matter "index" pages — a table of contents, "musical
+  // numbers" list, or synopsis of scenes. These list many scene/song titles
+  // together, so a naive first-match would resolve every bookmark to the index
+  // instead of the real page. A page is treated as an index page if it names an
+  // index section, or if it contains many (≥4) distinct bookmark anchors.
+  const INDEX_KEYWORDS = [
+    "musical numbers",
+    "scenes and musical numbers",
+    "synopsis of scenes",
+    "table of contents",
+    "list of scenes",
+  ];
+  const anchorTexts = raw
+    .map((b) => normalizeText(b.anchor ?? b.title ?? ""))
+    .filter((a) => a.length >= 4);
+  const indexPages = new Set<number>();
+  for (let i = 0; i < pagesNorm.length; i++) {
+    const text = pagesNorm[i];
+    const distinctHits = new Set(anchorTexts.filter((a) => text.includes(a)));
+    const hasKeyword = INDEX_KEYWORDS.some((k) => text.includes(k));
+    if (hasKeyword || distinctHits.size >= 4) indexPages.add(i);
+  }
+  const findBodyPage = (needle: string) =>
+    pagesNorm.findIndex((p, i) => !indexPages.has(i) && p.includes(needle));
+
   const out: ParsedBookmark[] = [];
   const seen = new Set<string>();
   for (const b of raw) {
     const anchor = normalizeText(b.anchor ?? "");
     const title = normalizeText(b.title ?? "");
     let page = -1;
-    if (anchor.length >= 4) page = pagesNorm.findIndex((p) => p.includes(anchor));
-    if (page === -1 && title.length >= 4) {
-      page = pagesNorm.findIndex((p) => p.includes(title));
-    }
-    if (page === -1) continue; // unfindable → likely spurious, drop
+    if (anchor.length >= 4) page = findBodyPage(anchor);
+    if (page === -1 && title.length >= 4) page = findBodyPage(title);
+    if (page === -1) continue; // unfindable outside the index → drop
     const key = `${page}|${(b.title ?? "").trim().toLowerCase()}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -107,7 +131,7 @@ const SYSTEM_PROMPT = `You analyse theatrical scripts and musical-theatre libret
 Produce four things:
 1. roles — every named speaking/singing character. Classify each as Principal (large role, drives the plot, sings/speaks frequently), Supporting (named role with meaningful but smaller presence), or Ensemble (chorus, named groups, or one-scene bit parts). Use the character name as it appears in the script (e.g. "Frederic", not "FREDERIC:"). Do not invent characters; do not list stage directions, narrators of headings, or props as characters. Each character appears once.
 2. scenes — the Act/Scene structure in reading order. actNumber and sceneNumber are 1-based integers; for a single-act play use actNumber 1 throughout. title is a short scene label (the script's own scene heading if present, otherwise a brief setting like "The town square").
-3. bookmarks — one entry per scene start (kind "scene") and per musical number / song (kind "song"). Do NOT return a page number. Instead return an "anchor": a short, EXACT, verbatim quote (3–8 words) copied character-for-character from the script at that point — the scene heading or the song's title/number line as printed (e.g. "No. 7 — Poor Wandering One" or "ACT II, SCENE 1"). The anchor MUST appear verbatim in the script text so it can be located; if you can't quote it exactly, omit that bookmark. For song titles and numbers, copy the script's own printed label exactly — never renumber, re-letter, or invent a sequence. Only mark genuine scene/song starts, not every page or stage direction.
+3. bookmarks — one entry per scene start (kind "scene") and per musical number / song (kind "song"). Do NOT return a page number. Instead return an "anchor": a short, EXACT, verbatim quote (3–8 words) copied character-for-character from the script at that point — the scene heading or the song's title/number line as printed (e.g. "No. 7 — Poor Wandering One" or "ACT II, SCENE 1"). The anchor MUST appear verbatim in the script text so it can be located; if you can't quote it exactly, omit that bookmark. For song titles and numbers, copy the script's own printed label exactly — never renumber, re-letter, or invent a sequence. Only mark genuine scene/song starts, not every page or stage direction. IMPORTANT: front-matter listing pages — a table of contents, a "Musical Numbers" list, a synopsis/list of scenes — are reference only. Use them to understand the structure, but create exactly ONE bookmark per scene/song at its ACTUAL start in the body of the script, never a bookmark for its entry in such a list.
 
 If the script is not actually a script (e.g. a contract or a flyer), return empty arrays.
 

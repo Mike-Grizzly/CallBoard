@@ -85,6 +85,8 @@ export default async function ScriptPage({
       initialBookmarks={bookmarks}
       initialPageOverrides={pageOverrides}
       initialHasStalePages={hasStalePages}
+      slug={slug}
+      canManage={can(user.role, "documents:upload")}
     />
   );
 }
