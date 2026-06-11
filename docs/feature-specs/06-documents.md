@@ -10,6 +10,10 @@ As a stage manager, I can upload scripts, schedules, and other production files 
 - **Document annotations/comments:** Placeholder sidebar exists in the viewer but no data model or functionality. Scaffolded only.
 - **AI script analysis:** Schema fields exist (`documentType`, `processingStatus`) but no processing logic. Scaffolded only.
 
+> **Folders + privacy:** documents are organized into `document_folders`
+> (added after this spec). Folders can be role-restricted — see
+> `13-document-folder-privacy.md`.
+
 ## Data model
 - `documents` — productionId, uploadedBy, title, fileName, fileSize, contentType, storagePath, documentType, processingStatus, createdAt
 

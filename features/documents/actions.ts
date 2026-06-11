@@ -9,6 +9,7 @@ import { can } from "@/lib/permissions";
 import { assertCanMutate } from "@/features/billing/guard";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_FOLDERS } from "./constants";
+import { ROLES } from "@/types/roles";
 
 export type UploadDocumentResult = {
   error?: string;
@@ -26,6 +27,24 @@ export async function createDefaultFolders(productionId: string) {
 }
 
 export type CreateFolderResult = { error?: string; success?: boolean };
+
+/** Read a folder's visibility + allowed roles from a form. A folder is
+ *  "restricted" only when explicitly flagged AND at least one role is chosen;
+ *  otherwise it falls back to "everyone" (and roles are cleared). */
+function readFolderVisibility(formData: FormData): {
+  visibility: "everyone" | "restricted";
+  allowedRoles: string[] | null;
+} {
+  const restricted = formData.get("visibility") === "restricted";
+  const roles = formData
+    .getAll("allowed_roles")
+    .map((r) => String(r))
+    .filter((r) => (ROLES as readonly string[]).includes(r));
+  if (restricted && roles.length > 0) {
+    return { visibility: "restricted", allowedRoles: roles };
+  }
+  return { visibility: "everyone", allowedRoles: null };
+}
 
 export async function createFolder(
   formData: FormData,
@@ -59,11 +78,59 @@ export async function createFolder(
     .from(documentFolders)
     .where(eq(documentFolders.productionId, productionId));
 
+  const { visibility, allowedRoles } = readFolderVisibility(formData);
+
   await db.insert(documentFolders).values({
     productionId,
     name,
     sortOrder: existing.length,
+    visibility,
+    allowedRoles,
   });
+
+  revalidatePath("/productions");
+  return { success: true };
+}
+
+export async function updateFolder(
+  formData: FormData,
+): Promise<CreateFolderResult> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "documents:upload")) {
+    return { error: "You don't have permission to edit folders." };
+  }
+
+  const folderId = formData.get("folder_id") as string;
+  const name = (formData.get("name") as string)?.trim();
+
+  if (!folderId || !name) {
+    return { error: "Folder name is required." };
+  }
+  if (name.length > 50) {
+    return { error: "Folder name must be 50 characters or less." };
+  }
+
+  const rows = await db
+    .select({ productionId: documentFolders.productionId })
+    .from(documentFolders)
+    .where(eq(documentFolders.id, folderId))
+    .limit(1);
+  if (rows.length === 0) return { error: "Folder not found." };
+
+  if (!(await userCanAccessProduction(user, rows[0].productionId))) {
+    return { error: "You don't have access to this production." };
+  }
+
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
+
+  const { visibility, allowedRoles } = readFolderVisibility(formData);
+
+  await db
+    .update(documentFolders)
+    .set({ name, visibility, allowedRoles })
+    .where(eq(documentFolders.id, folderId));
 
   revalidatePath("/productions");
   return { success: true };
