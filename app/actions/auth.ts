@@ -8,8 +8,10 @@ export type AuthResult = {
 };
 
 // Providers we offer one-click sign-in for. Kept as a local const (not
-// exported) so this "use server" file only exports async actions.
-const OAUTH_PROVIDERS = ["google", "apple"] as const;
+// exported) so this "use server" file only exports async actions. Apple is
+// held off for now (needs a paid Apple Developer membership) — add "apple"
+// here and a button in components/auth/oauth-buttons.tsx to enable it.
+const OAUTH_PROVIDERS = ["google"] as const;
 type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
 
 /**

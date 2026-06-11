@@ -3841,14 +3841,6 @@ button.month-cell {
   height: 1px;
   background: var(--border);
 }
-.auth-oauth-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.auth-oauth-grid form {
-  display: contents;
-}
 .auth-oauth-btn {
   width: 100%;
   justify-content: center;

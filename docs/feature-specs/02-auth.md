@@ -8,10 +8,10 @@ As a theatre company member, I can create an account, log in, reset my password,
 
 ## Status: IMPLEMENTED
 - Password reset flow exists in code but was not fully tested due to Supabase email rate limits during development. Needs verification.
-- Social sign-in (Google + Apple) added. App side is complete; requires the
-  Google and Apple providers to be enabled in the Supabase dashboard
-  (Authentication → Providers) before the buttons work. See "Social sign-in"
-  below.
+- Social sign-in (Google) added. App side is complete; requires the Google
+  provider to be enabled in the Supabase dashboard (Authentication →
+  Providers) before the button works. Apple is intentionally held off (needs
+  a paid Apple Developer membership) — see "Social sign-in" below.
 
 ## Data model
 - `profiles` — auto-created on first login from Supabase auth user (id, email, firstName, lastName, requestedRole)
@@ -33,28 +33,32 @@ As a theatre company member, I can create an account, log in, reset my password,
 - `app/reset-password/reset-password-form.tsx` — client form with password + confirm
 - `app/signup/confirm/resend-form.tsx` — resend verification email
 
-## Social sign-in (Google + Apple)
+## Social sign-in (Google)
 - `signInWithOAuth()` server action (`app/actions/auth.ts`) asks Supabase for
   the provider's authorization URL and redirects the browser to it. The
   provider returns the user to `/auth/callback`, which already exchanges the
   PKCE code for a session — no callback changes were needed.
-- `components/auth/oauth-buttons.tsx` renders the Google + Apple buttons on
-  both `/login` and `/signup` (Supabase resolves an existing user to a sign-in
-  and a new one to a signup, so the same buttons serve both).
+- `components/auth/oauth-buttons.tsx` renders the Google button on both
+  `/login` and `/signup` (Supabase resolves an existing user to a sign-in and
+  a new one to a signup, so the same button serves both).
 - OAuth users have no `first_name`/`last_name` metadata, so
   `lib/auth.ts → deriveName()` falls back to Google's `given_name`/`family_name`
   or splits a `full_name`/`name`. Profile + org creation is otherwise identical
   to email/password signup.
+- **Apple held off:** the wiring is provider-agnostic — re-enable it by adding
+  `"apple"` to `OAUTH_PROVIDERS` (`app/actions/auth.ts`) and a second button in
+  `oauth-buttons.tsx`. Deferred because Apple Sign In requires a paid Apple
+  Developer Program membership.
 - **Dashboard setup required (one-time):** In Supabase → Authentication →
-  Providers, enable Google and Apple and supply each provider's client
-  ID/secret. Add `<project-ref>.supabase.co/auth/v1/callback` as the provider's
-  redirect/return URL (Google Cloud Console / Apple Developer), and ensure the
-  app's `${NEXT_PUBLIC_SITE_URL}/auth/callback` is in Supabase's allowed
-  redirect URLs. Apple also requires an Apple Developer Program membership.
+  Providers, enable Google and supply the Google OAuth client ID/secret. Add
+  `https://avqgfzrcwegebtbvmcwo.supabase.co/auth/v1/callback` as an authorized
+  redirect URI in the Google Cloud Console, and ensure the app's
+  `${NEXT_PUBLIC_SITE_URL}/auth/callback` is in Supabase's allowed redirect
+  URLs.
 
 ## Server actions (`app/actions/auth.ts`)
 - `login()` — email/password sign in
-- `signInWithOAuth()` — starts Google/Apple OAuth (redirects to provider)
+- `signInWithOAuth()` — starts Google OAuth (redirects to provider)
 - `signup()` — creates account, stores first_name/last_name/requested_role in user metadata
 - `resendVerification()` — resend signup confirmation email
 - `requestPasswordReset()` — sends reset email
