@@ -961,31 +961,56 @@ export function ScriptViewer({
     return { yTop: best.top / canvasSize.h, height: best.h / canvasSize.h };
   }
 
-  // Build the line of script around a pipe, with "*" marking the pipe position.
-  function capturePipeLine(rect: AnnotationRect): string {
+  // Words on the text line at a vertical band, each with an approximate x. A
+  // single text-layer span often holds a whole line, so we split it into words
+  // and spread their x across the span's width by character offset — letting a
+  // pipe be located between words even within one span.
+  function lineWordsAt(
+    bandCenter: number,
+    tol: number,
+  ): { x: number; word: string }[] {
     const layer = textLayerRef.current;
-    if (!layer || canvasSize.w === 0 || canvasSize.h === 0) return "*";
+    if (!layer) return [];
+    const out: { x: number; word: string }[] = [];
+    for (const el of Array.from(layer.children) as HTMLElement[]) {
+      const center = el.offsetTop + el.offsetHeight / 2;
+      const text = el.textContent ?? "";
+      if (Math.abs(center - bandCenter) > tol || !text.trim()) continue;
+      const left = el.offsetLeft;
+      const width = el.offsetWidth;
+      const n = text.length || 1;
+      let idx = 0;
+      for (const part of text.split(/(\s+)/)) {
+        if (part.trim()) out.push({ x: left + (idx / n) * width, word: part });
+        idx += part.length;
+      }
+    }
+    return out.sort((a, b) => a.x - b.x);
+  }
+
+  // Build a short snippet of script around a pipe, with "*" marking it. Uses a
+  // window of words on each side (with "…" when there's more), so each pipe on
+  // a line captures its own surrounding words rather than the whole line.
+  function capturePipeLine(rect: AnnotationRect): string {
+    if (canvasSize.w === 0 || canvasSize.h === 0) return "*";
     const pipeX = rect.x * canvasSize.w;
     const bandCenter = (rect.y + rect.height / 2) * canvasSize.h;
     const tol = rect.height * canvasSize.h * 0.6 + 2;
-    const spans: { left: number; text: string }[] = [];
-    for (const el of Array.from(layer.children) as HTMLElement[]) {
-      const center = el.offsetTop + el.offsetHeight / 2;
-      if (Math.abs(center - bandCenter) <= tol && el.textContent?.trim()) {
-        spans.push({ left: el.offsetLeft, text: el.textContent });
-      }
-    }
-    spans.sort((a, b) => a.left - b.left);
+    const words = lineWordsAt(bandCenter, tol);
+    if (words.length === 0) return "*";
+
+    const WINDOW = 5;
+    let i = words.findIndex((w) => w.x >= pipeX);
+    if (i === -1) i = words.length; // pipe sits after the last word
+    const start = Math.max(0, i - WINDOW);
+    const end = Math.min(words.length, i + WINDOW);
+
     const parts: string[] = [];
-    let inserted = false;
-    for (const s of spans) {
-      if (!inserted && s.left >= pipeX) {
-        parts.push("*");
-        inserted = true;
-      }
-      parts.push(s.text);
-    }
-    if (!inserted) parts.push("*"); // pipe sits after the last word (line end)
+    if (start > 0) parts.push("…");
+    parts.push(...words.slice(start, i).map((w) => w.word));
+    parts.push("*");
+    parts.push(...words.slice(i, end).map((w) => w.word));
+    if (end < words.length) parts.push("…");
     return parts.join(" ").replace(/\s+/g, " ").trim();
   }
 
@@ -2483,6 +2508,27 @@ function ThumbnailPanel({
 
 // ── Canvas annotation renderer (used for PDF export) ─────────────────────
 
+// Order cue numbers the way a theatre cue sheet reads. Departments number in
+// parallel ("L1" lights, "SFX4" sound, bare "7"), so we sort by the numeric
+// part FIRST — keeping each sequence in order and interleaving by number — then
+// break ties by the letter prefix. This stays numerical even when the prefix
+// changes mid-list (the all-"L"-then-switch case), where a plain string sort
+// would clump every prefix together.
+function cueSortParts(label: string): { num: number; prefix: string } {
+  const m = label.match(/\d+(?:\.\d+)?/);
+  return {
+    num: m ? parseFloat(m[0]) : Number.POSITIVE_INFINITY,
+    prefix: label.replace(/\d.*$/, "").trim().toLowerCase(),
+  };
+}
+function compareCueNumbers(a: string, b: string): number {
+  const ka = cueSortParts(a);
+  const kb = cueSortParts(b);
+  if (ka.num !== kb.num) return ka.num - kb.num;
+  if (ka.prefix !== kb.prefix) return ka.prefix.localeCompare(kb.prefix);
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+}
+
 // Cue-label stacking. When several cue labels land in the same margin at
 // similar heights they overlap and become unreadable. We push the lower ones
 // further down so each (number + optional note) is clear; the leader then runs
@@ -2521,10 +2567,7 @@ function stackCueLabels(
         const ba = Math.round(a.y / LINE_BUCKET);
         const bb = Math.round(b.y / LINE_BUCKET);
         if (ba !== bb) return ba - bb;
-        return a.cueNumber.localeCompare(b.cueNumber, undefined, {
-          numeric: true,
-          sensitivity: "base",
-        });
+        return compareCueNumbers(a.cueNumber, b.cueNumber);
       });
     let prevBottom = -Infinity;
     for (const item of group) {
@@ -2586,14 +2629,9 @@ function buildCueSheetSections(
     }
     section.rows.push(cue);
   }
-  // Within each scene/song, list cues in numerical order (natural sort).
+  // Within each scene/song, list cues in cue-number order (prefix-aware).
   for (const section of sections) {
-    section.rows.sort((a, b) =>
-      a.cueNumber.localeCompare(b.cueNumber, undefined, {
-        numeric: true,
-        sensitivity: "base",
-      }),
-    );
+    section.rows.sort((a, b) => compareCueNumbers(a.cueNumber, b.cueNumber));
   }
   return sections;
 }
@@ -3447,18 +3485,13 @@ function AnnotationsPanel({
         : a.rect.x - b.rect.x
       : 0;
 
-  // Cues read in numerical order (natural, so "2" < "10"); other annotations
+  // Cues read in cue-number order (prefix-aware, numeric); other annotations
   // stay in top-to-bottom page order.
   const cues = (
     listable.filter(
       (a): a is Extract<Annotation, { type: "cue" }> => a.type === "cue",
     )
-  ).sort((a, b) =>
-    a.cueNumber.localeCompare(b.cueNumber, undefined, {
-      numeric: true,
-      sensitivity: "base",
-    }),
-  );
+  ).sort((a, b) => compareCueNumbers(a.cueNumber, b.cueNumber));
   const others = listable.filter((a) => a.type !== "cue").sort(byY);
 
   return (
