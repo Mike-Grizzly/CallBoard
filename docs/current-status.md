@@ -2,6 +2,9 @@
 
 **Last updated:** 2026-06-11
 
+**Session 2026-06-11 (beta round 10 — note text contrast, branch `claude/note-text-contrast`):** the on-page note text box used `color: var(--ink)`, which is white in dark mode — unreadable since the note sits on the white script page. Hardcoded the note text to a dark colour (`#1a1a1a`, +`fontWeight 500`) so it reads in any theme, matching the PDF export (`#1c1c1c`); nudged the box tint slightly lighter (`26`→`22`). `next build` clean. Not browser-verified.
+
+
 **Session 2026-06-11 (beta round 9 — wider cue-label spacing, branch `claude/cue-label-spacing`):** in two-column scripts a cue whose leader passed between two right-margin cues cut through their labels — the stacking gap (~23px) was barely over one script line, so cues ~one line apart were nudged only a pixel. Bumped the `stackCueLabels` constants (`CUE_LABEL_NUMBER_UP` 18→22, `CUE_LABEL_DESC_DOWN` 18→20, `CUE_LABEL_PAD` 5→14) so stacked labels keep ~15px clear whitespace and a sandwiched leader has room to pass cleanly. `next build` clean. Not browser-verified.
 
 
