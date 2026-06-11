@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   useEffect,
+  useMemo,
   useCallback,
   useTransition,
 } from "react";
@@ -814,10 +815,23 @@ export function ScriptViewer({
 
         await page.render({ canvas, viewport }).promise;
 
-        // Draw annotations for this page
+        // Draw annotations for this page. Cue labels stack the same way they do
+        // on screen, computed in this canvas's pixel space.
         const pageAnns = latestAnnotationsRef.current.filter((a) => a.page === pageNum);
+        const exportCueYs = stackCueLabels(
+          pageAnns.filter(
+            (a): a is Extract<Annotation, { type: "cue" }> => a.type === "cue",
+          ),
+          viewport.height,
+        );
         for (const ann of pageAnns) {
-          drawAnnotationOnCanvas(ctx, ann, viewport.width, viewport.height);
+          drawAnnotationOnCanvas(
+            ctx,
+            ann,
+            viewport.width,
+            viewport.height,
+            ann.type === "cue" ? exportCueYs.get(ann.id) : undefined,
+          );
         }
 
         const imgData = canvas.toDataURL("image/jpeg", 0.93);
@@ -853,6 +867,19 @@ export function ScriptViewer({
   // ── Page annotations (current page only) ──────────────────────────────────
 
   const pageAnnotations = annotations.filter((a) => a.page === currentPage);
+
+  // Stacked label positions for this page's cues, so overlapping labels offset
+  // instead of piling up (recomputed when the page's cues or canvas size change).
+  const cueLabelYs = useMemo(
+    () =>
+      stackCueLabels(
+        pageAnnotations.filter(
+          (a): a is Extract<Annotation, { type: "cue" }> => a.type === "cue",
+        ),
+        canvasSize.h,
+      ),
+    [pageAnnotations, canvasSize.h],
+  );
 
   // ── SVG cursor style ───────────────────────────────────────────────────────
 
@@ -1600,6 +1627,7 @@ export function ScriptViewer({
                   onClick={() =>
                     setSelectedId(selectedId === ann.id ? null : ann.id)
                   }
+                  cueLabelY={ann.type === "cue" ? cueLabelYs.get(ann.id) : undefined}
                 />
               ))}
 
@@ -2107,11 +2135,51 @@ function ThumbnailPanel({
 
 // ── Canvas annotation renderer (used for PDF export) ─────────────────────
 
+// Cue-label stacking. When several cue labels land in the same margin at
+// similar heights they overlap and become unreadable. We push the lower ones
+// further down so each (number + optional note) is clear; the leader then runs
+// horizontally out to the margin and drops at a 90° angle to the label, never
+// cutting diagonally across the script. Computed in the target surface's own
+// pixel space (screen SVG vs. 2× export canvas), so callers pass their canvasH.
+const CUE_LABEL_NUMBER_UP = 18; // number baseline sits this far above its anchor
+const CUE_LABEL_DESC_DOWN = 18; // description sits this far below it
+const CUE_LABEL_PAD = 5;
+
+function stackCueLabels(
+  cues: {
+    id: string;
+    rect: AnnotationRect;
+    leaderSide: "left" | "right";
+    cueDescription: string;
+  }[],
+  canvasH: number,
+): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const side of ["left", "right"] as const) {
+    const group = cues
+      .filter((c) => c.leaderSide === side)
+      .map((c) => ({
+        id: c.id,
+        y: (c.rect.y + c.rect.height) * canvasH,
+        hasDesc: c.cueDescription.trim().length > 0,
+      }))
+      .sort((a, b) => a.y - b.y);
+    let prevBottom = -Infinity;
+    for (const item of group) {
+      const y = Math.max(item.y, prevBottom + CUE_LABEL_NUMBER_UP + CUE_LABEL_PAD);
+      out.set(item.id, y);
+      prevBottom = y + (item.hasDesc ? CUE_LABEL_DESC_DOWN : 0);
+    }
+  }
+  return out;
+}
+
 function drawAnnotationOnCanvas(
   ctx: CanvasRenderingContext2D,
   ann: Annotation,
   canvasW: number,
   canvasH: number,
+  cueLabelY?: number,
 ) {
   if (ann.type === "ink") {
     if (ann.points.length === 0) return;
@@ -2165,6 +2233,7 @@ function drawAnnotationOnCanvas(
     const lineStartX = isLeft ? rx : rx + rw;
     const MARGIN_OFFSET = 14;
     const labelX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
+    const labelY = cueLabelY ?? bottomY;
     const cc = ann.color ?? CUE_STROKE;
 
     ctx.globalAlpha = 0.08;
@@ -2174,22 +2243,25 @@ function drawAnnotationOnCanvas(
     ctx.strokeStyle = cc;
     ctx.lineWidth = 1.5;
     ctx.strokeRect(rx, ry, rw, rh);
+    // Orthogonal leader: horizontal out to the margin, then a right-angle drop
+    // to the (possibly stacked) label — never a diagonal across the page.
     ctx.beginPath();
     ctx.moveTo(lineStartX, bottomY);
     ctx.lineTo(labelX, bottomY);
+    if (labelY !== bottomY) ctx.lineTo(labelX, labelY);
     ctx.lineWidth = 1;
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(labelX, bottomY, 3, 0, Math.PI * 2);
+    ctx.arc(labelX, labelY, 3, 0, Math.PI * 2);
     ctx.fillStyle = cc;
     ctx.fill();
     ctx.fillStyle = cc;
     ctx.textAlign = isLeft ? "left" : "right";
     ctx.font = "bold 15px system-ui, sans-serif";
-    ctx.fillText(ann.cueNumber, isLeft ? labelX + 6 : labelX - 6, bottomY - 4);
+    ctx.fillText(ann.cueNumber, isLeft ? labelX + 6 : labelX - 6, labelY - 4);
     if (ann.cueDescription) {
       ctx.font = "11px system-ui, sans-serif";
-      ctx.fillText(ann.cueDescription, isLeft ? labelX + 6 : labelX - 6, bottomY + 14);
+      ctx.fillText(ann.cueDescription, isLeft ? labelX + 6 : labelX - 6, labelY + 14);
     }
   }
 
@@ -2204,12 +2276,14 @@ function AnnotationShape({
   canvasH,
   selected,
   onClick,
+  cueLabelY,
 }: {
   annotation: Annotation;
   canvasW: number;
   canvasH: number;
   selected: boolean;
   onClick: () => void;
+  cueLabelY?: number;
 }) {
   if (annotation.type === "ink") {
     return (
@@ -2286,6 +2360,7 @@ function AnnotationShape({
     const lineStartX = isLeft ? rx : rx + rw;
     const MARGIN_OFFSET = 14;
     const labelX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
+    const labelY = cueLabelY ?? bottomY;
     const textAnchor = isLeft ? "start" : "end";
     const cc = annotation.color ?? CUE_STROKE;
 
@@ -2302,21 +2377,24 @@ function AnnotationShape({
           stroke={cc}
           strokeWidth={selected ? "2" : "1.5"}
         />
-        {/* Leader line from bottom edge of box to margin */}
-        <line
-          x1={lineStartX}
-          y1={bottomY}
-          x2={labelX}
-          y2={bottomY}
+        {/* Orthogonal leader: horizontal out to the margin, then a right-angle
+            drop to the (possibly stacked) label — never diagonal. */}
+        <polyline
+          points={
+            labelY === bottomY
+              ? `${lineStartX},${bottomY} ${labelX},${bottomY}`
+              : `${lineStartX},${bottomY} ${labelX},${bottomY} ${labelX},${labelY}`
+          }
+          fill="none"
           stroke={cc}
           strokeWidth="1"
         />
         {/* End marker */}
-        <circle cx={labelX} cy={bottomY} r="3" fill={cc} />
+        <circle cx={labelX} cy={labelY} r="3" fill={cc} />
         {/* Cue number */}
         <text
           x={isLeft ? labelX + 6 : labelX - 6}
-          y={bottomY - 4}
+          y={labelY - 4}
           textAnchor={textAnchor}
           fontSize="15"
           fill={cc}
@@ -2329,7 +2407,7 @@ function AnnotationShape({
         {annotation.cueDescription && (
           <text
             x={isLeft ? labelX + 6 : labelX - 6}
-            y={bottomY + 14}
+            y={labelY + 14}
             textAnchor={textAnchor}
             fontSize="11"
             fill={cc}
