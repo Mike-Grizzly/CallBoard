@@ -60,6 +60,35 @@ const ZOOM_STEPS = [0.75, 1.0, 1.25, 1.5, 2.0] as const;
 const ZOOM_LABELS = ["75%", "100%", "125%", "150%", "200%"] as const;
 const BASE_RENDER_SCALE = 1.8;
 
+/**
+ * Is a rendered page (near-)blank? Downsamples to a small canvas and measures
+ * the fraction of non-white ("ink") pixels. A scanned page that pdfjs failed to
+ * rasterize (MRC/CCITT ImageMask scripts) comes out essentially white; a page
+ * that actually drew its text has several percent ink. Threshold sits between.
+ */
+function isRenderBlank(source: HTMLCanvasElement): boolean {
+  try {
+    const W = 80;
+    const H = Math.max(1, Math.round((source.height / source.width) * W));
+    const small = document.createElement("canvas");
+    small.width = W;
+    small.height = H;
+    const ctx = small.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return false;
+    ctx.drawImage(source, 0, 0, W, H);
+    const { data } = ctx.getImageData(0, 0, W, H);
+    let ink = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      // Treat a pixel as "ink" if it's clearly off-white (any channel dark).
+      if (data[i] < 235 || data[i + 1] < 235 || data[i + 2] < 235) ink += 1;
+    }
+    const coverage = ink / (W * H);
+    return coverage < 0.004; // < 0.4% drawn ⇒ effectively blank
+  } catch {
+    return false; // never block viewing on a detection failure
+  }
+}
+
 interface Props {
   script: DefaultScript;
   productionId: string;
@@ -163,6 +192,13 @@ export function ScriptViewer({
   // tools are dead. Detect that, then offer in-browser OCR (tesseract.js) to
   // fill the text layer. The result is shared across the production.
   const [isScanned, setIsScanned] = useState<boolean | null>(null);
+  // A scan whose page renders (near-)blank in pdfjs — typically MRC/CCITT
+  // ImageMask scripts that pdfjs can't rasterize (the text is thousands of
+  // 1-bit stencils it drops). For these, in-browser OCR is futile (it would
+  // read a blank canvas), so we fall back to the browser's native PDF engine
+  // for viewing, exactly like the Documents tab.
+  const [renderBlank, setRenderBlank] = useState(false);
+  const [nativeView, setNativeView] = useState(false);
   const ocr = useScriptOcr({
     pdfUrl,
     storagePath: script.storagePath,
@@ -286,12 +322,16 @@ export function ScriptViewer({
     };
   }, [pdfUrl, currentPage, renderScale]);
 
-  // ── Detect a scanned/image-only script ──────────────────────────────────────
+  // ── Detect a scanned/image-only script + whether pdfjs can render it ─────────
   // Sample the first few pages' extractable text; near-empty means it's a scan
-  // (same heuristic the AI parser uses). Gates the OCR offer.
+  // (same heuristic the AI parser uses). For a scan, also rasterize a
+  // representative content page and measure ink coverage — if pdfjs draws it
+  // (near-)blank, it's a file pdfjs can't render (MRC/CCITT ImageMasks), so we
+  // route to the native PDF engine instead of offering futile in-browser OCR.
   useEffect(() => {
     let active = true;
     setIsScanned(null);
+    setRenderBlank(false);
     (async () => {
       try {
         const pdf = await loadPdfDocument(pdfUrl);
@@ -304,7 +344,23 @@ export function ScriptViewer({
             if ("str" in item) chars += item.str.length;
           }
         }
-        if (active) setIsScanned(chars < 100);
+        const scanned = chars < 100;
+        if (active) setIsScanned(scanned);
+        if (!scanned) return;
+
+        // Rasterize a content page (skip p.1, which often carries only a
+        // title/logo and would render non-blank even when the body can't).
+        const probePage = pdf.numPages > 1 ? 2 : 1;
+        const page = await pdf.getPage(probePage);
+        const viewport = page.getViewport({ scale: 1 });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        await page.render({ canvas, viewport }).promise;
+        const blank = isRenderBlank(canvas);
+        canvas.width = 0;
+        canvas.height = 0;
+        if (active) setRenderBlank(blank);
       } catch {
         if (active) setIsScanned(null);
       }
@@ -313,6 +369,12 @@ export function ScriptViewer({
       active = false;
     };
   }, [pdfUrl]);
+
+  // A scan pdfjs can't rasterize is useless in the canvas editor — drop the
+  // user straight into the native PDF view so they can at least read it.
+  useEffect(() => {
+    if (renderBlank) setNativeView(true);
+  }, [renderBlank]);
 
   // ── OCR text layer ──────────────────────────────────────────────────────────
   // For a scanned script with a ready OCR result, paint the per-word boxes as
@@ -1010,8 +1072,31 @@ export function ScriptViewer({
           </div>
         )}
 
+        {/* Scanned script pdfjs can't render → native PDF engine */}
+        {renderBlank && (
+          <div className="sv-ocr-banner">
+            <ScanText size={18} className="sv-ocr-icon" />
+            <div className="sv-ocr-body">
+              <strong>This scanned script can&rsquo;t be shown in the editor.</strong>{" "}
+              It&rsquo;s a scan our editor can&rsquo;t render, so it&rsquo;s
+              displayed below in your browser&rsquo;s built-in PDF viewer. To
+              enable annotation and text tools, run OCR on it (e.g. Adobe
+              Acrobat → Recognize Text) and re-upload.
+            </div>
+            <div className="sv-ocr-actions">
+              <button
+                className="btn ghost"
+                onClick={() => setNativeView((v) => !v)}
+                style={{ height: 30 }}
+              >
+                {nativeView ? "Try editor" : "Open native viewer"}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Scanned-script OCR notice */}
-        {canManage && ocr.status === "prompt" && (
+        {canManage && ocr.status === "prompt" && !renderBlank && (
           <div className="sv-ocr-banner">
             <ScanText size={18} className="sv-ocr-icon" />
             <div className="sv-ocr-body">
@@ -1359,6 +1444,21 @@ export function ScriptViewer({
               </span>
             </div>
           </div>
+        )}
+        {nativeView && (
+          <iframe
+            src={pdfUrl}
+            title="Script (native PDF viewer)"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              border: "none",
+              background: "#fff",
+              zIndex: 60,
+            }}
+          />
         )}
         <div
           ref={containerRef}
