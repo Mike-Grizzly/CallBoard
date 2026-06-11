@@ -20,6 +20,9 @@
 # generated at build by scripts/copy-pdfjs-assets.mjs
 /public/pdfjs/
 
+# generated at build by scripts/copy-tesseract-assets.mjs
+/public/tesseract/
+
 # production
 /build
 

@@ -119,3 +119,21 @@ export type ScriptParseResult = {
 };
 
 export type ScriptParseStatus = "processing" | "ready" | "applied" | "failed";
+
+// ── Scanned-script OCR (in-browser, tesseract.js — see lib/ocr.ts) ──────────
+// A single OCR'd word with a box normalized to 0..1 of the page width/height,
+// so it maps to any render scale in the viewer's transparent text layer.
+export type OcrWord = {
+  t: string;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+};
+
+export type OcrPage = {
+  page: number;
+  words: OcrWord[];
+};
+
+export type ScriptOcrStatus = "processing" | "ready" | "failed";

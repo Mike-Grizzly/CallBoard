@@ -1706,3 +1706,44 @@ the pricing PAGE to match this model.
 - **Reach/ack totals use the deduped union** of the targeted productions' members (`countDistinct`), since a person can be in several targeted shows.
 
 **Impact:** `features/announcements/queries.ts` + `actions.ts` rewritten around `org_wide` + the join table; new shared client UI (`components/announcements/announcements-center.tsx`, `announcement-composer.tsx`) used by both the global and production-scoped pages; old inline forms removed; `ac-*` styles added to `app/globals.css`. Dashboard announcement cards updated to the scope/priority shape. `tsc`/`eslint`/`next build` clean. Not yet device-verified.
+
+---
+
+## 2026-06-11 — Scanned-script OCR in the browser (tesseract.js) for text tools
+
+**Context.** A scanned/image-only script has no text layer, so the Script tool's select / copy / find / line-highlighting are dead — and print-to-PDF doesn't help (it re-wraps images, adds no text). The AI parser already OCRs scans *for analysis* via Claude vision, but that returns structured cast/scenes with **no per-word coordinates**, so it can't drive an on-page selectable layer. We needed real OCR with word boxes.
+
+**Decision.** Do OCR **in the browser with tesseract.js (WASM)**, not server-side.
+- **Why client-side:** it gives per-word bounding boxes (the thing the text layer needs), costs **zero tokens / no server infra** (vs Claude vision ~$1–2/scan, or a server-side ocrmypdf/Ghostscript worker that isn't Vercel-friendly), and the "watch a per-page progress bar" UX is a natural fit. Accuracy is good-not-perfect on clean scans — acceptable for select/copy/find.
+- **Shared, not per-user:** OCR is a property of the *file*, so the result is stored once keyed by `storage_path` + `script_version` and reused for the whole production (`script_ocr` table). Coordinates are **normalized 0..1** so they survive any zoom/scale.
+- **Detection** reuses the AI parser's heuristic (extractable text `< ~100` chars over the first few pages = scan).
+- **Opt-in + reversible:** managers get a banner (Run OCR / Not now); "Not now" is remembered per file and falls back to today's image-only viewing. Nothing about the existing viewer changes when OCR is absent.
+- **Engine self-hosted:** worker + WASM core copied into `public/tesseract/` at build (`scripts/copy-tesseract-assets.mjs`, gitignored like `public/pdfjs/`). Language data (`eng.traineddata`, ~10MB) is **not vendored** — fetched from the tessdata CDN by default (`NEXT_PUBLIC_TESSERACT_LANG_PATH` to self-host later).
+- **Gating:** running OCR is a write, gated by `assertCanMutate` (the existing billing guard) + production access; reading a ready result is open to all members.
+
+**Scope.** v1 wires the **desktop `ScriptViewer`** (detect → banner → run with progress → paint OCR text layer). The mobile reader can consume the *stored* result for display; its own detect/run UI is a fast-follow.
+
+**Setup the user owns — create the server-only table** (RLS on, no policies, like `script_parses`). Run in the Supabase SQL editor / via MCP against the `CallBoard` project:
+
+```sql
+create table if not exists public.script_ocr (
+  id uuid primary key default gen_random_uuid(),
+  production_id uuid references public.productions(id) on delete cascade,
+  document_id uuid references public.documents(id) on delete cascade,
+  storage_path text not null,
+  script_version integer not null default 1,
+  status text not null default 'processing',
+  page_count integer,
+  pages jsonb,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.script_ocr enable row level security;
+create index if not exists script_ocr_lookup_idx
+  on public.script_ocr (storage_path, script_version);
+```
+
+(No composite UNIQUE — those hang `drizzle-kit push`; app code enforces one row per `storage_path`+`script_version`.)
+
+**Impact.** New: `db/schema/script-ocr.ts`, `lib/ocr.ts`, `scripts/copy-tesseract-assets.mjs`, `features/scripts/ocr-actions.ts`, `app/(app)/productions/[slug]/script/use-script-ocr.ts`. Extended: `features/scripts/constants.ts`, `script-viewer.tsx`, `app/globals.css`, `db/schema/index.ts`, `.gitignore`, `eslint.config.mjs`, `package.json` (dev/build copy step + `tesseract.js`). `tsc`/`eslint` clean; `next build` compiles + type-checks. Not yet verified against a real scan.

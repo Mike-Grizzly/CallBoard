@@ -308,3 +308,51 @@ future lever if AI usage becomes material — deferred until there's token data.
   for small casts, not optimized for very large ones.
 - **Phase 2 highlighting** deferred — the hardest piece (per-line pixel coords,
   script-format-dependent).
+
+---
+
+## Scanned-script OCR (in-browser text tools) — 2026-06-11, built, not live-verified
+
+**Problem.** A scanned/image-only script has no text layer, so the Script tool's
+**select / copy / find / line-highlighting** tools are dead. The AI parser OCRs
+scans *for analysis* (Claude vision → cast/scenes), but that has no per-word
+coordinates, so it can't make the page text selectable. Print-to-PDF doesn't
+help either (it re-wraps images, adds no text).
+
+**Solution.** OCR the scan **in the browser with tesseract.js** and paint the
+result as the viewer's transparent text layer.
+
+- **Detect:** on open, sample the first ≤5 pages' extractable text; `< 100`
+  chars ⇒ scanned (same signal `runScriptParse` uses).
+- **Offer (managers):** a banner — **Run OCR** (warns it processes each page,
+  minutes for a full script) / **Not now** (remembered per file in
+  `localStorage`; falls back to image-only viewing). Non-managers just benefit
+  from a ready result; they don't see the run UI.
+- **Run:** render each page to a canvas → `ocrCanvas()` (tesseract.js, `eng`)
+  → per-word boxes, **normalized 0..1** of page size. Progress is shown
+  page-by-page and is **cancellable**; the worker is terminated when done.
+  Zero tokens / no server compute.
+- **Store once, shared:** results live in `script_ocr` keyed by
+  `storage_path` + `script_version` (a property of the *file*, reused for the
+  whole production). Flushed every 5 pages so a long run survives a closed tab;
+  `status` goes `processing → ready` (or `failed`, with a Try-again banner).
+- **Paint:** when `status==='ready'`, the viewer fills `textLayerRef` from the
+  stored boxes instead of the pdfjs text content (an `ocrOwnsTextLayer` ref
+  stops the pdfjs render path from wiping it). Because boxes are normalized,
+  they map to any zoom. This also **unblocks Phase 2 line-highlighting on
+  scans** (it's text-layer-driven).
+
+**Files.** `db/schema/script-ocr.ts`, `lib/ocr.ts`,
+`scripts/copy-tesseract-assets.mjs` (self-hosts worker + WASM core into
+`public/tesseract/`; lang data from the tessdata CDN by default, override with
+`NEXT_PUBLIC_TESSERACT_LANG_PATH`), `features/scripts/ocr-actions.ts`,
+`app/(app)/productions/[slug]/script/use-script-ocr.ts`; plus
+`features/scripts/constants.ts`, `script-viewer.tsx`, `globals.css`.
+
+**Setup the user owns.** Create the `script_ocr` table (SQL in
+`decision-log.md`, 2026-06-11) — RLS on, no policies, no composite UNIQUE.
+
+**Scope / not yet.** v1 = desktop `ScriptViewer`. Mobile reader consumes the
+*stored* result for display but its own detect/run UI is a fast-follow.
+Single language (`eng`). Accuracy is good-not-perfect on clean scans; very
+poor scans may need a real OCR pass (ocrmypdf/Acrobat) outside the app.

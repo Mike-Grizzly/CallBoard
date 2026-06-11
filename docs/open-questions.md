@@ -29,6 +29,13 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
   text now renders in the Script tool. If text *still* misses after this, the
   remaining suspects are optional-content (OCG) layers hidden-by-default or an
   image-codec issue; fallback option is detect-blank-and-use-native-iframe.
+- **Distinct case — genuinely scanned scripts (no text at all):** the font fix
+  above only helps PDFs that *have* a text layer pdfjs was dropping. A true
+  **scan/photo** has no text to render, so it stays image-only in the Script
+  tool by design. As of 2026-06-11 those get an in-browser **OCR** path
+  (tesseract.js) that adds a selectable text layer on demand — see
+  `feature-specs/19-ai-script-analysis.md` → "Scanned-script OCR". Pending the
+  `script_ocr` table being created live + real-scan verification.
 
 ## AI Script Analysis (Feature 19, Phase 1 — added 2026-06-09)
 

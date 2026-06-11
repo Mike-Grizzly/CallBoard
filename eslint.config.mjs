@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     // Reference-only copies of the standalone HTML demo's JSX. Not part of
     // the build; kept for designers/developers to consult while we port.
     "design-reference/**",
+    // Vendored tesseract.js engine (worker + WASM core), copied into public/
+    // at build by scripts/copy-tesseract-assets.mjs. Minified third-party code.
+    "public/tesseract/**",
   ]),
 ]);
 

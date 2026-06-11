@@ -30,6 +30,7 @@ import {
   BookOpen,
   Maximize2,
   Sparkles,
+  ScanText,
 } from "lucide-react";
 import Link from "next/link";
 import { saveAnnotations, dismissStaleBanner } from "@/features/scripts/actions";
@@ -49,6 +50,7 @@ import type { DefaultScript } from "@/features/scripts/queries";
 import { loadPdfDocument } from "@/lib/pdf";
 import { useIsPhone } from "@/lib/use-is-phone";
 import { MobileScriptReader } from "./mobile-script-reader";
+import { useScriptOcr } from "./use-script-ocr";
 
 // Module-level cache so re-renders don't re-decode the same page
 const pdfBitmapCache = new Map<string, ImageBitmap>();
@@ -156,6 +158,28 @@ export function ScriptViewer({
   const [downloadProgress, setDownloadProgress] = useState<{ current: number; total: number } | null>(null);
   const [, startTransition] = useTransition();
 
+  // ── Scanned-script OCR ──────────────────────────────────────────────────────
+  // A scanned/image-only PDF has no extractable text, so the select/copy/search
+  // tools are dead. Detect that, then offer in-browser OCR (tesseract.js) to
+  // fill the text layer. The result is shared across the production.
+  const [isScanned, setIsScanned] = useState<boolean | null>(null);
+  const ocr = useScriptOcr({
+    pdfUrl,
+    storagePath: script.storagePath,
+    scriptVersion: script.scriptVersion ?? 1,
+    documentId: script.id,
+    isScanned,
+    enabled: true,
+  });
+  // When OCR has produced a text layer, it owns `textLayerRef` (the pdfjs path
+  // would otherwise wipe it on every page render). Read via a ref so the render
+  // effect doesn't need OCR state in its deps.
+  const ocrOwnsTextLayer = ocr.status === "ready";
+  const ocrOwnsTextLayerRef = useRef(ocrOwnsTextLayer);
+  useEffect(() => {
+    ocrOwnsTextLayerRef.current = ocrOwnsTextLayer;
+  }, [ocrOwnsTextLayer]);
+
   // ── PDF rendering ─────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -211,8 +235,10 @@ export function ScriptViewer({
         /* non-fatal */
       }
 
-      // Render text layer for text-select highlighting
-      if (!cancelled && textLayerRef.current) {
+      // Render text layer for text-select highlighting. When OCR has produced
+      // a text layer for a scanned script, it owns this element instead (see
+      // the OCR text-layer effect) — skip so we don't wipe its spans.
+      if (!cancelled && textLayerRef.current && !ocrOwnsTextLayerRef.current) {
         const textLayerEl = textLayerRef.current;
         textLayerEl.innerHTML = "";
         try {
@@ -259,6 +285,67 @@ export function ScriptViewer({
       cancelled = true;
     };
   }, [pdfUrl, currentPage, renderScale]);
+
+  // ── Detect a scanned/image-only script ──────────────────────────────────────
+  // Sample the first few pages' extractable text; near-empty means it's a scan
+  // (same heuristic the AI parser uses). Gates the OCR offer.
+  useEffect(() => {
+    let active = true;
+    setIsScanned(null);
+    (async () => {
+      try {
+        const pdf = await loadPdfDocument(pdfUrl);
+        const sample = Math.min(pdf.numPages, 5);
+        let chars = 0;
+        for (let n = 1; n <= sample && chars <= 200; n += 1) {
+          const page = await pdf.getPage(n);
+          const tc = await page.getTextContent();
+          for (const item of tc.items) {
+            if ("str" in item) chars += item.str.length;
+          }
+        }
+        if (active) setIsScanned(chars < 100);
+      } catch {
+        if (active) setIsScanned(null);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [pdfUrl]);
+
+  // ── OCR text layer ──────────────────────────────────────────────────────────
+  // For a scanned script with a ready OCR result, paint the per-word boxes as
+  // the transparent selectable text layer (same role as the pdfjs text layer),
+  // turning the select / copy / find / line-highlight tools back on.
+  useEffect(() => {
+    const el = textLayerRef.current;
+    if (!el || ocr.status !== "ready") return;
+    el.innerHTML = "";
+    const words = ocr.pages.get(currentPage);
+    const { w, h } = canvasSize;
+    if (!words || !words.length || !w || !h) return;
+    const frag = document.createDocumentFragment();
+    for (const word of words) {
+      const span = document.createElement("span");
+      span.textContent = `${word.t} `;
+      const boxH = (word.y1 - word.y0) * h;
+      Object.assign(span.style, {
+        position: "absolute",
+        left: `${word.x0 * w}px`,
+        top: `${word.y0 * h}px`,
+        height: `${boxH}px`,
+        fontSize: `${boxH * 0.85}px`,
+        lineHeight: `${boxH}px`,
+        color: "transparent",
+        whiteSpace: "pre",
+        cursor: "text",
+        userSelect: "text",
+      });
+      frag.appendChild(span);
+    }
+    el.appendChild(frag);
+  }, [ocr.status, ocr.pages, currentPage, canvasSize]);
 
   // ── Intrinsic page width (for "fit width") ──────────────────────────────────
   useEffect(() => {
@@ -920,6 +1007,70 @@ export function ScriptViewer({
             >
               Dismiss
             </button>
+          </div>
+        )}
+
+        {/* Scanned-script OCR notice */}
+        {canManage && ocr.status === "prompt" && (
+          <div className="sv-ocr-banner">
+            <ScanText size={18} className="sv-ocr-icon" />
+            <div className="sv-ocr-body">
+              <strong>This script is a scan.</strong> Text tools (select, copy,
+              find, line highlighting) are off because there&rsquo;s no text
+              layer. Run OCR to turn them on — it processes each page, so a full
+              script can take a few minutes.
+            </div>
+            <div className="sv-ocr-actions">
+              <button className="btn primary" onClick={ocr.run} style={{ height: 30 }}>
+                <ScanText size={14} /> Run OCR
+              </button>
+              <button className="btn ghost" onClick={ocr.decline} style={{ height: 30 }}>
+                Not now
+              </button>
+            </div>
+          </div>
+        )}
+        {ocr.status === "running" && (
+          <div className="sv-ocr-banner">
+            <span className="sv-spinner" aria-hidden />
+            <div className="sv-ocr-body">
+              Reading the script&hellip;{" "}
+              {ocr.progress && ocr.progress.total > 0
+                ? `page ${ocr.progress.current} of ${ocr.progress.total}`
+                : "starting"}
+              . You can keep reading while this runs.
+              {ocr.progress && ocr.progress.total > 0 && (
+                <div className="sv-ocr-progress">
+                  <div
+                    className="sv-ocr-progress-bar"
+                    style={{
+                      width: `${Math.round(
+                        (ocr.progress.current / ocr.progress.total) * 100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="sv-ocr-actions">
+              <button className="btn ghost" onClick={ocr.cancel} style={{ height: 30 }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        {canManage && ocr.status === "failed" && (
+          <div className="sv-ocr-banner sv-ocr-banner-error">
+            <ScanText size={18} className="sv-ocr-icon" />
+            <div className="sv-ocr-body">
+              OCR didn&rsquo;t finish. You can try again, or keep viewing the
+              script as images.
+            </div>
+            <div className="sv-ocr-actions">
+              <button className="btn primary" onClick={ocr.run} style={{ height: 30 }}>
+                Try again
+              </button>
+            </div>
           </div>
         )}
 
