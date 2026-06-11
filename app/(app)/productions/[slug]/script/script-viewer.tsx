@@ -2522,21 +2522,18 @@ function compareCuePosition(a: CueAnn, b: CueAnn): number {
   return a.rect.x - b.rect.x;
 }
 
-// Cue-label placement. When several cue labels land in the same margin at
-// similar heights they overlap and their leaders cut across one another. We
-// keep each label near its line by using TWO lanes per margin: a cue is placed
-// in the inner (primary) lane at its natural height when there's room, and
-// overflows to the second lane only when the inner one is occupied — so sparse
-// pages stay single-column and dense clusters stagger between two lanes (the
-// overflow label threads between its neighbours rather than being pushed far
-// down). If both lanes are full it falls back to pushing down in the freer one.
-// The leader runs horizontally to its lane then drops at a 90° angle, never
-// diagonally. Computed in the target surface's own pixel space, so callers pass
-// canvasH; lane X is derived from canvasW at render time.
+// Cue-label placement. Labels in a margin are laid out in a single column in
+// CUE-NUMBER ORDER (top to bottom), so the numbers always read in sequence —
+// matching how cues are numbered. Each label sits at its anchor's height, and
+// only drops down when that would put it above (or overlapping) the previous,
+// lower-numbered label — so a cue inserted out of physical order, or a second
+// cue on the same line, falls below its predecessor instead of jumping above
+// it. The leader runs horizontally then drops at a 90° angle, never diagonally.
+// Computed in the target surface's own pixel space, so callers pass canvasH.
 const CUE_LABEL_NUMBER_UP = 20; // number baseline sits this far above its anchor
 const CUE_LABEL_DESC_DOWN = 18; // description sits this far below it
 const CUE_LABEL_PAD = 12; // clear whitespace kept between stacked labels
-const CUE_LANE_GAP = 34; // horizontal offset of the 2nd lane toward the text
+const CUE_LANE_GAP = 34; // retained for the renderers' lane-X math (lane 0 only)
 
 type CueLabelPos = { y: number; lane: number };
 
@@ -2550,60 +2547,32 @@ function stackCueLabels(
   }[],
   canvasH: number,
 ): Map<string, CueLabelPos> {
-  // Roughly one text line of tolerance: cues this close vertically are treated
-  // as the "same line".
-  const LINE_BUCKET = 14;
   const GAP = CUE_LABEL_NUMBER_UP + CUE_LABEL_PAD;
   const out = new Map<string, CueLabelPos>();
   for (const side of ["left", "right"] as const) {
     const group = cues
       .filter((c) => c.leaderSide === side)
-      .map((c) => {
-        const y = (c.rect.y + c.rect.height) * canvasH;
-        return {
-          id: c.id,
-          y,
-          bucket: Math.round(y / LINE_BUCKET),
-          hasDesc: c.cueDescription.trim().length > 0,
-          cueNumber: c.cueNumber,
-        };
-      })
-      .sort((a, b) => {
-        // Group by line; within a line order by cue number (so the lower number
-        // sits on top and the next drops below it), not by draw order.
-        if (a.bucket !== b.bucket) return a.bucket - b.bucket;
-        return a.cueNumber.localeCompare(b.cueNumber, undefined, {
+      .map((c) => ({
+        id: c.id,
+        y: (c.rect.y + c.rect.height) * canvasH,
+        hasDesc: c.cueDescription.trim().length > 0,
+        cueNumber: c.cueNumber,
+      }))
+      // Order the whole margin by cue number so labels read 10, 12, 13 down the
+      // page (numeric-aware so "2" < "10", letter prefixes like "L4" grouped).
+      .sort((a, b) =>
+        a.cueNumber.localeCompare(b.cueNumber, undefined, {
           numeric: true,
           sensitivity: "base",
-        });
-      });
-    // Bottom of the last label placed in each lane (inner = 0, second = 1).
-    const laneBottom = [-Infinity, -Infinity];
-    let prevBucket = NaN;
-    let prevLane = 0;
+        }),
+      );
+    // Place each label at its anchor height, but never above the previous
+    // (lower-numbered) label — push it down just enough to keep numeric order.
+    let bottom = -Infinity;
     for (const item of group) {
-      let lane: number;
-      let y: number;
-      if (item.bucket === prevBucket) {
-        // Same line as the previous cue: stack vertically right below it in the
-        // same lane (never side-by-side in the other lane), in cue-number order.
-        lane = prevLane;
-        y = laneBottom[lane] + GAP;
-      } else {
-        // New line: take the inner lane at its natural height when free, else
-        // stagger into the second lane, else push down in the freer lane.
-        lane = [0, 1].find((l) => item.y >= laneBottom[l] + GAP) ?? -1;
-        if (lane === -1) {
-          lane = laneBottom[0] <= laneBottom[1] ? 0 : 1;
-          y = laneBottom[lane] + GAP;
-        } else {
-          y = item.y;
-        }
-      }
-      out.set(item.id, { y, lane });
-      laneBottom[lane] = y + (item.hasDesc ? CUE_LABEL_DESC_DOWN : 0);
-      prevBucket = item.bucket;
-      prevLane = lane;
+      const y = Math.max(item.y, bottom + GAP);
+      out.set(item.id, { y, lane: 0 });
+      bottom = y + (item.hasDesc ? CUE_LABEL_DESC_DOWN : 0);
     }
   }
   return out;
