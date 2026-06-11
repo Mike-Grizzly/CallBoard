@@ -9,7 +9,7 @@ import {
   finalizeDocumentUpload,
 } from "@/features/documents/actions";
 import { uploadFileToSignedUrl } from "@/lib/storage-upload";
-import { isScannedPdf } from "@/lib/pdf-scan-detect";
+import { needsScriptOcr } from "@/lib/pdf-scan-detect";
 import {
   installSearchableScript,
   type RebuildProgress,
@@ -97,9 +97,9 @@ export function DocumentUploadForm({
       }
 
       formRef.current?.reset();
-      // A scanned script has no text layer — offer to make it searchable now,
-      // the way Adobe prompts for OCR on opening a scan.
-      if (documentType === "script" && (await isScannedPdf(file))) {
+      // A scanned script (image-only PDF or a bare image) has no text layer —
+      // offer to make it searchable now, the way Adobe prompts for OCR.
+      if (documentType === "script" && (await needsScriptOcr(file))) {
         setScan({ file, title });
       } else {
         setSuccess(true);
@@ -114,10 +114,9 @@ export function DocumentUploadForm({
     setOcrProgress(null);
     setOcrRunning(true);
     try {
-      const bytes = await scan.file.arrayBuffer();
       const res = await installSearchableScript({
         productionId,
-        bytes,
+        file: scan.file,
         baseName: scan.file.name,
         title: scan.title,
         onProgress: setOcrProgress,

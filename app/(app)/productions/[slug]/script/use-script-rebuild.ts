@@ -39,10 +39,13 @@ export function useScriptRebuild({ productionId, pdfUrl, title, fileName }: Args
     cancelRef.current = { cancelled: false };
     setStatus("running");
     try {
-      const bytes = await (await fetch(pdfUrl)).arrayBuffer();
+      const blob = await (await fetch(pdfUrl)).blob();
+      const file = new File([blob], fileName || "script.pdf", {
+        type: "application/pdf",
+      });
       const res = await installSearchableScript({
         productionId,
-        bytes,
+        file,
         baseName: fileName || "script",
         title,
         onProgress: (p) => {
