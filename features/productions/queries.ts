@@ -3,10 +3,11 @@ import { db } from "@/db";
 import {
   productions,
   productionMemberships,
+  productionRoles,
   organizationMemberships,
   profiles,
 } from "@/db/schema";
-import { and, eq, desc, isNull, isNotNull } from "drizzle-orm";
+import { and, asc, eq, desc, isNull, isNotNull } from "drizzle-orm";
 import { can } from "@/lib/permissions";
 import type { Role } from "@/types/roles";
 import type { WizardOrgUser } from "./wizard-constants";
@@ -166,6 +167,34 @@ export async function getVisibleProductions(user: {
   }
   return getUserProductions(user.id, user.organizationId);
 }
+
+/**
+ * The production's cast list (characters), with the org member cast in each
+ * role joined in when one is assigned. Drives the cast-assignment UI on the
+ * Cast & Crew page. Ordered as entered (wizard / AI reading order), then name.
+ */
+export async function getProductionRoles(productionId: string) {
+  return db
+    .select({
+      id: productionRoles.id,
+      name: productionRoles.name,
+      type: productionRoles.type,
+      actor: productionRoles.actor,
+      sortOrder: productionRoles.sortOrder,
+      assignedUserId: productionRoles.assignedUserId,
+      assignedFirstName: profiles.firstName,
+      assignedLastName: profiles.lastName,
+      assignedEmail: profiles.email,
+    })
+    .from(productionRoles)
+    .leftJoin(profiles, eq(productionRoles.assignedUserId, profiles.id))
+    .where(eq(productionRoles.productionId, productionId))
+    .orderBy(asc(productionRoles.sortOrder), asc(productionRoles.name));
+}
+
+export type ProductionRoleRow = Awaited<
+  ReturnType<typeof getProductionRoles>
+>[number];
 
 /**
  * Org members formatted for the wizard's actor autocomplete — anyone already

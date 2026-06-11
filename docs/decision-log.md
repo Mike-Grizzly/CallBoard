@@ -1705,7 +1705,7 @@ because deletion is more destructive. Org deletion additionally requires a
   keep the auth-resolution surface small. Deleting your current workspace moves
   you to another membership (or auth spins up a fresh personal workspace).
 
-**Deferred:** the destructive **hard purge** after 30 days is NOT built yet —
+**Deferred (delete):** the destructive **hard purge** after 30 days is NOT built yet —
 soft-deleted rows simply stay hidden past the window. Nothing is irreversibly
 lost until a careful, separately-tested purge step (likely an extension of the
 billing-lifecycle cron) lands. Tracked in open-questions.
@@ -1719,3 +1719,37 @@ billing-lifecycle cron) lands. Tracked in open-questions.
 (`getUserMemberships`); UI: `DeleteProductionButton`/`RestoreDeletedProductionButton`
 (`archive-buttons.tsx`), `deleted-section.tsx`, `delete-workspace-form.tsx`.
 `tsc`/`eslint` clean; columns verified live. Not yet device-verified.
+
+---
+
+## 2026-06-10 — Cast assignment bridges parsed roles to people
+
+**Decision:** `production_roles` (the character list written by the AI parse and
+the setup wizard) was previously write-only — never read or used. It now backs a
+**cast-assignment** UI. Added `production_roles.assigned_user_id` (nullable FK →
+`profiles`, `ON DELETE SET NULL`, applied live via MCP) as the bridge between a
+character and a real org member.
+
+**Semantics:**
+- Casting a person in a character (`assignRoleToMember`) **also grants
+  production access**: in theatre, casting someone means they get the show
+  (script, calls, etc.). A new member is inserted as `cast` with that
+  `characterName`; an **existing** member keeps their current production role
+  (so a director who also acts isn't demoted) and just gains the character.
+- **One actor ↔ one character per production**: re-assigning a person frees the
+  character they previously held in that show.
+- `unassignRole` clears the link + the matching `characterName` but **leaves the
+  membership** — revoking access stays an explicit action on the team list.
+- **Permissions:** casting existing members needs `productions:manage`; inviting
+  a brand-new person inline (`inviteAndAssignRole`, which reuses the People
+  invite flow) needs `settings:manage`, matching the existing invite gate.
+
+**Placement:** a "Cast list" section above the team manager on the Cast & Crew
+page (`/productions/[slug]/members`) — chosen over a separate Casting tab to
+keep all per-show people management in one place.
+
+**Impact:** `production_roles.assignedUserId` in the schema; `getProductionRoles`
+(`features/productions/queries.ts`); `assignRoleToMember`/`unassignRole`/
+`inviteAndAssignRole` (`features/members/actions.ts`); new `cast-list.tsx` wired
+into the members page. `tsc`/`eslint` clean; column verified live. Not yet
+device-verified.

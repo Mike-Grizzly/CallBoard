@@ -219,3 +219,21 @@ future lever if AI usage becomes material — deferred until there's token data.
   for small casts, not optimized for very large ones.
 - **Phase 2 highlighting** deferred — the hardest piece (per-line pixel coords,
   script-format-dependent).
+
+## Casting from parsed roles (added 2026-06-10)
+
+The parsed cast list (`production_roles`, written by `applyScriptParse`) was
+previously write-only. It now drives **cast assignment**: a "Cast list" section
+on the production's Cast & Crew page (`/productions/[slug]/members`) lists each
+parsed character and lets a manager cast a real person in it.
+
+- `production_roles.assigned_user_id` (nullable FK → `profiles`, `ON DELETE SET
+  NULL`) bridges a character to an org member.
+- Casting (`assignRoleToMember`) also grants production access: a new member is
+  added as `cast` with that `characterName`; an existing member keeps their
+  production role but gets the character. One actor ↔ one character per show
+  (re-assigning frees their previous role). `unassignRole` clears the link and
+  the character name but leaves access intact.
+- Managers (`productions:manage`) can cast existing org members; inviting a
+  brand-new person inline (`inviteAndAssignRole`) reuses the People invite flow
+  and so needs `settings:manage`.

@@ -1,12 +1,14 @@
 import { pgTable, uuid, text, integer, timestamp } from "drizzle-orm/pg-core";
 import { productions } from "./productions";
+import { profiles } from "./users";
 
 /**
  * The cast list / character roles for a production, captured in the setup
- * wizard. This is the planning artifact (who plays what); actual access for
- * cast members lives in `production_memberships`. `actor` is free text so a
- * role can be cast before the person has an account — it is intentionally not
- * a foreign key.
+ * wizard or written from a reviewed AI script analysis. This is the planning
+ * artifact (who plays what). `actor` is free text so a role can be cast before
+ * the person has an account; `assignedUserId` links the character to a real
+ * org member once one is cast (see `assignRoleToMember`), which also grants
+ * that person production access via `production_memberships`.
  */
 export const productionRoles = pgTable("production_roles", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -15,8 +17,14 @@ export const productionRoles = pgTable("production_roles", {
     .references(() => productions.id, { onDelete: "cascade" }),
   // Character / role name, e.g. "Frederic".
   name: text("name").notNull(),
-  // Optional actor name (free text — may not be an org member yet).
+  // Optional actor name (free text — may not be an org member yet). Kept in
+  // sync with the assigned member's display name when one is cast.
   actor: text("actor"),
+  // The org member cast in this role, if any. Null = not yet cast. ON DELETE
+  // SET NULL: removing the person from the org leaves the character uncast.
+  assignedUserId: uuid("assigned_user_id").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
   // One of the wizard's role types: Principal, Supporting, Ensemble, etc.
   type: text("type").notNull().default("Principal"),
   // Display order as entered in the wizard.
