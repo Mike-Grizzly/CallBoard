@@ -1855,3 +1855,19 @@ create index if not exists script_ocr_lookup_idx
 **OCR quality model (important, recorded for future work).** The rebuilt PDF is two layers: (1) the **visible page is the original scan image, untouched** — no script/lyric content is ever lost, altered, or dropped from what users read/print/annotate; (2) an **invisible text layer** from OCR drives search/select/copy and AI parse. OCR imperfections live *only* in layer 2 (a search miss, a copy typo, an occasional AI mis-parse) — never in the visible script. "Words recovered" in the DPI benchmark refers to how completely OCR populates layer 2, not deletion from the script. This mirrors Adobe's model (image + text layer); the only gap is tesseract vs. Adobe's commercial OCR accuracy. **Upgrade path if exact search/AI fidelity is needed:** route pages through a stronger OCR (cloud OCR or Claude vision) — the visible script is safe regardless of engine.
 
 **Impact.** Engine `lib/pdf-ocr-rebuild.ts` (image fn + `appendOcrPage` + scale), `lib/install-searchable-script.ts` (File dispatch), `lib/pdf-scan-detect.ts` (`needsScriptOcr`), `document-upload-form.tsx`, `use-script-rebuild.ts`. `tsc`/`eslint`/`next build` clean.
+
+---
+
+## 2026-06-11 — Rehearsal templates + schedule generation
+
+**Context.** The calls calendar listed "No recurring call support" as a known limitation. Requested feature: "calendar rehearsal-template generation". Asked the user for scope; they chose **Both** — saved named templates *and* recurring generation.
+
+**Decisions.**
+- **New `call_templates` table, production-scoped** (not org-level). Mirrors the calendar's existing per-production `calls` model; an org-wide template library would add access-check surface for no proven need (dev-rules: don't add broad abstractions early). FK to `productions`/`profiles` with cascade; RLS enabled, **no policies** (accessed only through server actions via the Drizzle/`DATABASE_URL` service connection) — same posture as `call_confirmations`/`script_ocr`. Applied as a live additive migration (`create_call_templates`) per this branch's convention.
+- **No new capability.** Reused `reports:create` (the calls-calendar gate) for template CRUD + generation. Cast/crew excluded.
+- **Templates are a seed, not a live link.** Generation copies the submitted form values (the picked template only prefills the form client-side); editing/deleting a template never mutates already-created calls. This keeps generated rows ordinary, individually-editable `calls` and avoids a template→calls dependency graph.
+- **Generation = one weekly pattern per run.** Date range × selected weekdays, iterated in UTC; `skip_existing` (default on) avoids duplicating days that already have a call; capped at **200 calls/run** as a runaway guard. Bi-weekly / per-day variation is a deliberate follow-up rather than a complex recurrence engine up front.
+- **Scoped to the production calendar.** The "Generate" entry only appears when the unified `CalendarClient` has a `scopedSlug` (i.e. `/productions/[slug]/calls`), since templates are production-scoped — the workspace multi-production calendar is left untouched.
+- **Deferred:** a template picker on the single-call slide-in tray (would require controlling every field on the shared `CallForm`); for now applying a template to one call = a one-day generation.
+
+**Impact.** New: `db/schema/call-templates.ts`, `features/call-templates/{queries,actions}.ts`, `app/(app)/productions/[slug]/calls/templates/**`, `app/(app)/productions/[slug]/calls/generate/**`. Edited: `db/schema/index.ts`, `app/(app)/calendar/calendar-client.tsx`. `tsc`/`eslint` clean; not yet browser-verified. Spec: `feature-specs/12-rehearsal-templates.md`.

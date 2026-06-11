@@ -80,4 +80,4 @@ End time shown as "until HH:MM AM/PM" under the start time when set.
 
 - Status is computed at page render time — the header won't flip from "upcoming" to "live" without a page reload. Real-time would require Supabase Realtime or polling.
 - Calendar shows all calls for a production across all time; there is no archive/hide-past toggle.
-- No recurring call support (e.g. "every Tuesday 7–10pm for 8 weeks").
+- ~~No recurring call support (e.g. "every Tuesday 7–10pm for 8 weeks").~~ **Resolved (2026-06-11)** by rehearsal templates + schedule generation — see `12-rehearsal-templates.md`.
