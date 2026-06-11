@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   useRef,
   useState,
   useEffect,
@@ -135,6 +136,8 @@ export function ScriptViewer({
   const [currentPage, setCurrentPage] = useState(1);
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
+  // "script" = the PDF + annotation canvas; "cuesheet" = the editable cue table.
+  const [viewMode, setViewMode] = useState<"script" | "cuesheet">("script");
 
   const [annotations, setAnnotations] = useState<Annotation[]>(initialAnnotations);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks);
@@ -855,6 +858,23 @@ export function ScriptViewer({
     }
   }
 
+  function exportCueSheetCsv() {
+    const cues = latestAnnotationsRef.current.filter(
+      (a): a is CueAnn => a.type === "cue",
+    );
+    const sections = buildCueSheetSections(cues, bookmarks);
+    const csv = cueSheetToCsv(sections, script.title || "Script");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${script.title || "script"} - cue sheet.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   function handleDismissStale() {
     const formData = new FormData();
     formData.set("script_id", script.id);
@@ -1425,6 +1445,17 @@ export function ScriptViewer({
                   : "Download PDF"}
               </span>
             </button>
+            <button
+              className={viewMode === "cuesheet" ? "btn" : "btn ghost"}
+              onClick={() =>
+                setViewMode((m) => (m === "cuesheet" ? "script" : "cuesheet"))
+              }
+              style={{ fontSize: 12, height: 28, gap: 5 }}
+              title="Toggle the cue sheet"
+            >
+              <LayoutList size={13} />
+              <span>{viewMode === "cuesheet" ? "Script" : "Cue sheet"}</span>
+            </button>
             <span
               style={{
                 fontSize: 11.5,
@@ -1502,6 +1533,23 @@ export function ScriptViewer({
           </div>
         )}
 
+        {viewMode === "cuesheet" ? (
+          <CueSheetView
+            cues={annotations.filter((a): a is CueAnn => a.type === "cue")}
+            bookmarks={bookmarks}
+            scriptTitle={script.title || "Script"}
+            readOnly={isPhone}
+            onEdit={updateAnnotation}
+            onDelete={deleteAnnotation}
+            onExportCsv={exportCueSheetCsv}
+            onGoToCue={(cue) => {
+              setViewMode("script");
+              setCurrentPage(cue.page);
+              setSelectedId(cue.id);
+            }}
+          />
+        ) : (
+        <>
         {/* PDF + annotation layer */}
         <div
           ref={workspaceRef}
@@ -1885,6 +1933,8 @@ export function ScriptViewer({
         <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
           {script.title} · v{script.scriptVersion} · Your annotations are private
         </p>
+        </>
+        )}
       </div>
 
       {/* ── Right panel column ── */}
@@ -2172,6 +2222,243 @@ function stackCueLabels(
     }
   }
   return out;
+}
+
+// ── Cue sheet (CSV export + spreadsheet view) ───────────────────────────────
+
+type CueAnn = Extract<Annotation, { type: "cue" }>;
+type CueSheetSection = { label: string; rows: CueAnn[] };
+
+/**
+ * Group every cue into ordered sections by the scene it falls under. Section
+ * anchors are the non-song bookmarks (the AI/parsed scene breakdown plus any
+ * hand-added markers), matched by page; cues before the first marker land in
+ * "Top of show". Cues are ordered by page, then vertical position on the page.
+ */
+function buildCueSheetSections(
+  cues: CueAnn[],
+  bookmarks: Bookmark[],
+): CueSheetSection[] {
+  const marks = bookmarks
+    .filter((b) => b.kind !== "song")
+    .slice()
+    .sort((a, b) => a.page - b.page);
+  const labelFor = (page: number): string => {
+    let label = "Top of show";
+    for (const m of marks) {
+      if (m.page <= page) label = m.title.trim() || label;
+      else break;
+    }
+    return label;
+  };
+  const sorted = cues
+    .slice()
+    .sort((a, b) => (a.page !== b.page ? a.page - b.page : a.rect.y - b.rect.y));
+  const sections: CueSheetSection[] = [];
+  for (const cue of sorted) {
+    const label = labelFor(cue.page);
+    let section = sections[sections.length - 1];
+    if (!section || section.label !== label) {
+      section = { label, rows: [] };
+      sections.push(section);
+    }
+    section.rows.push(cue);
+  }
+  return sections;
+}
+
+function csvCell(v: string): string {
+  return /[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+}
+
+/** Cue sheet as CSV — scene sections are divider rows, à la the user's notes. */
+function cueSheetToCsv(sections: CueSheetSection[], title: string): string {
+  const lines: string[] = [csvCell(`Cue Sheet: ${title}`), ""];
+  for (const section of sections) {
+    lines.push(csvCell(section.label));
+    lines.push("Cue,Note,Page");
+    for (const c of section.rows) {
+      lines.push(
+        [csvCell(c.cueNumber), csvCell(c.cueDescription), String(c.page)].join(
+          ",",
+        ),
+      );
+    }
+    lines.push("");
+  }
+  return lines.join("\r\n");
+}
+
+/**
+ * Editable cue-sheet view — a spreadsheet of every cue grouped by scene. Cue
+ * number and note are inline-editable and write straight back to the annotation
+ * (so the script view stays in sync); each row jumps to its spot in the script.
+ */
+function CueSheetView({
+  cues,
+  bookmarks,
+  scriptTitle,
+  readOnly,
+  onEdit,
+  onDelete,
+  onGoToCue,
+  onExportCsv,
+}: {
+  cues: CueAnn[];
+  bookmarks: Bookmark[];
+  scriptTitle: string;
+  readOnly: boolean;
+  onEdit: (id: string, changes: Partial<Annotation>) => void;
+  onDelete: (id: string) => void;
+  onGoToCue: (cue: CueAnn) => void;
+  onExportCsv: () => void;
+}) {
+  const sections = useMemo(
+    () => buildCueSheetSections(cues, bookmarks),
+    [cues, bookmarks],
+  );
+
+  return (
+    <div className="sv-cuesheet">
+      <div className="sv-cuesheet-head">
+        <div>
+          <div className="sv-cuesheet-title">Cue sheet</div>
+          <div className="sv-cuesheet-sub">
+            {cues.length} cue{cues.length === 1 ? "" : "s"} · {scriptTitle}
+          </div>
+        </div>
+        <button
+          className="btn ghost"
+          onClick={onExportCsv}
+          disabled={cues.length === 0}
+          style={{ fontSize: 12, height: 28, gap: 5 }}
+          title="Export the cue sheet as CSV"
+        >
+          <Download size={13} />
+          <span>Export CSV</span>
+        </button>
+      </div>
+
+      {cues.length === 0 ? (
+        <p className="sv-cuesheet-empty">
+          No cues yet. Switch to the script and place cues with the Cue tool —
+          they’ll show up here.
+        </p>
+      ) : (
+        <div className="sv-cuesheet-scroll">
+          <table className="sv-cuesheet-table">
+            <thead>
+              <tr>
+                <th style={{ width: 110 }}>Cue</th>
+                <th>Note</th>
+                <th style={{ width: 66 }}>Page</th>
+                {!readOnly && <th style={{ width: 34 }} />}
+              </tr>
+            </thead>
+            <tbody>
+              {sections.map((section) => (
+                <Fragment key={`${section.label}-${section.rows[0]?.id}`}>
+                  <tr className="sv-cuesheet-section">
+                    <td colSpan={readOnly ? 3 : 4}>{section.label}</td>
+                  </tr>
+                  {section.rows.map((cue) => (
+                    <CueSheetRow
+                      key={cue.id}
+                      cue={cue}
+                      readOnly={readOnly}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      onGoTo={() => onGoToCue(cue)}
+                    />
+                  ))}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CueSheetRow({
+  cue,
+  readOnly,
+  onEdit,
+  onDelete,
+  onGoTo,
+}: {
+  cue: CueAnn;
+  readOnly: boolean;
+  onEdit: (id: string, changes: Partial<Annotation>) => void;
+  onDelete: (id: string) => void;
+  onGoTo: () => void;
+}) {
+  const cc = cue.color ?? CUE_STROKE;
+  return (
+    <tr className="sv-cuesheet-row">
+      <td>
+        <span className="sv-cuesheet-cue">
+          <span className="sv-cuesheet-dot" style={{ background: cc }} />
+          {readOnly ? (
+            <span>{cue.cueNumber}</span>
+          ) : (
+            <input
+              className="sv-cuesheet-input"
+              defaultValue={cue.cueNumber}
+              onBlur={(e) => {
+                const v = e.target.value.trim();
+                if (v && v !== cue.cueNumber)
+                  onEdit(cue.id, { cueNumber: v } as Partial<Annotation>);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              }}
+            />
+          )}
+        </span>
+      </td>
+      <td>
+        {readOnly ? (
+          <span>{cue.cueDescription}</span>
+        ) : (
+          <input
+            className="sv-cuesheet-input"
+            defaultValue={cue.cueDescription}
+            placeholder="—"
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v !== cue.cueDescription)
+                onEdit(cue.id, { cueDescription: v } as Partial<Annotation>);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            }}
+          />
+        )}
+      </td>
+      <td>
+        <button
+          className="sv-cuesheet-page"
+          onClick={onGoTo}
+          title="Go to this cue in the script"
+        >
+          p.{cue.page}
+        </button>
+      </td>
+      {!readOnly && (
+        <td>
+          <button
+            className="sv-cuesheet-del"
+            onClick={() => onDelete(cue.id)}
+            title="Delete cue"
+          >
+            <Trash2 size={13} />
+          </button>
+        </td>
+      )}
+    </tr>
+  );
 }
 
 function drawAnnotationOnCanvas(
