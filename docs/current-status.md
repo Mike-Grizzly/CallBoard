@@ -2,6 +2,9 @@
 
 **Last updated:** 2026-06-11
 
+**Session 2026-06-11 (beta round 11 — smaller labels + auto two-lane cues, branch `claude/cue-two-lane`, EXPERIMENTAL / not merged):** trial of a denser cue layout. (1) **Smaller labels** — cue number 15→13px, description 11→9px (both SVG + export). (2) **Auto two-lane stacking** — `stackCueLabels` now returns `{y, lane}` and packs each margin into two lanes: a cue takes the inner lane at its natural height when free, overflows to a second lane (offset `CUE_LANE_GAP=34px` toward the text) only when the inner is occupied, and only pushes down if both lanes are full. Sparse pages stay single-column; dense clusters stagger between two lanes at their natural heights (verified: 5 cues 16px apart alternate 0/1/0/1/0 with no push-down). Stacking constants eased slightly (20/18/12). Renderers (`AnnotationShape`, `drawAnnotationOnCanvas`) take `cueLabel?: {y,lane}` and derive lane X from canvasW. Known risk to evaluate in-browser: the 2nd lane sits toward the text so on tight-margin scripts it may crowd the page, and long descriptions in two lanes can overlap. `tsc`/`eslint`/`next build` clean. **To be tested on deployment; scrap if it doesn't read well.**
+
+
 **Session 2026-06-11 (beta round 10 — note text contrast, branch `claude/note-text-contrast`):** the on-page note text box used `color: var(--ink)`, which is white in dark mode — unreadable since the note sits on the white script page. Hardcoded the note text to a dark colour (`#1a1a1a`, +`fontWeight 500`) so it reads in any theme, matching the PDF export (`#1c1c1c`); nudged the box tint slightly lighter (`26`→`22`). `next build` clean. Not browser-verified.
 
 
