@@ -17,6 +17,7 @@ export * from "./blocking-positions";
 export * from "./note-tags";
 export * from "./production-notes";
 export * from "./calls";
+export * from "./call-templates";
 export * from "./call-confirmations";
 export * from "./beat-comments";
 export * from "./notifications";

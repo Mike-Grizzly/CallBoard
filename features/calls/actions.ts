@@ -13,6 +13,7 @@ import {
   getProductionMembership,
   getProductionMembers,
 } from "@/features/members/queries";
+import { getTemplatesForProduction } from "@/features/call-templates/queries";
 
 export type CallResult = {
   error?: string;
@@ -28,10 +29,24 @@ export type CallTrayMember = {
   email: string;
 };
 
+export type CallTrayTemplate = {
+  id: string;
+  name: string;
+  callTime: string | null;
+  endTime: string | null;
+  location: string | null;
+  focus: string | null;
+  scenes: string | null;
+  castCalled: string | null;
+  schedule: string | null;
+  notes: string | null;
+};
+
 export type CallTrayData = {
   error?: string;
   productionId?: string;
   cast?: CallTrayMember[];
+  templates?: CallTrayTemplate[];
 };
 
 /**
@@ -52,7 +67,10 @@ export async function getCallTrayData(slug: string): Promise<CallTrayData> {
     if (!membership) return { error: "You're not on this production." };
   }
 
-  const members = await getProductionMembers(production.id);
+  const [members, rawTemplates] = await Promise.all([
+    getProductionMembers(production.id),
+    getTemplatesForProduction(production.id),
+  ]);
   const cast: CallTrayMember[] = members
     .filter((m) => m.role === "cast")
     .map((m) => ({
@@ -62,8 +80,20 @@ export async function getCallTrayData(slug: string): Promise<CallTrayData> {
       characterName: m.characterName,
       email: m.email,
     }));
+  const templates: CallTrayTemplate[] = rawTemplates.map((t) => ({
+    id: t.id,
+    name: t.name,
+    callTime: t.callTime,
+    endTime: t.endTime,
+    location: t.location,
+    focus: t.focus,
+    scenes: t.scenes,
+    castCalled: t.castCalled,
+    schedule: t.schedule,
+    notes: t.notes,
+  }));
 
-  return { productionId: production.id, cast };
+  return { productionId: production.id, cast, templates };
 }
 
 function trim(v: FormDataEntryValue | null): string | null {
