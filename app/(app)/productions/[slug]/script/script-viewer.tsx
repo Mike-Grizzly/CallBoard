@@ -1,9 +1,11 @@
 "use client";
 
 import {
+  Fragment,
   useRef,
   useState,
   useEffect,
+  useMemo,
   useCallback,
   useTransition,
 } from "react";
@@ -31,6 +33,9 @@ import {
   Maximize2,
   Sparkles,
   ScanText,
+  Music,
+  Clapperboard,
+  Square,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -106,7 +111,7 @@ interface Props {
 
 type PendingAnnotation =
   | { type: "note"; rect: AnnotationRect; page: number }
-  | { type: "cue"; rect: AnnotationRect; page: number };
+  | { type: "cue"; rect: AnnotationRect; page: number; marker: "box" | "pipe" };
 
 export function ScriptViewer({
   script,
@@ -124,6 +129,11 @@ export function ScriptViewer({
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+  // Available height for the viewer = viewport minus whatever chrome (app
+  // header, production tabs, banners) sits above it, so the script scrolls
+  // inside the page instead of running off the bottom of the monitor.
+  const [shellHeight, setShellHeight] = useState<number | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null);
   // Refs hold the latest values so the debounced save always reads current state
@@ -134,6 +144,8 @@ export function ScriptViewer({
   const [currentPage, setCurrentPage] = useState(1);
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
+  // "script" = the PDF + annotation canvas; "cuesheet" = the editable cue table.
+  const [viewMode, setViewMode] = useState<"script" | "cuesheet">("script");
 
   const [annotations, setAnnotations] = useState<Annotation[]>(initialAnnotations);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks);
@@ -142,27 +154,80 @@ export function ScriptViewer({
 
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [zoomIndex, setZoomIndex] = useState(1); // index into ZOOM_STEPS; 1 = 100%
-  const [zoomMode, setZoomMode] = useState<"step" | "fit">("step");
+  // Default to fitting the whole page in the available height, so a script
+  // page presents complete (no scroll) until the user zooms in.
+  const [zoomMode, setZoomMode] = useState<"step" | "fit">("fit");
   const [readMode, setReadMode] = useState(false);
 
   // Page-jump input (the "n / total" becomes editable on focus).
   const [pageInput, setPageInput] = useState("");
   const [pageInputFocused, setPageInputFocused] = useState(false);
 
-  // Intrinsic page width (points) + workspace width drive "fit width".
-  const [pageWidthPts, setPageWidthPts] = useState(0);
-  const [workspaceW, setWorkspaceW] = useState(0);
+  // Phones present the script view-only (see the tool note below); also gates
+  // the render scale, so declared here before "fit page" math uses it.
+  const isPhone = useIsPhone();
 
+  // Intrinsic page size (points) + workspace size drive "fit whole page".
+  const [pageWidthPts, setPageWidthPts] = useState(0);
+  const [pageHeightPts, setPageHeightPts] = useState(0);
+  const [workspaceW, setWorkspaceW] = useState(0);
+  const [workspaceH, setWorkspaceH] = useState(0);
+
+  // "Fit" = contain the whole page in the workspace box (limited by width OR
+  // height, whichever is tighter), accounting for the workspace padding.
   const fitScale =
-    zoomMode === "fit" && pageWidthPts > 0 && workspaceW > 0
-      ? Math.min(4, Math.max(0.4, (workspaceW - 48) / pageWidthPts))
+    pageWidthPts > 0 && workspaceW > 0
+      ? Math.min(
+          4,
+          Math.max(
+            0.4,
+            Math.min(
+              (workspaceW - 64) / pageWidthPts,
+              workspaceH > 0 && pageHeightPts > 0
+                ? (workspaceH - 56) / pageHeightPts
+                : Infinity,
+            ),
+          ),
+        )
       : null;
-  const renderScale = fitScale ?? BASE_RENDER_SCALE * ZOOM_STEPS[zoomIndex];
+  // On phones the canvas is CSS-stretched to the column width regardless of
+  // scale, so render at a fixed high scale for sharpness; "fit page" is a
+  // desktop concern (it shapes the actual displayed size there).
+  const renderScale = isPhone
+    ? BASE_RENDER_SCALE
+    : zoomMode === "fit" && fitScale
+      ? fitScale
+      : BASE_RENDER_SCALE * ZOOM_STEPS[zoomIndex];
+
+  // Zoom in/out, transitioning cleanly to/from the whole-page "fit" baseline.
+  function zoomIn() {
+    if (zoomMode === "fit") {
+      const fit = fitScale ?? 0;
+      let idx = ZOOM_STEPS.findIndex((z) => z * BASE_RENDER_SCALE > fit + 1e-3);
+      if (idx === -1) idx = ZOOM_STEPS.length - 1;
+      setZoomIndex(idx);
+      setZoomMode("step");
+    } else {
+      setZoomIndex((i) => Math.min(ZOOM_STEPS.length - 1, i + 1));
+    }
+  }
+  function zoomOut() {
+    if (zoomMode === "fit") return; // already showing the whole page
+    const nextIdx = zoomIndex - 1;
+    // Zooming out past the whole-page scale snaps back to fit.
+    if (
+      nextIdx < 0 ||
+      (fitScale !== null && BASE_RENDER_SCALE * ZOOM_STEPS[nextIdx] <= fitScale)
+    ) {
+      setZoomMode("fit");
+    } else {
+      setZoomIndex(nextIdx);
+    }
+  }
 
   // The annotation tools are mouse-built (drag to draw) — on phones the
   // script is presented view-only: the tool is locked to "pointer" so the
   // canvas only pans, and the drawing tools / edit controls are hidden.
-  const isPhone = useIsPhone();
   const [activeToolState, setActiveTool] = useState<Tool>("pointer");
   const activeTool: Tool = isPhone ? "pointer" : activeToolState;
   const [activeColor, setActiveColor] = useState(DEFAULT_ANNOTATION_COLOR);
@@ -182,6 +247,9 @@ export function ScriptViewer({
     }
   }
   const [preferredLeaderSide, setPreferredLeaderSide] = useState<"left" | "right">("right");
+  // Cue anchor style: drag a "box" around words/lines, or drop a "pipe" (a
+  // single vertical line) between words / at a line end.
+  const [cueMarker, setCueMarker] = useState<"box" | "pipe">("box");
 
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
@@ -441,13 +509,17 @@ export function ScriptViewer({
     el.appendChild(frag);
   }, [ocr.status, ocr.pages, currentPage, canvasSize]);
 
-  // ── Intrinsic page width (for "fit width") ──────────────────────────────────
+  // ── Intrinsic page size (for "fit whole page") ──────────────────────────────
   useEffect(() => {
     let active = true;
     loadPdfDocument(pdfUrl)
       .then(async (pdf) => {
         const page = await pdf.getPage(1);
-        if (active) setPageWidthPts(page.getViewport({ scale: 1 }).width);
+        if (active) {
+          const vp = page.getViewport({ scale: 1 });
+          setPageWidthPts(vp.width);
+          setPageHeightPts(vp.height);
+        }
       })
       .catch(() => {});
     return () => {
@@ -459,12 +531,40 @@ export function ScriptViewer({
   useEffect(() => {
     const el = workspaceRef.current;
     if (!el) return;
-    const measure = () => setWorkspaceW(el.clientWidth);
+    const measure = () => {
+      // Ignore zero sizes (e.g. while the cue-sheet view hides the workspace)
+      // so the fit scale keeps its last good value and the page stays put.
+      if (el.clientWidth > 0) setWorkspaceW(el.clientWidth);
+      if (el.clientHeight > 0) setWorkspaceH(el.clientHeight);
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // ── Bound the viewer to the visible viewport ────────────────────────────────
+  useEffect(() => {
+    if (isPhone) {
+      setShellHeight(null);
+      return;
+    }
+    const measure = () => {
+      const el = shellRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      // Leave a small gutter at the bottom so the card edge isn't flush.
+      setShellHeight(Math.max(360, window.innerHeight - top - 12));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    // Re-measure after layout settles (banners mounting can shift `top`).
+    const t = setTimeout(measure, 250);
+    return () => {
+      window.removeEventListener("resize", measure);
+      clearTimeout(t);
+    };
+  }, [isPhone]);
 
   // ── Prefetch adjacent pages so next/prev is instant ─────────────────────────
   useEffect(() => {
@@ -681,16 +781,33 @@ export function ScriptViewer({
 
   function handleSVGMouseUp(e: React.MouseEvent) {
     if (!drawStart || !drawCurrent) return;
+    const start = drawStart;
+    const end = drawCurrent;
 
     const rect: AnnotationRect = {
-      x: Math.min(drawStart.x, drawCurrent.x),
-      y: Math.min(drawStart.y, drawCurrent.y),
-      width: Math.abs(drawCurrent.x - drawStart.x),
-      height: Math.abs(drawCurrent.y - drawStart.y),
+      x: Math.min(start.x, end.x),
+      y: Math.min(start.y, end.y),
+      width: Math.abs(end.x - start.x),
+      height: Math.abs(end.y - start.y),
     };
 
     setDrawStart(null);
     setDrawCurrent(null);
+
+    // Pipe cue: a single click drops a vertical line at that point, snapped to
+    // the height of the text line under it (no drag needed).
+    if (activeTool === "cue" && cueMarker === "pipe") {
+      const band = pipeBandAt(end);
+      setPendingAnnotation({
+        type: "cue",
+        page: currentPage,
+        marker: "pipe",
+        rect: { x: end.x, y: band.yTop, width: 0, height: band.height },
+      });
+      setPendingCueNumber("");
+      setPendingCueDesc("");
+      return;
+    }
 
     // Ignore tiny accidental drags
     if (rect.width < 0.005 || rect.height < 0.003) return;
@@ -704,10 +821,20 @@ export function ScriptViewer({
         color: activeColor,
       });
     } else if (activeTool === "note") {
-      setPendingAnnotation({ type: "note", rect, page: currentPage });
+      // Notes are sticky-note text boxes, so guarantee enough room to read the
+      // note even from a quick drag; never shrink a box the user drew larger.
+      const width = Math.max(rect.width, 0.2);
+      const height = Math.max(rect.height, 0.06);
+      const noteRect: AnnotationRect = {
+        x: Math.min(rect.x, 1 - width),
+        y: Math.min(rect.y, 1 - height),
+        width,
+        height,
+      };
+      setPendingAnnotation({ type: "note", rect: noteRect, page: currentPage });
       setPendingText("");
     } else if (activeTool === "cue") {
-      setPendingAnnotation({ type: "cue", rect, page: currentPage });
+      setPendingAnnotation({ type: "cue", rect, page: currentPage, marker: "box" });
       setPendingCueNumber("");
       setPendingCueDesc("");
     }
@@ -719,31 +846,52 @@ export function ScriptViewer({
     if (!selection || selection.isCollapsed || !pdfCanvasRef.current) return;
 
     const range = selection.getRangeAt(0);
-    const rects = range.getClientRects();
     const canvasRect = pdfCanvasRef.current.getBoundingClientRect();
-
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const r of rects) {
-      minX = Math.min(minX, r.left - canvasRect.left);
-      minY = Math.min(minY, r.top - canvasRect.top);
-      maxX = Math.max(maxX, r.right - canvasRect.left);
-      maxY = Math.max(maxY, r.bottom - canvasRect.top);
-    }
-
-    if (maxX <= minX || maxY <= minY) return;
-
     const w = canvasRect.width;
     const h = canvasRect.height;
+    if (w === 0 || h === 0) return;
+
+    // getClientRects() returns one box per on-screen line fragment. Merge
+    // fragments that share a line (similar top) so each line is one box, and
+    // keep them separate across lines — a multi-line selection then hugs each
+    // line's actual text rather than collapsing into one full-width block.
+    const tol = 4;
+    const lines: { top: number; bottom: number; left: number; right: number }[] = [];
+    for (const r of range.getClientRects()) {
+      if (r.width < 0.5 || r.height < 0.5) continue;
+      const top = r.top - canvasRect.top;
+      const bottom = r.bottom - canvasRect.top;
+      const left = r.left - canvasRect.left;
+      const right = r.right - canvasRect.left;
+      const row = lines.find((l) => Math.abs(l.top - top) <= tol);
+      if (row) {
+        row.left = Math.min(row.left, left);
+        row.right = Math.max(row.right, right);
+        row.top = Math.min(row.top, top);
+        row.bottom = Math.max(row.bottom, bottom);
+      } else {
+        lines.push({ top, bottom, left, right });
+      }
+    }
+    if (lines.length === 0) return;
+
+    const rects: AnnotationRect[] = lines.map((l) => ({
+      x: l.left / w,
+      y: l.top / h,
+      width: (l.right - l.left) / w,
+      height: (l.bottom - l.top) / h,
+    }));
+    const minX = Math.min(...rects.map((r) => r.x));
+    const minY = Math.min(...rects.map((r) => r.y));
+    const maxX = Math.max(...rects.map((r) => r.x + r.width));
+    const maxY = Math.max(...rects.map((r) => r.y + r.height));
+
     addAnnotation({
       id: crypto.randomUUID(),
       page: currentPage,
       type: "highlight",
-      rect: {
-        x: minX / w,
-        y: minY / h,
-        width: (maxX - minX) / w,
-        height: (maxY - minY) / h,
-      },
+      rect: { x: minX, y: minY, width: maxX - minX, height: maxY - minY },
+      rects,
       color: activeColor,
     });
 
@@ -751,6 +899,120 @@ export function ScriptViewer({
   }
 
   // ── Pending annotation confirmation ────────────────────────────────────────
+
+  // Pull the script text sitting under a box from the rendered text layer, so a
+  // cue can record the "line" it's called on. Reads the positioned spans the
+  // PDF (or OCR) text layer lays over the canvas and keeps those overlapping
+  // the box, in reading order.
+  function captureLineText(rect: AnnotationRect): string {
+    const layer = textLayerRef.current;
+    if (!layer || canvasSize.w === 0 || canvasSize.h === 0) return "";
+    const bx = rect.x * canvasSize.w;
+    const by = rect.y * canvasSize.h;
+    const bw = rect.width * canvasSize.w;
+    const bh = rect.height * canvasSize.h;
+    const items: { top: number; left: number; text: string }[] = [];
+    for (const el of Array.from(layer.children) as HTMLElement[]) {
+      const t = el.offsetTop;
+      const l = el.offsetLeft;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const vOverlap = t + h > by && t < by + bh;
+      const hOverlap = l + w > bx && l < bx + bw;
+      if (vOverlap && hOverlap && el.textContent?.trim()) {
+        items.push({ top: t, left: l, text: el.textContent });
+      }
+    }
+    items.sort((a, b) =>
+      Math.abs(a.top - b.top) > 6 ? a.top - b.top : a.left - b.left,
+    );
+    return items
+      .map((i) => i.text)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  // Find the text line under a click (fractional point) and return its band as
+  // fractional y/height, so a pipe matches the height of the line it sits on.
+  function pipeBandAt(p: { x: number; y: number }): { yTop: number; height: number } {
+    const fallbackH = 0.022;
+    const fallback = {
+      yTop: Math.max(0, Math.min(p.y - fallbackH / 2, 1 - fallbackH)),
+      height: fallbackH,
+    };
+    const layer = textLayerRef.current;
+    if (!layer || canvasSize.h === 0) return fallback;
+    const py = p.y * canvasSize.h;
+    let best: { top: number; h: number } | null = null;
+    let bestScore = Infinity;
+    for (const el of Array.from(layer.children) as HTMLElement[]) {
+      const top = el.offsetTop;
+      const h = el.offsetHeight;
+      if (h <= 0) continue;
+      const contains = py >= top && py <= top + h;
+      const score = contains ? 0 : Math.abs(top + h / 2 - py);
+      if (score < bestScore) {
+        bestScore = score;
+        best = { top, h };
+      }
+    }
+    if (!best) return fallback;
+    return { yTop: best.top / canvasSize.h, height: best.h / canvasSize.h };
+  }
+
+  // Words on the text line at a vertical band, each with an approximate x. A
+  // single text-layer span often holds a whole line, so we split it into words
+  // and spread their x across the span's width by character offset — letting a
+  // pipe be located between words even within one span.
+  function lineWordsAt(
+    bandCenter: number,
+    tol: number,
+  ): { x: number; word: string }[] {
+    const layer = textLayerRef.current;
+    if (!layer) return [];
+    const out: { x: number; word: string }[] = [];
+    for (const el of Array.from(layer.children) as HTMLElement[]) {
+      const center = el.offsetTop + el.offsetHeight / 2;
+      const text = el.textContent ?? "";
+      if (Math.abs(center - bandCenter) > tol || !text.trim()) continue;
+      const left = el.offsetLeft;
+      const width = el.offsetWidth;
+      const n = text.length || 1;
+      let idx = 0;
+      for (const part of text.split(/(\s+)/)) {
+        if (part.trim()) out.push({ x: left + (idx / n) * width, word: part });
+        idx += part.length;
+      }
+    }
+    return out.sort((a, b) => a.x - b.x);
+  }
+
+  // Build a short snippet of script around a pipe, with "*" marking it. Uses a
+  // window of words on each side (with "…" when there's more), so each pipe on
+  // a line captures its own surrounding words rather than the whole line.
+  function capturePipeLine(rect: AnnotationRect): string {
+    if (canvasSize.w === 0 || canvasSize.h === 0) return "*";
+    const pipeX = rect.x * canvasSize.w;
+    const bandCenter = (rect.y + rect.height / 2) * canvasSize.h;
+    const tol = rect.height * canvasSize.h * 0.6 + 2;
+    const words = lineWordsAt(bandCenter, tol);
+    if (words.length === 0) return "*";
+
+    const WINDOW = 5;
+    let i = words.findIndex((w) => w.x >= pipeX);
+    if (i === -1) i = words.length; // pipe sits after the last word
+    const start = Math.max(0, i - WINDOW);
+    const end = Math.min(words.length, i + WINDOW);
+
+    const parts: string[] = [];
+    if (start > 0) parts.push("…");
+    parts.push(...words.slice(start, i).map((w) => w.word));
+    parts.push("*");
+    parts.push(...words.slice(i, end).map((w) => w.word));
+    if (end < words.length) parts.push("…");
+    return parts.join(" ").replace(/\s+/g, " ").trim();
+  }
 
   function confirmPending() {
     if (!pendingAnnotation) return;
@@ -774,6 +1036,7 @@ export function ScriptViewer({
         return;
       }
       const rect = pendingAnnotation.rect;
+      const isPipe = pendingAnnotation.marker === "pipe";
       addAnnotation({
         id: crypto.randomUUID(),
         page: pendingAnnotation.page,
@@ -783,6 +1046,8 @@ export function ScriptViewer({
         cueDescription: pendingCueDesc.trim(),
         leaderSide: preferredLeaderSide,
         color: cueColor,
+        marker: isPipe ? "pipe" : "box",
+        line: isPipe ? capturePipeLine(rect) : captureLineText(rect),
       });
     }
 
@@ -814,10 +1079,23 @@ export function ScriptViewer({
 
         await page.render({ canvas, viewport }).promise;
 
-        // Draw annotations for this page
+        // Draw annotations for this page. Cue labels stack the same way they do
+        // on screen, computed in this canvas's pixel space.
         const pageAnns = latestAnnotationsRef.current.filter((a) => a.page === pageNum);
+        const exportCueYs = stackCueLabels(
+          pageAnns.filter(
+            (a): a is Extract<Annotation, { type: "cue" }> => a.type === "cue",
+          ),
+          viewport.height,
+        );
         for (const ann of pageAnns) {
-          drawAnnotationOnCanvas(ctx, ann, viewport.width, viewport.height);
+          drawAnnotationOnCanvas(
+            ctx,
+            ann,
+            viewport.width,
+            viewport.height,
+            ann.type === "cue" ? exportCueYs.get(ann.id) : undefined,
+          );
         }
 
         const imgData = canvas.toDataURL("image/jpeg", 0.93);
@@ -841,6 +1119,23 @@ export function ScriptViewer({
     }
   }
 
+  function exportCueSheetCsv() {
+    const cues = latestAnnotationsRef.current.filter(
+      (a): a is CueAnn => a.type === "cue",
+    );
+    const sections = buildCueSheetSections(cues, bookmarks);
+    const csv = cueSheetToCsv(sections, script.title || "Script");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${script.title || "script"} - cue sheet.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   function handleDismissStale() {
     const formData = new FormData();
     formData.set("script_id", script.id);
@@ -853,6 +1148,19 @@ export function ScriptViewer({
   // ── Page annotations (current page only) ──────────────────────────────────
 
   const pageAnnotations = annotations.filter((a) => a.page === currentPage);
+
+  // Stacked label positions for this page's cues, so overlapping labels offset
+  // instead of piling up (recomputed when the page's cues or canvas size change).
+  const cueLabelYs = useMemo(
+    () =>
+      stackCueLabels(
+        pageAnnotations.filter(
+          (a): a is Extract<Annotation, { type: "cue" }> => a.type === "cue",
+        ),
+        canvasSize.h,
+      ),
+    [pageAnnotations, canvasSize.h],
+  );
 
   // ── SVG cursor style ───────────────────────────────────────────────────────
 
@@ -917,8 +1225,16 @@ export function ScriptViewer({
       />
     )}
     <div
+      ref={shellRef}
       className="anim-in script-viewer-shell"
-      style={{ display: "flex", gap: 0, minHeight: 0, maxWidth: 1440, margin: "0 auto" }}
+      style={{
+        display: "flex",
+        gap: 0,
+        minHeight: 0,
+        maxWidth: 1440,
+        margin: "0 auto",
+        ...(shellHeight ? { height: shellHeight } : {}),
+      }}
     >
       {/* ── Tool sidebar ── */}
       <div
@@ -985,6 +1301,47 @@ export function ScriptViewer({
             }}
           >
             <span style={{ fontSize: 9, color: "var(--ink-4)", letterSpacing: ".05em", textTransform: "uppercase" }}>
+              Style
+            </span>
+            <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
+              <button
+                title="Box — drag around words or lines"
+                onClick={() => setCueMarker("box")}
+                style={{
+                  width: 26,
+                  height: 24,
+                  display: "grid",
+                  placeItems: "center",
+                  border: "none",
+                  background: cueMarker === "box" ? "var(--accent)" : "transparent",
+                  color: cueMarker === "box" ? "white" : "var(--ink-3)",
+                  cursor: "pointer",
+                }}
+              >
+                <Square size={12} />
+              </button>
+              <button
+                title="Pipe — drop a vertical line between words / at a line end"
+                onClick={() => setCueMarker("pipe")}
+                style={{
+                  width: 26,
+                  height: 24,
+                  display: "grid",
+                  placeItems: "center",
+                  border: "none",
+                  borderLeft: "1px solid var(--border)",
+                  background: cueMarker === "pipe" ? "var(--accent)" : "transparent",
+                  color: cueMarker === "pipe" ? "white" : "var(--ink-3)",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: 15,
+                  lineHeight: 1,
+                }}
+              >
+                |
+              </button>
+            </div>
+            <span style={{ fontSize: 9, color: "var(--ink-4)", letterSpacing: ".05em", textTransform: "uppercase", marginTop: 6 }}>
               Margin
             </span>
             <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
@@ -1099,7 +1456,7 @@ export function ScriptViewer({
       )}
 
       {/* ── Main area ── */}
-      <div className="sv-canvas" style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="sv-canvas" style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", gap: 10 }}>
         {/* Stale banner */}
         {hasStalePages && (
           <div
@@ -1309,7 +1666,7 @@ export function ScriptViewer({
             <button
               className="btn ghost btn-icon"
               onClick={() => setZoomMode((m) => (m === "fit" ? "step" : "fit"))}
-              title="Fit page width"
+              title="Fit whole page"
               aria-pressed={zoomMode === "fit"}
               style={{
                 width: 28,
@@ -1323,11 +1680,8 @@ export function ScriptViewer({
             <div style={{ display: "flex", alignItems: "center", gap: 0, border: "1px solid var(--border)", borderRadius: 5, overflow: "hidden" }}>
               <button
                 className="btn ghost btn-icon"
-                onClick={() => {
-                  setZoomMode("step");
-                  setZoomIndex((i) => Math.max(0, i - 1));
-                }}
-                disabled={zoomMode === "step" && zoomIndex === 0}
+                onClick={zoomOut}
+                disabled={zoomMode === "fit"}
                 title="Zoom out"
                 style={{ width: 28, height: 28, borderRadius: 0, borderRight: "1px solid var(--border)" }}
               >
@@ -1338,10 +1692,7 @@ export function ScriptViewer({
               </span>
               <button
                 className="btn ghost btn-icon"
-                onClick={() => {
-                  setZoomMode("step");
-                  setZoomIndex((i) => Math.min(ZOOM_STEPS.length - 1, i + 1));
-                }}
+                onClick={zoomIn}
                 disabled={zoomMode === "step" && zoomIndex === ZOOM_STEPS.length - 1}
                 title="Zoom in"
                 style={{ width: 28, height: 28, borderRadius: 0, borderLeft: "1px solid var(--border)" }}
@@ -1397,6 +1748,17 @@ export function ScriptViewer({
                   ? `Preparing ${downloadProgress.current} / ${downloadProgress.total}…`
                   : "Download PDF"}
               </span>
+            </button>
+            <button
+              className={viewMode === "cuesheet" ? "btn" : "btn ghost"}
+              onClick={() =>
+                setViewMode((m) => (m === "cuesheet" ? "script" : "cuesheet"))
+              }
+              style={{ fontSize: 12, height: 28, gap: 5 }}
+              title="Toggle the cue sheet"
+            >
+              <LayoutList size={13} />
+              <span>{viewMode === "cuesheet" ? "Script" : "Cue sheet"}</span>
             </button>
             <span
               style={{
@@ -1475,7 +1837,25 @@ export function ScriptViewer({
           </div>
         )}
 
-        {/* PDF + annotation layer */}
+        {viewMode === "cuesheet" && (
+          <CueSheetView
+            cues={annotations.filter((a): a is CueAnn => a.type === "cue")}
+            bookmarks={bookmarks}
+            scriptTitle={script.title || "Script"}
+            readOnly={isPhone}
+            onEdit={updateAnnotation}
+            onDelete={deleteAnnotation}
+            onExportCsv={exportCueSheetCsv}
+            onGoToCue={(cue) => {
+              setViewMode("script");
+              setCurrentPage(cue.page);
+              setSelectedId(cue.id);
+            }}
+          />
+        )}
+        {/* PDF + annotation layer — kept mounted across view toggles so the
+            rendered canvas (and the measured fit scale) survive; just hidden
+            while the cue sheet shows, rather than unmounted and re-rendered. */}
         <div
           ref={workspaceRef}
           className="sv-workspace"
@@ -1486,6 +1866,11 @@ export function ScriptViewer({
             padding: "28px 32px",
             overflow: "auto",
             position: "relative",
+            // Fill the remaining height inside the bounded shell and scroll the
+            // PDF internally, rather than growing the page past the viewport.
+            flex: shellHeight ? 1 : undefined,
+            minHeight: 0,
+            display: viewMode === "cuesheet" ? "none" : undefined,
             cursor: activeTool === "pointer" ? (panning ? "grabbing" : "grab") : "default",
           }}
         >
@@ -1600,31 +1985,43 @@ export function ScriptViewer({
                   onClick={() =>
                     setSelectedId(selectedId === ann.id ? null : ann.id)
                   }
+                  cueLabelY={ann.type === "cue" ? cueLabelYs.get(ann.id) : undefined}
                 />
               ))}
 
-              {/* In-progress rectangle */}
-              {drawStart && drawCurrent && (
-                <rect
-                  x={Math.min(drawStart.x, drawCurrent.x) * canvasSize.w}
-                  y={Math.min(drawStart.y, drawCurrent.y) * canvasSize.h}
-                  width={
-                    Math.abs(drawCurrent.x - drawStart.x) * canvasSize.w
-                  }
-                  height={
-                    Math.abs(drawCurrent.y - drawStart.y) * canvasSize.h
-                  }
-                  fill={
-                    activeTool === "cue"
-                      ? `${cueColor}1a`
-                      : `${activeColor}55`
-                  }
-                  stroke={activeTool === "cue" ? cueColor : activeColor}
-                  strokeWidth="1.5"
-                  strokeDasharray="5,3"
-                  pointerEvents="none"
-                />
-              )}
+              {/* In-progress preview — a vertical line for the pipe cue, a box
+                  for everything else */}
+              {drawStart && drawCurrent &&
+                (activeTool === "cue" && cueMarker === "pipe" ? (
+                  (() => {
+                    const band = pipeBandAt(drawCurrent);
+                    const px = drawCurrent.x * canvasSize.w;
+                    return (
+                      <line
+                        x1={px}
+                        y1={band.yTop * canvasSize.h}
+                        x2={px}
+                        y2={(band.yTop + band.height) * canvasSize.h}
+                        stroke={cueColor}
+                        strokeWidth="2"
+                        strokeDasharray="4,3"
+                        pointerEvents="none"
+                      />
+                    );
+                  })()
+                ) : (
+                  <rect
+                    x={Math.min(drawStart.x, drawCurrent.x) * canvasSize.w}
+                    y={Math.min(drawStart.y, drawCurrent.y) * canvasSize.h}
+                    width={Math.abs(drawCurrent.x - drawStart.x) * canvasSize.w}
+                    height={Math.abs(drawCurrent.y - drawStart.y) * canvasSize.h}
+                    fill={activeTool === "cue" ? `${cueColor}1a` : `${activeColor}55`}
+                    stroke={activeTool === "cue" ? cueColor : activeColor}
+                    strokeWidth="1.5"
+                    strokeDasharray="5,3"
+                    pointerEvents="none"
+                  />
+                ))}
             </svg>
           )}
 
@@ -1854,9 +2251,11 @@ export function ScriptViewer({
         </div>
 
         {/* Script info */}
-        <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
-          {script.title} · v{script.scriptVersion} · Your annotations are private
-        </p>
+        {viewMode !== "cuesheet" && (
+          <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
+            {script.title} · v{script.scriptVersion} · Your annotations are private
+          </p>
+        )}
       </div>
 
       {/* ── Right panel column ── */}
@@ -1869,6 +2268,8 @@ export function ScriptViewer({
           display: "flex",
           flexDirection: "column",
           gap: 0,
+          minHeight: 0,
+          ...(shellHeight ? { overflowY: "auto" } : {}),
         }}
       >
         <BookmarksPanel
@@ -2107,11 +2508,382 @@ function ThumbnailPanel({
 
 // ── Canvas annotation renderer (used for PDF export) ─────────────────────
 
+// Cues are ordered by where they sit in the script — page, then top-to-bottom,
+// then left-to-right — so the cue sheet reads in true show order regardless of
+// numbering. A late sound cue (SFX4) lands among the light cues at its actual
+// spot, not next to "L4". A small vertical tolerance treats near-equal heights
+// as the same line so those order left-to-right.
+const SAME_LINE_FRAC = 0.012; // ~one text line as a fraction of page height
+function compareCuePosition(a: CueAnn, b: CueAnn): number {
+  if (a.page !== b.page) return a.page - b.page;
+  const rowA = Math.round(a.rect.y / SAME_LINE_FRAC);
+  const rowB = Math.round(b.rect.y / SAME_LINE_FRAC);
+  if (rowA !== rowB) return rowA - rowB;
+  return a.rect.x - b.rect.x;
+}
+
+// Cue-label stacking. When several cue labels land in the same margin at
+// similar heights they overlap and become unreadable. We push the lower ones
+// further down so each (number + optional note) is clear; the leader then runs
+// horizontally out to the margin and drops at a 90° angle to the label, never
+// cutting diagonally across the script. Computed in the target surface's own
+// pixel space (screen SVG vs. 2× export canvas), so callers pass their canvasH.
+const CUE_LABEL_NUMBER_UP = 18; // number baseline sits this far above its anchor
+const CUE_LABEL_DESC_DOWN = 18; // description sits this far below it
+const CUE_LABEL_PAD = 5;
+
+function stackCueLabels(
+  cues: {
+    id: string;
+    rect: AnnotationRect;
+    leaderSide: "left" | "right";
+    cueDescription: string;
+  }[],
+  canvasH: number,
+): Map<string, number> {
+  // Roughly one text line of tolerance: cues this close vertically are treated
+  // as the "same line" and ordered left-to-right (their position on the line),
+  // so two cues on one line stack in reading order instead of by draw order.
+  const LINE_BUCKET = 14;
+  const out = new Map<string, number>();
+  for (const side of ["left", "right"] as const) {
+    const group = cues
+      .filter((c) => c.leaderSide === side)
+      .map((c) => ({
+        id: c.id,
+        y: (c.rect.y + c.rect.height) * canvasH,
+        x: c.rect.x,
+        hasDesc: c.cueDescription.trim().length > 0,
+      }))
+      .sort((a, b) => {
+        const ba = Math.round(a.y / LINE_BUCKET);
+        const bb = Math.round(b.y / LINE_BUCKET);
+        if (ba !== bb) return ba - bb;
+        return a.x - b.x;
+      });
+    let prevBottom = -Infinity;
+    for (const item of group) {
+      const y = Math.max(item.y, prevBottom + CUE_LABEL_NUMBER_UP + CUE_LABEL_PAD);
+      out.set(item.id, y);
+      prevBottom = y + (item.hasDesc ? CUE_LABEL_DESC_DOWN : 0);
+    }
+  }
+  return out;
+}
+
+// ── Cue sheet (CSV export + spreadsheet view) ───────────────────────────────
+
+type CueAnn = Extract<Annotation, { type: "cue" }>;
+type CueSheetSection = {
+  label: string;
+  kind?: "scene" | "song";
+  rows: CueAnn[];
+};
+
+/**
+ * Group every cue into ordered sections by the bookmark it falls under — scenes
+ * AND songs, so a number like "#3 Our Prayer" gets its own section. Anchors are
+ * matched in document reading order (page, then the order bookmarks were
+ * detected), so a cue takes the most recent scene/song that starts before it.
+ * Cues before the first bookmark land in "Top of show".
+ *
+ * Note: bookmarks only carry a page, not a within-page position, so when a
+ * scene and a song share one page every cue on that page is filed under
+ * whichever was detected later (usually the song). Precise "between the scene
+ * and the song" ordering would need positional data we don't store yet.
+ */
+function buildCueSheetSections(
+  cues: CueAnn[],
+  bookmarks: Bookmark[],
+): CueSheetSection[] {
+  // Stable sort by page keeps same-page bookmarks in detection (reading) order.
+  const marks = bookmarks.slice().sort((a, b) => a.page - b.page);
+  const anchorFor = (page: number): { label: string; kind?: "scene" | "song" } => {
+    let anchor: Bookmark | null = null;
+    for (const m of marks) {
+      if (m.page <= page) anchor = m;
+      else break;
+    }
+    return anchor
+      ? { label: anchor.title.trim() || "Untitled", kind: anchor.kind }
+      : { label: "Top of show" };
+  };
+  const sorted = cues.slice().sort(compareCuePosition);
+  const sections: CueSheetSection[] = [];
+  for (const cue of sorted) {
+    const a = anchorFor(cue.page);
+    let section = sections[sections.length - 1];
+    if (!section || section.label !== a.label || section.kind !== a.kind) {
+      section = { label: a.label, kind: a.kind, rows: [] };
+      sections.push(section);
+    }
+    section.rows.push(cue);
+  }
+  return sections;
+}
+
+function csvCell(v: string): string {
+  return /[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+}
+
+/** Cue sheet as CSV — scene sections are divider rows, à la the user's notes. */
+function cueSheetToCsv(sections: CueSheetSection[], title: string): string {
+  const lines: string[] = [csvCell(`Cue Sheet: ${title}`), ""];
+  for (const section of sections) {
+    lines.push(csvCell(section.label));
+    lines.push("Cue,Line,Note,Page");
+    for (const c of section.rows) {
+      lines.push(
+        [
+          csvCell(c.cueNumber),
+          csvCell(c.line ?? ""),
+          csvCell(c.cueDescription),
+          String(c.page),
+        ].join(","),
+      );
+    }
+    lines.push("");
+  }
+  return lines.join("\r\n");
+}
+
+/**
+ * Editable cue-sheet view — a spreadsheet of every cue grouped by scene. Cue
+ * number and note are inline-editable and write straight back to the annotation
+ * (so the script view stays in sync); each row jumps to its spot in the script.
+ */
+function CueSheetView({
+  cues,
+  bookmarks,
+  scriptTitle,
+  readOnly,
+  onEdit,
+  onDelete,
+  onGoToCue,
+  onExportCsv,
+}: {
+  cues: CueAnn[];
+  bookmarks: Bookmark[];
+  scriptTitle: string;
+  readOnly: boolean;
+  onEdit: (id: string, changes: Partial<Annotation>) => void;
+  onDelete: (id: string) => void;
+  onGoToCue: (cue: CueAnn) => void;
+  onExportCsv: () => void;
+}) {
+  const sections = useMemo(
+    () => buildCueSheetSections(cues, bookmarks),
+    [cues, bookmarks],
+  );
+
+  return (
+    <div className="sv-cuesheet">
+      <div className="sv-cuesheet-head">
+        <div>
+          <div className="sv-cuesheet-title">Cue sheet</div>
+          <div className="sv-cuesheet-sub">
+            {cues.length} cue{cues.length === 1 ? "" : "s"} · {scriptTitle}
+          </div>
+        </div>
+        <button
+          className="btn ghost"
+          onClick={onExportCsv}
+          disabled={cues.length === 0}
+          style={{ fontSize: 12, height: 28, gap: 5 }}
+          title="Export the cue sheet as CSV"
+        >
+          <Download size={13} />
+          <span>Export CSV</span>
+        </button>
+      </div>
+
+      {cues.length === 0 ? (
+        <p className="sv-cuesheet-empty">
+          No cues yet. Switch to the script and place cues with the Cue tool —
+          they’ll show up here.
+        </p>
+      ) : (
+        <div className="sv-cuesheet-scroll">
+          <table className="sv-cuesheet-table">
+            <thead>
+              <tr>
+                <th style={{ width: 100 }}>Cue</th>
+                <th>Line</th>
+                <th>Note</th>
+                <th style={{ width: 66 }}>Page</th>
+                {!readOnly && <th style={{ width: 34 }} />}
+              </tr>
+            </thead>
+            <tbody>
+              {sections.map((section) => (
+                <Fragment key={`${section.label}-${section.rows[0]?.id}`}>
+                  <tr className="sv-cuesheet-section">
+                    <td colSpan={readOnly ? 4 : 5}>
+                      <span className="sv-cuesheet-section-label">
+                        {section.kind === "song" ? (
+                          <Music size={12} />
+                        ) : section.kind === "scene" ? (
+                          <Clapperboard size={12} />
+                        ) : null}
+                        {section.label}
+                      </span>
+                    </td>
+                  </tr>
+                  {section.rows.map((cue) => (
+                    <CueSheetRow
+                      key={cue.id}
+                      cue={cue}
+                      readOnly={readOnly}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      onGoTo={() => onGoToCue(cue)}
+                    />
+                  ))}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CueSheetRow({
+  cue,
+  readOnly,
+  onEdit,
+  onDelete,
+  onGoTo,
+}: {
+  cue: CueAnn;
+  readOnly: boolean;
+  onEdit: (id: string, changes: Partial<Annotation>) => void;
+  onDelete: (id: string) => void;
+  onGoTo: () => void;
+}) {
+  const cc = cue.color ?? CUE_STROKE;
+  return (
+    <tr className="sv-cuesheet-row">
+      <td>
+        <span className="sv-cuesheet-cue">
+          <span className="sv-cuesheet-dot" style={{ background: cc }} />
+          {readOnly ? (
+            <span>{cue.cueNumber}</span>
+          ) : (
+            <input
+              className="sv-cuesheet-input"
+              defaultValue={cue.cueNumber}
+              onBlur={(e) => {
+                const v = e.target.value.trim();
+                if (v && v !== cue.cueNumber)
+                  onEdit(cue.id, { cueNumber: v } as Partial<Annotation>);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              }}
+            />
+          )}
+        </span>
+      </td>
+      <td>
+        {readOnly ? (
+          <span className="sv-cuesheet-line">{cue.line}</span>
+        ) : (
+          <input
+            className="sv-cuesheet-input sv-cuesheet-line"
+            defaultValue={cue.line ?? ""}
+            placeholder="—"
+            title={cue.line || undefined}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v !== (cue.line ?? ""))
+                onEdit(cue.id, { line: v } as Partial<Annotation>);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            }}
+          />
+        )}
+      </td>
+      <td>
+        {readOnly ? (
+          <span>{cue.cueDescription}</span>
+        ) : (
+          <input
+            className="sv-cuesheet-input"
+            defaultValue={cue.cueDescription}
+            placeholder="—"
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v !== cue.cueDescription)
+                onEdit(cue.id, { cueDescription: v } as Partial<Annotation>);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            }}
+          />
+        )}
+      </td>
+      <td>
+        <button
+          className="sv-cuesheet-page"
+          onClick={onGoTo}
+          title="Go to this cue in the script"
+        >
+          p.{cue.page}
+        </button>
+      </td>
+      {!readOnly && (
+        <td>
+          <button
+            className="sv-cuesheet-del"
+            onClick={() => onDelete(cue.id)}
+            title="Delete cue"
+          >
+            <Trash2 size={13} />
+          </button>
+        </td>
+      )}
+    </tr>
+  );
+}
+
+/** Word-wrap text into a fixed width, drawing each line; caller clips to box. */
+function wrapCanvasText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+) {
+  let cursorY = y;
+  for (const paragraph of text.split("\n")) {
+    let line = "";
+    for (const word of paragraph.split(/\s+/)) {
+      const attempt = line ? `${line} ${word}` : word;
+      if (ctx.measureText(attempt).width > maxWidth && line) {
+        ctx.fillText(line, x, cursorY);
+        cursorY += lineHeight;
+        line = word;
+      } else {
+        line = attempt;
+      }
+    }
+    if (line) {
+      ctx.fillText(line, x, cursorY);
+      cursorY += lineHeight;
+    }
+  }
+}
+
 function drawAnnotationOnCanvas(
   ctx: CanvasRenderingContext2D,
   ann: Annotation,
   canvasW: number,
   canvasH: number,
+  cueLabelY?: number,
 ) {
   if (ann.type === "ink") {
     if (ann.points.length === 0) return;
@@ -2143,15 +2915,31 @@ function drawAnnotationOnCanvas(
   if (ann.type === "highlight") {
     ctx.globalAlpha = 0.44;
     ctx.fillStyle = ann.color;
-    ctx.fillRect(rx, ry, rw, rh);
+    const boxes = ann.rects && ann.rects.length > 0 ? ann.rects : [ann.rect];
+    for (const b of boxes) {
+      ctx.fillRect(b.x * canvasW, b.y * canvasH, b.width * canvasW, b.height * canvasH);
+    }
   } else if (ann.type === "note") {
-    ctx.globalAlpha = 0.33;
+    ctx.globalAlpha = 0.15;
     ctx.fillStyle = ann.color;
     ctx.fillRect(rx, ry, rw, rh);
     ctx.globalAlpha = 1;
     ctx.strokeStyle = ann.color;
     ctx.lineWidth = 1;
     ctx.strokeRect(rx, ry, rw, rh);
+    // The note text, wrapped + clipped inside the box.
+    if (ann.text.trim()) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(rx, ry, rw, rh);
+      ctx.clip();
+      ctx.fillStyle = "#1c1c1c";
+      ctx.font = "11px system-ui, sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      wrapCanvasText(ctx, ann.text, rx + 5, ry + 4, rw - 10, 14);
+      ctx.restore();
+    }
     ctx.beginPath();
     ctx.arc(rx + rw, ry, 5, 0, Math.PI * 2);
     ctx.fillStyle = ann.color;
@@ -2165,31 +2953,52 @@ function drawAnnotationOnCanvas(
     const lineStartX = isLeft ? rx : rx + rw;
     const MARGIN_OFFSET = 14;
     const labelX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
+    const labelY = cueLabelY ?? bottomY;
     const cc = ann.color ?? CUE_STROKE;
 
-    ctx.globalAlpha = 0.08;
-    ctx.fillStyle = cc;
-    ctx.fillRect(rx, ry, rw, rh);
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = cc;
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(rx, ry, rw, rh);
+    if (ann.marker === "pipe") {
+      // Vertical caret over its text line.
+      ctx.strokeStyle = cc;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(rx, ry);
+      ctx.lineTo(rx, bottomY);
+      ctx.stroke();
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(rx - 3, ry);
+      ctx.lineTo(rx + 3, ry);
+      ctx.moveTo(rx - 3, bottomY);
+      ctx.lineTo(rx + 3, bottomY);
+      ctx.stroke();
+    } else {
+      ctx.globalAlpha = 0.08;
+      ctx.fillStyle = cc;
+      ctx.fillRect(rx, ry, rw, rh);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = cc;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(rx, ry, rw, rh);
+    }
+    // Orthogonal leader: horizontal out to the margin, then a right-angle drop
+    // to the (possibly stacked) label — never a diagonal across the page.
     ctx.beginPath();
     ctx.moveTo(lineStartX, bottomY);
     ctx.lineTo(labelX, bottomY);
+    if (labelY !== bottomY) ctx.lineTo(labelX, labelY);
     ctx.lineWidth = 1;
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(labelX, bottomY, 3, 0, Math.PI * 2);
+    ctx.arc(labelX, labelY, 3, 0, Math.PI * 2);
     ctx.fillStyle = cc;
     ctx.fill();
     ctx.fillStyle = cc;
     ctx.textAlign = isLeft ? "left" : "right";
     ctx.font = "bold 15px system-ui, sans-serif";
-    ctx.fillText(ann.cueNumber, isLeft ? labelX + 6 : labelX - 6, bottomY - 4);
+    ctx.fillText(ann.cueNumber, isLeft ? labelX + 6 : labelX - 6, labelY - 4);
     if (ann.cueDescription) {
       ctx.font = "11px system-ui, sans-serif";
-      ctx.fillText(ann.cueDescription, isLeft ? labelX + 6 : labelX - 6, bottomY + 14);
+      ctx.fillText(ann.cueDescription, isLeft ? labelX + 6 : labelX - 6, labelY + 14);
     }
   }
 
@@ -2204,12 +3013,14 @@ function AnnotationShape({
   canvasH,
   selected,
   onClick,
+  cueLabelY,
 }: {
   annotation: Annotation;
   canvasW: number;
   canvasH: number;
   selected: boolean;
   onClick: () => void;
+  cueLabelY?: number;
 }) {
   if (annotation.type === "ink") {
     return (
@@ -2237,36 +3048,70 @@ function AnnotationShape({
   const rh = annotation.rect.height * canvasH;
 
   if (annotation.type === "highlight") {
+    // Per-line boxes for a text selection; fall back to the single bounding box
+    // for drawn-box highlights (and pre-existing ones without `rects`).
+    const boxes =
+      annotation.rects && annotation.rects.length > 0
+        ? annotation.rects
+        : [annotation.rect];
     return (
-      <rect
-        x={rx}
-        y={ry}
-        width={rw}
-        height={rh}
-        fill={`${annotation.color}70`}
-        stroke={selected ? "var(--ink)" : "none"}
-        strokeWidth="1.5"
+      <g
         style={{ cursor: "pointer" }}
         onClick={(e) => {
           e.stopPropagation();
           onClick();
         }}
-      />
+      >
+        {boxes.map((b, i) => (
+          <rect
+            key={i}
+            x={b.x * canvasW}
+            y={b.y * canvasH}
+            width={b.width * canvasW}
+            height={b.height * canvasH}
+            fill={`${annotation.color}70`}
+            stroke={selected ? "var(--ink)" : "none"}
+            strokeWidth="1.5"
+          />
+        ))}
+      </g>
     );
   }
 
   if (annotation.type === "note") {
     return (
       <g onClick={(e) => { e.stopPropagation(); onClick(); }} style={{ cursor: "pointer" }}>
+        {/* Sticky-note box: light tinted fill so the note text reads on top */}
         <rect
           x={rx}
           y={ry}
           width={rw}
           height={rh}
-          fill={`${annotation.color}55`}
+          rx={2}
+          fill={`${annotation.color}26`}
           stroke={annotation.color}
           strokeWidth={selected ? "2" : "1"}
         />
+        {/* The note's text, wrapped inside the box */}
+        <foreignObject x={rx} y={ry} width={rw} height={rh} style={{ pointerEvents: "none" }}>
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              boxSizing: "border-box",
+              padding: "3px 5px",
+              fontSize: 11,
+              lineHeight: 1.25,
+              color: "var(--ink)",
+              fontFamily: "system-ui, sans-serif",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              overflow: "hidden",
+            }}
+          >
+            {annotation.text}
+          </div>
+        </foreignObject>
         {/* Note indicator dot */}
         <circle
           cx={rx + rw}
@@ -2286,37 +3131,61 @@ function AnnotationShape({
     const lineStartX = isLeft ? rx : rx + rw;
     const MARGIN_OFFSET = 14;
     const labelX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
+    const labelY = cueLabelY ?? bottomY;
     const textAnchor = isLeft ? "start" : "end";
     const cc = annotation.color ?? CUE_STROKE;
 
+    const isPipe = annotation.marker === "pipe";
+
     return (
       <g onClick={(e) => { e.stopPropagation(); onClick(); }} style={{ cursor: "pointer" }}>
-        {/* Box */}
-        <rect
-          x={rx}
-          y={ry}
-          width={rw}
-          height={rh}
-          fill={cc}
-          fillOpacity={0.08}
-          stroke={cc}
-          strokeWidth={selected ? "2" : "1.5"}
-        />
-        {/* Leader line from bottom edge of box to margin */}
-        <line
-          x1={lineStartX}
-          y1={bottomY}
-          x2={labelX}
-          y2={bottomY}
+        {isPipe ? (
+          <>
+            {/* Wide transparent hit target so the thin pipe is easy to click */}
+            <line x1={rx} y1={ry} x2={rx} y2={bottomY} stroke="transparent" strokeWidth="12" />
+            {/* The pipe: a vertical line with small serifs, like a text caret */}
+            <line
+              x1={rx}
+              y1={ry}
+              x2={rx}
+              y2={bottomY}
+              stroke={cc}
+              strokeWidth={selected ? "3" : "2"}
+            />
+            <line x1={rx - 3} y1={ry} x2={rx + 3} y2={ry} stroke={cc} strokeWidth="1.5" />
+            <line x1={rx - 3} y1={bottomY} x2={rx + 3} y2={bottomY} stroke={cc} strokeWidth="1.5" />
+          </>
+        ) : (
+          /* Box */
+          <rect
+            x={rx}
+            y={ry}
+            width={rw}
+            height={rh}
+            fill={cc}
+            fillOpacity={0.08}
+            stroke={cc}
+            strokeWidth={selected ? "2" : "1.5"}
+          />
+        )}
+        {/* Orthogonal leader: horizontal out to the margin, then a right-angle
+            drop to the (possibly stacked) label — never diagonal. */}
+        <polyline
+          points={
+            labelY === bottomY
+              ? `${lineStartX},${bottomY} ${labelX},${bottomY}`
+              : `${lineStartX},${bottomY} ${labelX},${bottomY} ${labelX},${labelY}`
+          }
+          fill="none"
           stroke={cc}
           strokeWidth="1"
         />
         {/* End marker */}
-        <circle cx={labelX} cy={bottomY} r="3" fill={cc} />
+        <circle cx={labelX} cy={labelY} r="3" fill={cc} />
         {/* Cue number */}
         <text
           x={isLeft ? labelX + 6 : labelX - 6}
-          y={bottomY - 4}
+          y={labelY - 4}
           textAnchor={textAnchor}
           fontSize="15"
           fill={cc}
@@ -2329,7 +3198,7 @@ function AnnotationShape({
         {annotation.cueDescription && (
           <text
             x={isLeft ? labelX + 6 : labelX - 6}
-            y={bottomY + 14}
+            y={labelY + 14}
             textAnchor={textAnchor}
             fontSize="11"
             fill={cc}
@@ -2360,14 +3229,21 @@ function BookmarksPanel({
 }) {
   const sorted = [...bookmarks].sort((a, b) => a.page - b.page);
   const [query, setQuery] = useState("");
+  // Scenes vs. songs view. Hand-added bookmarks (no kind) group with scenes.
+  const [tab, setTab] = useState<"scenes" | "songs">("scenes");
+  const sceneCount = sorted.filter((b) => b.kind !== "song").length;
+  const songCount = sorted.filter((b) => b.kind === "song").length;
+  const tabbed = sorted.filter((b) =>
+    tab === "songs" ? b.kind === "song" : b.kind !== "song",
+  );
   const q = query.trim().toLowerCase();
   const filtered = q
-    ? sorted.filter((b) =>
+    ? tabbed.filter((b) =>
         /^\d+$/.test(q)
           ? String(b.page).includes(q)
           : b.title.toLowerCase().includes(q),
       )
-    : sorted;
+    : tabbed;
 
   return (
     <div style={{ marginBottom: 16 }}>
@@ -2401,6 +3277,31 @@ function BookmarksPanel({
         )}
       </div>
 
+      {bookmarks.length > 0 && (
+        <div className="sv-bm-tabs">
+          <button
+            type="button"
+            className={tab === "scenes" ? "sv-bm-tab active" : "sv-bm-tab"}
+            onClick={() => setTab("scenes")}
+            aria-pressed={tab === "scenes"}
+          >
+            <Clapperboard size={12} />
+            Scenes
+            <span className="sv-bm-tab-count">{sceneCount}</span>
+          </button>
+          <button
+            type="button"
+            className={tab === "songs" ? "sv-bm-tab active" : "sv-bm-tab"}
+            onClick={() => setTab("songs")}
+            aria-pressed={tab === "songs"}
+          >
+            <Music size={12} />
+            Songs
+            <span className="sv-bm-tab-count">{songCount}</span>
+          </button>
+        </div>
+      )}
+
       {bookmarks.length > 3 && (
         <input
           value={query}
@@ -2425,6 +3326,10 @@ function BookmarksPanel({
       {sorted.length === 0 ? (
         <p style={{ fontSize: 12, color: "var(--ink-4)", padding: "4px 2px 12px" }}>
           No bookmarks yet.
+        </p>
+      ) : tabbed.length === 0 ? (
+        <p style={{ fontSize: 12, color: "var(--ink-4)", padding: "4px 2px 12px" }}>
+          No {tab === "songs" ? "songs" : "scenes"} yet.
         </p>
       ) : filtered.length === 0 ? (
         <p style={{ fontSize: 12, color: "var(--ink-4)", padding: "4px 2px 12px" }}>
@@ -2566,6 +3471,7 @@ function AnnotationsPanel({
         : a.rect.x - b.rect.x
       : 0;
 
+  // Both cues and other annotations read top-to-bottom (show order on the page).
   const cues = listable.filter((a) => a.type === "cue").sort(byY);
   const others = listable.filter((a) => a.type !== "cue").sort(byY);
 
