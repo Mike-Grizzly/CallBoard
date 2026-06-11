@@ -2508,25 +2508,18 @@ function ThumbnailPanel({
 
 // ── Canvas annotation renderer (used for PDF export) ─────────────────────
 
-// Order cue numbers the way a theatre cue sheet reads. Departments number in
-// parallel ("L1" lights, "SFX4" sound, bare "7"), so we sort by the numeric
-// part FIRST — keeping each sequence in order and interleaving by number — then
-// break ties by the letter prefix. This stays numerical even when the prefix
-// changes mid-list (the all-"L"-then-switch case), where a plain string sort
-// would clump every prefix together.
-function cueSortParts(label: string): { num: number; prefix: string } {
-  const m = label.match(/\d+(?:\.\d+)?/);
-  return {
-    num: m ? parseFloat(m[0]) : Number.POSITIVE_INFINITY,
-    prefix: label.replace(/\d.*$/, "").trim().toLowerCase(),
-  };
-}
-function compareCueNumbers(a: string, b: string): number {
-  const ka = cueSortParts(a);
-  const kb = cueSortParts(b);
-  if (ka.num !== kb.num) return ka.num - kb.num;
-  if (ka.prefix !== kb.prefix) return ka.prefix.localeCompare(kb.prefix);
-  return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+// Cues are ordered by where they sit in the script — page, then top-to-bottom,
+// then left-to-right — so the cue sheet reads in true show order regardless of
+// numbering. A late sound cue (SFX4) lands among the light cues at its actual
+// spot, not next to "L4". A small vertical tolerance treats near-equal heights
+// as the same line so those order left-to-right.
+const SAME_LINE_FRAC = 0.012; // ~one text line as a fraction of page height
+function compareCuePosition(a: CueAnn, b: CueAnn): number {
+  if (a.page !== b.page) return a.page - b.page;
+  const rowA = Math.round(a.rect.y / SAME_LINE_FRAC);
+  const rowB = Math.round(b.rect.y / SAME_LINE_FRAC);
+  if (rowA !== rowB) return rowA - rowB;
+  return a.rect.x - b.rect.x;
 }
 
 // Cue-label stacking. When several cue labels land in the same margin at
@@ -2544,14 +2537,13 @@ function stackCueLabels(
     id: string;
     rect: AnnotationRect;
     leaderSide: "left" | "right";
-    cueNumber: string;
     cueDescription: string;
   }[],
   canvasH: number,
 ): Map<string, number> {
   // Roughly one text line of tolerance: cues this close vertically are treated
-  // as the "same line" and ordered by cue number rather than pixel position, so
-  // a cue 2 and cue 4 on one line stack 2-above-4 instead of by draw order.
+  // as the "same line" and ordered left-to-right (their position on the line),
+  // so two cues on one line stack in reading order instead of by draw order.
   const LINE_BUCKET = 14;
   const out = new Map<string, number>();
   for (const side of ["left", "right"] as const) {
@@ -2560,14 +2552,14 @@ function stackCueLabels(
       .map((c) => ({
         id: c.id,
         y: (c.rect.y + c.rect.height) * canvasH,
-        cueNumber: c.cueNumber,
+        x: c.rect.x,
         hasDesc: c.cueDescription.trim().length > 0,
       }))
       .sort((a, b) => {
         const ba = Math.round(a.y / LINE_BUCKET);
         const bb = Math.round(b.y / LINE_BUCKET);
         if (ba !== bb) return ba - bb;
-        return compareCueNumbers(a.cueNumber, b.cueNumber);
+        return a.x - b.x;
       });
     let prevBottom = -Infinity;
     for (const item of group) {
@@ -2616,9 +2608,7 @@ function buildCueSheetSections(
       ? { label: anchor.title.trim() || "Untitled", kind: anchor.kind }
       : { label: "Top of show" };
   };
-  const sorted = cues
-    .slice()
-    .sort((a, b) => (a.page !== b.page ? a.page - b.page : a.rect.y - b.rect.y));
+  const sorted = cues.slice().sort(compareCuePosition);
   const sections: CueSheetSection[] = [];
   for (const cue of sorted) {
     const a = anchorFor(cue.page);
@@ -2628,10 +2618,6 @@ function buildCueSheetSections(
       sections.push(section);
     }
     section.rows.push(cue);
-  }
-  // Within each scene/song, list cues in cue-number order (prefix-aware).
-  for (const section of sections) {
-    section.rows.sort((a, b) => compareCueNumbers(a.cueNumber, b.cueNumber));
   }
   return sections;
 }
@@ -3485,13 +3471,8 @@ function AnnotationsPanel({
         : a.rect.x - b.rect.x
       : 0;
 
-  // Cues read in cue-number order (prefix-aware, numeric); other annotations
-  // stay in top-to-bottom page order.
-  const cues = (
-    listable.filter(
-      (a): a is Extract<Annotation, { type: "cue" }> => a.type === "cue",
-    )
-  ).sort((a, b) => compareCueNumbers(a.cueNumber, b.cueNumber));
+  // Both cues and other annotations read top-to-bottom (show order on the page).
+  const cues = listable.filter((a) => a.type === "cue").sort(byY);
   const others = listable.filter((a) => a.type !== "cue").sort(byY);
 
   return (
