@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SignupForm } from "./signup-form";
+import { OAuthButtons } from "@/components/auth/oauth-buttons";
 
 export default function SignupPage() {
   return (
@@ -19,6 +20,7 @@ export default function SignupPage() {
           </p>
         </div>
         <SignupForm />
+        <OAuthButtons />
         <p className="auth-foot">
           Already have an account? <Link href="/login">Sign in</Link>
         </p>

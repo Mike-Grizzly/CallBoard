@@ -3823,6 +3823,30 @@ button.month-cell {
   height: 38px;
   margin-top: 2px;
 }
+.auth-oauth {
+  margin-top: 16px;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  color: var(--ink-4);
+  font-size: 11.5px;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.auth-oauth-btn {
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+}
 .auth-error,
 .auth-success {
   margin-bottom: 14px;
