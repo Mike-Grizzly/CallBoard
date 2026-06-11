@@ -2522,18 +2522,20 @@ function compareCuePosition(a: CueAnn, b: CueAnn): number {
   return a.rect.x - b.rect.x;
 }
 
-// Cue-label placement. Labels in a margin are laid out in a single column in
-// CUE-NUMBER ORDER (top to bottom), so the numbers always read in sequence —
-// matching how cues are numbered. Each label sits at its anchor's height, and
-// only drops down when that would put it above (or overlapping) the previous,
-// lower-numbered label — so a cue inserted out of physical order, or a second
-// cue on the same line, falls below its predecessor instead of jumping above
-// it. The leader runs horizontally then drops at a 90° angle, never diagonally.
+// Cue-label placement. Labels in a margin are laid out in CUE-NUMBER ORDER so
+// the numbers always read in sequence (10, 12, 13…) top to bottom — a higher
+// number never sits above a lower one. Default is a single column: each label
+// sits at its anchor's height, dropping down only enough to clear the previous
+// (lower-numbered) label. When a column gets busy — a label would be pushed
+// more than CUE_CROWD past its anchor — the overflow spills into a second
+// column nearer the text instead of pushing the whole stack further down, so
+// two cues on a line still stack vertically but dense clusters fan into two
+// columns. The leader runs horizontally then drops at 90°, never diagonally.
 // Computed in the target surface's own pixel space, so callers pass canvasH.
 const CUE_LABEL_NUMBER_UP = 20; // number baseline sits this far above its anchor
 const CUE_LABEL_DESC_DOWN = 18; // description sits this far below it
 const CUE_LABEL_PAD = 12; // clear whitespace kept between stacked labels
-const CUE_LANE_GAP = 34; // retained for the renderers' lane-X math (lane 0 only)
+const CUE_LANE_GAP = 34; // horizontal offset of the 2nd column toward the text
 
 type CueLabelPos = { y: number; lane: number };
 
@@ -2548,6 +2550,10 @@ function stackCueLabels(
   canvasH: number,
 ): Map<string, CueLabelPos> {
   const GAP = CUE_LABEL_NUMBER_UP + CUE_LABEL_PAD;
+  // How far a label may be pushed below its anchor before opening the 2nd
+  // column. ~one stacked label, so two cues on a line still stack vertically
+  // and only a denser pile-up fans sideways.
+  const CUE_CROWD = GAP + CUE_LABEL_DESC_DOWN;
   const out = new Map<string, CueLabelPos>();
   for (const side of ["left", "right"] as const) {
     const group = cues
@@ -2558,21 +2564,33 @@ function stackCueLabels(
         hasDesc: c.cueDescription.trim().length > 0,
         cueNumber: c.cueNumber,
       }))
-      // Order the whole margin by cue number so labels read 10, 12, 13 down the
-      // page (numeric-aware so "2" < "10", letter prefixes like "L4" grouped).
+      // Whole margin ordered by cue number (numeric-aware: "2" < "10").
       .sort((a, b) =>
         a.cueNumber.localeCompare(b.cueNumber, undefined, {
           numeric: true,
           sensitivity: "base",
         }),
       );
-    // Place each label at its anchor height, but never above the previous
-    // (lower-numbered) label — push it down just enough to keep numeric order.
-    let bottom = -Infinity;
+    const bottom = [-Infinity, -Infinity]; // bottom of last label per column
+    let lastY = -Infinity; // previous label's y — keeps numbers in order
     for (const item of group) {
-      const y = Math.max(item.y, bottom + GAP);
-      out.set(item.id, { y, lane: 0 });
-      bottom = y + (item.hasDesc ? CUE_LABEL_DESC_DOWN : 0);
+      // Never above the anchor or the previous (lower) number.
+      const floor = Math.max(item.y, lastY);
+      const y0 = Math.max(floor, bottom[0] + GAP);
+      let lane = 0;
+      let y = y0;
+      if (y0 - item.y > CUE_CROWD) {
+        // Column 0 is crowding this label far from its line — use the 2nd
+        // column if it lands closer (still no higher than the previous number).
+        const y1 = Math.max(floor, bottom[1] + GAP);
+        if (y1 < y0) {
+          lane = 1;
+          y = y1;
+        }
+      }
+      out.set(item.id, { y, lane });
+      bottom[lane] = y + (item.hasDesc ? CUE_LABEL_DESC_DOWN : 0);
+      lastY = y;
     }
   }
   return out;
