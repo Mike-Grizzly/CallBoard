@@ -126,6 +126,11 @@ export function ScriptViewer({
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+  // Available height for the viewer = viewport minus whatever chrome (app
+  // header, production tabs, banners) sits above it, so the script scrolls
+  // inside the page instead of running off the bottom of the monitor.
+  const [shellHeight, setShellHeight] = useState<number | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null);
   // Refs hold the latest values so the debounced save always reads current state
@@ -469,6 +474,29 @@ export function ScriptViewer({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // ── Bound the viewer to the visible viewport ────────────────────────────────
+  useEffect(() => {
+    if (isPhone) {
+      setShellHeight(null);
+      return;
+    }
+    const measure = () => {
+      const el = shellRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      // Leave a small gutter at the bottom so the card edge isn't flush.
+      setShellHeight(Math.max(360, window.innerHeight - top - 12));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    // Re-measure after layout settles (banners mounting can shift `top`).
+    const t = setTimeout(measure, 250);
+    return () => {
+      window.removeEventListener("resize", measure);
+      clearTimeout(t);
+    };
+  }, [isPhone]);
 
   // ── Prefetch adjacent pages so next/prev is instant ─────────────────────────
   useEffect(() => {
@@ -964,8 +992,16 @@ export function ScriptViewer({
       />
     )}
     <div
+      ref={shellRef}
       className="anim-in script-viewer-shell"
-      style={{ display: "flex", gap: 0, minHeight: 0, maxWidth: 1440, margin: "0 auto" }}
+      style={{
+        display: "flex",
+        gap: 0,
+        minHeight: 0,
+        maxWidth: 1440,
+        margin: "0 auto",
+        ...(shellHeight ? { height: shellHeight } : {}),
+      }}
     >
       {/* ── Tool sidebar ── */}
       <div
@@ -1146,7 +1182,7 @@ export function ScriptViewer({
       )}
 
       {/* ── Main area ── */}
-      <div className="sv-canvas" style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="sv-canvas" style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", gap: 10 }}>
         {/* Stale banner */}
         {hasStalePages && (
           <div
@@ -1561,6 +1597,10 @@ export function ScriptViewer({
             padding: "28px 32px",
             overflow: "auto",
             position: "relative",
+            // Fill the remaining height inside the bounded shell and scroll the
+            // PDF internally, rather than growing the page past the viewport.
+            flex: shellHeight ? 1 : undefined,
+            minHeight: 0,
             cursor: activeTool === "pointer" ? (panning ? "grabbing" : "grab") : "default",
           }}
         >
@@ -1947,6 +1987,8 @@ export function ScriptViewer({
           display: "flex",
           flexDirection: "column",
           gap: 0,
+          minHeight: 0,
+          ...(shellHeight ? { overflowY: "auto" } : {}),
         }}
       >
         <BookmarksPanel
