@@ -800,7 +800,17 @@ export function ScriptViewer({
         color: activeColor,
       });
     } else if (activeTool === "note") {
-      setPendingAnnotation({ type: "note", rect, page: currentPage });
+      // Notes are sticky-note text boxes, so guarantee enough room to read the
+      // note even from a quick drag; never shrink a box the user drew larger.
+      const width = Math.max(rect.width, 0.2);
+      const height = Math.max(rect.height, 0.06);
+      const noteRect: AnnotationRect = {
+        x: Math.min(rect.x, 1 - width),
+        y: Math.min(rect.y, 1 - height),
+        width,
+        height,
+      };
+      setPendingAnnotation({ type: "note", rect: noteRect, page: currentPage });
       setPendingText("");
     } else if (activeTool === "cue") {
       setPendingAnnotation({ type: "cue", rect, page: currentPage });
@@ -815,31 +825,52 @@ export function ScriptViewer({
     if (!selection || selection.isCollapsed || !pdfCanvasRef.current) return;
 
     const range = selection.getRangeAt(0);
-    const rects = range.getClientRects();
     const canvasRect = pdfCanvasRef.current.getBoundingClientRect();
-
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const r of rects) {
-      minX = Math.min(minX, r.left - canvasRect.left);
-      minY = Math.min(minY, r.top - canvasRect.top);
-      maxX = Math.max(maxX, r.right - canvasRect.left);
-      maxY = Math.max(maxY, r.bottom - canvasRect.top);
-    }
-
-    if (maxX <= minX || maxY <= minY) return;
-
     const w = canvasRect.width;
     const h = canvasRect.height;
+    if (w === 0 || h === 0) return;
+
+    // getClientRects() returns one box per on-screen line fragment. Merge
+    // fragments that share a line (similar top) so each line is one box, and
+    // keep them separate across lines — a multi-line selection then hugs each
+    // line's actual text rather than collapsing into one full-width block.
+    const tol = 4;
+    const lines: { top: number; bottom: number; left: number; right: number }[] = [];
+    for (const r of range.getClientRects()) {
+      if (r.width < 0.5 || r.height < 0.5) continue;
+      const top = r.top - canvasRect.top;
+      const bottom = r.bottom - canvasRect.top;
+      const left = r.left - canvasRect.left;
+      const right = r.right - canvasRect.left;
+      const row = lines.find((l) => Math.abs(l.top - top) <= tol);
+      if (row) {
+        row.left = Math.min(row.left, left);
+        row.right = Math.max(row.right, right);
+        row.top = Math.min(row.top, top);
+        row.bottom = Math.max(row.bottom, bottom);
+      } else {
+        lines.push({ top, bottom, left, right });
+      }
+    }
+    if (lines.length === 0) return;
+
+    const rects: AnnotationRect[] = lines.map((l) => ({
+      x: l.left / w,
+      y: l.top / h,
+      width: (l.right - l.left) / w,
+      height: (l.bottom - l.top) / h,
+    }));
+    const minX = Math.min(...rects.map((r) => r.x));
+    const minY = Math.min(...rects.map((r) => r.y));
+    const maxX = Math.max(...rects.map((r) => r.x + r.width));
+    const maxY = Math.max(...rects.map((r) => r.y + r.height));
+
     addAnnotation({
       id: crypto.randomUUID(),
       page: currentPage,
       type: "highlight",
-      rect: {
-        x: minX / w,
-        y: minY / h,
-        width: (maxX - minX) / w,
-        height: (maxY - minY) / h,
-      },
+      rect: { x: minX, y: minY, width: maxX - minX, height: maxY - minY },
+      rects,
       color: activeColor,
     });
 
@@ -2663,6 +2694,35 @@ function CueSheetRow({
   );
 }
 
+/** Word-wrap text into a fixed width, drawing each line; caller clips to box. */
+function wrapCanvasText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+) {
+  let cursorY = y;
+  for (const paragraph of text.split("\n")) {
+    let line = "";
+    for (const word of paragraph.split(/\s+/)) {
+      const attempt = line ? `${line} ${word}` : word;
+      if (ctx.measureText(attempt).width > maxWidth && line) {
+        ctx.fillText(line, x, cursorY);
+        cursorY += lineHeight;
+        line = word;
+      } else {
+        line = attempt;
+      }
+    }
+    if (line) {
+      ctx.fillText(line, x, cursorY);
+      cursorY += lineHeight;
+    }
+  }
+}
+
 function drawAnnotationOnCanvas(
   ctx: CanvasRenderingContext2D,
   ann: Annotation,
@@ -2700,15 +2760,31 @@ function drawAnnotationOnCanvas(
   if (ann.type === "highlight") {
     ctx.globalAlpha = 0.44;
     ctx.fillStyle = ann.color;
-    ctx.fillRect(rx, ry, rw, rh);
+    const boxes = ann.rects && ann.rects.length > 0 ? ann.rects : [ann.rect];
+    for (const b of boxes) {
+      ctx.fillRect(b.x * canvasW, b.y * canvasH, b.width * canvasW, b.height * canvasH);
+    }
   } else if (ann.type === "note") {
-    ctx.globalAlpha = 0.33;
+    ctx.globalAlpha = 0.15;
     ctx.fillStyle = ann.color;
     ctx.fillRect(rx, ry, rw, rh);
     ctx.globalAlpha = 1;
     ctx.strokeStyle = ann.color;
     ctx.lineWidth = 1;
     ctx.strokeRect(rx, ry, rw, rh);
+    // The note text, wrapped + clipped inside the box.
+    if (ann.text.trim()) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(rx, ry, rw, rh);
+      ctx.clip();
+      ctx.fillStyle = "#1c1c1c";
+      ctx.font = "11px system-ui, sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      wrapCanvasText(ctx, ann.text, rx + 5, ry + 4, rw - 10, 14);
+      ctx.restore();
+    }
     ctx.beginPath();
     ctx.arc(rx + rw, ry, 5, 0, Math.PI * 2);
     ctx.fillStyle = ann.color;
@@ -2800,36 +2876,70 @@ function AnnotationShape({
   const rh = annotation.rect.height * canvasH;
 
   if (annotation.type === "highlight") {
+    // Per-line boxes for a text selection; fall back to the single bounding box
+    // for drawn-box highlights (and pre-existing ones without `rects`).
+    const boxes =
+      annotation.rects && annotation.rects.length > 0
+        ? annotation.rects
+        : [annotation.rect];
     return (
-      <rect
-        x={rx}
-        y={ry}
-        width={rw}
-        height={rh}
-        fill={`${annotation.color}70`}
-        stroke={selected ? "var(--ink)" : "none"}
-        strokeWidth="1.5"
+      <g
         style={{ cursor: "pointer" }}
         onClick={(e) => {
           e.stopPropagation();
           onClick();
         }}
-      />
+      >
+        {boxes.map((b, i) => (
+          <rect
+            key={i}
+            x={b.x * canvasW}
+            y={b.y * canvasH}
+            width={b.width * canvasW}
+            height={b.height * canvasH}
+            fill={`${annotation.color}70`}
+            stroke={selected ? "var(--ink)" : "none"}
+            strokeWidth="1.5"
+          />
+        ))}
+      </g>
     );
   }
 
   if (annotation.type === "note") {
     return (
       <g onClick={(e) => { e.stopPropagation(); onClick(); }} style={{ cursor: "pointer" }}>
+        {/* Sticky-note box: light tinted fill so the note text reads on top */}
         <rect
           x={rx}
           y={ry}
           width={rw}
           height={rh}
-          fill={`${annotation.color}55`}
+          rx={2}
+          fill={`${annotation.color}26`}
           stroke={annotation.color}
           strokeWidth={selected ? "2" : "1"}
         />
+        {/* The note's text, wrapped inside the box */}
+        <foreignObject x={rx} y={ry} width={rw} height={rh} style={{ pointerEvents: "none" }}>
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              boxSizing: "border-box",
+              padding: "3px 5px",
+              fontSize: 11,
+              lineHeight: 1.25,
+              color: "var(--ink)",
+              fontFamily: "system-ui, sans-serif",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              overflow: "hidden",
+            }}
+          >
+            {annotation.text}
+          </div>
+        </foreignObject>
         {/* Note indicator dot */}
         <circle
           cx={rx + rw}

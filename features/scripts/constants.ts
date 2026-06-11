@@ -22,7 +22,12 @@ export type HighlightAnnotation = {
   id: string;
   page: number;
   type: "highlight";
+  // Overall bounding box (selection outline / hit area / back-compat).
   rect: AnnotationRect;
+  // Per-line boxes for a text selection, so a multi-line highlight hugs each
+  // line instead of filling one big block. Absent on drawn-box highlights and
+  // on highlights made before this existed — those just use `rect`.
+  rects?: AnnotationRect[];
   color: string;
 };
 
