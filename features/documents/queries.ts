@@ -8,6 +8,8 @@ export async function getFoldersByProduction(productionId: string) {
       id: documentFolders.id,
       name: documentFolders.name,
       sortOrder: documentFolders.sortOrder,
+      visibility: documentFolders.visibility,
+      allowedRoles: documentFolders.allowedRoles,
     })
     .from(documentFolders)
     .where(eq(documentFolders.productionId, productionId))
@@ -89,6 +91,8 @@ export async function getDocumentById(documentId: string) {
       storagePath: documents.storagePath,
       folderId: documents.folderId,
       folderName: documentFolders.name,
+      folderVisibility: documentFolders.visibility,
+      folderAllowedRoles: documentFolders.allowedRoles,
       processingStatus: documents.processingStatus,
       createdAt: documents.createdAt,
       uploadedByFirstName: profiles.firstName,

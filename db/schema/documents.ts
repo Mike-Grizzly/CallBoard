@@ -9,6 +9,10 @@ export const documentFolders = pgTable("document_folders", {
     .references(() => productions.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
+  // "everyone" (default, all members) or "restricted" (only allowedRoles +
+  // managers). Existing folders default to everyone, preserving behavior.
+  visibility: text("visibility").notNull().default("everyone"),
+  allowedRoles: text("allowed_roles").array(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

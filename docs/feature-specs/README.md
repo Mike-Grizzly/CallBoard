@@ -37,5 +37,6 @@ Each feature spec must be updated when its feature changes. Status should reflec
 | `09-rehearsal-report-overhaul.md` | Rehearsal Report Overhaul | Planned |
 | `10-calls-calendar.md` | Call Schedule Calendar | Implemented |
 | `12-rehearsal-templates.md` | Rehearsal Templates & Schedule Generation | Implemented (not browser-verified) |
+| `13-document-folder-privacy.md` | Role-Restricted (Private) Document Folders | Implemented (not browser-verified) |
 | `16-people-directory.md` | People Directory & Mass Upload | Implemented (not fully verified) |
 | `17-push-notifications.md` | Web Push Notifications (PWA) | Implemented (not fully verified) |
