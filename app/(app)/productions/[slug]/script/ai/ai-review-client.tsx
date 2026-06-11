@@ -213,7 +213,10 @@ export function AiReviewClient({
 function ParseQuota({ usage }: { usage: ParseUsage }) {
   const out = usage.remaining <= 0;
   const low = !out && usage.remaining <= 1;
-  const fg = out ? "var(--c-clay)" : low ? "var(--c-amber)" : "var(--ink-3)";
+  // Subtly tint the pill so it reads as a limited resource (accent normally,
+  // escalating to amber when one's left and clay when used up).
+  const tone = out ? "var(--c-clay)" : low ? "var(--c-amber)" : "var(--accent)";
+  const fg = out ? "var(--c-clay)" : low ? "var(--c-amber)" : "var(--accent-ink)";
   return (
     <span
       title={`${usage.used} of ${usage.limit} AI analyses used in the last ${usage.windowDays} days`}
@@ -225,8 +228,8 @@ function ParseQuota({ usage }: { usage: ParseUsage }) {
         fontSize: 12,
         fontWeight: 600,
         color: fg,
-        background: "var(--bg-muted)",
-        border: "1px solid var(--border)",
+        background: `color-mix(in oklch, ${tone} 12%, var(--bg-elev))`,
+        border: `1px solid color-mix(in oklch, ${tone} 38%, transparent)`,
         borderRadius: 999,
         padding: "4px 11px",
         fontVariantNumeric: "tabular-nums",

@@ -27,6 +27,9 @@ export const productionRoles = pgTable("production_roles", {
   }),
   // One of the wizard's role types: Principal, Supporting, Ensemble, etc.
   type: text("type").notNull().default("Principal"),
+  // "ai" = written by applyScriptParse (replaced wholesale on the next parse);
+  // "manual" = wizard / hand-added (preserved across re-parses).
+  source: text("source").notNull().default("manual"),
   // Display order as entered in the wizard.
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })

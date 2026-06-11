@@ -8,10 +8,11 @@ import {
   scriptCache,
   productionRoles,
   productionScenes,
+  sceneBeats,
   productionMemberships,
   productions,
 } from "@/db/schema";
-import { and, desc, eq, gte, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { assertCanMutate } from "@/features/billing/guard";
@@ -436,61 +437,136 @@ export async function applyScriptParse(
   // no-op rather than a second insert of the same roles/scenes.
   if (parse.status === "applied") return { success: true };
 
-  // Existing roles/scenes for this production. We never delete (the set is
-  // shared — wizard roles, hand-added cast, blocking-tool scenes), so apply is
-  // additive but de-duplicated: applying the same breakdown twice, or a
-  // re-parse that overlaps the first, won't pile up duplicate rows.
-  const [existingRoles, existingScenes] = await Promise.all([
-    db
+  // Re-parse semantics: a parse OWNS the rows it created (source = "ai") and
+  // replaces them wholesale on the next parse, so re-analysing the same script
+  // never stacks duplicates. Hand-added / wizard rows (source = "manual") and
+  // any blocking work are always preserved.
+  await db.transaction(async (tx) => {
+    // ── Characters ──────────────────────────────────────────────────────
+    // Capture the casting assignments on the outgoing AI roles so we can
+    // re-link them by character name onto the fresh rows (re-parsing must not
+    // un-cast actors). Production access lives in production_memberships and is
+    // untouched here.
+    const prevAiRoles = await tx
+      .select({
+        name: productionRoles.name,
+        assignedUserId: productionRoles.assignedUserId,
+        actor: productionRoles.actor,
+      })
+      .from(productionRoles)
+      .where(
+        and(
+          eq(productionRoles.productionId, productionId),
+          eq(productionRoles.source, "ai"),
+        ),
+      );
+    const assignmentByName = new Map(
+      prevAiRoles
+        .filter((r) => r.assignedUserId)
+        .map((r) => [
+          r.name.trim().toLowerCase(),
+          { assignedUserId: r.assignedUserId, actor: r.actor },
+        ]),
+    );
+
+    await tx
+      .delete(productionRoles)
+      .where(
+        and(
+          eq(productionRoles.productionId, productionId),
+          eq(productionRoles.source, "ai"),
+        ),
+      );
+
+    // Manual roles that remain — don't create an AI row that collides by name.
+    const manualRoles = await tx
       .select({ name: productionRoles.name })
       .from(productionRoles)
-      .where(eq(productionRoles.productionId, productionId)),
-    db
+      .where(eq(productionRoles.productionId, productionId));
+    const haveRole = new Set(manualRoles.map((r) => r.name.trim().toLowerCase()));
+
+    const roles = result.roles
+      .map((r, i) => ({
+        name: (r.name ?? "").trim(),
+        type: (PARSE_ROLE_TYPES as readonly string[]).includes(r.type)
+          ? r.type
+          : "Principal",
+        sortOrder: i,
+      }))
+      .filter((r) => r.name.length > 0 && !haveRole.has(r.name.toLowerCase()));
+    if (roles.length > 0) {
+      await tx.insert(productionRoles).values(
+        roles.map((r) => {
+          const prior = assignmentByName.get(r.name.toLowerCase());
+          return {
+            productionId,
+            source: "ai",
+            ...r,
+            assignedUserId: prior?.assignedUserId ?? null,
+            actor: prior?.actor ?? null,
+          };
+        }),
+      );
+    }
+
+    // ── Scenes ──────────────────────────────────────────────────────────
+    // Scenes are shared with the blocking tool (scene_beats cascade-delete on
+    // scene removal). Replace only AI scenes with NO beats; an AI scene that's
+    // been blocked is preserved even if this parse drops it.
+    const aiScenes = await tx
+      .select({ id: productionScenes.id })
+      .from(productionScenes)
+      .where(
+        and(
+          eq(productionScenes.productionId, productionId),
+          eq(productionScenes.source, "ai"),
+        ),
+      );
+    const aiSceneIds = aiScenes.map((s) => s.id);
+    const blocked =
+      aiSceneIds.length > 0
+        ? await tx
+            .selectDistinct({ sceneId: sceneBeats.sceneId })
+            .from(sceneBeats)
+            .where(inArray(sceneBeats.sceneId, aiSceneIds))
+        : [];
+    const blockedIds = new Set(blocked.map((b) => b.sceneId));
+    const removableIds = aiSceneIds.filter((id) => !blockedIds.has(id));
+    if (removableIds.length > 0) {
+      await tx
+        .delete(productionScenes)
+        .where(inArray(productionScenes.id, removableIds));
+    }
+
+    // Remaining scenes (manual + AI-with-blocking) — don't duplicate act/scene.
+    const remainingScenes = await tx
       .select({
         actNumber: productionScenes.actNumber,
         sceneNumber: productionScenes.sceneNumber,
       })
       .from(productionScenes)
-      .where(eq(productionScenes.productionId, productionId)),
-  ]);
-  const haveRole = new Set(existingRoles.map((r) => r.name.trim().toLowerCase()));
-  const haveScene = new Set(
-    existingScenes.map((s) => `${s.actNumber}-${s.sceneNumber}`),
-  );
-
-  // Roles — only named rows, type clamped to the known set, skipping any name
-  // the production already has.
-  const roles = result.roles
-    .map((r, i) => ({
-      name: (r.name ?? "").trim(),
-      type: (PARSE_ROLE_TYPES as readonly string[]).includes(r.type)
-        ? r.type
-        : "Principal",
-      sortOrder: i,
-    }))
-    .filter((r) => r.name.length > 0 && !haveRole.has(r.name.toLowerCase()));
-  if (roles.length > 0) {
-    await db
-      .insert(productionRoles)
-      .values(roles.map((r) => ({ productionId, ...r })));
-  }
-
-  // Scenes — in reading order, skipping any act/scene the production already has.
-  const scenes = result.scenes
-    .map((s, i) => ({
-      actNumber: Math.max(1, Math.trunc(s.actNumber) || 1),
-      sceneNumber: Math.max(1, Math.trunc(s.sceneNumber) || 1),
-      title: (s.title ?? "").trim() || `Scene ${i + 1}`,
-      orderIndex: i,
-    }))
-    .filter(
-      (s) => s.title.length > 0 && !haveScene.has(`${s.actNumber}-${s.sceneNumber}`),
+      .where(eq(productionScenes.productionId, productionId));
+    const haveScene = new Set(
+      remainingScenes.map((s) => `${s.actNumber}-${s.sceneNumber}`),
     );
-  if (scenes.length > 0) {
-    await db
-      .insert(productionScenes)
-      .values(scenes.map((s) => ({ productionId, ...s })));
-  }
+
+    const scenes = result.scenes
+      .map((s, i) => ({
+        actNumber: Math.max(1, Math.trunc(s.actNumber) || 1),
+        sceneNumber: Math.max(1, Math.trunc(s.sceneNumber) || 1),
+        title: (s.title ?? "").trim() || `Scene ${i + 1}`,
+        orderIndex: i,
+      }))
+      .filter(
+        (s) =>
+          s.title.length > 0 && !haveScene.has(`${s.actNumber}-${s.sceneNumber}`),
+      );
+    if (scenes.length > 0) {
+      await tx
+        .insert(productionScenes)
+        .values(scenes.map((s) => ({ productionId, source: "ai", ...s })));
+    }
+  });
 
   // Bookmarks — seed the shared set onto every member's annotations for this
   // script, so cast members open the script already bookmarked.

@@ -2,10 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import type { Production } from "@/db/schema";
 import { resolveProductionColor } from "@/features/productions/constants";
-import {
-  ArchiveProductionButton,
-  DeleteProductionButton,
-} from "./archive-buttons";
+import { ProductionCardMenu } from "./production-card-menu";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
@@ -123,9 +120,6 @@ export function ProductionList({
               className="prod-card"
               data-status={production.status}
             >
-              <span className="prod-card-cta">
-                Open hub <Icon name="ChevronRight" size={14} />
-              </span>
               <div className="prod-card-head">
                 <span className="prod-card-status">
                   <span className="prod-card-dot" style={{ background: dotColor }} />
@@ -135,16 +129,12 @@ export function ProductionList({
               <h2 className="prod-card-title">{production.title}</h2>
               <ProductionFoot production={production} />
             </Link>
-            {canManage && (
-              <ArchiveProductionButton
+            {(canManage || canDelete) && (
+              <ProductionCardMenu
                 productionId={production.id}
                 productionTitle={production.title}
-              />
-            )}
-            {canDelete && (
-              <DeleteProductionButton
-                productionId={production.id}
-                productionTitle={production.title}
+                canArchive={canManage}
+                canDelete={canDelete}
               />
             )}
           </div>

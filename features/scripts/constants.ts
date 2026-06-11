@@ -43,7 +43,24 @@ export type CueAnnotation = {
   cueNumber: string;
   cueDescription: string;
   leaderSide: "left" | "right";
+  // Per-cue colour (e.g. red for lights, blue for sound). Absent on cues made
+  // before colour was added — they fall back to CUE_STROKE.
+  color?: string;
 };
+
+/**
+ * Cue colours — saturated so leader lines / labels read clearly over the
+ * script. The first (red) is the legacy default (`CUE_STROKE`). The viewer
+ * remembers the last colour picked and applies it to new cues until changed.
+ */
+export const CUE_COLORS = [
+  { label: "Red", value: "#EF4444" },
+  { label: "Blue", value: "#3B82F6" },
+  { label: "Green", value: "#22C55E" },
+  { label: "Amber", value: "#F59E0B" },
+  { label: "Purple", value: "#8B5CF6" },
+  { label: "Pink", value: "#EC4899" },
+] as const;
 
 /** Point on a page, normalized 0–1 against page width/height. */
 export type InkPoint = { x: number; y: number };
