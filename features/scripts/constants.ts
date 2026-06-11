@@ -46,6 +46,9 @@ export type CueAnnotation = {
   // Per-cue colour (e.g. red for lights, blue for sound). Absent on cues made
   // before colour was added — they fall back to CUE_STROKE.
   color?: string;
+  // Script text captured from under the cue's box at draw time (the "line" the
+  // cue is called on). Absent on cues made before this was added.
+  line?: string;
 };
 
 /**

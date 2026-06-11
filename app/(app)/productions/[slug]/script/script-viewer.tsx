@@ -528,8 +528,10 @@ export function ScriptViewer({
     const el = workspaceRef.current;
     if (!el) return;
     const measure = () => {
-      setWorkspaceW(el.clientWidth);
-      setWorkspaceH(el.clientHeight);
+      // Ignore zero sizes (e.g. while the cue-sheet view hides the workspace)
+      // so the fit scale keeps its last good value and the page stays put.
+      if (el.clientWidth > 0) setWorkspaceW(el.clientWidth);
+      if (el.clientHeight > 0) setWorkspaceH(el.clientHeight);
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -846,6 +848,39 @@ export function ScriptViewer({
 
   // ── Pending annotation confirmation ────────────────────────────────────────
 
+  // Pull the script text sitting under a box from the rendered text layer, so a
+  // cue can record the "line" it's called on. Reads the positioned spans the
+  // PDF (or OCR) text layer lays over the canvas and keeps those overlapping
+  // the box, in reading order.
+  function captureLineText(rect: AnnotationRect): string {
+    const layer = textLayerRef.current;
+    if (!layer || canvasSize.w === 0 || canvasSize.h === 0) return "";
+    const bx = rect.x * canvasSize.w;
+    const by = rect.y * canvasSize.h;
+    const bw = rect.width * canvasSize.w;
+    const bh = rect.height * canvasSize.h;
+    const items: { top: number; left: number; text: string }[] = [];
+    for (const el of Array.from(layer.children) as HTMLElement[]) {
+      const t = el.offsetTop;
+      const l = el.offsetLeft;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const vOverlap = t + h > by && t < by + bh;
+      const hOverlap = l + w > bx && l < bx + bw;
+      if (vOverlap && hOverlap && el.textContent?.trim()) {
+        items.push({ top: t, left: l, text: el.textContent });
+      }
+    }
+    items.sort((a, b) =>
+      Math.abs(a.top - b.top) > 6 ? a.top - b.top : a.left - b.left,
+    );
+    return items
+      .map((i) => i.text)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   function confirmPending() {
     if (!pendingAnnotation) return;
 
@@ -877,6 +912,7 @@ export function ScriptViewer({
         cueDescription: pendingCueDesc.trim(),
         leaderSide: preferredLeaderSide,
         color: cueColor,
+        line: captureLineText(rect),
       });
     }
 
@@ -1625,7 +1661,7 @@ export function ScriptViewer({
           </div>
         )}
 
-        {viewMode === "cuesheet" ? (
+        {viewMode === "cuesheet" && (
           <CueSheetView
             cues={annotations.filter((a): a is CueAnn => a.type === "cue")}
             bookmarks={bookmarks}
@@ -1640,9 +1676,10 @@ export function ScriptViewer({
               setSelectedId(cue.id);
             }}
           />
-        ) : (
-        <>
-        {/* PDF + annotation layer */}
+        )}
+        {/* PDF + annotation layer — kept mounted across view toggles so the
+            rendered canvas (and the measured fit scale) survive; just hidden
+            while the cue sheet shows, rather than unmounted and re-rendered. */}
         <div
           ref={workspaceRef}
           className="sv-workspace"
@@ -1657,6 +1694,7 @@ export function ScriptViewer({
             // PDF internally, rather than growing the page past the viewport.
             flex: shellHeight ? 1 : undefined,
             minHeight: 0,
+            display: viewMode === "cuesheet" ? "none" : undefined,
             cursor: activeTool === "pointer" ? (panning ? "grabbing" : "grab") : "default",
           }}
         >
@@ -2026,10 +2064,10 @@ export function ScriptViewer({
         </div>
 
         {/* Script info */}
-        <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
-          {script.title} · v{script.scriptVersion} · Your annotations are private
-        </p>
-        </>
+        {viewMode !== "cuesheet" && (
+          <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
+            {script.title} · v{script.scriptVersion} · Your annotations are private
+          </p>
         )}
       </div>
 
@@ -2386,6 +2424,15 @@ function buildCueSheetSections(
     }
     section.rows.push(cue);
   }
+  // Within each scene/song, list cues in numerical order (natural sort).
+  for (const section of sections) {
+    section.rows.sort((a, b) =>
+      a.cueNumber.localeCompare(b.cueNumber, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      }),
+    );
+  }
   return sections;
 }
 
@@ -2398,12 +2445,15 @@ function cueSheetToCsv(sections: CueSheetSection[], title: string): string {
   const lines: string[] = [csvCell(`Cue Sheet: ${title}`), ""];
   for (const section of sections) {
     lines.push(csvCell(section.label));
-    lines.push("Cue,Note,Page");
+    lines.push("Cue,Line,Note,Page");
     for (const c of section.rows) {
       lines.push(
-        [csvCell(c.cueNumber), csvCell(c.cueDescription), String(c.page)].join(
-          ",",
-        ),
+        [
+          csvCell(c.cueNumber),
+          csvCell(c.line ?? ""),
+          csvCell(c.cueDescription),
+          String(c.page),
+        ].join(","),
       );
     }
     lines.push("");
@@ -2471,7 +2521,8 @@ function CueSheetView({
           <table className="sv-cuesheet-table">
             <thead>
               <tr>
-                <th style={{ width: 110 }}>Cue</th>
+                <th style={{ width: 100 }}>Cue</th>
+                <th>Line</th>
                 <th>Note</th>
                 <th style={{ width: 66 }}>Page</th>
                 {!readOnly && <th style={{ width: 34 }} />}
@@ -2481,7 +2532,7 @@ function CueSheetView({
               {sections.map((section) => (
                 <Fragment key={`${section.label}-${section.rows[0]?.id}`}>
                   <tr className="sv-cuesheet-section">
-                    <td colSpan={readOnly ? 3 : 4}>
+                    <td colSpan={readOnly ? 4 : 5}>
                       <span className="sv-cuesheet-section-label">
                         {section.kind === "song" ? (
                           <Music size={12} />
@@ -2548,6 +2599,26 @@ function CueSheetRow({
             />
           )}
         </span>
+      </td>
+      <td>
+        {readOnly ? (
+          <span className="sv-cuesheet-line">{cue.line}</span>
+        ) : (
+          <input
+            className="sv-cuesheet-input sv-cuesheet-line"
+            defaultValue={cue.line ?? ""}
+            placeholder="—"
+            title={cue.line || undefined}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v !== (cue.line ?? ""))
+                onEdit(cue.id, { line: v } as Partial<Annotation>);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            }}
+          />
+        )}
       </td>
       <td>
         {readOnly ? (
@@ -3098,7 +3169,18 @@ function AnnotationsPanel({
         : a.rect.x - b.rect.x
       : 0;
 
-  const cues = listable.filter((a) => a.type === "cue").sort(byY);
+  // Cues read in numerical order (natural, so "2" < "10"); other annotations
+  // stay in top-to-bottom page order.
+  const cues = (
+    listable.filter(
+      (a): a is Extract<Annotation, { type: "cue" }> => a.type === "cue",
+    )
+  ).sort((a, b) =>
+    a.cueNumber.localeCompare(b.cueNumber, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    }),
+  );
   const others = listable.filter((a) => a.type !== "cue").sort(byY);
 
   return (

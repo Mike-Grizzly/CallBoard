@@ -1175,6 +1175,15 @@ textarea.field {
   align-items: center;
   gap: 7px;
 }
+.sv-cuesheet-line {
+  color: var(--ink-3);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0;
+  min-width: 120px;
+}
 .sv-cuesheet-dot {
   width: 9px;
   height: 9px;
