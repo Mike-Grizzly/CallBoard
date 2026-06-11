@@ -8246,6 +8246,20 @@ textarea.cform-field {
   margin: 2px 0 0;
   letter-spacing: -0.01em;
 }
+.call-tray-modes {
+  display: flex;
+  justify-content: center;
+  padding: 12px 20px 0;
+  flex-shrink: 0;
+}
+.call-tray-modes .seg {
+  width: 100%;
+}
+.call-tray-modes .seg button {
+  flex: 1;
+  justify-content: center;
+  height: 30px;
+}
 .call-tray-body {
   flex: 1;
   min-height: 0;

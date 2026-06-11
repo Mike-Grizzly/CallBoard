@@ -189,19 +189,6 @@ export function CalendarClient({
                   </button>
                 ))}
               </div>
-              {canEdit && scopedSlug && (
-                <button
-                  className="btn ghost"
-                  onClick={() =>
-                    router.push(`/productions/${scopedSlug}/calls/generate`)
-                  }
-                  title="Generate a recurring schedule from a template"
-                  style={{ height: 32, padding: "0 12px" }}
-                >
-                  <Icon name="CalendarDays" className="ico" />
-                  <span className="cal-new-label">Generate</span>
-                </button>
-              )}
               {canEdit && (
                 <button
                   className="btn primary cal-new"
