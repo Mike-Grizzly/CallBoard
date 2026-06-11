@@ -3084,18 +3084,20 @@ function AnnotationShape({
   if (annotation.type === "note") {
     return (
       <g onClick={(e) => { e.stopPropagation(); onClick(); }} style={{ cursor: "pointer" }}>
-        {/* Sticky-note box: light tinted fill so the note text reads on top */}
+        {/* Sticky-note box: light tinted fill so the dark note text reads on top */}
         <rect
           x={rx}
           y={ry}
           width={rw}
           height={rh}
           rx={2}
-          fill={`${annotation.color}26`}
+          fill={`${annotation.color}22`}
           stroke={annotation.color}
           strokeWidth={selected ? "2" : "1"}
         />
-        {/* The note's text, wrapped inside the box */}
+        {/* The note's text, wrapped inside the box. Always dark — the note sits
+            on the white script page, so a fixed dark colour reads in any theme
+            (a themed var like --ink would be white in dark mode). */}
         <foreignObject x={rx} y={ry} width={rw} height={rh} style={{ pointerEvents: "none" }}>
           <div
             style={{
@@ -3105,7 +3107,8 @@ function AnnotationShape({
               padding: "3px 5px",
               fontSize: 11,
               lineHeight: 1.25,
-              color: "var(--ink)",
+              color: "#1a1a1a",
+              fontWeight: 500,
               fontFamily: "system-ui, sans-serif",
               whiteSpace: "pre-wrap",
               wordBreak: "break-word",
