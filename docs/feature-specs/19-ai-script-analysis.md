@@ -1,7 +1,7 @@
 # Feature 19 — AI Script Analysis
 
 **Status:** Phase 1 IMPLEMENTED (branch `claude/serene-cray-kmpjry`, not yet merged, not live-verified).
-**Phase 2 (per-role highlighting):** NOT BUILT.
+**Phase 2 (per-role line highlighting):** SCOPED as a beta (2026-06-10) — render-only, client-side, opt-in. Not built yet. See "Phase 2 — per-role line highlighting (Beta)" below.
 
 ## Goal
 
@@ -16,7 +16,7 @@ the production's real tables automatically.
 | 1 | Cast/characters + Principal/Supporting/Ensemble | `production_roles` | 1 ✅ |
 | 2 | Act/Scene breakdown | `production_scenes` | 1 ✅ |
 | 3 | Bookmarks for scenes + musical numbers (page-accurate) | `script_annotations.bookmarks` (per-user, seeded for all members) | 1 ✅ |
-| 4 | Pre-highlight each lead/supporting role's lines | `script_annotations.annotations` | 2 ⛔ (needs per-line pixel coords; format-dependent) |
+| 4 | Pre-highlight each lead/supporting role's lines | (render-only overlay — nothing persisted) | 2 🅱 SCOPED beta (see below) |
 
 ## Architecture
 
@@ -167,6 +167,70 @@ contains personal annotations (highlights/notes/cues/ink — those live per-user
 no actors), production data, or the script text. That structural breakdown is the
 only thing shared across orgs.
 
+## Scanned scripts (OCR via vision)
+
+Theatre scripts are often distributed as scans or photocopies with no embedded
+text layer. `runScriptParse` detects this (extracted text < 200 chars) and, instead
+of failing, switches to a **vision path**:
+
+- The PDF is handed to Claude's native PDF/vision pipeline (which renders each
+  page to an image and OCRs it) by passing the existing Supabase **signed URL**
+  as a `{ type: "url" }` `document` content block — no base64 (which would
+  inflate ~33% and risk the 32 MB request ceiling) and no Files API upload.
+- A **separate system prompt** (`VISION_SYSTEM_PROMPT`) asks for the same
+  roles/scenes, but bookmarks return a **`page` integer** instead of a text
+  anchor — there is no extracted-text layer to anchor against on a scan.
+  `resolveVisionBookmarks` validates each page is within the document and
+  de-dupes. **Bookmarks on scans are best-effort** (model-estimated pages); cast
+  and scenes are unaffected.
+- **Page cap:** `MAX_SCANNED_PAGES = 250`. Each scanned page costs image + text
+  tokens, so a very long scan would overflow even the 1M window; beyond the cap
+  the parse fails with a "split it into acts" message.
+- **Cache safety:** the global script cache is fingerprinted on the **raw file
+  bytes** for scans (the extracted text is empty and would otherwise collide
+  across different scans, poisoning the cross-org cache). Text PDFs keep the
+  normalized-text fingerprint. Both are SHA-256 hex in the same column.
+- The wizard auto-fill path benefits automatically — it runs the same
+  `runScriptParse`.
+
+## Phase 2 — per-role line highlighting (Beta, SCOPED 2026-06-10, not built)
+
+**Goal:** an actor opens the script and sees **their character's lines highlighted**, so they can scan their part at a glance. This was output #4 of the original director's vision.
+
+**Beta positioning.** This is shipped as an explicitly-labelled **Beta** because line detection is format-dependent: it works well on cleanly-formatted text PDFs and degrades on irregular ones. It is **opt-in and off by default**, so it can never silently change anyone's experience. Messaging on the control tells the user that if the result looks wrong they just switch it off — their bookmarks and notations are unaffected.
+
+### Reversibility (the load-bearing decision)
+AI line-highlights are a **separate, render-only overlay** — they are **never written into `script_annotations`**. The user's own highlights/notes/cues/ink and the AI bookmarks are never read or mutated by this feature. Consequences:
+- "Fall back to the previous parsed version with only bookmarks + my notations" is the **default state** — there is literally nothing to undo, because nothing was ever written.
+- No DB writes, no schema changes, no new server actions, zero token cost.
+
+### How it works (client-side, cue-based)
+The desktop viewer (`script-viewer.tsx`) already builds a positioned text layer from `pdfjs` (`getTextContent()` → per-item x/y/width). The beta engine reuses it:
+1. The viewer is given the production's **cast names** (from `production_roles`; works whether they came from the AI parse or were hand-entered).
+2. The user picks a character from a **"Highlight lines (Beta)"** dropdown (default: Off).
+3. A pure client util (`features/scripts/line-highlights.ts`) walks each page's text items, groups them into lines by y-position, finds the chosen character's **cue lines** (the cast name as printed — `FREDERIC.` / `FREDERIC:` / `FREDERIC (aside):`), and boxes each line of the speech from the cue until the next cue / stage direction / scene heading. Anchoring on the known cast name (not a generic ALL-CAPS heuristic) keeps false positives down.
+4. Rects are emitted in the same normalized 0–1 coordinate space as existing annotations and rendered as a **non-interactive** SVG group **below** the user's annotation layer (so user highlights stay clickable), only for the current page. Results are cached per `(page, character)` in a module map so page-flips are instant.
+
+Selection is remembered in **localStorage** (client-only — still no server write).
+
+### Limitations (state them in the UI)
+- **Text PDFs only.** Scanned/OCR scripts have no client text layer, so highlighting is unavailable there (consistent with the OCR caveat).
+- **Format-dependent.** Two-column scripts, dialogue on the same line as the cue, names with spaces/abbreviations, and speeches that continue across a page break are imperfect (a continuation page has no cue, so its lines won't highlight).
+- Requires the cast to be set up (roles exist). If none, the control shows a "set up the cast first" hint.
+
+### Beta slice vs. later iterations
+- **Beta v1 (this scope):** desktop `ScriptViewer` — the dropdown + render-only overlay + the `line-highlights.ts` util + passing role names from `script/page.tsx`. No DB/schema/server changes.
+- **Fast follow:** the same overlay in the **mobile reader** (`mobile-script-reader.tsx`) — actors read on phones, so this is high-value.
+- **Later:** opt-in **persistence** as a separate AI-owned layer (distinct id prefix, still revert-by-clearing) so highlights appear in the "Download annotated PDF" export; **auto-select** the viewer's own character via `production_memberships.character_name`; and a **server-side / AI-assisted** coordinate engine for irregular scripts (accurate but token-costly).
+
+### Files (when built)
+- New `features/scripts/line-highlights.ts` (pure, client-safe: pdfjs textContent + character name → rects; unit-testable).
+- `script-viewer.tsx` (control + overlay layer), `script/page.tsx` (fetch + pass role names), optional `constants.ts` (highlight style token).
+- No schema, no server actions, no new dependency.
+
+### Open decisions (deferred)
+- **Plan gating:** the beta is client-side and free to run, so it isn't naturally covered by `assertCanMutate`. Decide later whether to gate *visibility* by plan (cosmetic) — recommend showing it to anyone who can view the script until/unless the costly server engine lands.
+
 ## Permissions
 
 Gated on `documents:upload` (admin/producer/director/choreographer/stage_manager
@@ -202,6 +266,29 @@ and this is a setup-time action, so caps cover the economics without a new SKU.
 A per-tier monthly quota (free 5 / repertory 20 / company ∞) is the natural
 future lever if AI usage becomes material — deferred until there's token data.
 
+## Reliability (added 2026-06-10)
+
+- **Stalled-parse watchdog.** If the async run worker dies (Vercel reclaim, or
+  work > `maxDuration=300s`) the row would sit in `processing` forever — spinning
+  the review page and blocking new parses via the concurrency lock. A row
+  `processing` past `STALE_PARSE_MS` (8 min) is now treated as dead: the poll
+  actions (`fetchLatestScriptParse`/`fetchScriptParseById`) flip it to `failed`
+  (`failIfStale`), and all three concurrency locks skip it (`hasLiveProcessing`).
+  Lazy — no cron, since the review page polls every 3s.
+- **Idempotent apply.** `applyScriptParse` re-applying an already-`applied` parse
+  is a no-op (status guard); roles/scenes are inserted additively but
+  **de-duplicated** against the production's existing rows (roles by name, scenes
+  by act/scene number), so a double-click or an overlapping re-parse won't pile up
+  duplicates. It never *deletes* (scenes are shared with the blocking tool, and
+  roles can be hand-added) — a re-parse that drops a role/scene leaves the old row
+  for manual removal.
+- **Late-joiner bookmark seeding.** `seedSharedBookmarks` only seeds members
+  present at apply time. Members who join later are seeded **lazily on first
+  Script-tab open** by `ensureMemberBookmarks` (reads the applied parse's bookmarks
+  — the canonical set — and writes the user's `ai-*` set if missing). Gated by
+  `documents.processingStatus === "applied"` + the member lacking an AI set, so
+  there's no extra query for productions without an AI breakdown.
+
 ## Setup the user owns
 
 - Set `ANTHROPIC_API_KEY` in Vercel (and local `.env`). `.env.example` documents
@@ -210,7 +297,9 @@ future lever if AI usage becomes material — deferred until there's token data.
 ## Known limitations / risks (see open-questions)
 
 - **No live verification yet** — needs the API key + a real script.
-- **Scanned/image-only PDFs** are rejected (no OCR) with a clear message.
+- **Scanned/image-only PDFs** are now read via Claude's vision/PDF pipeline (see
+  "Scanned scripts" below) — bookmarks on scans are best-effort. Capped at 250
+  pages.
 - **Very long scripts** may exceed `maxDuration=300`; needs Vercel Fluid compute
   for the higher ceiling.
 - **Position classification** (lead/supporting) is a model estimate from line
@@ -219,3 +308,79 @@ future lever if AI usage becomes material — deferred until there's token data.
   for small casts, not optimized for very large ones.
 - **Phase 2 highlighting** deferred — the hardest piece (per-line pixel coords,
   script-format-dependent).
+
+---
+
+## Scanned-script OCR (in-browser text tools) — 2026-06-11, built, not live-verified
+
+**Problem.** A scanned/image-only script has no text layer, so the Script tool's
+**select / copy / find / line-highlighting** tools are dead. The AI parser OCRs
+scans *for analysis* (Claude vision → cast/scenes), but that has no per-word
+coordinates, so it can't make the page text selectable. Print-to-PDF doesn't
+help either (it re-wraps images, adds no text).
+
+**Solution.** OCR the scan **in the browser with tesseract.js** and paint the
+result as the viewer's transparent text layer.
+
+- **Detect:** on open, sample the first ≤5 pages' extractable text; `< 100`
+  chars ⇒ scanned (same signal `runScriptParse` uses).
+- **Offer (managers):** a banner — **Run OCR** (warns it processes each page,
+  minutes for a full script) / **Not now** (remembered per file in
+  `localStorage`; falls back to image-only viewing). Non-managers just benefit
+  from a ready result; they don't see the run UI.
+- **Run:** render each page to a canvas → `ocrCanvas()` (tesseract.js, `eng`)
+  → per-word boxes, **normalized 0..1** of page size. Progress is shown
+  page-by-page and is **cancellable**; the worker is terminated when done.
+  Zero tokens / no server compute.
+- **Store once, shared:** results live in `script_ocr` keyed by
+  `storage_path` + `script_version` (a property of the *file*, reused for the
+  whole production). Flushed every 5 pages so a long run survives a closed tab;
+  `status` goes `processing → ready` (or `failed`, with a Try-again banner).
+- **Paint:** when `status==='ready'`, the viewer fills `textLayerRef` from the
+  stored boxes instead of the pdfjs text content (an `ocrOwnsTextLayer` ref
+  stops the pdfjs render path from wiping it). Because boxes are normalized,
+  they map to any zoom. This also **unblocks Phase 2 line-highlighting on
+  scans** (it's text-layer-driven).
+
+**Files.** `db/schema/script-ocr.ts`, `lib/ocr.ts`,
+`scripts/copy-tesseract-assets.mjs` (self-hosts worker + WASM core into
+`public/tesseract/`; lang data from the tessdata CDN by default, override with
+`NEXT_PUBLIC_TESSERACT_LANG_PATH`), `features/scripts/ocr-actions.ts`,
+`app/(app)/productions/[slug]/script/use-script-ocr.ts`; plus
+`features/scripts/constants.ts`, `script-viewer.tsx`, `globals.css`.
+
+**Setup the user owns.** Create the `script_ocr` table (SQL in
+`decision-log.md`, 2026-06-11) — RLS on, no policies, no composite UNIQUE.
+
+**Scope / not yet.** v1 = desktop `ScriptViewer`. Mobile reader consumes the
+*stored* result for display but its own detect/run UI is a fast-follow.
+Single language (`eng`). Accuracy is good-not-perfect on clean scans; very
+poor scans may need a real OCR pass (ocrmypdf/Acrobat) outside the app.
+
+---
+
+## Unrenderable scans → searchable-PDF rebuild (PDFium-WASM) — 2026-06-11
+
+Some scans pdfjs **can't rasterize at all** — e.g. MRC-compressed files whose
+text is thousands of `CCITTFax` 1-bit `/ImageMask` stencils that pdfjs drops
+(it draws only the `DCTDecode` background). For these the in-browser tesseract
+OCR (which reads the pdfjs canvas) also fails. Two-layer fix:
+
+1. **Native fallback (read):** the viewer measures ink coverage of a
+   representative rendered page (`isRenderBlank`); if a scan comes back blank,
+   it shows the PDF in the browser's native engine (`<iframe>`, like Documents)
+   and hides the futile OCR offer.
+2. **Searchable rebuild (fix):** `lib/pdf-ocr-rebuild.ts` rasterizes each page
+   with **PDFium-WASM** (`@hyzyla/pdfium`, base64-inlined — no asset hosting),
+   OCRs it with `tesseract.js`, and assembles a new PDF (page image + invisible
+   jsPDF text layer). Standard codecs + real text ⇒ pdfjs renders/searches it
+   natively. Managers trigger it from the blank-render banner (*Make
+   searchable*, progress + cancel); the result uploads direct-to-storage and
+   becomes the new default script (`finalizeRebuiltScript`, version-bumped,
+   original kept).
+
+**Verified:** PDFium-WASM renders the tester's exact file (126 pp, 16–27% ink)
+where pdfjs is blank; `tsc`/`eslint`/`next build` clean. **Not yet:** live
+end-to-end run in a browser; relocating the prompt from the viewer into the
+upload flow; non-English OCR; very long scripts may want a background job
+instead of the client-side rebuild.

@@ -30,8 +30,10 @@ import {
   BookOpen,
   Maximize2,
   Sparkles,
+  ScanText,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { saveAnnotations, dismissStaleBanner } from "@/features/scripts/actions";
 import {
   ANNOTATION_COLORS,
@@ -49,6 +51,8 @@ import type { DefaultScript } from "@/features/scripts/queries";
 import { loadPdfDocument } from "@/lib/pdf";
 import { useIsPhone } from "@/lib/use-is-phone";
 import { MobileScriptReader } from "./mobile-script-reader";
+import { useScriptOcr } from "./use-script-ocr";
+import { useScriptRebuild } from "./use-script-rebuild";
 
 // Module-level cache so re-renders don't re-decode the same page
 const pdfBitmapCache = new Map<string, ImageBitmap>();
@@ -57,6 +61,35 @@ const pdfThumbnailCache = new Map<string, string>(); // "url::page" -> jpeg data
 const ZOOM_STEPS = [0.75, 1.0, 1.25, 1.5, 2.0] as const;
 const ZOOM_LABELS = ["75%", "100%", "125%", "150%", "200%"] as const;
 const BASE_RENDER_SCALE = 1.8;
+
+/**
+ * Is a rendered page (near-)blank? Downsamples to a small canvas and measures
+ * the fraction of non-white ("ink") pixels. A scanned page that pdfjs failed to
+ * rasterize (MRC/CCITT ImageMask scripts) comes out essentially white; a page
+ * that actually drew its text has several percent ink. Threshold sits between.
+ */
+function isRenderBlank(source: HTMLCanvasElement): boolean {
+  try {
+    const W = 80;
+    const H = Math.max(1, Math.round((source.height / source.width) * W));
+    const small = document.createElement("canvas");
+    small.width = W;
+    small.height = H;
+    const ctx = small.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return false;
+    ctx.drawImage(source, 0, 0, W, H);
+    const { data } = ctx.getImageData(0, 0, W, H);
+    let ink = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      // Treat a pixel as "ink" if it's clearly off-white (any channel dark).
+      if (data[i] < 235 || data[i + 1] < 235 || data[i + 2] < 235) ink += 1;
+    }
+    const coverage = ink / (W * H);
+    return coverage < 0.004; // < 0.4% drawn ⇒ effectively blank
+  } catch {
+    return false; // never block viewing on a detection failure
+  }
+}
 
 interface Props {
   script: DefaultScript;
@@ -156,6 +189,49 @@ export function ScriptViewer({
   const [downloadProgress, setDownloadProgress] = useState<{ current: number; total: number } | null>(null);
   const [, startTransition] = useTransition();
 
+  // ── Scanned-script OCR ──────────────────────────────────────────────────────
+  // A scanned/image-only PDF has no extractable text, so the select/copy/search
+  // tools are dead. Detect that, then offer in-browser OCR (tesseract.js) to
+  // fill the text layer. The result is shared across the production.
+  const [isScanned, setIsScanned] = useState<boolean | null>(null);
+  // A scan whose page renders (near-)blank in pdfjs — typically MRC/CCITT
+  // ImageMask scripts that pdfjs can't rasterize (the text is thousands of
+  // 1-bit stencils it drops). For these, in-browser OCR is futile (it would
+  // read a blank canvas), so we fall back to the browser's native PDF engine
+  // for viewing, exactly like the Documents tab.
+  const [renderBlank, setRenderBlank] = useState(false);
+  const [nativeView, setNativeView] = useState(false);
+  const ocr = useScriptOcr({
+    pdfUrl,
+    storagePath: script.storagePath,
+    scriptVersion: script.scriptVersion ?? 1,
+    documentId: script.id,
+    isScanned,
+    enabled: true,
+  });
+  // When OCR has produced a text layer, it owns `textLayerRef` (the pdfjs path
+  // would otherwise wipe it on every page render). Read via a ref so the render
+  // effect doesn't need OCR state in its deps.
+  const ocrOwnsTextLayer = ocr.status === "ready";
+  const ocrOwnsTextLayerRef = useRef(ocrOwnsTextLayer);
+  useEffect(() => {
+    ocrOwnsTextLayerRef.current = ocrOwnsTextLayer;
+  }, [ocrOwnsTextLayer]);
+
+  // Rebuild an unrenderable scan into a searchable PDF (PDFium + OCR) and
+  // install it as the new default script. On success the page reloads to pick
+  // up the rebuilt file, which pdfjs renders normally.
+  const router = useRouter();
+  const rebuild = useScriptRebuild({
+    productionId,
+    pdfUrl,
+    title: script.title ?? "",
+    fileName: script.fileName ?? "script.pdf",
+  });
+  useEffect(() => {
+    if (rebuild.status === "done") router.refresh();
+  }, [rebuild.status, router]);
+
   // ── PDF rendering ─────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -211,8 +287,10 @@ export function ScriptViewer({
         /* non-fatal */
       }
 
-      // Render text layer for text-select highlighting
-      if (!cancelled && textLayerRef.current) {
+      // Render text layer for text-select highlighting. When OCR has produced
+      // a text layer for a scanned script, it owns this element instead (see
+      // the OCR text-layer effect) — skip so we don't wipe its spans.
+      if (!cancelled && textLayerRef.current && !ocrOwnsTextLayerRef.current) {
         const textLayerEl = textLayerRef.current;
         textLayerEl.innerHTML = "";
         try {
@@ -259,6 +337,93 @@ export function ScriptViewer({
       cancelled = true;
     };
   }, [pdfUrl, currentPage, renderScale]);
+
+  // ── Detect a scanned/image-only script + whether pdfjs can render it ─────────
+  // Sample the first few pages' extractable text; near-empty means it's a scan
+  // (same heuristic the AI parser uses). For a scan, also rasterize a
+  // representative content page and measure ink coverage — if pdfjs draws it
+  // (near-)blank, it's a file pdfjs can't render (MRC/CCITT ImageMasks), so we
+  // route to the native PDF engine instead of offering futile in-browser OCR.
+  useEffect(() => {
+    let active = true;
+    setIsScanned(null);
+    setRenderBlank(false);
+    (async () => {
+      try {
+        const pdf = await loadPdfDocument(pdfUrl);
+        const sample = Math.min(pdf.numPages, 5);
+        let chars = 0;
+        for (let n = 1; n <= sample && chars <= 200; n += 1) {
+          const page = await pdf.getPage(n);
+          const tc = await page.getTextContent();
+          for (const item of tc.items) {
+            if ("str" in item) chars += item.str.length;
+          }
+        }
+        const scanned = chars < 100;
+        if (active) setIsScanned(scanned);
+        if (!scanned) return;
+
+        // Rasterize a content page (skip p.1, which often carries only a
+        // title/logo and would render non-blank even when the body can't).
+        const probePage = pdf.numPages > 1 ? 2 : 1;
+        const page = await pdf.getPage(probePage);
+        const viewport = page.getViewport({ scale: 1 });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        await page.render({ canvas, viewport }).promise;
+        const blank = isRenderBlank(canvas);
+        canvas.width = 0;
+        canvas.height = 0;
+        if (active) setRenderBlank(blank);
+      } catch {
+        if (active) setIsScanned(null);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [pdfUrl]);
+
+  // A scan pdfjs can't rasterize is useless in the canvas editor — drop the
+  // user straight into the native PDF view so they can at least read it.
+  useEffect(() => {
+    if (renderBlank) setNativeView(true);
+  }, [renderBlank]);
+
+  // ── OCR text layer ──────────────────────────────────────────────────────────
+  // For a scanned script with a ready OCR result, paint the per-word boxes as
+  // the transparent selectable text layer (same role as the pdfjs text layer),
+  // turning the select / copy / find / line-highlight tools back on.
+  useEffect(() => {
+    const el = textLayerRef.current;
+    if (!el || ocr.status !== "ready") return;
+    el.innerHTML = "";
+    const words = ocr.pages.get(currentPage);
+    const { w, h } = canvasSize;
+    if (!words || !words.length || !w || !h) return;
+    const frag = document.createDocumentFragment();
+    for (const word of words) {
+      const span = document.createElement("span");
+      span.textContent = `${word.t} `;
+      const boxH = (word.y1 - word.y0) * h;
+      Object.assign(span.style, {
+        position: "absolute",
+        left: `${word.x0 * w}px`,
+        top: `${word.y0 * h}px`,
+        height: `${boxH}px`,
+        fontSize: `${boxH * 0.85}px`,
+        lineHeight: `${boxH}px`,
+        color: "transparent",
+        whiteSpace: "pre",
+        cursor: "text",
+        userSelect: "text",
+      });
+      frag.appendChild(span);
+    }
+    el.appendChild(frag);
+  }, [ocr.status, ocr.pages, currentPage, canvasSize]);
 
   // ── Intrinsic page width (for "fit width") ──────────────────────────────────
   useEffect(() => {
@@ -923,6 +1088,106 @@ export function ScriptViewer({
           </div>
         )}
 
+        {/* Scanned script pdfjs can't render → rebuild searchable, or native view */}
+        {/* Scanned script → offer a searchable-PDF rebuild (PDFium + OCR).
+            Gated on isScanned (no text layer) — the reliable, Adobe-style
+            signal — not on a blank render, since these scans often draw a faint
+            background that isn't "blank". renderBlank only drives the native
+            fallback for display. */}
+        {isScanned === true &&
+          (rebuild.status === "running" || rebuild.status === "uploading" ? (
+            <div className="sv-ocr-banner">
+              <span className="sv-spinner" aria-hidden />
+              <div className="sv-ocr-body">
+                {rebuild.status === "uploading"
+                  ? "Saving the searchable script…"
+                  : `Making this script searchable… ${
+                      rebuild.progress
+                        ? `${
+                            rebuild.progress.phase === "ocr" ? "reading" : "rendering"
+                          } page ${rebuild.progress.page} of ${rebuild.progress.total}`
+                        : "starting"
+                    }`}
+                . This can take a few minutes — please keep this tab open.
+                {rebuild.progress && rebuild.progress.total > 0 && (
+                  <div className="sv-ocr-progress">
+                    <div
+                      className="sv-ocr-progress-bar"
+                      style={{
+                        width: `${Math.round(
+                          (rebuild.progress.page / rebuild.progress.total) * 100,
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="sv-ocr-actions">
+                <button
+                  className="btn ghost"
+                  onClick={rebuild.cancel}
+                  style={{ height: 30 }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              className={`sv-ocr-banner${
+                rebuild.status === "failed" ? " sv-ocr-banner-error" : ""
+              }`}
+            >
+              <ScanText size={18} className="sv-ocr-icon" />
+              <div className="sv-ocr-body">
+                {rebuild.status === "failed" ? (
+                  <>
+                    <strong>Couldn&rsquo;t make this script searchable.</strong>{" "}
+                    {rebuild.error} You can try again, or read it in the native
+                    viewer below.
+                  </>
+                ) : renderBlank ? (
+                  <>
+                    <strong>This scanned script can&rsquo;t be shown in the editor.</strong>{" "}
+                    It&rsquo;s displayed below in your browser&rsquo;s built-in PDF
+                    viewer.{" "}
+                    {canManage
+                      ? "Make it searchable to enable annotation and text tools across the whole project."
+                      : "Ask a manager to make it searchable to enable annotation and text tools."}
+                  </>
+                ) : (
+                  <>
+                    <strong>This script is a scan.</strong> Annotation and text
+                    tools (select, copy, find, line highlighting) are off because
+                    it has no text layer.{" "}
+                    {canManage
+                      ? "Make it searchable to turn them on across the whole project — it OCRs every page, so a full script takes a few minutes."
+                      : "Ask a manager to make it searchable to turn them on."}
+                  </>
+                )}
+              </div>
+              <div className="sv-ocr-actions">
+                {canManage && (
+                  <button
+                    className="btn primary"
+                    onClick={rebuild.run}
+                    style={{ height: 30 }}
+                  >
+                    <ScanText size={14} />{" "}
+                    {rebuild.status === "failed" ? "Try again" : "Make searchable"}
+                  </button>
+                )}
+                <button
+                  className="btn ghost"
+                  onClick={() => setNativeView((v) => !v)}
+                  style={{ height: 30 }}
+                >
+                  {nativeView ? "Try editor" : "Open native viewer"}
+                </button>
+              </div>
+            </div>
+          ))}
+
         {/* Page navigation + save status */}
         <div
           className="sv-pagenav"
@@ -1208,6 +1473,21 @@ export function ScriptViewer({
               </span>
             </div>
           </div>
+        )}
+        {nativeView && (
+          <iframe
+            src={pdfUrl}
+            title="Script (native PDF viewer)"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              border: "none",
+              background: "#fff",
+              zIndex: 60,
+            }}
+          />
         )}
         <div
           ref={containerRef}

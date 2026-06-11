@@ -4,6 +4,39 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
+## Script tool: text not rendering for some valid PDFs (reported 2026-06-10 — ROOT-CAUSED + FIXED 2026-06-11, pending live verify)
+
+- **Symptom:** In the **Script tool**, a tester's script rendered images (e.g. the
+  show logo on p.1) but the **text was missing**, while the *same file* read fine
+  in the **Documents** PDF viewer. (Earlier described as a fully "blank" page; the
+  sharper report — images present, text absent — was the key clue.)
+- **Root cause (confirmed in code):** `lib/pdf.ts` called `getDocument(url)` with
+  **no font configuration**. `pdfjs-dist` only renders **non-embedded** fonts
+  (Helvetica/Times/Arial — referenced-but-not-embedded, very common in scripts) if
+  `standardFontDataUrl` (and `cMapUrl`/`cMapPacked` for CID fonts) point at its
+  shipped asset folders. Without them pdfjs draws images but silently skips that
+  text. The Documents tab uses `<iframe>` → the browser's native PDF engine
+  (PDFium), which has its own fonts, so it rendered the text — explaining the
+  Documents-vs-Script discrepancy exactly.
+- **Fix:** `scripts/copy-pdfjs-assets.mjs` copies pdfjs-dist's `cmaps/` +
+  `standard_fonts/` into `public/pdfjs/` (run before `dev`/`build`; `public/pdfjs/`
+  gitignored), and `lib/pdf.ts` now passes `cMapUrl` / `cMapPacked` /
+  `standardFontDataUrl`. Covers every `loadPdfDocument` caller (script viewer,
+  mobile reader, blocking canvas); the blocking **setup wizard** was also routed
+  through `loadPdfDocument` instead of its own bare `getDocument`.
+- **Status:** Fix pushed on `claude/wonderful-newton-vo7sog` (PR #32). Needs live
+  verification on the tester's file via the preview deploy — confirm the script
+  text now renders in the Script tool. If text *still* misses after this, the
+  remaining suspects are optional-content (OCG) layers hidden-by-default or an
+  image-codec issue; fallback option is detect-blank-and-use-native-iframe.
+- **Distinct case — genuinely scanned scripts (no text at all):** the font fix
+  above only helps PDFs that *have* a text layer pdfjs was dropping. A true
+  **scan/photo** has no text to render, so it stays image-only in the Script
+  tool by design. As of 2026-06-11 those get an in-browser **OCR** path
+  (tesseract.js) that adds a selectable text layer on demand — see
+  `feature-specs/19-ai-script-analysis.md` → "Scanned-script OCR". Pending the
+  `script_ocr` table being created live + real-scan verification.
+
 ## AI Script Analysis (Feature 19, Phase 1 — added 2026-06-09)
 
 - **Not live-verified.** No real script has been parsed end-to-end — needs
@@ -11,30 +44,63 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
   accuracy for bookmarks) is unproven on real, irregularly-formatted scripts.
 - **Long-script timeout.** The run route caps at `maxDuration=300`. A very long
   script (model latency + extraction) could exceed it; needs Vercel Fluid
-  compute for a higher ceiling, or chunking. No retry/resume if it times out
-  (the row just stays `processing` — should it auto-fail after a deadline?).
-- **`after()` durability.** Relies on Vercel keeping the function alive for the
-  deferred work. If the platform reclaims it early, the parse stalls in
-  `processing` with no watchdog. Consider a sweep that flips stale
-  `processing` rows to `failed`.
-- **Scanned PDFs.** Image-only/scanned scripts have no text layer and are
-  rejected with a message — no OCR path.
+  compute for a higher ceiling, or chunking. No retry/resume if it times out.
+- **Stalled-parse watchdog: RESOLVED (2026-06-10).** A parse whose worker dies
+  (Vercel reclaims the function, or it exceeds `maxDuration`) no longer spins the
+  review page forever or blocks new parses. Anything `processing` past
+  `STALE_PARSE_MS` (8 min) is treated as dead: the poll paths
+  (`fetchLatestScriptParse`/`fetchScriptParseById`) flip it to `failed` via
+  `failIfStale`, and the concurrency locks (`startScriptParse`/`reparseWithNotes`/
+  `startWizardScriptParse`) ignore stale rows via `hasLiveProcessing`. Residual
+  cosmetic edge: a parse nobody polls and nobody supersedes keeps the document's
+  `processingStatus` at `processing` until something touches it — no functional
+  impact (no longer blocks). A daily cron sweep could tidy this if it matters.
+- **Re-apply duplicates roles/scenes: RESOLVED (2026-06-10).** `applyScriptParse`
+  is now safe to re-apply: re-applying the same parse is a no-op (status guard),
+  and roles/scenes are de-duplicated against what the production already has
+  (roles by name, scenes by act/scene number). Note: it is **additive** — a
+  re-parse that *removes* or *renames* a role/scene won't delete the old row
+  (there's no AI-vs-hand-added marker, and `production_scenes` is shared with the
+  blocking tool, so blind deletion is unsafe). The director curates removals in
+  the review form / members page.
+- **Scanned PDFs: RESOLVED (2026-06-10).** Image-only/scanned scripts are now
+  read via Claude's vision/PDF pipeline (`runScriptParse` vision path — sends the
+  signed URL as a `document` block). Open edges: (1) **bookmark pages on scans are
+  model-estimated** (no text layer to anchor against), so less reliable than the
+  anchor-resolved text path; (2) capped at `MAX_SCANNED_PAGES = 250` — a longer
+  scan fails with a "split it" message rather than chunking; (3) **cost is higher**
+  on scans (image + text tokens per page, ~$1–2 for a full script) — covered by
+  the existing per-production/per-user caps but not separately metered; (4) not yet
+  live-verified against a real scanned script.
 - **Bookmark seeding scale.** `applyScriptParse` writes one `script_annotations`
   row per production member; fine for small casts, unbounded for large ones.
-  Also: members who join *after* apply won't get the seeded bookmarks (seeding
-  is a point-in-time action, not a shared/default set).
-- **Re-apply duplicates roles/scenes.** Applying a second time appends another
-  full set of `production_roles`/`production_scenes` (only bookmarks are
-  idempotent). Acceptable for a one-time setup step, but worth guarding if
-  re-runs become common.
+  **Late-joiner gap RESOLVED (2026-06-10):** members who join *after* apply are now
+  seeded lazily on first Script-tab open via `ensureMemberBookmarks` (reads the
+  applied parse's bookmarks, the canonical set). Residual edges: (1) it's a
+  write-on-render, so two simultaneous first-opens by the same user could insert
+  two annotation rows (`script_annotations` has no unique constraint — same class
+  as the existing apply-time seeding; `getScriptAnnotations` uses `limit(1)`);
+  (2) the per-member row-explosion for very large casts is unchanged.
+- **Re-apply duplicates roles/scenes: RESOLVED (2026-06-10)** — see the
+  watchdog/idempotent-apply entry above. Apply is now a no-op on an already-applied
+  parse and de-duplicates roles/scenes against existing rows; it stays additive
+  (never deletes), so a re-parse that drops a role/scene needs manual cleanup.
 - **Cost guardrails: RESOLVED (basic).** Concurrency lock + per-production cap
   (5 / 30 days) + token logging now ship (`startScriptParse`,
   `runScriptParse`). Open: no org-level monthly quota yet (chosen to defer the
   per-tier quota until there's real token data); the per-production cap is the
   only ceiling, so a `company`-tier org with many productions is effectively
   uncapped org-wide.
-- **Phase 2 (per-role highlighting)** is the deferred moonshot — needs per-line
-  pixel coordinates from the PDF and is highly script-format-dependent.
+- **Phase 2 (per-role line highlighting): SCOPED as a beta (2026-06-10), not
+  built.** Decided to ship it as a **render-only, client-side, opt-in** overlay
+  (no DB writes, no schema, no tokens) so it's reversible by construction — the
+  user's bookmarks/notations are never touched; "off" is the fallback. The viewer
+  detects a chosen character's speeches from the existing pdfjs text layer (cue-
+  based). Full design in the feature spec. Open: text-PDF-only (no client text
+  layer on scans); format-dependent accuracy (two-column, same-line cues, cross-
+  page speeches); mobile-reader parity is a fast-follow; persistence (for PDF
+  export) + auto-select-by-`character_name` + a server AI-assisted engine are
+  later iterations; plan-gating of visibility is undecided (it's free to run).
 - **Wizard auto-fill (added 2026-06-09):** parses a script during new-production
   setup to pre-fill the cast, then carries the PDF over as the default script on
   launch (`attachWizardScript`). Open edges: (1) **orphan temp files** — if a

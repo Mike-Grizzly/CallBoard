@@ -17,6 +17,12 @@
 /.next/
 /out/
 
+# generated at build by scripts/copy-pdfjs-assets.mjs
+/public/pdfjs/
+
+# generated at build by scripts/copy-tesseract-assets.mjs
+/public/tesseract/
+
 # production
 /build
 
@@ -40,3 +46,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+eng.traineddata

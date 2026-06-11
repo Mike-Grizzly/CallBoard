@@ -11,6 +11,7 @@ export async function getDefaultScript(productionId: string) {
       contentType: documents.contentType,
       storagePath: documents.storagePath,
       scriptVersion: documents.scriptVersion,
+      processingStatus: documents.processingStatus,
       uploadedByFirstName: profiles.firstName,
       uploadedByLastName: profiles.lastName,
     })
