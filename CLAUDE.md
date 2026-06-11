@@ -8,7 +8,7 @@ This is a lightweight production portal for small theatre companies. MVP built i
 
 - **Stack:** Next.js 16 App Router, React 19, TypeScript strict, Tailwind v4, Supabase (auth/DB/storage), Drizzle ORM, TipTap rich text
 - **DB:** 9 tables — organizations, profiles, organization_memberships, productions, production_memberships, rehearsal_reports, production_logs, report_attachments, documents
-- **Auth:** Supabase email/password, `proxy.ts` (NOT middleware.ts), auto-profile creation in `lib/auth.ts`
+- **Auth:** Supabase email/password + Google OAuth (`signInWithOAuth` in `app/actions/auth.ts`, buttons in `components/auth/oauth-buttons.tsx`), `proxy.ts` (NOT middleware.ts), auto-profile creation in `lib/auth.ts`
 - **Permissions:** `can(role, capability)` in `lib/permissions.ts` — 6 roles, 10 capabilities
 - **Storage:** Single `attachments` bucket in Supabase Storage, signed URLs (1hr expiry)
 - **Features built:** Foundation, Auth, Roles/Permissions, Productions/Dashboard, Reports/Daily Log, Document Center, File Uploads
