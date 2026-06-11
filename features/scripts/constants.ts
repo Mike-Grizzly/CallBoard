@@ -54,6 +54,7 @@ export type CueAnnotation = {
  * remembers the last colour picked and applies it to new cues until changed.
  */
 export const CUE_COLORS = [
+  { label: "Black", value: "#111111" },
   { label: "Red", value: "#EF4444" },
   { label: "Blue", value: "#3B82F6" },
   { label: "Green", value: "#22C55E" },
