@@ -199,6 +199,13 @@ export function ScriptViewer({
       ? fitScale
       : BASE_RENDER_SCALE * ZOOM_STEPS[zoomIndex];
 
+  // The cue overlay (label font, leader/pipe strokes, stacking gaps) is sized
+  // in screen pixels, so without this it looks huge when the page renders small
+  // (Fit on a small monitor) and tiny when zoomed in. Scaling every overlay
+  // dimension by renderScale/BASE keeps it a fixed size relative to the script
+  // text at any zoom or monitor. =1 at the default 100%.
+  const cueScale = renderScale / BASE_RENDER_SCALE;
+
   // Zoom in/out, transitioning cleanly to/from the whole-page "fit" baseline.
   function zoomIn() {
     if (zoomMode === "fit") {
@@ -1071,6 +1078,8 @@ export function ScriptViewer({
         const PRINT_SCALE = 2;
         const viewport = page.getViewport({ scale: PRINT_SCALE });
         const nativeViewport = page.getViewport({ scale: 1 });
+        // Match the on-screen overlay sizing (fixed size in PDF-point space).
+        const exportCueScale = PRINT_SCALE / BASE_RENDER_SCALE;
 
         const canvas = document.createElement("canvas");
         canvas.width = viewport.width;
@@ -1087,6 +1096,7 @@ export function ScriptViewer({
             (a): a is Extract<Annotation, { type: "cue" }> => a.type === "cue",
           ),
           viewport.height,
+          exportCueScale,
         );
         for (const ann of pageAnns) {
           drawAnnotationOnCanvas(
@@ -1095,6 +1105,7 @@ export function ScriptViewer({
             viewport.width,
             viewport.height,
             ann.type === "cue" ? exportCueLabels.get(ann.id) : undefined,
+            exportCueScale,
           );
         }
 
@@ -1158,8 +1169,9 @@ export function ScriptViewer({
           (a): a is Extract<Annotation, { type: "cue" }> => a.type === "cue",
         ),
         canvasSize.h,
+        cueScale,
       ),
-    [pageAnnotations, canvasSize.h],
+    [pageAnnotations, canvasSize.h, cueScale],
   );
 
   // ── SVG cursor style ───────────────────────────────────────────────────────
@@ -1986,6 +1998,7 @@ export function ScriptViewer({
                     setSelectedId(selectedId === ann.id ? null : ann.id)
                   }
                   cueLabel={ann.type === "cue" ? cueLabels.get(ann.id) : undefined}
+                  cueScale={cueScale}
                 />
               ))}
 
@@ -2548,12 +2561,17 @@ function stackCueLabels(
     cueDescription: string;
   }[],
   canvasH: number,
+  scale = 1,
 ): Map<string, CueLabelPos> {
-  const GAP = CUE_LABEL_NUMBER_UP + CUE_LABEL_PAD;
+  // Offsets are in screen px; scale them so stacks stay proportional to the
+  // page (and the text) at any zoom — see `cueScale`.
+  const NUMBER_UP = CUE_LABEL_NUMBER_UP * scale;
+  const DESC_DOWN = CUE_LABEL_DESC_DOWN * scale;
+  const GAP = NUMBER_UP + CUE_LABEL_PAD * scale;
   // How far a label may be pushed below its anchor before opening the 2nd
   // column. ~one stacked label, so two cues on a line still stack vertically
   // and only a denser pile-up fans sideways.
-  const CUE_CROWD = GAP + CUE_LABEL_DESC_DOWN;
+  const CUE_CROWD = GAP + DESC_DOWN;
   const out = new Map<string, CueLabelPos>();
   for (const side of ["left", "right"] as const) {
     const group = cues
@@ -2589,7 +2607,7 @@ function stackCueLabels(
         }
       }
       out.set(item.id, { y, lane });
-      bottom[lane] = y + (item.hasDesc ? CUE_LABEL_DESC_DOWN : 0);
+      bottom[lane] = y + (item.hasDesc ? DESC_DOWN : 0);
       lastY = y;
     }
   }
@@ -2909,6 +2927,7 @@ function drawAnnotationOnCanvas(
   canvasW: number,
   canvasH: number,
   cueLabel?: CueLabelPos,
+  cueScale = 1,
 ) {
   if (ann.type === "ink") {
     if (ann.points.length === 0) return;
@@ -2973,30 +2992,34 @@ function drawAnnotationOnCanvas(
     ctx.lineWidth = 1;
     ctx.stroke();
   } else if (ann.type === "cue") {
+    const s = cueScale;
     const bottomY = ry + rh;
     const isLeft = ann.leaderSide === "left";
     const lineStartX = isLeft ? rx : rx + rw;
-    const MARGIN_OFFSET = 14;
+    const MARGIN_OFFSET = 14 * s;
     const lane = cueLabel?.lane ?? 0;
     const baseX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
-    const labelX = isLeft ? baseX + lane * CUE_LANE_GAP : baseX - lane * CUE_LANE_GAP;
+    const labelX = isLeft
+      ? baseX + lane * CUE_LANE_GAP * s
+      : baseX - lane * CUE_LANE_GAP * s;
     const labelY = cueLabel?.y ?? bottomY;
     const cc = ann.color ?? CUE_STROKE;
+    const serif = 3 * s;
 
     if (ann.marker === "pipe") {
       // Vertical caret over its text line.
       ctx.strokeStyle = cc;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2 * s;
       ctx.beginPath();
       ctx.moveTo(rx, ry);
       ctx.lineTo(rx, bottomY);
       ctx.stroke();
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.5 * s;
       ctx.beginPath();
-      ctx.moveTo(rx - 3, ry);
-      ctx.lineTo(rx + 3, ry);
-      ctx.moveTo(rx - 3, bottomY);
-      ctx.lineTo(rx + 3, bottomY);
+      ctx.moveTo(rx - serif, ry);
+      ctx.lineTo(rx + serif, ry);
+      ctx.moveTo(rx - serif, bottomY);
+      ctx.lineTo(rx + serif, bottomY);
       ctx.stroke();
     } else {
       ctx.globalAlpha = 0.08;
@@ -3004,7 +3027,7 @@ function drawAnnotationOnCanvas(
       ctx.fillRect(rx, ry, rw, rh);
       ctx.globalAlpha = 1;
       ctx.strokeStyle = cc;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.5 * s;
       ctx.strokeRect(rx, ry, rw, rh);
     }
     // Orthogonal leader: horizontal out to the margin, then a right-angle drop
@@ -3013,19 +3036,19 @@ function drawAnnotationOnCanvas(
     ctx.moveTo(lineStartX, bottomY);
     ctx.lineTo(labelX, bottomY);
     if (labelY !== bottomY) ctx.lineTo(labelX, labelY);
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 * s;
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(labelX, labelY, 3, 0, Math.PI * 2);
+    ctx.arc(labelX, labelY, serif, 0, Math.PI * 2);
     ctx.fillStyle = cc;
     ctx.fill();
     ctx.fillStyle = cc;
     ctx.textAlign = isLeft ? "left" : "right";
-    ctx.font = "bold 13px system-ui, sans-serif";
-    ctx.fillText(ann.cueNumber, isLeft ? labelX + 6 : labelX - 6, labelY - 4);
+    ctx.font = `bold ${13 * s}px system-ui, sans-serif`;
+    ctx.fillText(ann.cueNumber, isLeft ? labelX + 6 * s : labelX - 6 * s, labelY - 4 * s);
     if (ann.cueDescription) {
-      ctx.font = "9px system-ui, sans-serif";
-      ctx.fillText(ann.cueDescription, isLeft ? labelX + 6 : labelX - 6, labelY + 12);
+      ctx.font = `${9 * s}px system-ui, sans-serif`;
+      ctx.fillText(ann.cueDescription, isLeft ? labelX + 6 * s : labelX - 6 * s, labelY + 12 * s);
     }
   }
 
@@ -3041,6 +3064,7 @@ function AnnotationShape({
   selected,
   onClick,
   cueLabel,
+  cueScale = 1,
 }: {
   annotation: Annotation;
   canvasW: number;
@@ -3048,6 +3072,7 @@ function AnnotationShape({
   selected: boolean;
   onClick: () => void;
   cueLabel?: CueLabelPos;
+  cueScale?: number;
 }) {
   if (annotation.type === "ink") {
     return (
@@ -3156,16 +3181,20 @@ function AnnotationShape({
   }
 
   if (annotation.type === "cue") {
+    const s = cueScale;
     const bottomY = ry + rh;
     const isLeft = annotation.leaderSide === "left";
     const lineStartX = isLeft ? rx : rx + rw;
-    const MARGIN_OFFSET = 14;
+    const MARGIN_OFFSET = 14 * s;
     const lane = cueLabel?.lane ?? 0;
     const baseX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
-    const labelX = isLeft ? baseX + lane * CUE_LANE_GAP : baseX - lane * CUE_LANE_GAP;
+    const labelX = isLeft
+      ? baseX + lane * CUE_LANE_GAP * s
+      : baseX - lane * CUE_LANE_GAP * s;
     const labelY = cueLabel?.y ?? bottomY;
     const textAnchor = isLeft ? "start" : "end";
     const cc = annotation.color ?? CUE_STROKE;
+    const serif = 3 * s;
 
     const isPipe = annotation.marker === "pipe";
 
@@ -3174,7 +3203,7 @@ function AnnotationShape({
         {isPipe ? (
           <>
             {/* Wide transparent hit target so the thin pipe is easy to click */}
-            <line x1={rx} y1={ry} x2={rx} y2={bottomY} stroke="transparent" strokeWidth="12" />
+            <line x1={rx} y1={ry} x2={rx} y2={bottomY} stroke="transparent" strokeWidth={12 * s} />
             {/* The pipe: a vertical line with small serifs, like a text caret */}
             <line
               x1={rx}
@@ -3182,10 +3211,10 @@ function AnnotationShape({
               x2={rx}
               y2={bottomY}
               stroke={cc}
-              strokeWidth={selected ? "3" : "2"}
+              strokeWidth={(selected ? 3 : 2) * s}
             />
-            <line x1={rx - 3} y1={ry} x2={rx + 3} y2={ry} stroke={cc} strokeWidth="1.5" />
-            <line x1={rx - 3} y1={bottomY} x2={rx + 3} y2={bottomY} stroke={cc} strokeWidth="1.5" />
+            <line x1={rx - serif} y1={ry} x2={rx + serif} y2={ry} stroke={cc} strokeWidth={1.5 * s} />
+            <line x1={rx - serif} y1={bottomY} x2={rx + serif} y2={bottomY} stroke={cc} strokeWidth={1.5 * s} />
           </>
         ) : (
           /* Box */
@@ -3197,7 +3226,7 @@ function AnnotationShape({
             fill={cc}
             fillOpacity={0.08}
             stroke={cc}
-            strokeWidth={selected ? "2" : "1.5"}
+            strokeWidth={(selected ? 2 : 1.5) * s}
           />
         )}
         {/* Orthogonal leader: horizontal out to the margin, then a right-angle
@@ -3210,16 +3239,16 @@ function AnnotationShape({
           }
           fill="none"
           stroke={cc}
-          strokeWidth="1"
+          strokeWidth={1 * s}
         />
         {/* End marker */}
-        <circle cx={labelX} cy={labelY} r="3" fill={cc} />
+        <circle cx={labelX} cy={labelY} r={serif} fill={cc} />
         {/* Cue number */}
         <text
-          x={isLeft ? labelX + 6 : labelX - 6}
-          y={labelY - 4}
+          x={isLeft ? labelX + 6 * s : labelX - 6 * s}
+          y={labelY - 4 * s}
           textAnchor={textAnchor}
-          fontSize="13"
+          fontSize={13 * s}
           fill={cc}
           fontWeight="700"
           fontFamily="system-ui, sans-serif"
@@ -3229,10 +3258,10 @@ function AnnotationShape({
         {/* Cue description */}
         {annotation.cueDescription && (
           <text
-            x={isLeft ? labelX + 6 : labelX - 6}
-            y={labelY + 12}
+            x={isLeft ? labelX + 6 * s : labelX - 6 * s}
+            y={labelY + 12 * s}
             textAnchor={textAnchor}
-            fontSize="9"
+            fontSize={9 * s}
             fill={cc}
             fontFamily="system-ui, sans-serif"
           >
