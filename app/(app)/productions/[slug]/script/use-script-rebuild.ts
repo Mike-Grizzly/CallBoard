@@ -1,15 +1,8 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import {
-  rebuildScanAsSearchablePdf,
-  type RebuildProgress,
-} from "@/lib/pdf-ocr-rebuild";
-import {
-  createRebuiltScriptUploadUrl,
-  finalizeRebuiltScript,
-} from "@/features/scripts/ocr-actions";
-import { uploadFileToSignedUrl } from "@/lib/storage-upload";
+import type { RebuildProgress } from "@/lib/pdf-ocr-rebuild";
+import { installSearchableScript } from "@/lib/install-searchable-script";
 
 export type RebuildStatus =
   | "idle"
@@ -47,40 +40,22 @@ export function useScriptRebuild({ productionId, pdfUrl, title, fileName }: Args
     setStatus("running");
     try {
       const bytes = await (await fetch(pdfUrl)).arrayBuffer();
-      const blob = await rebuildScanAsSearchablePdf(bytes, {
-        onProgress: setProgress,
+      const res = await installSearchableScript({
+        productionId,
+        bytes,
+        baseName: fileName || "script",
+        title,
+        onProgress: (p) => {
+          // The hook surfaces "uploading" once page work is done.
+          setProgress(p);
+        },
         signal: cancelRef.current,
       });
-      if (cancelRef.current.cancelled) {
+      if (res.cancelled || cancelRef.current.cancelled) {
         setStatus("idle");
         return;
       }
-
-      setStatus("uploading");
-      const base = (fileName || "script").replace(/\.pdf$/i, "");
-      const outName = `${base}-searchable.pdf`;
-
-      const signed = await createRebuiltScriptUploadUrl({
-        productionId,
-        fileName: outName,
-      });
-      if (signed.error || !signed.path || !signed.token) {
-        throw new Error(signed.error || "Upload could not start.");
-      }
-
-      const file = new File([blob], outName, { type: "application/pdf" });
-      const up = await uploadFileToSignedUrl(signed.path, signed.token, file);
-      if (up.error) throw new Error(up.error);
-
-      const fin = await finalizeRebuiltScript({
-        productionId,
-        storagePath: signed.path,
-        title: title ? `${title} (searchable)` : "Script (searchable)",
-        fileName: outName,
-        fileSize: blob.size,
-      });
-      if (fin.error) throw new Error(fin.error);
-
+      if (res.error) throw new Error(res.error);
       setStatus("done");
     } catch (e) {
       if (cancelRef.current.cancelled) {

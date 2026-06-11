@@ -1,13 +1,19 @@
 "use client";
 
 import { useState, useTransition, useRef } from "react";
-import { Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Upload, ScanText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   requestDocumentUpload,
   finalizeDocumentUpload,
 } from "@/features/documents/actions";
 import { uploadFileToSignedUrl } from "@/lib/storage-upload";
+import { isScannedPdf } from "@/lib/pdf-scan-detect";
+import {
+  installSearchableScript,
+  type RebuildProgress,
+} from "@/lib/install-searchable-script";
 import { DOCUMENT_TYPES } from "@/features/documents/constants";
 import type { DocumentFolder } from "@/features/documents/queries";
 
@@ -18,15 +24,25 @@ export function DocumentUploadForm({
   productionId: string;
   folders: DocumentFolder[];
 }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
 
+  // After a scanned script is uploaded, we offer to OCR it into a searchable
+  // PDF (set as the default script). This holds that pending offer.
+  const [scan, setScan] = useState<{ file: File; title: string } | null>(null);
+  const [ocrError, setOcrError] = useState<string | null>(null);
+  const [ocrProgress, setOcrProgress] = useState<RebuildProgress | null>(null);
+  const [ocrRunning, setOcrRunning] = useState(false);
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setSuccess(false);
+    setScan(null);
+    setOcrError(null);
 
     const formData = new FormData(e.currentTarget);
     const title = ((formData.get("title") as string) ?? "").trim();
@@ -77,12 +93,48 @@ export function DocumentUploadForm({
       });
       if (result.error) {
         setError(result.error);
+        return;
+      }
+
+      formRef.current?.reset();
+      // A scanned script has no text layer — offer to make it searchable now,
+      // the way Adobe prompts for OCR on opening a scan.
+      if (documentType === "script" && (await isScannedPdf(file))) {
+        setScan({ file, title });
       } else {
         setSuccess(true);
-        formRef.current?.reset();
         setTimeout(() => setSuccess(false), 3000);
       }
     });
+  }
+
+  async function runOcr() {
+    if (!scan) return;
+    setOcrError(null);
+    setOcrProgress(null);
+    setOcrRunning(true);
+    try {
+      const bytes = await scan.file.arrayBuffer();
+      const res = await installSearchableScript({
+        productionId,
+        bytes,
+        baseName: scan.file.name,
+        title: scan.title,
+        onProgress: setOcrProgress,
+      });
+      if (res.error) {
+        setOcrError(res.error);
+        return;
+      }
+      setScan(null);
+      setSuccess(true);
+      router.refresh();
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      setOcrError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setOcrRunning(false);
+    }
   }
 
   return (
@@ -226,6 +278,99 @@ export function DocumentUploadForm({
           </p>
         )}
       </div>
+
+      {scan && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            background: "var(--bg-sunken)",
+            display: "flex",
+            gap: 10,
+            alignItems: "flex-start",
+          }}
+        >
+          <ScanText
+            size={18}
+            style={{ color: "var(--accent)", flexShrink: 0, marginTop: 1 }}
+            aria-hidden
+          />
+          <div style={{ flex: 1, fontSize: 13, color: "var(--ink-2)" }}>
+            {ocrRunning ? (
+              <>
+                Making &ldquo;{scan.title}&rdquo; searchable&hellip;{" "}
+                {ocrProgress
+                  ? `${
+                      ocrProgress.phase === "ocr" ? "reading" : "rendering"
+                    } page ${ocrProgress.page} of ${ocrProgress.total}`
+                  : "starting"}
+                . This can take a few minutes — keep this tab open.
+                {ocrProgress && ocrProgress.total > 0 && (
+                  <div
+                    style={{
+                      marginTop: 6,
+                      height: 4,
+                      borderRadius: 2,
+                      background: "var(--border)",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${Math.round(
+                          (ocrProgress.page / ocrProgress.total) * 100,
+                        )}%`,
+                        background: "var(--accent)",
+                        transition: "width .2s",
+                      }}
+                    />
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <strong>This looks like a scanned script</strong> with no
+                searchable text. Make it searchable so the Script tool, search,
+                and AI analysis can use it? It OCRs every page (a few minutes)
+                and becomes the default script.
+                {ocrError && (
+                  <div style={{ marginTop: 6, color: "var(--c-clay)" }}>
+                    {ocrError}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          {!ocrRunning && (
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <Button type="button" size="sm" onClick={runOcr}>
+                <ScanText className="h-4 w-4" aria-hidden />
+                {ocrError ? "Try again" : "Make searchable"}
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setScan(null);
+                  setSuccess(true);
+                  setTimeout(() => setSuccess(false), 3000);
+                }}
+                style={{
+                  fontSize: 13,
+                  color: "var(--ink-3)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Skip
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </form>
   );
 }

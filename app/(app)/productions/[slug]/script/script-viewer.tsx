@@ -1089,7 +1089,12 @@ export function ScriptViewer({
         )}
 
         {/* Scanned script pdfjs can't render → rebuild searchable, or native view */}
-        {renderBlank &&
+        {/* Scanned script → offer a searchable-PDF rebuild (PDFium + OCR).
+            Gated on isScanned (no text layer) — the reliable, Adobe-style
+            signal — not on a blank render, since these scans often draw a faint
+            background that isn't "blank". renderBlank only drives the native
+            fallback for display. */}
+        {isScanned === true &&
           (rebuild.status === "running" || rebuild.status === "uploading" ? (
             <div className="sv-ocr-banner">
               <span className="sv-spinner" aria-hidden />
@@ -1141,14 +1146,23 @@ export function ScriptViewer({
                     {rebuild.error} You can try again, or read it in the native
                     viewer below.
                   </>
-                ) : (
+                ) : renderBlank ? (
                   <>
                     <strong>This scanned script can&rsquo;t be shown in the editor.</strong>{" "}
-                    It&rsquo;s shown below in your browser&rsquo;s built-in PDF
+                    It&rsquo;s displayed below in your browser&rsquo;s built-in PDF
                     viewer.{" "}
                     {canManage
                       ? "Make it searchable to enable annotation and text tools across the whole project."
                       : "Ask a manager to make it searchable to enable annotation and text tools."}
+                  </>
+                ) : (
+                  <>
+                    <strong>This script is a scan.</strong> Annotation and text
+                    tools (select, copy, find, line highlighting) are off because
+                    it has no text layer.{" "}
+                    {canManage
+                      ? "Make it searchable to turn them on across the whole project — it OCRs every page, so a full script takes a few minutes."
+                      : "Ask a manager to make it searchable to turn them on."}
                   </>
                 )}
               </div>
@@ -1173,70 +1187,6 @@ export function ScriptViewer({
               </div>
             </div>
           ))}
-
-        {/* Scanned-script OCR notice */}
-        {canManage && ocr.status === "prompt" && !renderBlank && (
-          <div className="sv-ocr-banner">
-            <ScanText size={18} className="sv-ocr-icon" />
-            <div className="sv-ocr-body">
-              <strong>This script is a scan.</strong> Text tools (select, copy,
-              find, line highlighting) are off because there&rsquo;s no text
-              layer. Run OCR to turn them on — it processes each page, so a full
-              script can take a few minutes.
-            </div>
-            <div className="sv-ocr-actions">
-              <button className="btn primary" onClick={ocr.run} style={{ height: 30 }}>
-                <ScanText size={14} /> Run OCR
-              </button>
-              <button className="btn ghost" onClick={ocr.decline} style={{ height: 30 }}>
-                Not now
-              </button>
-            </div>
-          </div>
-        )}
-        {ocr.status === "running" && (
-          <div className="sv-ocr-banner">
-            <span className="sv-spinner" aria-hidden />
-            <div className="sv-ocr-body">
-              Reading the script&hellip;{" "}
-              {ocr.progress && ocr.progress.total > 0
-                ? `page ${ocr.progress.current} of ${ocr.progress.total}`
-                : "starting"}
-              . You can keep reading while this runs.
-              {ocr.progress && ocr.progress.total > 0 && (
-                <div className="sv-ocr-progress">
-                  <div
-                    className="sv-ocr-progress-bar"
-                    style={{
-                      width: `${Math.round(
-                        (ocr.progress.current / ocr.progress.total) * 100,
-                      )}%`,
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-            <div className="sv-ocr-actions">
-              <button className="btn ghost" onClick={ocr.cancel} style={{ height: 30 }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-        {canManage && ocr.status === "failed" && (
-          <div className="sv-ocr-banner sv-ocr-banner-error">
-            <ScanText size={18} className="sv-ocr-icon" />
-            <div className="sv-ocr-body">
-              OCR didn&rsquo;t finish. You can try again, or keep viewing the
-              script as images.
-            </div>
-            <div className="sv-ocr-actions">
-              <button className="btn primary" onClick={ocr.run} style={{ height: 30 }}>
-                Try again
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Page navigation + save status */}
         <div
