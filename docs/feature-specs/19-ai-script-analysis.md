@@ -384,3 +384,18 @@ where pdfjs is blank; `tsc`/`eslint`/`next build` clean. **Not yet:** live
 end-to-end run in a browser; relocating the prompt from the viewer into the
 upload flow; non-English OCR; very long scripts may want a background job
 instead of the client-side rebuild.
+
+### Wider scan coverage + DPI (2026-06-11)
+
+- **Image uploads:** a script uploaded as JPEG/PNG/WebP (not just PDF) is
+  scan-detected (`needsScriptOcr`) and rebuilt into a one-page searchable PDF
+  (`rebuildImageAsSearchablePdf`, EXIF-aware). Shared per-page assembly
+  (`appendOcrPage`); `installSearchableScript` takes a `File` and dispatches
+  image-vs-PDF.
+- **OCR DPI:** PDFium render scale 2.0→3.0 (144→216 dpi); +11% words / higher
+  confidence on the real test file.
+- **Two-layer model:** the rebuilt page is the *original scan image* (nothing
+  lost), with an *invisible* OCR text layer for search/select/AI. OCR errors
+  only ever affect that hidden layer, never the visible script. Stronger OCR
+  (cloud/Claude vision) is the upgrade path if exact search/AI fidelity is
+  needed.
