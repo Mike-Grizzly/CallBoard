@@ -5,8 +5,10 @@ import { Icon } from "@/components/ui/icon";
 import {
   getCallTrayData,
   type CallTrayMember,
+  type CallTrayTemplate,
 } from "@/features/calls/actions";
 import { CallForm } from "@/app/(app)/productions/[slug]/calls/new/call-form";
+import { GenerateForm } from "@/app/(app)/productions/[slug]/calls/generate/generate-form";
 
 /**
  * Slide-in rehearsal-call builder. Opens as a right-side drawer on desktop and
@@ -31,8 +33,11 @@ export function CallTray({
   const [data, setData] = useState<{
     productionId: string;
     cast: CallTrayMember[];
+    templates: CallTrayTemplate[];
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // "single" schedules one call; "repeat" generates a recurring series.
+  const [repeat, setRepeat] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -42,7 +47,11 @@ export function CallTray({
         setError(res.error ?? "Could not load this production.");
         return;
       }
-      setData({ productionId: res.productionId, cast: res.cast ?? [] });
+      setData({
+        productionId: res.productionId,
+        cast: res.cast ?? [],
+        templates: res.templates ?? [],
+      });
     });
     return () => {
       active = false;
@@ -119,7 +128,7 @@ export function CallTray({
             {productionTitle && (
               <div className="call-tray-eyebrow">{productionTitle}</div>
             )}
-            <h2>Schedule a call</h2>
+            <h2>{repeat ? "Schedule rehearsals" : "Schedule a call"}</h2>
           </div>
           <button
             className="btn ghost icon-only sm"
@@ -130,6 +139,33 @@ export function CallTray({
           </button>
         </header>
 
+        {!error && data !== null && (
+          <div className="call-tray-modes">
+            <div className="seg" role="tablist" aria-label="Scheduling mode">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!repeat}
+                data-on={!repeat}
+                onClick={() => setRepeat(false)}
+              >
+                <Icon name="Calendar" width={14} height={14} />
+                One call
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={repeat}
+                data-on={repeat}
+                onClick={() => setRepeat(true)}
+              >
+                <Icon name="CalendarDays" width={14} height={14} />
+                Repeating
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="call-tray-body">
           {error ? (
             <div className="cform-err">
@@ -138,6 +174,15 @@ export function CallTray({
             </div>
           ) : data === null ? (
             <div className="call-tray-loading">Loading…</div>
+          ) : repeat ? (
+            <GenerateForm
+              mode="tray"
+              productionId={data.productionId}
+              slug={slug}
+              templates={data.templates}
+              onClose={onClose}
+              onCreated={onCreated}
+            />
           ) : (
             <CallForm
               mode="tray"

@@ -32,10 +32,13 @@ cannot. No new capability was added.
 | `/productions/[slug]/calls/generate` | Generate a schedule (optionally seeded by a template) |
 | `/productions/[slug]/calls/generate?template=ID` | Generate, prefilled from a template |
 
-Entry point: a **Generate** button in the calendar toolbar, shown only on the
-production-scoped calendar (`scopedSlug` set) for users with `canEdit`. The
-generate page links to template management; the templates list links back to
-generate (per template).
+Entry point: the **Schedule a call** slide-in tray (opened from the calendar's
+"Schedule call" button / FAB) has an animated `One call` / `Repeating` segmented
+toggle (`.seg`) at the top. "One call" is the existing single-call form;
+"Repeating" swaps in the generator in place — same tray, no navigation. The
+standalone `/calls/generate` page is kept for the templates list's per-template
+**Generate** deep-link (`?template=ID`) and links back to template management;
+the repeat-mode tray also links to template management.
 
 ## Schema
 
@@ -87,8 +90,9 @@ service connection) — matches `call_confirmations` / `script_ocr`. Index on
 | `app/(app)/productions/[slug]/calls/templates/page.tsx` | Templates list |
 | `app/(app)/productions/[slug]/calls/templates/new/{page,template-form}.tsx` | Create (form shared w/ edit) |
 | `app/(app)/productions/[slug]/calls/templates/[templateId]/edit/{page,delete-template-button}.tsx` | Edit / delete |
-| `app/(app)/productions/[slug]/calls/generate/{page,generate-form}.tsx` | Generate flow |
-| `app/(app)/calendar/calendar-client.tsx` | "Generate" toolbar entry (scoped calendar only) |
+| `app/(app)/productions/[slug]/calls/generate/{page,generate-form}.tsx` | Generate flow (`GenerateForm` has `mode="page"\|"tray"`) |
+| `app/(app)/calendar/call-tray.tsx` | One call / Repeating toggle; hosts both forms |
+| `features/calls/actions.ts` | `getCallTrayData` also returns the production's templates |
 
 ## Manual test steps
 
@@ -113,8 +117,18 @@ service connection) — matches `call_confirmations` / `script_ocr`. Index on
 - Generation is one weekly pattern per run (pick the weekdays). Bi-weekly /
   "every other week" or per-day time variation needs multiple runs or a follow-up.
 - Templates are production-scoped; no cross-production / org-level template library.
-- Single-call creation (the slide-in tray) does **not** yet offer a template
-  picker — template application currently flows through the Generate page (a
-  one-day range = one call). Adding a picker to the shared `CallForm` is a
-  fast-follow.
+- The repeat-mode generator uses plain-text call-default fields (incl. a free-text
+  "cast called"), not the single-call form's rich cast picker — generated calls
+  are skeletons you flesh out per day. Unifying the field set across both tray
+  modes is a possible follow-up.
 - Not browser-verified yet.
+
+## Revisions
+
+- **2026-06-11 (same session, follow-up):** moved generation into the
+  **Schedule a call** tray behind a `One call` / `Repeating` toggle (removed the
+  separate toolbar button); `getCallTrayData` now also returns templates so the
+  repeat mode can offer the template picker. Fixed the weekday-chip selected
+  state — was `--primary` (a near-black box in light mode, unclear invert in
+  dark); now uses the theme-aware accent tint (`--accent-soft` bg /
+  `--accent-ink` text / `--accent` border).

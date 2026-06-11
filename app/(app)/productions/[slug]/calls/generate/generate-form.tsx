@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
@@ -78,17 +78,31 @@ export function GenerateForm({
   slug,
   templates,
   prefillTemplateId,
+  mode = "page",
+  onClose,
+  onCreated,
 }: {
   productionId: string;
   slug: string;
   templates: TemplateOption[];
   prefillTemplateId?: string;
+  /** "tray" renders inside the slide-in scheduler: success closes + refreshes
+   *  the calendar in place instead of showing the inline banner. */
+  mode?: "page" | "tray";
+  onClose?: () => void;
+  onCreated?: () => void;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState<
     GenerateResult | undefined,
     FormData
   >(generateCalls, undefined);
+
+  // In the tray, leave on success the same way the single-call form does.
+  useEffect(() => {
+    if (mode === "tray" && state?.success) onCreated?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   const initialTemplate = useMemo(
     () => templates.find((t) => t.id === prefillTemplateId),
@@ -151,7 +165,7 @@ export function GenerateForm({
         </div>
       )}
 
-      {state?.success && (
+      {mode === "page" && state?.success && (
         <div className="flex items-center justify-between gap-3 rounded-md border border-emerald-600/40 bg-emerald-600/10 px-3 py-2.5 text-sm text-emerald-700 dark:text-emerald-400">
           <span className="inline-flex items-center gap-2">
             <Icon name="Check" width={16} height={16} />
@@ -169,7 +183,16 @@ export function GenerateForm({
       )}
 
       <div className="cform-card">
-        <div className="cform-card-h">Recurrence</div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="cform-card-h">Recurrence</div>
+          <Link
+            href={`/productions/${slug}/calls/templates`}
+            className="inline-flex items-center gap-1 text-xs text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)] transition-colors"
+          >
+            <Icon name="Tag" width={13} height={13} />
+            {templates.length > 0 ? "Manage templates" : "Save a template"}
+          </Link>
+        </div>
 
         {templates.length > 0 && (
           <label className="cform-row" htmlFor="template">
@@ -250,8 +273,8 @@ export function GenerateForm({
                   className={
                     "rounded-full border px-3 py-1 text-sm font-medium transition-colors " +
                     (on
-                      ? "bg-[color:var(--primary)] text-[color:var(--primary-foreground)] border-[color:var(--primary)]"
-                      : "border-[color:var(--border)] hover:bg-[color:var(--muted)]")
+                      ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent-ink)]"
+                      : "border-[color:var(--border)] text-[color:var(--foreground)] hover:bg-[color:var(--muted)]")
                   }
                 >
                   {d.label}
@@ -384,11 +407,17 @@ export function GenerateForm({
       </div>
 
       <div className="cform-actions">
-        <Link href={`/productions/${slug}/calls`}>
-          <Button type="button" variant="outline">
+        {mode === "tray" ? (
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-        </Link>
+        ) : (
+          <Link href={`/productions/${slug}/calls`}>
+            <Button type="button" variant="outline">
+              Cancel
+            </Button>
+          </Link>
+        )}
         <Button type="submit" disabled={pending}>
           {pending ? "Generating..." : "Generate calls"}
         </Button>
