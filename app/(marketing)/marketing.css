@@ -240,12 +240,11 @@ h3.subtitle{
 }
 .brand{display:inline-flex;align-items:center;gap:11px}
 .brand-mark{
-  width:32px;height:32px;border-radius:8px;
-  background:var(--ink);color:var(--bg);
+  width:30px;height:30px;
   display:grid;place-items:center;
   flex-shrink:0;
 }
-.brand-mark svg{width:19px;height:19px}
+.brand-mark img{width:30px;height:30px;display:block}
 .brand-name{font-family:var(--font-display);font-weight:600;font-size:21px;letter-spacing:-.01em}
 .brand-name em{font-style:normal;color:var(--accent);font-weight:500}
 .nav-links{display:flex;align-items:center;gap:4px;margin-left:8px}
@@ -319,7 +318,6 @@ h3.subtitle{
   display:grid;grid-template-columns:1.6fr repeat(3,1fr);gap:40px;
   padding-bottom:48px;border-bottom:1px solid var(--night-border);
 }
-.footer .brand-mark{background:var(--bg);color:var(--night)}
 .footer .brand-name{color:var(--night-ink)}
 .footer-blurb{color:var(--night-ink-3);font-size:14.5px;margin-top:16px;max-width:34ch;line-height:1.6}
 .footer-col h4{font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--night-ink-3);font-weight:600;margin-bottom:16px}

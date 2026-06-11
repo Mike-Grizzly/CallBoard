@@ -267,16 +267,29 @@ select {
 .rail-mark {
   width: 28px;
   height: 28px;
-  border-radius: 7px;
-  background: var(--ink);
-  color: var(--bg);
   display: grid;
   place-items: center;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 16px;
-  font-style: normal;
-  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+.rail-mark img {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+/* Brand badge — paper (cream tile, ink mark) on light themes; ink (dark tile,
+   paper mark) on dark/dusk. Both variants are rendered and toggled by the
+   active theme so the mark always matches its surface. */
+.brand-badge.is-dark {
+  display: none;
+}
+body[data-theme="dark"] .brand-badge.is-light,
+body[data-theme="dusk"] .brand-badge.is-light {
+  display: none;
+}
+body[data-theme="dark"] .brand-badge.is-dark,
+body[data-theme="dusk"] .brand-badge.is-dark {
+  display: block;
 }
 .rail-name {
   font-family: var(--font-display);
@@ -3743,14 +3756,14 @@ button.month-cell {
 .auth-mark {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
   display: grid;
   place-items: center;
-  background: var(--accent);
-  color: #fff;
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 600;
+  flex-shrink: 0;
+}
+.auth-mark img {
+  width: 30px;
+  height: 30px;
+  display: block;
 }
 .auth-wordmark {
   font-family: var(--font-display);
@@ -6726,15 +6739,13 @@ select.pp-field {
 .np-root .brand-mark {
   width: 26px;
   height: 26px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, var(--accent), oklch(0.45 0.18 18));
   display: grid;
   place-items: center;
-  color: white;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 14px;
-  font-style: normal;
+  flex-shrink: 0;
+}
+.np-root .brand-mark img {
+  width: 26px;
+  height: 26px;
 }
 .np-root .top-crumbs {
   margin-left: 14px;

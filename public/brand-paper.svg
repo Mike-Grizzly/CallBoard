@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0.12" y1="0" x2="0.88" y2="1">
-      <stop offset="0" stop-color="#222834"></stop><stop offset="1" stop-color="#15181F"></stop>
+      <stop offset="0" stop-color="#F5F2EA"></stop><stop offset="1" stop-color="#ECE6DA"></stop>
     </linearGradient>
   </defs>
   <rect width="1024" height="1024" rx="229.07" ry="229.07" fill="url(#bg)"></rect>
@@ -12,6 +12,6 @@
         <polygon points="56,116 184,116 190,130 50,130"></polygon>
         <polygon points="44,155 196,155 204,173 36,173"></polygon>
       </g></mask></defs>
-    <path d="M 30 184 L 30 74 Q 30 24 84 24 L 156 24 Q 210 24 210 74 L 210 184 Z" fill="#E0A23A" stroke="#E0A23A" stroke-width="12" stroke-linejoin="round" mask="url(#cut)"></path>
+    <path d="M 30 184 L 30 74 Q 30 24 84 24 L 156 24 Q 210 24 210 74 L 210 184 Z" fill="#15181F" stroke="#15181F" stroke-width="12" stroke-linejoin="round" mask="url(#cut)"></path>
   </svg>
 </svg>

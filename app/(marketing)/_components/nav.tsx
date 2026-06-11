@@ -16,7 +16,7 @@ function Brand() {
   return (
     <Link className="brand" href="/" aria-label="Proscene home">
       <span className="brand-mark">
-        <img src="/brand-mark.svg" alt="" width={19} height={19} />
+        <img src="/brand-paper.svg" alt="" width={30} height={30} />
       </span>
       <span className="brand-name">
         Pro<em>scene</em>
