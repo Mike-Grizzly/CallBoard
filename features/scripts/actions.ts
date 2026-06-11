@@ -11,7 +11,7 @@ import {
   productionMemberships,
   productions,
 } from "@/db/schema";
-import { and, eq, gte, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { assertCanMutate } from "@/features/billing/guard";
@@ -185,6 +185,55 @@ export async function dismissStaleBanner(
 
 // ----- AI script analysis -----
 
+// The async run worker can die without ever flipping the row off "processing"
+// (Vercel reclaims the function, or the work exceeds maxDuration=300s). Such a
+// row would otherwise spin the review page forever AND block every future parse
+// via the concurrency lock. Anything still "processing" past this deadline is
+// treated as dead. 8 min = maxDuration plus generous headroom.
+const STALE_PARSE_MS = 8 * 60 * 1000;
+const STALE_PARSE_ERROR =
+  "The analysis timed out. Long scripts can take a couple of minutes — please try again.";
+
+function isStaleProcessing(row: { status: string; createdAt: Date }): boolean {
+  return (
+    row.status === "processing" &&
+    Date.now() - new Date(row.createdAt).getTime() > STALE_PARSE_MS
+  );
+}
+
+/** True if a parse is genuinely still running (processing and not past the deadline). */
+function hasLiveProcessing(rows: { status: string; createdAt: Date }[]): boolean {
+  return rows.some((r) => r.status === "processing" && !isStaleProcessing(r));
+}
+
+/**
+ * If a parse has been stuck in "processing" past the deadline, flip it (and its
+ * document) to "failed" so the UI stops spinning. Guarded by a status match so
+ * it can't clobber a parse that finished in the same instant. Returns whether it
+ * acted. Called from the poll paths so the user sees the failure immediately.
+ */
+async function failIfStale(row: {
+  id: string;
+  status: string;
+  createdAt: Date;
+  documentId: string | null;
+}): Promise<boolean> {
+  if (!isStaleProcessing(row)) return false;
+  await db
+    .update(scriptParses)
+    .set({ status: "failed", error: STALE_PARSE_ERROR, updatedAt: new Date() })
+    .where(
+      and(eq(scriptParses.id, row.id), eq(scriptParses.status, "processing")),
+    );
+  if (row.documentId) {
+    await db
+      .update(documents)
+      .set({ processingStatus: "failed" })
+      .where(eq(documents.id, row.documentId));
+  }
+  return true;
+}
+
 export type StartScriptParseResult = { error?: string; parseId?: string };
 
 /**
@@ -227,7 +276,7 @@ export async function startScriptParse(
   // Cost guardrails: one parse at a time per production, and a rolling cap.
   const since = new Date(Date.now() - PARSE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const recent = await db
-    .select({ status: scriptParses.status })
+    .select({ status: scriptParses.status, createdAt: scriptParses.createdAt })
     .from(scriptParses)
     .where(
       and(
@@ -235,7 +284,8 @@ export async function startScriptParse(
         gte(scriptParses.createdAt, since),
       ),
     );
-  if (recent.some((r) => r.status === "processing")) {
+  // A dead-but-still-"processing" row (worker died) must not lock out new parses.
+  if (hasLiveProcessing(recent)) {
     return { error: "An analysis is already running for this production — give it a minute." };
   }
   // Count only parses that actually ran (failed-before-the-model rows are free
@@ -300,7 +350,7 @@ export async function reparseWithNotes(
 
   const since = new Date(Date.now() - PARSE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const recent = await db
-    .select({ status: scriptParses.status })
+    .select({ status: scriptParses.status, createdAt: scriptParses.createdAt })
     .from(scriptParses)
     .where(
       and(
@@ -308,7 +358,7 @@ export async function reparseWithNotes(
         gte(scriptParses.createdAt, since),
       ),
     );
-  if (recent.some((r) => r.status === "processing")) {
+  if (hasLiveProcessing(recent)) {
     return { error: "An analysis is already running for this production — give it a minute." };
   }
   if (recent.filter((r) => r.status !== "failed").length >= PARSE_LIMIT_PER_PRODUCTION) {
@@ -341,8 +391,10 @@ export type ApplyScriptParseResult = { error?: string; success?: boolean };
 /**
  * Write a reviewed (possibly hand-edited) analysis into the production: cast
  * roles, the act/scene breakdown, and a shared set of script bookmarks seeded
- * onto every production member's per-user annotations. Idempotent on bookmarks
- * (stable `ai-*` ids are skipped if already present) so re-applying is safe.
+ * onto every production member's per-user annotations. Safe to re-apply:
+ * re-applying the same parse is a no-op (status guard), and roles/scenes are
+ * de-duplicated against what the production already has, while bookmarks replace
+ * the prior AI-seeded set (stable `ai-*` ids).
  */
 export async function applyScriptParse(
   parseId: string,
@@ -380,7 +432,34 @@ export async function applyScriptParse(
   const lock = await assertCanMutate(user.organizationId);
   if (lock.error) return { error: lock.error };
 
-  // Roles — only named rows, type clamped to the known set.
+  // Idempotent: re-applying an already-applied parse (double-click, retry) is a
+  // no-op rather than a second insert of the same roles/scenes.
+  if (parse.status === "applied") return { success: true };
+
+  // Existing roles/scenes for this production. We never delete (the set is
+  // shared — wizard roles, hand-added cast, blocking-tool scenes), so apply is
+  // additive but de-duplicated: applying the same breakdown twice, or a
+  // re-parse that overlaps the first, won't pile up duplicate rows.
+  const [existingRoles, existingScenes] = await Promise.all([
+    db
+      .select({ name: productionRoles.name })
+      .from(productionRoles)
+      .where(eq(productionRoles.productionId, productionId)),
+    db
+      .select({
+        actNumber: productionScenes.actNumber,
+        sceneNumber: productionScenes.sceneNumber,
+      })
+      .from(productionScenes)
+      .where(eq(productionScenes.productionId, productionId)),
+  ]);
+  const haveRole = new Set(existingRoles.map((r) => r.name.trim().toLowerCase()));
+  const haveScene = new Set(
+    existingScenes.map((s) => `${s.actNumber}-${s.sceneNumber}`),
+  );
+
+  // Roles — only named rows, type clamped to the known set, skipping any name
+  // the production already has.
   const roles = result.roles
     .map((r, i) => ({
       name: (r.name ?? "").trim(),
@@ -389,14 +468,14 @@ export async function applyScriptParse(
         : "Principal",
       sortOrder: i,
     }))
-    .filter((r) => r.name.length > 0);
+    .filter((r) => r.name.length > 0 && !haveRole.has(r.name.toLowerCase()));
   if (roles.length > 0) {
     await db
       .insert(productionRoles)
       .values(roles.map((r) => ({ productionId, ...r })));
   }
 
-  // Scenes — in reading order.
+  // Scenes — in reading order, skipping any act/scene the production already has.
   const scenes = result.scenes
     .map((s, i) => ({
       actNumber: Math.max(1, Math.trunc(s.actNumber) || 1),
@@ -404,7 +483,9 @@ export async function applyScriptParse(
       title: (s.title ?? "").trim() || `Scene ${i + 1}`,
       orderIndex: i,
     }))
-    .filter((s) => s.title.length > 0);
+    .filter(
+      (s) => s.title.length > 0 && !haveScene.has(`${s.actNumber}-${s.sceneNumber}`),
+    );
   if (scenes.length > 0) {
     await db
       .insert(productionScenes)
@@ -458,14 +539,10 @@ export async function applyScriptParse(
   return { success: true };
 }
 
-async function seedSharedBookmarks(
-  productionId: string,
-  scriptId: string,
-  result: ScriptParseResult,
-  requesterId: string,
-) {
+/** The shared, AI-seeded bookmark set derived from a parse result (stable `ai-*` ids). */
+function aiBookmarksFromResult(result: ScriptParseResult): Bookmark[] {
   const now = new Date().toISOString();
-  const shared: Bookmark[] = result.bookmarks
+  return result.bookmarks
     .filter((b) => Number.isFinite(b.page) && b.page >= 1)
     .map((b, i) => ({
       id: `ai-${b.page}-${i}`,
@@ -474,6 +551,15 @@ async function seedSharedBookmarks(
       kind: b.kind === "song" ? ("song" as const) : ("scene" as const),
       createdAt: now,
     }));
+}
+
+async function seedSharedBookmarks(
+  productionId: string,
+  scriptId: string,
+  result: ScriptParseResult,
+  requesterId: string,
+) {
+  const shared = aiBookmarksFromResult(result);
   if (shared.length === 0) return;
 
   const members = await db
@@ -524,12 +610,86 @@ async function seedSharedBookmarks(
   }
 }
 
+/**
+ * Lazily seed a member with the production's AI bookmark set when they open the
+ * script. `seedSharedBookmarks` only seeds the members present at apply time, so
+ * anyone who joins later (invite, bulk-assign, wizard) would otherwise see no
+ * bookmarks. This is the single chokepoint — every viewer hits the Script tab —
+ * and follows the codebase's lazy-write convention (auto-profile creation).
+ *
+ * Self-securing (callable as a server action): the user is the session user, and
+ * production access is gated. Returns the merged bookmark set if it seeded (so
+ * the page can show it this render), or null if there was nothing to do.
+ */
+export async function ensureMemberBookmarks(
+  scriptId: string,
+  productionId: string,
+): Promise<Bookmark[] | null> {
+  const user = await requireCurrentUser();
+  if (!(await userCanAccessProduction(user, productionId))) return null;
+
+  // The applied parse is the canonical AI breakdown for this document.
+  const [applied] = await db
+    .select({ result: scriptParses.result })
+    .from(scriptParses)
+    .where(
+      and(
+        eq(scriptParses.documentId, scriptId),
+        eq(scriptParses.status, "applied"),
+      ),
+    )
+    .orderBy(desc(scriptParses.updatedAt))
+    .limit(1);
+  const result = applied?.result as ScriptParseResult | undefined;
+  if (!result) return null;
+  const ai = aiBookmarksFromResult(result);
+  if (ai.length === 0) return null;
+
+  const [row] = await db
+    .select({ bookmarks: scriptAnnotations.bookmarks })
+    .from(scriptAnnotations)
+    .where(
+      and(
+        eq(scriptAnnotations.scriptId, scriptId),
+        eq(scriptAnnotations.userId, user.id),
+      ),
+    )
+    .limit(1);
+  const current = (row?.bookmarks as Bookmark[] | undefined) ?? [];
+  // Already seeded (the caller usually pre-checks this, but be safe).
+  if (current.some((b) => b.id?.startsWith("ai-"))) return null;
+
+  const merged = [...current.filter((b) => !b.id?.startsWith("ai-")), ...ai];
+  if (row) {
+    await db
+      .update(scriptAnnotations)
+      .set({ bookmarks: merged, updatedAt: new Date() })
+      .where(
+        and(
+          eq(scriptAnnotations.scriptId, scriptId),
+          eq(scriptAnnotations.userId, user.id),
+        ),
+      );
+  } else {
+    await db
+      .insert(scriptAnnotations)
+      .values({ scriptId, userId: user.id, productionId, bookmarks: merged });
+  }
+  return merged;
+}
+
 /** Poll target for the review page while a parse is processing. */
 export async function fetchLatestScriptParse(productionId: string) {
   const user = await requireCurrentUser();
   if (!(await userCanAccessProduction(user, productionId))) return null;
   const { getLatestScriptParse } = await import("./queries");
-  return getLatestScriptParse(productionId);
+  const parse = await getLatestScriptParse(productionId);
+  // Watchdog: if the worker died and left this spinning, fail it now so the
+  // review page stops polling forever.
+  if (parse && (await failIfStale(parse))) {
+    return { ...parse, status: "failed", error: STALE_PARSE_ERROR };
+  }
+  return parse;
 }
 
 export async function discardScriptParse(
@@ -587,7 +747,7 @@ export async function requestWizardScriptUpload(
     return { error: "Upload a PDF script." };
   }
   if (!fileName || fileSize <= 0) return { error: "Please choose a file." };
-  if (fileSize > 25 * 1024 * 1024) return { error: "File must be under 25MB." };
+  if (fileSize > 64 * 1024 * 1024) return { error: "File must be under 64MB." };
 
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storagePath = `wizard-scripts/${user.id}/${Date.now()}-${safeName}`;
@@ -622,7 +782,7 @@ export async function startWizardScriptParse(
     Date.now() - WIZARD_PARSE_WINDOW_DAYS * 24 * 60 * 60 * 1000,
   );
   const recent = await db
-    .select({ status: scriptParses.status })
+    .select({ status: scriptParses.status, createdAt: scriptParses.createdAt })
     .from(scriptParses)
     .where(
       and(
@@ -631,7 +791,7 @@ export async function startWizardScriptParse(
         gte(scriptParses.createdAt, since),
       ),
     );
-  if (recent.some((r) => r.status === "processing")) {
+  if (hasLiveProcessing(recent)) {
     return { error: "An analysis is already running — give it a moment." };
   }
   if (recent.filter((r) => r.status !== "failed").length >= WIZARD_PARSE_LIMIT) {
@@ -654,10 +814,12 @@ export async function fetchScriptParseById(parseId: string) {
     .select({
       id: scriptParses.id,
       productionId: scriptParses.productionId,
+      documentId: scriptParses.documentId,
       requestedBy: scriptParses.requestedBy,
       status: scriptParses.status,
       result: scriptParses.result,
       error: scriptParses.error,
+      createdAt: scriptParses.createdAt,
     })
     .from(scriptParses)
     .where(eq(scriptParses.id, parseId))
@@ -669,6 +831,10 @@ export async function fetchScriptParseById(parseId: string) {
     : parse.requestedBy === user.id;
   if (!authorized) return null;
 
+  // Watchdog: a parse whose worker died stops spinning the poller here too.
+  if (await failIfStale(parse)) {
+    return { status: "failed", result: parse.result, error: STALE_PARSE_ERROR };
+  }
   return { status: parse.status, result: parse.result, error: parse.error };
 }
 

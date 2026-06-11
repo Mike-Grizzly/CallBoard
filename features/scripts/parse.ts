@@ -17,6 +17,12 @@ import type {
 // roughly 150k tokens — comfortably inside Opus's 1M window with headroom.
 const MAX_TEXT_CHARS = 600_000;
 
+// Scanned/image-only PDFs are analysed via Claude's vision pipeline, where each
+// page costs image + extracted-text tokens (~a few thousand each). A very long
+// scan would overflow even the 1M window, so we cap the page count and ask the
+// user to split it. Comfortably covers a full-length musical libretto.
+const MAX_SCANNED_PAGES = 250;
+
 /**
  * Extract the text of each page of a PDF, one string per page (index 0 = page
  * 1). Uses `unpdf`, which ships a serverless-safe pdfjs build — no browser
@@ -116,6 +122,39 @@ function resolveBookmarks(
   return out;
 }
 
+/**
+ * Resolve bookmarks for the vision (scanned-PDF) path, where the model returns
+ * a page number directly rather than a text anchor. We can't verify the page
+ * against an extracted-text layer here, so we only validate it is a real page
+ * of the document and de-duplicate. Bookmarks are best-effort on scans.
+ */
+function resolveVisionBookmarks(
+  raw: { kind?: string; title?: string; page?: number }[],
+  pageCount: number,
+): ParsedBookmark[] {
+  const out: ParsedBookmark[] = [];
+  const seen = new Set<string>();
+  for (const b of raw) {
+    const page = Math.round(Number(b.page));
+    if (!Number.isFinite(page) || page < 1 || page > pageCount) continue;
+    const title = (b.title ?? "").trim() || `Page ${page}`;
+    const key = `${page}|${title.toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ page, title, kind: b.kind === "song" ? "song" : "scene" });
+  }
+  out.sort((a, b) => a.page - b.page);
+  return out;
+}
+
+/** Concatenate the text blocks of a model reply (ignoring thinking blocks). */
+function textFromMessage(message: Anthropic.Message): string {
+  return message.content
+    .filter((b): b is Anthropic.TextBlock => b.type === "text")
+    .map((b) => b.text)
+    .join("");
+}
+
 /** Pull the JSON object out of the model's reply, tolerating stray fences/prose. */
 function extractJson(text: string): string {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -137,6 +176,29 @@ If the script is not actually a script (e.g. a contract or a flyer), return empt
 
 Respond with ONLY a single JSON object in this exact shape — no markdown, no code fences, no commentary:
 ${OUTPUT_SHAPE}`;
+
+// For scanned / photographed scripts there is no embedded text to match an
+// anchor against, so the vision path asks the model for a page number directly.
+// `page` is the sequential page of the PDF (1 = first page), which is exactly
+// what the script viewer navigates by.
+const OUTPUT_SHAPE_VISION = `{
+  "title": string,                       // the show's title, "" if unknown
+  "roles":  [{ "name": string, "type": "Principal" | "Supporting" | "Ensemble" }],
+  "scenes": [{ "actNumber": integer, "sceneNumber": integer, "title": string }],
+  "bookmarks": [{ "kind": "scene" | "song", "title": string, "page": integer }]
+}`;
+
+const VISION_SYSTEM_PROMPT = `You analyse theatrical scripts and musical-theatre librettos to set up a production template. You are given a SCANNED or photographed script as page images — read the text off each page carefully, including handwritten-looking or low-contrast type.
+
+Produce three things:
+1. roles — every named speaking/singing character. Classify each as Principal (large role, drives the plot, sings/speaks frequently), Supporting (named role with meaningful but smaller presence), or Ensemble (chorus, named groups, or one-scene bit parts). Use the character name as it appears in the script (e.g. "Frederic", not "FREDERIC:"). Do not invent characters; do not list stage directions, narrators or headings, or props as characters. Each character appears once.
+2. scenes — the Act/Scene structure in reading order. actNumber and sceneNumber are 1-based integers; for a single-act play use actNumber 1 throughout. title is a short scene label (the script's own scene heading if present, otherwise a brief setting like "The town square").
+3. bookmarks — one entry per scene start (kind "scene") and per musical number / song (kind "song"). For each, give the "page": the SEQUENTIAL page number of the PDF where that scene/song begins, where the first page of the file is page 1 (count pages in order — do NOT use any printed folio/page number that may differ). Only mark genuine scene/song starts, not every page. Front-matter listing pages — a table of contents, a "Musical Numbers" list, a synopsis/list of scenes — are reference only: create exactly ONE bookmark per scene/song at its ACTUAL start in the body, never at its entry in such a list. For song titles, copy the script's own printed label.
+
+If the document is not actually a script (e.g. a contract or a flyer), return empty arrays.
+
+Respond with ONLY a single JSON object in this exact shape — no markdown, no code fences, no commentary:
+${OUTPUT_SHAPE_VISION}`;
 
 /**
  * Run the analysis for a staged parse row: download the PDF, extract its text,
@@ -204,17 +266,25 @@ export async function runScriptParse(parseId: string): Promise<void> {
 
     const pages = await extractPdfPages(bytes);
     const fullText = pages.join("\n");
-    if (fullText.trim().length < 200) {
+
+    // A PDF with (almost) no embedded text is a scan or photographed script.
+    // Rather than reject it, hand the file to Claude's vision/PDF pipeline,
+    // which OCRs each page. Capped because each scanned page costs image + text
+    // tokens and a very long scan would overflow even the 1M context window.
+    const isScanned = fullText.trim().length < 200;
+    if (isScanned && pages.length > MAX_SCANNED_PAGES) {
       throw new Error(
-        "Couldn't read enough text from this PDF — it may be a scan or image-only file.",
+        `This looks like a scanned script of ${pages.length} pages — too long to analyse as images. Try splitting it into separate acts and analysing each.`,
       );
     }
 
     // Content fingerprint → global cache. An exact-file match reuses a
     // previously human-verified breakdown (instant, free, no model call).
-    // Skipped for a re-analysis, where the point is a fresh take.
+    // Skipped for a re-analysis, where the point is a fresh take. For scans the
+    // extracted text is empty (and would collide across different scans), so we
+    // fingerprint the raw file bytes instead of the text.
     const fingerprint = createHash("sha256")
-      .update(normalizeText(fullText))
+      .update(isScanned ? bytes : normalizeText(fullText))
       .digest("hex");
 
     if (!parse.notes) {
@@ -255,8 +325,6 @@ export async function runScriptParse(parseId: string): Promise<void> {
       }
     }
 
-    const tagged = buildTaggedScript(pages);
-
     // On a re-analysis, prepend the director's corrections and (if available)
     // the previous result so the model fixes the specific problems.
     let preface = "";
@@ -287,45 +355,90 @@ export async function runScriptParse(parseId: string): Promise<void> {
         "\nNow re-analyse the script and produce a corrected result.\n\n";
     }
 
-    const stream = client.messages.stream({
-      model: SCRIPT_PARSE_MODEL,
-      max_tokens: 16000,
-      thinking: { type: "adaptive" },
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: `${preface}Analyse this script (${pages.length} pages):\n${tagged}`,
-        },
-      ],
-    });
+    let message: Anthropic.Message;
+    let result: ScriptParseResult;
 
-    const message = await stream.finalMessage();
-    const text = message.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("");
+    if (isScanned) {
+      // Vision path: hand Claude the PDF itself (via the signed URL — no base64
+      // bloat, no Files API) and let it OCR the pages. Bookmarks come back as
+      // page numbers, which we validate against the document below.
+      const stream = client.messages.stream({
+        model: SCRIPT_PARSE_MODEL,
+        max_tokens: 16000,
+        thinking: { type: "adaptive" },
+        system: VISION_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "document", source: { type: "url", url: signed.signedUrl } },
+              {
+                type: "text",
+                text: `${preface}Analyse this scanned script (${pages.length} pages).`,
+              },
+            ],
+          },
+        ],
+      });
+      message = await stream.finalMessage();
 
-    const raw = JSON.parse(extractJson(text)) as {
-      title?: string;
-      roles?: ParsedRole[];
-      scenes?: ParsedScene[];
-      bookmarks?: { kind?: string; title?: string; anchor?: string }[];
-    };
-    if (!Array.isArray(raw.roles) || !Array.isArray(raw.scenes)) {
-      throw new Error("The analysis came back in an unexpected format.");
+      const raw = JSON.parse(extractJson(textFromMessage(message))) as {
+        title?: string;
+        roles?: ParsedRole[];
+        scenes?: ParsedScene[];
+        bookmarks?: { kind?: string; title?: string; page?: number }[];
+      };
+      if (!Array.isArray(raw.roles) || !Array.isArray(raw.scenes)) {
+        throw new Error("The analysis came back in an unexpected format.");
+      }
+      result = {
+        title: raw.title ?? "",
+        roles: raw.roles,
+        scenes: raw.scenes,
+        // No text layer to anchor against on a scan — trust the model's page
+        // number but validate it points at a real page.
+        bookmarks: resolveVisionBookmarks(
+          Array.isArray(raw.bookmarks) ? raw.bookmarks : [],
+          pages.length,
+        ),
+      };
+    } else {
+      const tagged = buildTaggedScript(pages);
+      const stream = client.messages.stream({
+        model: SCRIPT_PARSE_MODEL,
+        max_tokens: 16000,
+        thinking: { type: "adaptive" },
+        system: SYSTEM_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: `${preface}Analyse this script (${pages.length} pages):\n${tagged}`,
+          },
+        ],
+      });
+      message = await stream.finalMessage();
+
+      const raw = JSON.parse(extractJson(textFromMessage(message))) as {
+        title?: string;
+        roles?: ParsedRole[];
+        scenes?: ParsedScene[];
+        bookmarks?: { kind?: string; title?: string; anchor?: string }[];
+      };
+      if (!Array.isArray(raw.roles) || !Array.isArray(raw.scenes)) {
+        throw new Error("The analysis came back in an unexpected format.");
+      }
+      result = {
+        title: raw.title ?? "",
+        roles: raw.roles,
+        scenes: raw.scenes,
+        // Page numbers are resolved in code from anchors, not trusted from the
+        // model — this is what fixes long-script bookmark drift.
+        bookmarks: resolveBookmarks(
+          Array.isArray(raw.bookmarks) ? raw.bookmarks : [],
+          pages,
+        ),
+      };
     }
-    const result: ScriptParseResult = {
-      title: raw.title ?? "",
-      roles: raw.roles,
-      scenes: raw.scenes,
-      // Page numbers are resolved in code from anchors, not trusted from the
-      // model — this is what fixes long-script bookmark drift.
-      bookmarks: resolveBookmarks(
-        Array.isArray(raw.bookmarks) ? raw.bookmarks : [],
-        pages,
-      ),
-    };
 
     await db
       .update(scriptParses)

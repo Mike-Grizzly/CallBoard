@@ -127,7 +127,7 @@ next.config.ts              Next.js config (serverActions body size limit)
   signs the logo path for the rail badge + settings headers without
   issuing duplicate signs across layout + page.
 - RLS policies on `storage.objects`: authenticated users can INSERT, SELECT, DELETE on the `attachments` bucket
-- File size limits: 25MB for documents, 10MB for report attachments,
+- File size limits: 64MB for documents, 10MB for report attachments,
   2MB for workspace logos
 
 ## Database schema

@@ -147,8 +147,9 @@ export function AiReviewClient({
           Results vary with how a script is formatted. Modern scripts that clearly
           label songs and scene headings read best; older or lightly-formatted PDFs
           may need a tweak or two — songs are usually spot-on, scenes can blend in.
-          Always give it a quick review, and use <strong>“Not quite right?”</strong>{" "}
-          below to refine without re-uploading.
+          Scanned or photographed scripts are read too, though their bookmark pages
+          are approximate. Always give it a quick review, and use{" "}
+          <strong>“Not quite right?”</strong> below to refine without re-uploading.
         </p>
       </div>
 

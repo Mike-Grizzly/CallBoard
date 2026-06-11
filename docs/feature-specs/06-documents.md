@@ -40,7 +40,7 @@ As a stage manager, I can upload scripts, schedules, and other production files 
   - Other: download fallback with file info
 
 ## Server actions (`features/documents/actions.ts`)
-- `uploadDocument(formData)` — uploads to Supabase Storage, records in DB, validates title and 25MB size limit; requires `documents:upload`
+- `uploadDocument(formData)` — uploads to Supabase Storage, records in DB, validates title and 64MB size limit; requires `documents:upload`
 - `deleteDocument(formData)` — removes from storage and DB; requires `documents:upload`
 - `getDocumentUrl(storagePath)` — returns signed URL (1-hour expiry); **no permission check**
 

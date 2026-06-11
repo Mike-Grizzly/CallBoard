@@ -61,7 +61,7 @@ As a stage manager or director, I can keep a daily log of running notes, then cr
 - TipTap bullet points don't render (Tailwind prose CSS reset)
 - `RichTextDisplay` uses `dangerouslySetInnerHTML` — content is from authenticated users via TipTap but not sanitized
 - `getAttachmentUrl()` has no auth check — any authenticated user who knows the storage path could generate a URL
-- Report attachments max 10MB; document uploads max 25MB (different limits)
+- Report attachments max 10MB; document uploads max 64MB (different limits)
 - Daily log is per-user per-production — only the author can see/edit their own log
 
 ## Manual test checklist

@@ -13,7 +13,7 @@ As a team member with upload permissions, I can upload files to productions. Fil
 ### Upload (documents)
 1. User navigates to production > Documents tab
 2. Fills in title, selects document type, picks file
-3. Submits form → server action validates size (25MB), uploads to Supabase Storage, records metadata in DB
+3. Submits form → server action validates size (64MB), uploads to Supabase Storage, records metadata in DB
 4. Page revalidates, new document appears in list
 
 ### Upload (report attachments)
@@ -39,7 +39,7 @@ As a team member with upload permissions, I can upload files to productions. Fil
 - `/productions/[slug]/reports/[reportId]` — attachment upload on report detail
 
 ## What users can upload today
-- **Documents:** Any file type, up to 25MB, with title and category
+- **Documents:** Any file type, up to 64MB, with title and category
 - **Report attachments:** Any file type, up to 10MB
 - No file type restrictions are enforced
 
@@ -90,9 +90,10 @@ CREATE POLICY "Authenticated users can delete" ON storage.objects
 - **Cast and crew** can view documents and reports but cannot upload or delete
 
 ## File size validation
-- Documents: 25MB limit checked in `uploadDocument()` server action
+- Documents: 64MB limit checked in `uploadDocument()` server action
 - Report attachments: 10MB limit checked in `uploadReportAttachment()` server action
-- Next.js server action body size limit: 25MB (configured in `next.config.ts` under `experimental.serverActions.bodySizeLimit`)
+- Next.js server action body size limit: 64MB (configured in `next.config.ts` under `experimental.serverActions.bodySizeLimit`, mirrored by `proxyClientMaxBodySize`). Raised from 25MB on 2026-06-11 to accept OCR'd scripts (Adobe OCR can bloat a scan to ~50MB).
+- **Caveat (large files through the server action):** uploads go through a server action (FormData), so they're bounded by `bodySizeLimit` **and** the host's request-body cap. The Supabase Storage bucket's own per-file limit (dashboard) must also be ≥ the app limit. For files materially larger than this, the scalable path is a **direct browser→Supabase upload via a signed upload URL** (the workspace-logo uploader already does this to sidestep the action body cap) — not yet wired for documents/scripts.
 
 ## File type validation
 - **None.** Any file type is accepted. No allowlist or blocklist.
@@ -104,7 +105,7 @@ CREATE POLICY "Authenticated users can delete" ON storage.objects
 - Success message shown for 3 seconds then cleared
 
 ## Error states
-- File too large: "File size must be under 25MB" / "File size must be under 10MB"
+- File too large: "File size must be under 64MB" / "File size must be under 10MB"
 - Missing file: "Please select a file to upload"
 - Missing title: "Title is required" (documents only)
 - Storage upload failure: "Upload failed: {message}" (surfaced from Supabase)
@@ -138,8 +139,8 @@ CREATE POLICY "Authenticated users can delete" ON storage.objects
 - Page-level production membership check gates access to the documents and reports pages
 
 ## Manual test checklist
-- [ ] Upload a document under 25MB — succeeds
-- [ ] Upload a document over 25MB — shows error
+- [ ] Upload a document under 64MB — succeeds
+- [ ] Upload a document over 64MB — shows error
 - [ ] Upload a report attachment under 10MB — succeeds
 - [ ] Upload a report attachment over 10MB — shows error
 - [ ] View a PDF document in the in-app viewer
@@ -166,6 +167,6 @@ CREATE POLICY "Authenticated users can delete" ON storage.objects
 - Single `attachments` Supabase Storage bucket for all file types
 - Server actions handle the full upload lifecycle (validate → storage upload → DB insert)
 - Signed URLs are generated on demand, not stored
-- `next.config.ts` must have `experimental.serverActions.bodySizeLimit: "25mb"` — removing this breaks document uploads
+- `next.config.ts` must have `experimental.serverActions.bodySizeLimit: "64mb"` — removing this breaks document uploads
 - Non-function constants must NOT be exported from `"use server"` files — causes hydration errors in client components (see `features/documents/constants.ts`)
 - The `attachments` bucket and its RLS policies were created manually via Supabase Dashboard/SQL Editor — they are not managed by Drizzle

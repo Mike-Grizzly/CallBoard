@@ -21,7 +21,17 @@ export async function loadPdfDocument(url: string): Promise<PDFDocumentProxy> {
       "pdfjs-dist/build/pdf.worker.min.mjs",
       import.meta.url,
     ).toString();
-    return pdfjsLib.getDocument(url).promise;
+    // Point pdfjs at the CMap + standard-font data we copy into public/ at
+    // build time (scripts/copy-pdfjs-assets.mjs). Without these, text that
+    // uses non-embedded fonts (Helvetica/Times/Arial — common in scripts)
+    // renders blank while images still draw, so a PDF can look fine in the
+    // browser's native viewer yet appear textless in this one.
+    return pdfjsLib.getDocument({
+      url,
+      cMapUrl: "/pdfjs/cmaps/",
+      cMapPacked: true,
+      standardFontDataUrl: "/pdfjs/standard_fonts/",
+    }).promise;
   })();
 
   // Drop a failed load so a later attempt can retry instead of replaying the error.

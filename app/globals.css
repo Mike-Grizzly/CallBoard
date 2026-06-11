@@ -1026,6 +1026,75 @@ textarea.field {
     transform: rotate(360deg);
   }
 }
+
+/* ── Scanned-script OCR banner (Script viewer) ────────────────────────────── */
+.sv-ocr-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: color-mix(in oklch, var(--c-amber) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--c-amber) 30%, transparent);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.sv-ocr-banner-error {
+  background: color-mix(in oklch, var(--c-red, #dc2626) 10%, transparent);
+  border-color: color-mix(in oklch, var(--c-red, #dc2626) 30%, transparent);
+}
+.sv-ocr-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--c-amber);
+}
+.sv-ocr-body {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.45;
+}
+.sv-ocr-body strong {
+  color: var(--ink-1);
+}
+.sv-ocr-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.sv-ocr-progress {
+  margin-top: 6px;
+  height: 5px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--ink-3, #999) 25%, transparent);
+  overflow: hidden;
+}
+.sv-ocr-progress-bar {
+  height: 100%;
+  background: var(--c-amber);
+  border-radius: 999px;
+  transition: width 0.2s ease-out;
+}
+.sv-spinner {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border: 2px solid color-mix(in oklch, var(--c-amber) 35%, transparent);
+  border-top-color: var(--c-amber);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@media (max-width: 720px) {
+  .sv-ocr-banner {
+    flex-wrap: wrap;
+  }
+  .sv-ocr-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
 /* PDF load spinner — inherits `color` from its container so it reads on
    both the light script workspace and the dark blocking canvas. */
 .pdf-spinner {

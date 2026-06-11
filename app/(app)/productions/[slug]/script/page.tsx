@@ -4,7 +4,7 @@ import { can } from "@/lib/permissions";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
 import { getDefaultScript, getScriptAnnotations } from "@/features/scripts/queries";
-import { getScriptUrl } from "@/features/scripts/actions";
+import { getScriptUrl, ensureMemberBookmarks } from "@/features/scripts/actions";
 import type { Annotation, Bookmark, PageOverrides } from "@/features/scripts/constants";
 import { ScriptScreen } from "./script-screen";
 
@@ -72,7 +72,17 @@ export default async function ScriptPage({
   ]);
 
   const annotations = (annotationRow?.annotations ?? []) as Annotation[];
-  const bookmarks = (annotationRow?.bookmarks ?? []) as Bookmark[];
+  let bookmarks = (annotationRow?.bookmarks ?? []) as Bookmark[];
+  // Late-joiner seeding: members who joined after the AI breakdown was applied
+  // have no AI bookmarks yet. Seed them on first open (only when a breakdown was
+  // actually applied, and only if they don't already have the AI set).
+  if (
+    script.processingStatus === "applied" &&
+    !bookmarks.some((b) => b.id?.startsWith("ai-"))
+  ) {
+    const seeded = await ensureMemberBookmarks(script.id, production.id);
+    if (seeded) bookmarks = seeded;
+  }
   const pageOverrides = (annotationRow?.pageOverrides ?? {}) as PageOverrides;
   const hasStalePages = annotationRow?.hasStalePages ?? false;
 

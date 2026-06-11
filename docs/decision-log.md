@@ -1661,6 +1661,37 @@ the pricing PAGE to match this model.
 
 ---
 
+## 2026-06-10 — Scanned/image-only scripts analysed via Claude's vision/PDF pipeline
+
+**Decision:** When an uploaded script has no usable embedded text (`runScriptParse` extracts < 200 chars), instead of rejecting it, hand the PDF to Claude's native vision/PDF pipeline, which OCRs each page. The PDF is passed as a `{ type: "url" }` `document` content block using the Supabase signed URL we already mint — not base64 (which inflates ~33% and would risk the 32 MB request ceiling) and not a Files API upload (extra round-trip + cleanup).
+
+**Reason:** Theatre scripts are frequently scans/photocopies with no text layer; previously these failed outright. The same blank-page class of file was also a pain point reported by a tester. Claude Opus 4.8 supports PDF input (600-page limit on a 1M-context model, 32 MB request limit) and OCRs image-only pages via vision, so no separate OCR engine (Tesseract etc.) is needed.
+
+**Impact:**
+- A separate `VISION_SYSTEM_PROMPT` + `OUTPUT_SHAPE_VISION` ask for the same cast/scenes, but bookmarks return a **`page` integer** (no extracted text to anchor against on a scan). `resolveVisionBookmarks` validates the page is within the document and de-dupes — bookmarks on scans are **best-effort**, cast/scenes unaffected.
+- **Page cap** `MAX_SCANNED_PAGES = 250` (each scanned page costs image + text tokens; a longer scan would overflow the context window) — beyond it the parse fails with a "split into acts" message.
+- **Cache fingerprint** for scans is the **raw file bytes** SHA-256, not the normalized text (empty text would collide across different scans and poison the cross-org `script_cache`). Text PDFs keep the text fingerprint; both are hex in the same column.
+- Cost on scans is higher (~$1–2/script: image + text tokens per page), bounded by the existing per-production/per-user caps. The wizard auto-fill path inherits this for free (same `runScriptParse`).
+- Files touched: `features/scripts/parse.ts` (vision branch, prompts, `resolveVisionBookmarks`, `textFromMessage`, `MAX_SCANNED_PAGES`); AI-setup caveat copy in `script/ai/ai-review-client.tsx`.
+
+---
+
+## 2026-06-10 — AI script-parse reliability: watchdog, idempotent apply, late-joiner seeding
+
+**Decision:** Three self-contained reliability fixes to the AI script-analysis feature, all in `features/scripts/actions.ts`.
+
+1. **Stalled-parse watchdog (lazy, no cron).** The async run worker can die (Vercel reclaims the function, or work exceeds `maxDuration=300s`) without ever flipping the row off `processing`, which previously (a) spun the review page forever and (b) blocked all future parses via the concurrency lock. A row still `processing` past `STALE_PARSE_MS` (8 min) is now treated as dead: the poll paths (`fetchLatestScriptParse`/`fetchScriptParseById`) flip it to `failed` (`failIfStale`) so the UI shows a timeout, and the three concurrency locks (`startScriptParse`/`reparseWithNotes`/`startWizardScriptParse`) ignore stale rows (`hasLiveProcessing`). Chose lazy detection over a cron sweep because the poll already happens every 3s — the user watching gets immediate feedback with zero new infra.
+
+2. **Idempotent apply.** `applyScriptParse` blindly inserted roles + scenes, so a double-click or a re-parse re-apply piled up duplicates (only bookmarks were idempotent). Now: re-applying an already-`applied` parse is a no-op (status guard), and roles/scenes are inserted **additively but de-duplicated** against what the production already has (roles by name, scenes by act/scene number).
+
+3. **Late-joiner bookmark seeding.** `seedSharedBookmarks` only seeds members present at apply time, so anyone who joins later (invite, bulk-assign, wizard) saw no AI bookmarks. They're now seeded **lazily on first Script-tab open** by `ensureMemberBookmarks` (reads the applied parse's bookmarks — the canonical set — and writes the user's `ai-*` set if missing). Chose the script-open chokepoint over hooking every member-add path, and gated it on `documents.processingStatus === "applied"` so productions without a breakdown pay no extra query. Fits the codebase's lazy-write convention (auto-profile creation).
+
+**Reason:** The feature isn't live-verified yet; these are the difference between an impressive demo and something trustworthy in production. All three are small and contained to the scripts feature.
+
+**Impact:** No schema change (added `processingStatus` to the `getDefaultScript` projection). Apply is **additive** by design — it never deletes, because `production_scenes` is shared with the blocking tool and roles can be hand-added/wizard-created, so there's no safe blanket "replace AI rows" without an AI-vs-manual marker column. A re-parse that drops/renames a role or scene leaves the old row for the director to remove in the review form. Late-joiner seeding is a write-on-render: two simultaneous first-opens by the same user could double-insert an annotation row (no unique constraint on `script_annotations`; `limit(1)` on read) — same class as the existing apply-time seeding.
+
+---
+
 ## 2026-06-10 — Announcements: multi-audience via a join table (+ priority, require-ack)
 
 **Decision:** Redesigned announcements into a broadcast tool. An announcement is now either **org-wide** (`announcements.org_wide = true`) or scoped to a **set** of productions via a new join table **`announcement_productions`** `(announcement_id, production_id)` (unique). Added `priority` (`normal|important|urgent`, CHECK) and an explicit `require_ack` flag. The legacy single `announcements.production_id` column was **kept but demoted** — still written for single-target posts (null for org-wide/multi), no longer read for audience resolution.
@@ -1753,3 +1784,74 @@ keep all per-show people management in one place.
 `inviteAndAssignRole` (`features/members/actions.ts`); new `cast-list.tsx` wired
 into the members page. `tsc`/`eslint` clean; column verified live. Not yet
 device-verified.
+
+---
+
+## 2026-06-11 — Scanned-script OCR in the browser (tesseract.js) for text tools
+
+**Context.** A scanned/image-only script has no text layer, so the Script tool's select / copy / find / line-highlighting are dead — and print-to-PDF doesn't help (it re-wraps images, adds no text). The AI parser already OCRs scans *for analysis* via Claude vision, but that returns structured cast/scenes with **no per-word coordinates**, so it can't drive an on-page selectable layer. We needed real OCR with word boxes.
+
+**Decision.** Do OCR **in the browser with tesseract.js (WASM)**, not server-side.
+- **Why client-side:** it gives per-word bounding boxes (the thing the text layer needs), costs **zero tokens / no server infra** (vs Claude vision ~$1–2/scan, or a server-side ocrmypdf/Ghostscript worker that isn't Vercel-friendly), and the "watch a per-page progress bar" UX is a natural fit. Accuracy is good-not-perfect on clean scans — acceptable for select/copy/find.
+- **Shared, not per-user:** OCR is a property of the *file*, so the result is stored once keyed by `storage_path` + `script_version` and reused for the whole production (`script_ocr` table). Coordinates are **normalized 0..1** so they survive any zoom/scale.
+- **Detection** reuses the AI parser's heuristic (extractable text `< ~100` chars over the first few pages = scan).
+- **Opt-in + reversible:** managers get a banner (Run OCR / Not now); "Not now" is remembered per file and falls back to today's image-only viewing. Nothing about the existing viewer changes when OCR is absent.
+- **Engine self-hosted:** worker + WASM core copied into `public/tesseract/` at build (`scripts/copy-tesseract-assets.mjs`, gitignored like `public/pdfjs/`). Language data (`eng.traineddata`, ~10MB) is **not vendored** — fetched from the tessdata CDN by default (`NEXT_PUBLIC_TESSERACT_LANG_PATH` to self-host later).
+- **Gating:** running OCR is a write, gated by `assertCanMutate` (the existing billing guard) + production access; reading a ready result is open to all members.
+
+**Scope.** v1 wires the **desktop `ScriptViewer`** (detect → banner → run with progress → paint OCR text layer). The mobile reader can consume the *stored* result for display; its own detect/run UI is a fast-follow.
+
+**Setup the user owns — create the server-only table** (RLS on, no policies, like `script_parses`). Run in the Supabase SQL editor / via MCP against the `CallBoard` project:
+
+```sql
+create table if not exists public.script_ocr (
+  id uuid primary key default gen_random_uuid(),
+  production_id uuid references public.productions(id) on delete cascade,
+  document_id uuid references public.documents(id) on delete cascade,
+  storage_path text not null,
+  script_version integer not null default 1,
+  status text not null default 'processing',
+  page_count integer,
+  pages jsonb,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.script_ocr enable row level security;
+create index if not exists script_ocr_lookup_idx
+  on public.script_ocr (storage_path, script_version);
+```
+
+(No composite UNIQUE — those hang `drizzle-kit push`; app code enforces one row per `storage_path`+`script_version`.)
+
+**Impact.** New: `db/schema/script-ocr.ts`, `lib/ocr.ts`, `scripts/copy-tesseract-assets.mjs`, `features/scripts/ocr-actions.ts`, `app/(app)/productions/[slug]/script/use-script-ocr.ts`. Extended: `features/scripts/constants.ts`, `script-viewer.tsx`, `app/globals.css`, `db/schema/index.ts`, `.gitignore`, `eslint.config.mjs`, `package.json` (dev/build copy step + `tesseract.js`). `tsc`/`eslint` clean; `next build` compiles + type-checks. Not yet verified against a real scan.
+
+---
+
+## 2026-06-11 — Searchable-PDF rebuild for pdfjs-unrenderable scans (PDFium-WASM)
+
+**Context.** A tester's scanned script rendered blank in the Script tool even after in-browser OCR. Recovering the file from git history and dissecting it showed why: it's **MRC compression** — every page is a `DCTDecode` (JPEG) background plus **3,959 tiny `CCITTFax` 1-bit `/ImageMask` glyph stencils** (`/K -1`) that carry the actual text. **pdfjs renders the background but drops the ImageMask stencils**, so the text body is blank. pdfjs is both our viewer's renderer *and* the in-browser OCR's raster source, so display and tesseract OCR both came up empty. The browser's native engine (Documents `<iframe>`) and Adobe render it fine — hence those worked. (PR #32's non-embedded-font fix does nothing here: the file has no fonts.)
+
+**Decision.** Stop forcing pdfjs for these. Two layers:
+1. **Native-engine fallback (viewing).** The viewer probes a representative page's ink coverage (`isRenderBlank`, downsample + non-white ratio); a scanned page that comes back (near-)blank means pdfjs can't rasterize it, so we render the PDF in the browser's native viewer (an `<iframe>` of the signed URL, like the Documents tab). The in-browser tesseract OCR offer is suppressed for these (it would read a blank canvas).
+2. **In-browser searchable-PDF rebuild (fixing).** `lib/pdf-ocr-rebuild.ts` renders each page with **PDFium-WASM** (`@hyzyla/pdfium`, the engine Chrome uses — **verified it renders this exact file**, 126 pages at 16–27% ink where pdfjs is blank), OCRs each page with `tesseract.js`, and assembles a new PDF with the page image + an **invisible jsPDF text layer**. The output uses standard codecs + a real text layer, so pdfjs renders and searches it natively — no `script_ocr` overlay needed for rebuilt files. It's the automatic equivalent of Adobe "Recognize Text".
+
+**Why PDFium-WASM over a server pipeline:** keeps the app's zero-infrastructure, all-client model (pdfjs/tesseract/jsPDF already run in the browser), BSD/MIT licensed, and the base64-inlined WASM build needs no asset hosting or CDN. Trade-off: a long scan is a multi-minute client task (progress + cancel); if that ever becomes a problem, moving just the rebuild to a background job is a clean later upgrade.
+
+**Product decisions (with user):** the rebuilt searchable file **replaces the default script** (version-bumped; the original upload stays in the document list as a backup). The rebuild is **offered at first view** of an unrenderable scan (where blank-render detection is reliable) via a *Make searchable* button; relocating the prompt into the upload flow itself is a follow-up. Decline keeps the original + native-engine viewing.
+
+**Impact.** New dep `@hyzyla/pdfium`. New: `lib/pdf-ocr-rebuild.ts`, `app/(app)/productions/[slug]/script/use-script-rebuild.ts`, server actions `createRebuiltScriptUploadUrl` / `finalizeRebuiltScript` (`features/scripts/ocr-actions.ts`). Extended `script-viewer.tsx` (blank detection, native fallback, rebuild UI). `tsc`/`eslint` clean; `next build` compiles. Not yet live-verified end-to-end (needs a running browser + the real file).
+
+---
+
+## 2026-06-11 — Wider scan coverage + OCR quality model (image uploads, higher DPI)
+
+**Context.** After shipping the searchable-scan rebuild (PR #32), two follow-ups to widen the umbrella for photocopied/scanned scripts, plus a clarification on what OCR does and doesn't change.
+
+**Decisions.**
+- **Image-file scripts.** A script uploaded as a bare JPEG/PNG/WebP (not only a PDF) is now scan-detected and rebuilt into a one-page searchable PDF (`rebuildImageAsSearchablePdf`: `createImageBitmap` with `imageOrientation:"from-image"` for EXIF rotation → OCR → jsPDF text layer). Per-page assembly shared with the PDF path via `appendOcrPage`; `installSearchableScript` takes a `File` and dispatches image-vs-PDF; `needsScriptOcr` = supported image type OR no-text-layer PDF. (Low real-world demand, but cheap once the engine existed.)
+- **Higher OCR DPI.** PDFium render scale 2.0→3.0 (144→216 dpi). Measured on the real test file: +11% words recovered (314→349 over 3 pages) and higher mean confidence (78.0→78.7), at modest memory/output-size cost. Not pushed to 300 dpi to keep client-side memory/time bounded on long scripts.
+
+**OCR quality model (important, recorded for future work).** The rebuilt PDF is two layers: (1) the **visible page is the original scan image, untouched** — no script/lyric content is ever lost, altered, or dropped from what users read/print/annotate; (2) an **invisible text layer** from OCR drives search/select/copy and AI parse. OCR imperfections live *only* in layer 2 (a search miss, a copy typo, an occasional AI mis-parse) — never in the visible script. "Words recovered" in the DPI benchmark refers to how completely OCR populates layer 2, not deletion from the script. This mirrors Adobe's model (image + text layer); the only gap is tesseract vs. Adobe's commercial OCR accuracy. **Upgrade path if exact search/AI fidelity is needed:** route pages through a stronger OCR (cloud OCR or Claude vision) — the visible script is safe regardless of engine.
+
+**Impact.** Engine `lib/pdf-ocr-rebuild.ts` (image fn + `appendOcrPage` + scale), `lib/install-searchable-script.ts` (File dispatch), `lib/pdf-scan-detect.ts` (`needsScriptOcr`), `document-upload-form.tsx`, `use-script-rebuild.ts`. `tsc`/`eslint`/`next build` clean.

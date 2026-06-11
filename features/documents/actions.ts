@@ -92,8 +92,8 @@ export async function requestDocumentUpload(
   if (!fileName || fileSize <= 0) {
     return { error: "Please select a file to upload." };
   }
-  if (fileSize > 25 * 1024 * 1024) {
-    return { error: "File size must be under 25MB." };
+  if (fileSize > 64 * 1024 * 1024) {
+    return { error: "File size must be under 64MB." };
   }
 
   const allowedTypes = [

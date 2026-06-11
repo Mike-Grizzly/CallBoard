@@ -9,6 +9,7 @@ import {
   requestGroundPlanImageUpload,
 } from "@/features/blocking/actions";
 import { uploadFileToSignedUrl } from "@/lib/storage-upload";
+import { loadPdfDocument } from "@/lib/pdf";
 import { getDocumentUrl } from "@/features/documents/actions";
 import type { DocumentWithUploader } from "@/features/documents/queries";
 import type { StageConfiguration } from "@/db/schema";
@@ -109,14 +110,7 @@ export function SetupWizard({
     let cancelled = false;
     async function renderPdf() {
       try {
-        const pdfjsLib = await import("pdfjs-dist");
-        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-          "pdfjs-dist/build/pdf.worker.min.mjs",
-          import.meta.url,
-        ).toString();
-
-        const loadingTask = pdfjsLib.getDocument(pdfUrl!);
-        const pdf = await loadingTask.promise;
+        const pdf = await loadPdfDocument(pdfUrl!);
         if (cancelled) return;
 
         setNumPages(pdf.numPages);
