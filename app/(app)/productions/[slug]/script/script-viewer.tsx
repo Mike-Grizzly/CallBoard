@@ -2545,46 +2545,65 @@ function stackCueLabels(
     id: string;
     rect: AnnotationRect;
     leaderSide: "left" | "right";
+    cueNumber: string;
     cueDescription: string;
   }[],
   canvasH: number,
 ): Map<string, CueLabelPos> {
   // Roughly one text line of tolerance: cues this close vertically are treated
-  // as the "same line" and ordered left-to-right (their position on the line),
-  // so two cues on one line stack in reading order instead of by draw order.
+  // as the "same line".
   const LINE_BUCKET = 14;
   const GAP = CUE_LABEL_NUMBER_UP + CUE_LABEL_PAD;
   const out = new Map<string, CueLabelPos>();
   for (const side of ["left", "right"] as const) {
     const group = cues
       .filter((c) => c.leaderSide === side)
-      .map((c) => ({
-        id: c.id,
-        y: (c.rect.y + c.rect.height) * canvasH,
-        x: c.rect.x,
-        hasDesc: c.cueDescription.trim().length > 0,
-      }))
+      .map((c) => {
+        const y = (c.rect.y + c.rect.height) * canvasH;
+        return {
+          id: c.id,
+          y,
+          bucket: Math.round(y / LINE_BUCKET),
+          hasDesc: c.cueDescription.trim().length > 0,
+          cueNumber: c.cueNumber,
+        };
+      })
       .sort((a, b) => {
-        const ba = Math.round(a.y / LINE_BUCKET);
-        const bb = Math.round(b.y / LINE_BUCKET);
-        if (ba !== bb) return ba - bb;
-        return a.x - b.x;
+        // Group by line; within a line order by cue number (so the lower number
+        // sits on top and the next drops below it), not by draw order.
+        if (a.bucket !== b.bucket) return a.bucket - b.bucket;
+        return a.cueNumber.localeCompare(b.cueNumber, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
       });
     // Bottom of the last label placed in each lane (inner = 0, second = 1).
     const laneBottom = [-Infinity, -Infinity];
+    let prevBucket = NaN;
+    let prevLane = 0;
     for (const item of group) {
-      // Prefer the inner lane; use the second only when the inner is occupied
-      // at this height. If neither is free, push down in the freer lane.
-      let lane = [0, 1].find((l) => item.y >= laneBottom[l] + GAP) ?? -1;
+      let lane: number;
       let y: number;
-      if (lane === -1) {
-        lane = laneBottom[0] <= laneBottom[1] ? 0 : 1;
+      if (item.bucket === prevBucket) {
+        // Same line as the previous cue: stack vertically right below it in the
+        // same lane (never side-by-side in the other lane), in cue-number order.
+        lane = prevLane;
         y = laneBottom[lane] + GAP;
       } else {
-        y = item.y;
+        // New line: take the inner lane at its natural height when free, else
+        // stagger into the second lane, else push down in the freer lane.
+        lane = [0, 1].find((l) => item.y >= laneBottom[l] + GAP) ?? -1;
+        if (lane === -1) {
+          lane = laneBottom[0] <= laneBottom[1] ? 0 : 1;
+          y = laneBottom[lane] + GAP;
+        } else {
+          y = item.y;
+        }
       }
       out.set(item.id, { y, lane });
       laneBottom[lane] = y + (item.hasDesc ? CUE_LABEL_DESC_DOWN : 0);
+      prevBucket = item.bucket;
+      prevLane = lane;
     }
   }
   return out;
