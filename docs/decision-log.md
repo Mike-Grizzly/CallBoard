@@ -1888,3 +1888,19 @@ create index if not exists script_ocr_lookup_idx
 **Rollout lesson (why it took several passes).** The break was never the app code — it was deploy/config: production briefly ran a `main` build with no OAuth code (button "vanished", redirect had nowhere to land), and testing happened on Vercel previews where the domain-scoped cookie can't survive the hop to prod. Diagnosed from Supabase auth logs: a `login` event with **no following `POST /token`** = the code was never redeemed. Fix = merge to `main`, deploy prod, test on `www.proscene.app`. Full runbook in `feature-specs/02-auth.md` → "OAuth troubleshooting".
 
 **Impact.** New: `components/auth/oauth-buttons.tsx`. Edited: `app/actions/auth.ts` (`signInWithOAuth`, `requestOrigin`), `lib/auth.ts` (`deriveName`), `app/login/page.tsx` (+ `?error=` surfacing), `app/signup/page.tsx`, `app/globals.css` (`.auth-divider`/`.auth-oauth*`). Merged via PR #41; verified working in production 2026-06-11. Requires the Google provider enabled in the Supabase dashboard (not in code).
+
+---
+
+## 2026-06-11 — Role-restricted (private) document folders
+
+**Context.** Backlog item "per-role private folders" (flagged as needing design decisions). The Document Center had production-scoped folders, but every folder/document was visible to all members.
+
+**Decisions.**
+- **Restrict by role, stored on the folder.** Added `visibility` ('everyone'|'restricted') + `allowed_roles text[]` to `document_folders` rather than a join table — roles are a small fixed enum, so an array column is the lean choice. Live additive migration (`add_folder_visibility`); existing folders default to `everyone`, no behavior change.
+- **Visibility keys off the viewer's _production_ role** (`production_memberships.role`), not the org role, since a person's role varies per show. Managers (`productions:manage` = admin/producer) always see every folder. One pure helper `canViewFolder` shared by server filtering and client UI.
+- **Documents inherit folder visibility; unfiled docs stay public.** No per-document ACL — keeps the model simple and matches how teams think ("the SM folder").
+- **Reused `documents:upload`** for creating/editing restricted folders — no new capability.
+- **Enforced at the page + viewer**, not via RLS (the app reads through the Drizzle service connection, so filtering lives in app code). The documents list filters folders + docs; the viewer `notFound()`s on a hidden doc to block direct-URL access.
+- **Deferred:** the Documents tab badge still counts hidden docs (a number, no titles — acceptable v1 leak); the Script tool's default-script path isn't folder-gated; restriction is role-based, not per-person or per-department.
+
+**Impact.** New: `folder-editor.tsx`, `feature-specs/13-document-folder-privacy.md`. Edited: `db/schema/documents.ts`, `features/documents/{constants,actions,queries}.ts`, the documents page + `[documentId]` viewer + `documents-client.tsx`. `tsc`/`eslint` clean; not browser-verified. Shipped as its own PR off `main`.

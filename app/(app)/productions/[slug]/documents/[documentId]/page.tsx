@@ -6,6 +6,7 @@ import { can } from "@/lib/permissions";
 import { getProductionBySlug } from "@/features/productions/queries";
 import { getProductionMembership } from "@/features/members/queries";
 import { getDocumentById } from "@/features/documents/queries";
+import { canViewFolder } from "@/features/documents/constants";
 import { getDocumentUrl } from "@/features/documents/actions";
 import { getIsPinned } from "@/features/pins/queries";
 import { PinButton } from "@/features/pins/pin-button";
@@ -40,15 +41,24 @@ export default async function DocumentDetailPage({
   }
 
   const canManage = can(user.role, "productions:manage");
-  if (!canManage) {
-    const membership = await getProductionMembership(user.id, production.id);
-    if (!membership) {
-      redirect("/productions");
-    }
+  const membership = await getProductionMembership(user.id, production.id);
+  if (!canManage && !membership) {
+    redirect("/productions");
   }
 
   const doc = await getDocumentById(documentId);
   if (!doc || doc.productionId !== production.id) {
+    notFound();
+  }
+
+  // A document in a role-restricted folder is only reachable by allowed roles.
+  if (
+    !canViewFolder(
+      { visibility: doc.folderVisibility, allowedRoles: doc.folderAllowedRoles },
+      membership?.role ?? null,
+      canManage,
+    )
+  ) {
     notFound();
   }
 
