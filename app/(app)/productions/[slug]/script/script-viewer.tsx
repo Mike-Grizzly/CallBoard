@@ -2568,10 +2568,9 @@ function stackCueLabels(
   const NUMBER_UP = CUE_LABEL_NUMBER_UP * scale;
   const DESC_DOWN = CUE_LABEL_DESC_DOWN * scale;
   const GAP = NUMBER_UP + CUE_LABEL_PAD * scale;
-  // How far a label may be pushed below its anchor before opening the 2nd
-  // column. ~one stacked label, so two cues on a line still stack vertically
-  // and only a denser pile-up fans sideways.
-  const CUE_CROWD = GAP + DESC_DOWN;
+  // Look-ahead window (~one label tall): if another cue sits this close below,
+  // stacking a colliding label straight down would run into it.
+  const FOLLOW = GAP + DESC_DOWN;
   const out = new Map<string, CueLabelPos>();
   for (const side of ["left", "right"] as const) {
     const group = cues
@@ -2589,17 +2588,24 @@ function stackCueLabels(
           sensitivity: "base",
         }),
       );
+    // For each cue, is there another cue just below its line? If so, stacking a
+    // label down here would collide with it, so we fan into the 2nd column
+    // instead. An isolated same-line group (nothing close below) just stacks.
+    const followed = group.map((it) =>
+      group.some((o) => o !== it && o.y > it.y + 0.5 && o.y <= it.y + FOLLOW),
+    );
     const bottom = [-Infinity, -Infinity]; // bottom of last label per column
     let lastY = -Infinity; // previous label's y — keeps numbers in order
-    for (const item of group) {
+    group.forEach((item, i) => {
       // Never above the anchor or the previous (lower) number.
       const floor = Math.max(item.y, lastY);
       const y0 = Math.max(floor, bottom[0] + GAP);
       let lane = 0;
       let y = y0;
-      if (y0 - item.y > CUE_CROWD) {
-        // Column 0 is crowding this label far from its line — use the 2nd
-        // column if it lands closer (still no higher than the previous number).
+      // y0 above its line means column 0 can't seat it without pushing down.
+      // Fan into the 2nd column only when this cue is closely followed below
+      // (so stacking down would collide); otherwise stack vertically.
+      if (y0 > item.y + 0.5 && followed[i]) {
         const y1 = Math.max(floor, bottom[1] + GAP);
         if (y1 < y0) {
           lane = 1;
@@ -2609,7 +2615,7 @@ function stackCueLabels(
       out.set(item.id, { y, lane });
       bottom[lane] = y + (item.hasDesc ? DESC_DOWN : 0);
       lastY = y;
-    }
+    });
   }
   return out;
 }
