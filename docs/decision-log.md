@@ -1871,3 +1871,20 @@ create index if not exists script_ocr_lookup_idx
 - **Deferred:** a template picker on the single-call slide-in tray (would require controlling every field on the shared `CallForm`); for now applying a template to one call = a one-day generation.
 
 **Impact.** New: `db/schema/call-templates.ts`, `features/call-templates/{queries,actions}.ts`, `app/(app)/productions/[slug]/calls/templates/**`, `app/(app)/productions/[slug]/calls/generate/**`. Edited: `db/schema/index.ts`, `app/(app)/calendar/calendar-client.tsx`. `tsc`/`eslint` clean; not yet browser-verified. Spec: `feature-specs/12-rehearsal-templates.md`.
+
+---
+
+## 2026-06-11 — Google social sign-in (Apple deferred; origin-derived OAuth redirect)
+
+**Decision.** Added "Sign in with Google" on `/login` and `/signup` via Supabase OAuth (PKCE), alongside the existing email/password flow. Apple Sign In is deliberately **not** shipped.
+
+**Reasons / choices.**
+- **Google only, for now.** Apple Sign In requires a paid Apple Developer Program membership ($99/yr), so it was held off. The implementation is provider-agnostic: re-enabling Apple is `"apple"` in `OAUTH_PROVIDERS` (`app/actions/auth.ts`) plus a second button in `components/auth/oauth-buttons.tsx`.
+- **No new callback.** The pre-existing `/auth/callback` route already does the PKCE `exchangeCodeForSession`, so OAuth reused it unchanged.
+- **`redirectTo` is derived from the request origin, not `NEXT_PUBLIC_SITE_URL`.** A fixed site URL sent users back to a different domain than the one that started the flow; since the PKCE code-verifier cookie is **domain-scoped**, the exchange then failed and Supabase fell back to the Site URL (homepage). `requestOrigin()` (Origin / x-forwarded-host headers) keeps the round-trip on one host.
+- **Canonical domain = `www.proscene.app`.** Supabase Site URL, `NEXT_PUBLIC_SITE_URL`, and the tested host are all `www` to avoid apex↔www cookie/redirect mismatches.
+- **OAuth name backfill.** OAuth users lack `first_name`/`last_name` metadata, so `lib/auth.ts → deriveName()` falls back to Google's `given_name`/`family_name` (or splits `full_name`/`name`). Profile + org auto-creation is otherwise identical to email/password signup — a new Google user gets their own admin workspace.
+
+**Rollout lesson (why it took several passes).** The break was never the app code — it was deploy/config: production briefly ran a `main` build with no OAuth code (button "vanished", redirect had nowhere to land), and testing happened on Vercel previews where the domain-scoped cookie can't survive the hop to prod. Diagnosed from Supabase auth logs: a `login` event with **no following `POST /token`** = the code was never redeemed. Fix = merge to `main`, deploy prod, test on `www.proscene.app`. Full runbook in `feature-specs/02-auth.md` → "OAuth troubleshooting".
+
+**Impact.** New: `components/auth/oauth-buttons.tsx`. Edited: `app/actions/auth.ts` (`signInWithOAuth`, `requestOrigin`), `lib/auth.ts` (`deriveName`), `app/login/page.tsx` (+ `?error=` surfacing), `app/signup/page.tsx`, `app/globals.css` (`.auth-divider`/`.auth-oauth*`). Merged via PR #41; verified working in production 2026-06-11. Requires the Google provider enabled in the Supabase dashboard (not in code).
