@@ -1747,3 +1747,19 @@ create index if not exists script_ocr_lookup_idx
 (No composite UNIQUE — those hang `drizzle-kit push`; app code enforces one row per `storage_path`+`script_version`.)
 
 **Impact.** New: `db/schema/script-ocr.ts`, `lib/ocr.ts`, `scripts/copy-tesseract-assets.mjs`, `features/scripts/ocr-actions.ts`, `app/(app)/productions/[slug]/script/use-script-ocr.ts`. Extended: `features/scripts/constants.ts`, `script-viewer.tsx`, `app/globals.css`, `db/schema/index.ts`, `.gitignore`, `eslint.config.mjs`, `package.json` (dev/build copy step + `tesseract.js`). `tsc`/`eslint` clean; `next build` compiles + type-checks. Not yet verified against a real scan.
+
+---
+
+## 2026-06-11 — Searchable-PDF rebuild for pdfjs-unrenderable scans (PDFium-WASM)
+
+**Context.** A tester's scanned script rendered blank in the Script tool even after in-browser OCR. Recovering the file from git history and dissecting it showed why: it's **MRC compression** — every page is a `DCTDecode` (JPEG) background plus **3,959 tiny `CCITTFax` 1-bit `/ImageMask` glyph stencils** (`/K -1`) that carry the actual text. **pdfjs renders the background but drops the ImageMask stencils**, so the text body is blank. pdfjs is both our viewer's renderer *and* the in-browser OCR's raster source, so display and tesseract OCR both came up empty. The browser's native engine (Documents `<iframe>`) and Adobe render it fine — hence those worked. (PR #32's non-embedded-font fix does nothing here: the file has no fonts.)
+
+**Decision.** Stop forcing pdfjs for these. Two layers:
+1. **Native-engine fallback (viewing).** The viewer probes a representative page's ink coverage (`isRenderBlank`, downsample + non-white ratio); a scanned page that comes back (near-)blank means pdfjs can't rasterize it, so we render the PDF in the browser's native viewer (an `<iframe>` of the signed URL, like the Documents tab). The in-browser tesseract OCR offer is suppressed for these (it would read a blank canvas).
+2. **In-browser searchable-PDF rebuild (fixing).** `lib/pdf-ocr-rebuild.ts` renders each page with **PDFium-WASM** (`@hyzyla/pdfium`, the engine Chrome uses — **verified it renders this exact file**, 126 pages at 16–27% ink where pdfjs is blank), OCRs each page with `tesseract.js`, and assembles a new PDF with the page image + an **invisible jsPDF text layer**. The output uses standard codecs + a real text layer, so pdfjs renders and searches it natively — no `script_ocr` overlay needed for rebuilt files. It's the automatic equivalent of Adobe "Recognize Text".
+
+**Why PDFium-WASM over a server pipeline:** keeps the app's zero-infrastructure, all-client model (pdfjs/tesseract/jsPDF already run in the browser), BSD/MIT licensed, and the base64-inlined WASM build needs no asset hosting or CDN. Trade-off: a long scan is a multi-minute client task (progress + cancel); if that ever becomes a problem, moving just the rebuild to a background job is a clean later upgrade.
+
+**Product decisions (with user):** the rebuilt searchable file **replaces the default script** (version-bumped; the original upload stays in the document list as a backup). The rebuild is **offered at first view** of an unrenderable scan (where blank-render detection is reliable) via a *Make searchable* button; relocating the prompt into the upload flow itself is a follow-up. Decline keeps the original + native-engine viewing.
+
+**Impact.** New dep `@hyzyla/pdfium`. New: `lib/pdf-ocr-rebuild.ts`, `app/(app)/productions/[slug]/script/use-script-rebuild.ts`, server actions `createRebuiltScriptUploadUrl` / `finalizeRebuiltScript` (`features/scripts/ocr-actions.ts`). Extended `script-viewer.tsx` (blank detection, native fallback, rebuild UI). `tsc`/`eslint` clean; `next build` compiles. Not yet live-verified end-to-end (needs a running browser + the real file).

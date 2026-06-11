@@ -33,6 +33,7 @@ import {
   ScanText,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { saveAnnotations, dismissStaleBanner } from "@/features/scripts/actions";
 import {
   ANNOTATION_COLORS,
@@ -51,6 +52,7 @@ import { loadPdfDocument } from "@/lib/pdf";
 import { useIsPhone } from "@/lib/use-is-phone";
 import { MobileScriptReader } from "./mobile-script-reader";
 import { useScriptOcr } from "./use-script-ocr";
+import { useScriptRebuild } from "./use-script-rebuild";
 
 // Module-level cache so re-renders don't re-decode the same page
 const pdfBitmapCache = new Map<string, ImageBitmap>();
@@ -215,6 +217,20 @@ export function ScriptViewer({
   useEffect(() => {
     ocrOwnsTextLayerRef.current = ocrOwnsTextLayer;
   }, [ocrOwnsTextLayer]);
+
+  // Rebuild an unrenderable scan into a searchable PDF (PDFium + OCR) and
+  // install it as the new default script. On success the page reloads to pick
+  // up the rebuilt file, which pdfjs renders normally.
+  const router = useRouter();
+  const rebuild = useScriptRebuild({
+    productionId,
+    pdfUrl,
+    title: script.title ?? "",
+    fileName: script.fileName ?? "script.pdf",
+  });
+  useEffect(() => {
+    if (rebuild.status === "done") router.refresh();
+  }, [rebuild.status, router]);
 
   // ── PDF rendering ─────────────────────────────────────────────────────────
 
@@ -1072,28 +1088,91 @@ export function ScriptViewer({
           </div>
         )}
 
-        {/* Scanned script pdfjs can't render → native PDF engine */}
-        {renderBlank && (
-          <div className="sv-ocr-banner">
-            <ScanText size={18} className="sv-ocr-icon" />
-            <div className="sv-ocr-body">
-              <strong>This scanned script can&rsquo;t be shown in the editor.</strong>{" "}
-              It&rsquo;s a scan our editor can&rsquo;t render, so it&rsquo;s
-              displayed below in your browser&rsquo;s built-in PDF viewer. To
-              enable annotation and text tools, run OCR on it (e.g. Adobe
-              Acrobat → Recognize Text) and re-upload.
+        {/* Scanned script pdfjs can't render → rebuild searchable, or native view */}
+        {renderBlank &&
+          (rebuild.status === "running" || rebuild.status === "uploading" ? (
+            <div className="sv-ocr-banner">
+              <span className="sv-spinner" aria-hidden />
+              <div className="sv-ocr-body">
+                {rebuild.status === "uploading"
+                  ? "Saving the searchable script…"
+                  : `Making this script searchable… ${
+                      rebuild.progress
+                        ? `${
+                            rebuild.progress.phase === "ocr" ? "reading" : "rendering"
+                          } page ${rebuild.progress.page} of ${rebuild.progress.total}`
+                        : "starting"
+                    }`}
+                . This can take a few minutes — please keep this tab open.
+                {rebuild.progress && rebuild.progress.total > 0 && (
+                  <div className="sv-ocr-progress">
+                    <div
+                      className="sv-ocr-progress-bar"
+                      style={{
+                        width: `${Math.round(
+                          (rebuild.progress.page / rebuild.progress.total) * 100,
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="sv-ocr-actions">
+                <button
+                  className="btn ghost"
+                  onClick={rebuild.cancel}
+                  style={{ height: 30 }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-            <div className="sv-ocr-actions">
-              <button
-                className="btn ghost"
-                onClick={() => setNativeView((v) => !v)}
-                style={{ height: 30 }}
-              >
-                {nativeView ? "Try editor" : "Open native viewer"}
-              </button>
+          ) : (
+            <div
+              className={`sv-ocr-banner${
+                rebuild.status === "failed" ? " sv-ocr-banner-error" : ""
+              }`}
+            >
+              <ScanText size={18} className="sv-ocr-icon" />
+              <div className="sv-ocr-body">
+                {rebuild.status === "failed" ? (
+                  <>
+                    <strong>Couldn&rsquo;t make this script searchable.</strong>{" "}
+                    {rebuild.error} You can try again, or read it in the native
+                    viewer below.
+                  </>
+                ) : (
+                  <>
+                    <strong>This scanned script can&rsquo;t be shown in the editor.</strong>{" "}
+                    It&rsquo;s shown below in your browser&rsquo;s built-in PDF
+                    viewer.{" "}
+                    {canManage
+                      ? "Make it searchable to enable annotation and text tools across the whole project."
+                      : "Ask a manager to make it searchable to enable annotation and text tools."}
+                  </>
+                )}
+              </div>
+              <div className="sv-ocr-actions">
+                {canManage && (
+                  <button
+                    className="btn primary"
+                    onClick={rebuild.run}
+                    style={{ height: 30 }}
+                  >
+                    <ScanText size={14} />{" "}
+                    {rebuild.status === "failed" ? "Try again" : "Make searchable"}
+                  </button>
+                )}
+                <button
+                  className="btn ghost"
+                  onClick={() => setNativeView((v) => !v)}
+                  style={{ height: 30 }}
+                >
+                  {nativeView ? "Try editor" : "Open native viewer"}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          ))}
 
         {/* Scanned-script OCR notice */}
         {canManage && ocr.status === "prompt" && !renderBlank && (

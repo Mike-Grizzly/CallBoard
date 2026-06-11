@@ -356,3 +356,31 @@ result as the viewer's transparent text layer.
 *stored* result for display but its own detect/run UI is a fast-follow.
 Single language (`eng`). Accuracy is good-not-perfect on clean scans; very
 poor scans may need a real OCR pass (ocrmypdf/Acrobat) outside the app.
+
+---
+
+## Unrenderable scans → searchable-PDF rebuild (PDFium-WASM) — 2026-06-11
+
+Some scans pdfjs **can't rasterize at all** — e.g. MRC-compressed files whose
+text is thousands of `CCITTFax` 1-bit `/ImageMask` stencils that pdfjs drops
+(it draws only the `DCTDecode` background). For these the in-browser tesseract
+OCR (which reads the pdfjs canvas) also fails. Two-layer fix:
+
+1. **Native fallback (read):** the viewer measures ink coverage of a
+   representative rendered page (`isRenderBlank`); if a scan comes back blank,
+   it shows the PDF in the browser's native engine (`<iframe>`, like Documents)
+   and hides the futile OCR offer.
+2. **Searchable rebuild (fix):** `lib/pdf-ocr-rebuild.ts` rasterizes each page
+   with **PDFium-WASM** (`@hyzyla/pdfium`, base64-inlined — no asset hosting),
+   OCRs it with `tesseract.js`, and assembles a new PDF (page image + invisible
+   jsPDF text layer). Standard codecs + real text ⇒ pdfjs renders/searches it
+   natively. Managers trigger it from the blank-render banner (*Make
+   searchable*, progress + cancel); the result uploads direct-to-storage and
+   becomes the new default script (`finalizeRebuiltScript`, version-bumped,
+   original kept).
+
+**Verified:** PDFium-WASM renders the tester's exact file (126 pp, 16–27% ink)
+where pdfjs is blank; `tsc`/`eslint`/`next build` clean. **Not yet:** live
+end-to-end run in a browser; relocating the prompt from the viewer into the
+upload flow; non-English OCR; very long scripts may want a background job
+instead of the client-side rebuild.

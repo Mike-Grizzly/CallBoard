@@ -1,10 +1,13 @@
 "use server";
 
 import { db } from "@/db";
-import { documents, scriptOcr } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
+import { documents, scriptOcr, scriptAnnotations } from "@/db/schema";
+import { and, desc, eq } from "drizzle-orm";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { assertCanMutate } from "@/features/billing/guard";
+import { can } from "@/lib/permissions";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { revalidatePath } from "next/cache";
 import type { OcrPage, ScriptOcrStatus } from "./constants";
 
 /**
@@ -184,4 +187,112 @@ export async function failScriptOcr(ocrId: string): Promise<void> {
     .update(scriptOcr)
     .set({ status: "failed", updatedAt: new Date() })
     .where(eq(scriptOcr.id, ocrId));
+}
+
+// ── Searchable-PDF rebuild (PDFium + OCR, assembled in the browser) ──────────
+// A scan pdfjs can't render is rebuilt client-side into a searchable PDF
+// (lib/pdf-ocr-rebuild.ts). The browser uploads the result straight to storage
+// via a signed URL, then finalizes it as the production's new default script.
+
+export type CreateRebuiltScriptUrlResult = {
+  error?: string;
+  path?: string;
+  token?: string;
+};
+
+export async function createRebuiltScriptUploadUrl(input: {
+  productionId: string;
+  fileName: string;
+}): Promise<CreateRebuiltScriptUrlResult> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "documents:upload")) {
+    return { error: "You don't have permission to replace the script." };
+  }
+  if (!(await userCanAccessProduction(user, input.productionId))) {
+    return { error: "You don't have access to that production." };
+  }
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
+
+  const safeName = (input.fileName || "script.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
+  const storagePath = `documents/${input.productionId}/${Date.now()}-${safeName}`;
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase.storage
+    .from("attachments")
+    .createSignedUploadUrl(storagePath);
+  if (error || !data) {
+    return { error: `Could not start upload: ${error?.message ?? "unknown error"}` };
+  }
+  return { path: data.path, token: data.token };
+}
+
+export type FinalizeRebuiltScriptResult = { error?: string; success?: boolean };
+
+export async function finalizeRebuiltScript(input: {
+  productionId: string;
+  storagePath: string;
+  title: string;
+  fileName: string;
+  fileSize: number;
+}): Promise<FinalizeRebuiltScriptResult> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "documents:upload")) {
+    return { error: "You don't have permission to replace the script." };
+  }
+  if (!(await userCanAccessProduction(user, input.productionId))) {
+    return { error: "You don't have access to that production." };
+  }
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
+
+  // The path was minted server-side under this production's prefix; reject
+  // anything else so a caller can't attach an arbitrary stored object.
+  if (!input.storagePath.startsWith(`documents/${input.productionId}/`)) {
+    return { error: "Upload could not be verified." };
+  }
+
+  // New default script version = one past the highest in the production.
+  const [top] = await db
+    .select({ scriptVersion: documents.scriptVersion })
+    .from(documents)
+    .where(eq(documents.productionId, input.productionId))
+    .orderBy(desc(documents.scriptVersion))
+    .limit(1);
+  const nextVersion = (top?.scriptVersion ?? 0) + 1;
+
+  // Demote the current default(s); the original upload stays in the list.
+  await db
+    .update(documents)
+    .set({ isDefaultScript: false })
+    .where(
+      and(
+        eq(documents.productionId, input.productionId),
+        eq(documents.isDefaultScript, true),
+      ),
+    );
+
+  await db.insert(documents).values({
+    productionId: input.productionId,
+    uploadedBy: user.id,
+    title: input.title?.trim() || "Script (searchable)",
+    fileName: input.fileName,
+    fileSize: input.fileSize,
+    contentType: "application/pdf",
+    storagePath: input.storagePath,
+    documentType: "script",
+    isDefaultScript: true,
+    scriptVersion: nextVersion,
+    processingStatus: "ready",
+  });
+
+  // Existing per-user annotations were anchored to the old (blank) render;
+  // flag them stale so the viewer shows its "script updated" banner.
+  await db
+    .update(scriptAnnotations)
+    .set({ hasStalePages: true })
+    .where(eq(scriptAnnotations.productionId, input.productionId));
+
+  revalidatePath("/productions");
+  return { success: true };
 }
