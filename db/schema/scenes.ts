@@ -16,6 +16,9 @@ export const productionScenes = pgTable("production_scenes", {
   sceneNumber: integer("scene_number").notNull().default(1),
   title: text("title").notNull(),
   orderIndex: integer("order_index").notNull().default(0),
+  // "ai" = written by applyScriptParse (the beatless ones are replaced on the
+  // next parse); "manual" = wizard / hand-added (always preserved).
+  source: text("source").notNull().default("manual"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

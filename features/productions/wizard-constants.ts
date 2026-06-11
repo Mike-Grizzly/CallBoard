@@ -126,6 +126,7 @@ export type FullProductionInput = {
   roles: WizardRoleInput[];
   team: WizardTeamMemberInput[];
   status?: "draft" | "active";
+  color?: string;
 };
 
 export type QuickProductionInput = {

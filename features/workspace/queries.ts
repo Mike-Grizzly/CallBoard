@@ -6,7 +6,7 @@ import {
   mentions,
   notifications,
 } from "@/db/schema";
-import { and, count, eq, gt, sql } from "drizzle-orm";
+import { and, count, eq, gt, isNull, sql } from "drizzle-orm";
 import type { Role } from "@/types/roles";
 
 export type UserMembership = {
@@ -85,7 +85,12 @@ export async function getUserMemberships(
       organizations,
       eq(organizations.id, organizationMemberships.organizationId),
     )
-    .where(eq(organizationMemberships.userId, userId))
+    .where(
+      and(
+        eq(organizationMemberships.userId, userId),
+        isNull(organizations.deletedAt),
+      ),
+    )
     .orderBy(organizations.name);
 
   return rows.map((r) => ({

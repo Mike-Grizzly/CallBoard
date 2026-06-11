@@ -3,10 +3,11 @@ import { db } from "@/db";
 import {
   productions,
   productionMemberships,
+  productionRoles,
   organizationMemberships,
   profiles,
 } from "@/db/schema";
-import { and, eq, desc, isNull, isNotNull } from "drizzle-orm";
+import { and, asc, eq, desc, isNull, isNotNull } from "drizzle-orm";
 import { can } from "@/lib/permissions";
 import type { Role } from "@/types/roles";
 import type { WizardOrgUser } from "./wizard-constants";
@@ -23,6 +24,7 @@ export async function getProductionsByOrganization(organizationId: string) {
       and(
         eq(productions.organizationId, organizationId),
         isNull(productions.archivedAt),
+        isNull(productions.deletedAt),
       ),
     )
     .orderBy(desc(productions.createdAt));
@@ -38,9 +40,29 @@ export async function getArchivedProductionsByOrganization(
       and(
         eq(productions.organizationId, organizationId),
         isNotNull(productions.archivedAt),
+        isNull(productions.deletedAt),
       ),
     )
     .orderBy(desc(productions.archivedAt));
+}
+
+/**
+ * Soft-deleted ("trashed") productions for the org's "Recently deleted"
+ * view. Restorable by an admin for 30 days; hard purge is deferred.
+ */
+export async function getDeletedProductionsByOrganization(
+  organizationId: string,
+) {
+  return db
+    .select()
+    .from(productions)
+    .where(
+      and(
+        eq(productions.organizationId, organizationId),
+        isNotNull(productions.deletedAt),
+      ),
+    )
+    .orderBy(desc(productions.deletedAt));
 }
 
 /**
@@ -57,6 +79,7 @@ export const getProductionBySlug = cache(
         and(
           eq(productions.organizationId, organizationId),
           eq(productions.slug, slug),
+          isNull(productions.deletedAt),
         ),
       )
       .limit(1);
@@ -95,6 +118,7 @@ export async function getUserProductions(
         // the active org's shows, never a mix across workspaces.
         eq(productions.organizationId, organizationId),
         isNull(productions.archivedAt),
+        isNull(productions.deletedAt),
       ),
     )
     .orderBy(desc(productions.createdAt));
@@ -143,6 +167,34 @@ export async function getVisibleProductions(user: {
   }
   return getUserProductions(user.id, user.organizationId);
 }
+
+/**
+ * The production's cast list (characters), with the org member cast in each
+ * role joined in when one is assigned. Drives the cast-assignment UI on the
+ * Cast & Crew page. Ordered as entered (wizard / AI reading order), then name.
+ */
+export async function getProductionRoles(productionId: string) {
+  return db
+    .select({
+      id: productionRoles.id,
+      name: productionRoles.name,
+      type: productionRoles.type,
+      actor: productionRoles.actor,
+      sortOrder: productionRoles.sortOrder,
+      assignedUserId: productionRoles.assignedUserId,
+      assignedFirstName: profiles.firstName,
+      assignedLastName: profiles.lastName,
+      assignedEmail: profiles.email,
+    })
+    .from(productionRoles)
+    .leftJoin(profiles, eq(productionRoles.assignedUserId, profiles.id))
+    .where(eq(productionRoles.productionId, productionId))
+    .orderBy(asc(productionRoles.sortOrder), asc(productionRoles.name));
+}
+
+export type ProductionRoleRow = Awaited<
+  ReturnType<typeof getProductionRoles>
+>[number];
 
 /**
  * Org members formatted for the wizard's actor autocomplete — anyone already

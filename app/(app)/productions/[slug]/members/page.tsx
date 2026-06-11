@@ -3,12 +3,16 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getProductionBySlug } from "@/features/productions/queries";
+import {
+  getProductionBySlug,
+  getProductionRoles,
+} from "@/features/productions/queries";
 import {
   getProductionMembers,
   getOrganizationMembers,
 } from "@/features/members/queries";
 import { ProductionMemberManager } from "./production-member-manager";
+import { CastList } from "./cast-list";
 
 export default async function ProductionMembersPage({
   params,
@@ -28,15 +32,17 @@ export default async function ProductionMembersPage({
     notFound();
   }
 
-  const [productionMembers, orgMembers] = await Promise.all([
+  const [productionMembers, orgMembers, roles] = await Promise.all([
     getProductionMembers(production.id),
     getOrganizationMembers(user.organizationId),
+    getProductionRoles(production.id),
   ]);
 
   const assignedUserIds = new Set(productionMembers.map((m) => m.userId));
   const availableMembers = orgMembers.filter(
     (m) => !assignedUserIds.has(m.userId),
   );
+  const canInvite = can(user.role, "settings:manage");
 
   return (
     <div className="page-narrow anim-in">
@@ -54,11 +60,20 @@ export default async function ProductionMembersPage({
         </p>
       </div>
 
-      <ProductionMemberManager
-        productionId={production.id}
-        currentMembers={productionMembers}
-        availableMembers={availableMembers}
-      />
+      <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+        <CastList
+          roles={roles}
+          orgMembers={orgMembers}
+          canInvite={canInvite}
+          scriptHref={`/productions/${slug}/script/ai`}
+        />
+
+        <ProductionMemberManager
+          productionId={production.id}
+          currentMembers={productionMembers}
+          availableMembers={availableMembers}
+        />
+      </div>
     </div>
   );
 }

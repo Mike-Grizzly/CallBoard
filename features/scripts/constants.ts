@@ -43,7 +43,25 @@ export type CueAnnotation = {
   cueNumber: string;
   cueDescription: string;
   leaderSide: "left" | "right";
+  // Per-cue colour (e.g. red for lights, blue for sound). Absent on cues made
+  // before colour was added — they fall back to CUE_STROKE.
+  color?: string;
 };
+
+/**
+ * Cue colours — saturated so leader lines / labels read clearly over the
+ * script. The first (red) is the legacy default (`CUE_STROKE`). The viewer
+ * remembers the last colour picked and applies it to new cues until changed.
+ */
+export const CUE_COLORS = [
+  { label: "Black", value: "#111111" },
+  { label: "Red", value: "#EF4444" },
+  { label: "Blue", value: "#3B82F6" },
+  { label: "Green", value: "#22C55E" },
+  { label: "Amber", value: "#F59E0B" },
+  { label: "Purple", value: "#8B5CF6" },
+  { label: "Pink", value: "#EC4899" },
+] as const;
 
 /** Point on a page, normalized 0–1 against page width/height. */
 export type InkPoint = { x: number; y: number };
@@ -88,6 +106,12 @@ export type Bookmark = {
   // bookmarks a user adds by hand.
   kind?: "scene" | "song";
 };
+
+// Cost guardrails for AI analysis. Each parse is a real per-token Anthropic
+// charge, so cap how often the feature can run for one production. The window
+// is generous enough for legitimate re-uploads but kills runaway loops.
+export const PARSE_LIMIT_PER_PRODUCTION = 5;
+export const PARSE_WINDOW_DAYS = 30;
 
 // ----- AI script analysis (the model's proposal, pre-review) -----
 

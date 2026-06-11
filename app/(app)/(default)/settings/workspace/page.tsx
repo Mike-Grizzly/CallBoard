@@ -15,6 +15,7 @@ import {
   TransferOwnershipForm,
   type TransferCandidate,
 } from "./transfer-ownership-form";
+import { DeleteWorkspaceForm } from "./delete-workspace-form";
 
 export default async function WorkspaceSettingsPage() {
   const user = await requireCurrentUser();
@@ -90,6 +91,8 @@ export default async function WorkspaceSettingsPage() {
       </div>
 
       <TransferOwnershipForm candidates={candidates} />
+
+      <DeleteWorkspaceForm workspaceName={overview.name} />
     </div>
   );
 }

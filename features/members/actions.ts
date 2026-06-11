@@ -6,11 +6,16 @@ import {
   organizationMemberships,
   organizations,
   productionMemberships,
+  productionRoles,
   productions,
   profiles,
 } from "@/db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
-import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
+import {
+  requireCurrentUser,
+  userCanAccessProduction,
+  type CurrentUser,
+} from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { Role } from "@/types/roles";
@@ -325,6 +330,242 @@ export async function removeProductionMember(
 
   revalidatePath(`/productions`);
   revalidatePath(`/people`);
+  return {};
+}
+
+// ─── Cast assignment: bridge production_roles ↔ production_memberships ──
+
+function personDisplayName(p: {
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+}): string {
+  return `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim() || p.email;
+}
+
+/**
+ * Load a production role and confirm the caller may manage casting on its
+ * production. Shared by the assign/unassign/invite cast actions.
+ */
+async function loadRoleForCasting(currentUser: CurrentUser, roleId: string) {
+  if (!roleId) return { error: "Missing role." as const };
+  const [role] = await db
+    .select({
+      id: productionRoles.id,
+      productionId: productionRoles.productionId,
+      name: productionRoles.name,
+      assignedUserId: productionRoles.assignedUserId,
+    })
+    .from(productionRoles)
+    .where(eq(productionRoles.id, roleId))
+    .limit(1);
+  if (!role) return { error: "Character not found." as const };
+  if (!(await userCanAccessProduction(currentUser, role.productionId))) {
+    return { error: "You don't have access to this production." as const };
+  }
+  return { role };
+}
+
+/**
+ * Cast an existing org member in a parsed character. Links the character to
+ * the person AND grants production access: a new member is added as `cast`
+ * with this character; an existing member keeps their production role (so a
+ * director who also acts isn't demoted) but gets the character name.
+ */
+export async function assignRoleToMember(
+  roleId: string,
+  userId: string,
+): Promise<MemberActionResult> {
+  const currentUser = await requireCurrentUser();
+  if (!can(currentUser.role, "productions:manage")) {
+    return { error: "You don't have permission to manage casting." };
+  }
+
+  const loaded = await loadRoleForCasting(currentUser, roleId);
+  if ("error" in loaded) return { error: loaded.error };
+  const { role } = loaded;
+
+  if (!userId) return { error: "Select a person." };
+  const [person] = await db
+    .select({
+      id: profiles.id,
+      firstName: profiles.firstName,
+      lastName: profiles.lastName,
+      email: profiles.email,
+    })
+    .from(profiles)
+    .innerJoin(
+      organizationMemberships,
+      eq(organizationMemberships.userId, profiles.id),
+    )
+    .where(
+      and(
+        eq(profiles.id, userId),
+        eq(organizationMemberships.organizationId, currentUser.organizationId),
+      ),
+    )
+    .limit(1);
+  if (!person) return { error: "That person isn't in your organization." };
+
+  await db.transaction(async (tx) => {
+    // Free any other character this person was assigned in this production —
+    // one actor, one character (re-assigning moves them).
+    await tx
+      .update(productionRoles)
+      .set({ assignedUserId: null, actor: null })
+      .where(
+        and(
+          eq(productionRoles.productionId, role.productionId),
+          eq(productionRoles.assignedUserId, userId),
+        ),
+      );
+
+    await tx
+      .update(productionRoles)
+      .set({ assignedUserId: userId, actor: personDisplayName(person) })
+      .where(eq(productionRoles.id, role.id));
+
+    const [existing] = await tx
+      .select({ id: productionMemberships.id })
+      .from(productionMemberships)
+      .where(
+        and(
+          eq(productionMemberships.userId, userId),
+          eq(productionMemberships.productionId, role.productionId),
+        ),
+      )
+      .limit(1);
+
+    if (existing) {
+      // Keep their existing production role; just set the character.
+      await tx
+        .update(productionMemberships)
+        .set({ characterName: role.name })
+        .where(eq(productionMemberships.id, existing.id));
+    } else {
+      await tx.insert(productionMemberships).values({
+        userId,
+        productionId: role.productionId,
+        role: "cast",
+        characterName: role.name,
+      });
+    }
+  });
+
+  revalidatePath("/productions");
+  revalidatePath("/people");
+  return {};
+}
+
+/**
+ * Clear a character's casting. Leaves the person's production membership in
+ * place (revoking access is a separate, explicit action on the team list);
+ * only clears the link and the character name if it still matches this role.
+ */
+export async function unassignRole(
+  roleId: string,
+): Promise<MemberActionResult> {
+  const currentUser = await requireCurrentUser();
+  if (!can(currentUser.role, "productions:manage")) {
+    return { error: "You don't have permission to manage casting." };
+  }
+
+  const loaded = await loadRoleForCasting(currentUser, roleId);
+  if ("error" in loaded) return { error: loaded.error };
+  const { role } = loaded;
+
+  await db.transaction(async (tx) => {
+    if (role.assignedUserId) {
+      await tx
+        .update(productionMemberships)
+        .set({ characterName: null })
+        .where(
+          and(
+            eq(productionMemberships.userId, role.assignedUserId),
+            eq(productionMemberships.productionId, role.productionId),
+            eq(productionMemberships.characterName, role.name),
+          ),
+        );
+    }
+    await tx
+      .update(productionRoles)
+      .set({ assignedUserId: null, actor: null })
+      .where(eq(productionRoles.id, role.id));
+  });
+
+  revalidatePath("/productions");
+  return {};
+}
+
+/**
+ * Invite a brand-new person and cast them in a character in one step. Inviting
+ * provisions an org account, so this needs the same `settings:manage` gate as
+ * the People directory invite; it reuses `inviteMembers` (which creates the
+ * account + the `cast` production membership with this character), then links
+ * the character to the freshly-created profile.
+ */
+export async function inviteAndAssignRole(input: {
+  roleId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  sendInvite?: boolean;
+}): Promise<MemberActionResult> {
+  const currentUser = await requireCurrentUser();
+  if (!can(currentUser.role, "settings:manage")) {
+    return { error: "Only workspace admins can invite new people." };
+  }
+
+  const loaded = await loadRoleForCasting(currentUser, input.roleId);
+  if ("error" in loaded) return { error: loaded.error };
+  const { role } = loaded;
+
+  const email = input.email.trim();
+  if (!isValidEmail(email)) return { error: "Enter a valid email address." };
+  if (!input.firstName.trim() && !input.lastName.trim()) {
+    return { error: "Enter the person's name." };
+  }
+
+  const result = await inviteMembers({
+    people: [
+      {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email,
+        role: "cast",
+        assignments: [
+          {
+            productionId: role.productionId,
+            role: "cast",
+            characterName: role.name,
+          },
+        ],
+      },
+    ],
+    sendInvite: input.sendInvite ?? true,
+  });
+
+  if (result.error) return { error: result.error };
+  const row = result.results?.[0];
+  if (row?.outcome === "error") {
+    return { error: row.message ?? "Could not invite that person." };
+  }
+
+  // Link the character to the now-existing profile (created or pre-existing).
+  const [person] = await db
+    .select({ id: profiles.id, firstName: profiles.firstName, lastName: profiles.lastName, email: profiles.email })
+    .from(profiles)
+    .where(sql`lower(${profiles.email}) = ${email.toLowerCase()}`)
+    .limit(1);
+  if (person) {
+    await db
+      .update(productionRoles)
+      .set({ assignedUserId: person.id, actor: personDisplayName(person) })
+      .where(eq(productionRoles.id, role.id));
+  }
+
+  revalidatePath("/productions");
+  revalidatePath("/people");
   return {};
 }
 

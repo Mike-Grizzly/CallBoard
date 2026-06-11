@@ -38,6 +38,11 @@ export const productions = pgTable("productions", {
   // archived view and restorable). We never hard-delete productions —
   // they carry too much downstream history (reports, calls, blocking).
   archivedAt: timestamp("archived_at", { withTimezone: true }),
+  // Soft-delete ("trash"), distinct from archive. Null = live, non-null =
+  // deleted: hidden from every list (including the archived view) and from
+  // production access checks, but recoverable by an admin from the
+  // "Recently deleted" view for 30 days. Hard purge is deferred.
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

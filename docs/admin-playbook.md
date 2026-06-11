@@ -173,6 +173,52 @@ UPDATE organizations SET billing_lifecycle_stage = 7, updated_at = now() WHERE i
 
 ---
 
+## Recover a deleted workspace or production (within 30 days)
+
+Delete is a **soft-delete** — the row and all its data are retained; only
+`deleted_at` is set. Restore by clearing it (within the 30-day window, before
+any future purge runs).
+
+```sql
+-- Find a soft-deleted workspace
+SELECT id, name, slug, deleted_at
+FROM organizations
+WHERE deleted_at IS NOT NULL
+ORDER BY deleted_at DESC;
+
+-- Restore it (scope to the confirmed id)
+UPDATE organizations SET deleted_at = NULL, updated_at = now()
+WHERE id = '<org-id>';
+```
+
+Restoring an org does **not** re-select it for the user who deleted it (their
+`profiles.selected_organization_id` was moved off). They'll see it again in the
+workspace switcher and can switch back in; or set it for them:
+
+```sql
+UPDATE profiles SET selected_organization_id = '<org-id>'
+WHERE id = '<user-id>';
+```
+
+Productions are normally self-serve restorable by an admin from the
+**Recently deleted** section on `/productions`. To restore one by hand:
+
+```sql
+SELECT id, title, slug, organization_id, deleted_at
+FROM productions
+WHERE deleted_at IS NOT NULL
+ORDER BY deleted_at DESC;
+
+UPDATE productions SET deleted_at = NULL, updated_at = now()
+WHERE id = '<production-id>';
+```
+
+> There is **no automatic hard purge yet** — soft-deleted rows past 30 days are
+> hidden but not removed, so recovery is always possible until a purge step is
+> built.
+
+---
+
 ## When in doubt
 
 Tell Claude the org name and what you want; you'll get a `SELECT` to confirm the

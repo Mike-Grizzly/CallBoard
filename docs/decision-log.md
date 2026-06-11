@@ -1709,6 +1709,84 @@ the pricing PAGE to match this model.
 
 ---
 
+## 2026-06-10 — Soft-delete model for productions and organizations
+
+**Decision:** Both productions and organizations get a nullable `deleted_at`
+column (`timestamptz`, applied live via Supabase MCP `apply_migration`),
+**separate from** productions' existing `archived_at`. Semantics:
+
+- **Archive** (`archived_at`) = a legitimate "this season is over, keep it"
+  state — restorable from the Archived view, kept forever.
+- **Delete** (`deleted_at`) = "trash": hidden from every list and from
+  production access checks (`userCanAccessProduction`, `getProductionBySlug`),
+  recoverable for 30 days, then (eventually) purged.
+
+**Permissioning:** delete/restore are **admin-only** (`settings:manage`),
+deliberately stricter than archive (`productions:manage`, i.e. producers too),
+because deletion is more destructive. Org deletion additionally requires a
+**type-the-workspace-name** confirmation (re-checked server-side in
+`deleteWorkspace`, not just the UI).
+
+**Recovery split (per product owner):**
+- **Productions** are **self-serve recoverable** — a "Recently deleted" section
+  on `/productions` (admins) with a Restore button, surfacing the 30-day window.
+- **Organizations** are **support-recoverable** — the delete confirmation tells
+  the user it's recoverable via support for 30 days; an operator restores it by
+  clearing `deleted_at` (see admin-playbook). No self-serve org-restore UI, to
+  keep the auth-resolution surface small. Deleting your current workspace moves
+  you to another membership (or auth spins up a fresh personal workspace).
+
+**Deferred (delete):** the destructive **hard purge** after 30 days is NOT built yet —
+soft-deleted rows simply stay hidden past the window. Nothing is irreversibly
+lost until a careful, separately-tested purge step (likely an extension of the
+billing-lifecycle cron) lands. Tracked in open-questions.
+
+**Impact:** new `deleted_at` on `db/schema/{productions,organizations}.ts`;
+`deleteProduction`/`restoreDeletedProduction` (`features/productions/actions.ts`)
++ `getDeletedProductionsByOrganization` and `deleted_at` filters across
+`features/productions/queries.ts`; `deleteWorkspace` (`features/workspace/actions.ts`)
++ deleted-org filters in `lib/auth.ts` (`resolveActiveMembership`,
+`userCanAccessProduction`) and `features/workspace/queries.ts`
+(`getUserMemberships`); UI: `DeleteProductionButton`/`RestoreDeletedProductionButton`
+(`archive-buttons.tsx`), `deleted-section.tsx`, `delete-workspace-form.tsx`.
+`tsc`/`eslint` clean; columns verified live. Not yet device-verified.
+
+---
+
+## 2026-06-10 — Cast assignment bridges parsed roles to people
+
+**Decision:** `production_roles` (the character list written by the AI parse and
+the setup wizard) was previously write-only — never read or used. It now backs a
+**cast-assignment** UI. Added `production_roles.assigned_user_id` (nullable FK →
+`profiles`, `ON DELETE SET NULL`, applied live via MCP) as the bridge between a
+character and a real org member.
+
+**Semantics:**
+- Casting a person in a character (`assignRoleToMember`) **also grants
+  production access**: in theatre, casting someone means they get the show
+  (script, calls, etc.). A new member is inserted as `cast` with that
+  `characterName`; an **existing** member keeps their current production role
+  (so a director who also acts isn't demoted) and just gains the character.
+- **One actor ↔ one character per production**: re-assigning a person frees the
+  character they previously held in that show.
+- `unassignRole` clears the link + the matching `characterName` but **leaves the
+  membership** — revoking access stays an explicit action on the team list.
+- **Permissions:** casting existing members needs `productions:manage`; inviting
+  a brand-new person inline (`inviteAndAssignRole`, which reuses the People
+  invite flow) needs `settings:manage`, matching the existing invite gate.
+
+**Placement:** a "Cast list" section above the team manager on the Cast & Crew
+page (`/productions/[slug]/members`) — chosen over a separate Casting tab to
+keep all per-show people management in one place.
+
+**Impact:** `production_roles.assignedUserId` in the schema; `getProductionRoles`
+(`features/productions/queries.ts`); `assignRoleToMember`/`unassignRole`/
+`inviteAndAssignRole` (`features/members/actions.ts`); new `cast-list.tsx` wired
+into the members page. `tsc`/`eslint` clean; column verified live. Not yet
+device-verified.
+
+---
+
 ## 2026-06-11 — Scanned-script OCR in the browser (tesseract.js) for text tools
 
 **Context.** A scanned/image-only script has no text layer, so the Script tool's select / copy / find / line-highlighting are dead — and print-to-PDF doesn't help (it re-wraps images, adds no text). The AI parser already OCRs scans *for analysis* via Claude vision, but that returns structured cast/scenes with **no per-word coordinates**, so it can't drive an on-page selectable layer. We needed real OCR with word boxes.

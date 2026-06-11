@@ -8,7 +8,7 @@ import {
   productionMemberships,
   productions,
 } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createOrganization } from "@/lib/organization";
 import { can } from "@/lib/permissions";
@@ -59,7 +59,14 @@ async function resolveActiveMembership(
       organizations,
       eq(organizations.id, organizationMemberships.organizationId),
     )
-    .where(eq(organizationMemberships.userId, userId));
+    .where(
+      and(
+        eq(organizationMemberships.userId, userId),
+        // A soft-deleted workspace is never resolved as the user's active org;
+        // they fall through to another membership (or a fresh org is created).
+        isNull(organizations.deletedAt),
+      ),
+    );
 
   if (memberships.length === 0) return null;
 
@@ -273,12 +280,16 @@ export async function userCanAccessProduction(
   productionId: string,
 ): Promise<boolean> {
   const [prod] = await db
-    .select({ organizationId: productions.organizationId })
+    .select({
+      organizationId: productions.organizationId,
+      deletedAt: productions.deletedAt,
+    })
     .from(productions)
     .where(eq(productions.id, productionId))
     .limit(1);
 
   if (!prod || prod.organizationId !== user.organizationId) return false;
+  if (prod.deletedAt) return false;
 
   if (can(user.role, "productions:manage")) return true;
 

@@ -5,6 +5,12 @@ export const PRODUCTION_COLOR_PALETTE = [
   { token: "amber", label: "Amber", cssVar: "var(--c-amber)" },
   { token: "plum", label: "Plum", cssVar: "var(--c-plum)" },
   { token: "sand", label: "Sand", cssVar: "var(--c-sand)" },
+  { token: "teal", label: "Teal", cssVar: "var(--c-teal)" },
+  { token: "rose", label: "Rose", cssVar: "var(--c-rose)" },
+  { token: "indigo", label: "Indigo", cssVar: "var(--c-indigo)" },
+  { token: "moss", label: "Moss", cssVar: "var(--c-moss)" },
+  { token: "ocean", label: "Ocean", cssVar: "var(--c-ocean)" },
+  { token: "berry", label: "Berry", cssVar: "var(--c-berry)" },
 ] as const;
 
 export type ProductionColorToken =

@@ -39,6 +39,7 @@ import {
   ANNOTATION_COLORS,
   DEFAULT_ANNOTATION_COLOR,
   CUE_STROKE,
+  CUE_COLORS,
   INK_OPACITY,
   inkPathD,
   type Tool,
@@ -165,6 +166,21 @@ export function ScriptViewer({
   const [activeToolState, setActiveTool] = useState<Tool>("pointer");
   const activeTool: Tool = isPhone ? "pointer" : activeToolState;
   const [activeColor, setActiveColor] = useState(DEFAULT_ANNOTATION_COLOR);
+  // The cue colour applied to new cues — sticks until changed, remembered across
+  // sessions. (Lazy init from localStorage; guarded for SSR.)
+  const [cueColor, setCueColorState] = useState<string>(CUE_STROKE);
+  useEffect(() => {
+    const saved = window.localStorage.getItem("sv-cue-color");
+    if (saved) setCueColorState(saved);
+  }, []);
+  function setCueColor(value: string) {
+    setCueColorState(value);
+    try {
+      window.localStorage.setItem("sv-cue-color", value);
+    } catch {
+      /* ignore (private mode / quota) */
+    }
+  }
   const [preferredLeaderSide, setPreferredLeaderSide] = useState<"left" | "right">("right");
 
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
@@ -766,6 +782,7 @@ export function ScriptViewer({
         cueNumber: pendingCueNumber.trim(),
         cueDescription: pendingCueDesc.trim(),
         leaderSide: preferredLeaderSide,
+        color: cueColor,
       });
     }
 
@@ -1004,6 +1021,31 @@ export function ScriptViewer({
               >
                 <AlignRight size={12} />
               </button>
+            </div>
+            <span style={{ fontSize: 9, color: "var(--ink-4)", letterSpacing: ".05em", textTransform: "uppercase", marginTop: 6 }}>
+              Color
+            </span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, justifyItems: "center" }}>
+              {CUE_COLORS.map((c) => (
+                <button
+                  key={c.value}
+                  title={c.label}
+                  onClick={() => setCueColor(c.value)}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: "50%",
+                    border:
+                      cueColor === c.value
+                        ? "2px solid var(--ink)"
+                        : "2px solid transparent",
+                    background: c.value,
+                    cursor: "pointer",
+                    padding: 0,
+                    outline: "none",
+                  }}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -1574,10 +1616,10 @@ export function ScriptViewer({
                   }
                   fill={
                     activeTool === "cue"
-                      ? "rgba(239,68,68,0.1)"
+                      ? `${cueColor}1a`
                       : `${activeColor}55`
                   }
-                  stroke={activeTool === "cue" ? CUE_STROKE : activeColor}
+                  stroke={activeTool === "cue" ? cueColor : activeColor}
                   strokeWidth="1.5"
                   strokeDasharray="5,3"
                   pointerEvents="none"
@@ -2121,14 +2163,15 @@ function drawAnnotationOnCanvas(
     const bottomY = ry + rh;
     const isLeft = ann.leaderSide === "left";
     const lineStartX = isLeft ? rx : rx + rw;
-    const MARGIN_OFFSET = 6;
+    const MARGIN_OFFSET = 14;
     const labelX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
+    const cc = ann.color ?? CUE_STROKE;
 
     ctx.globalAlpha = 0.08;
-    ctx.fillStyle = CUE_STROKE;
+    ctx.fillStyle = cc;
     ctx.fillRect(rx, ry, rw, rh);
     ctx.globalAlpha = 1;
-    ctx.strokeStyle = CUE_STROKE;
+    ctx.strokeStyle = cc;
     ctx.lineWidth = 1.5;
     ctx.strokeRect(rx, ry, rw, rh);
     ctx.beginPath();
@@ -2138,15 +2181,15 @@ function drawAnnotationOnCanvas(
     ctx.stroke();
     ctx.beginPath();
     ctx.arc(labelX, bottomY, 3, 0, Math.PI * 2);
-    ctx.fillStyle = CUE_STROKE;
+    ctx.fillStyle = cc;
     ctx.fill();
-    ctx.fillStyle = CUE_STROKE;
+    ctx.fillStyle = cc;
     ctx.textAlign = isLeft ? "left" : "right";
-    ctx.font = "bold 11px system-ui, sans-serif";
-    ctx.fillText(ann.cueNumber, isLeft ? labelX + 5 : labelX - 5, bottomY - 3);
+    ctx.font = "bold 15px system-ui, sans-serif";
+    ctx.fillText(ann.cueNumber, isLeft ? labelX + 6 : labelX - 6, bottomY - 4);
     if (ann.cueDescription) {
-      ctx.font = "10px system-ui, sans-serif";
-      ctx.fillText(ann.cueDescription, isLeft ? labelX + 5 : labelX - 5, bottomY + 13);
+      ctx.font = "11px system-ui, sans-serif";
+      ctx.fillText(ann.cueDescription, isLeft ? labelX + 6 : labelX - 6, bottomY + 14);
     }
   }
 
@@ -2241,9 +2284,10 @@ function AnnotationShape({
     const bottomY = ry + rh;
     const isLeft = annotation.leaderSide === "left";
     const lineStartX = isLeft ? rx : rx + rw;
-    const MARGIN_OFFSET = 6;
+    const MARGIN_OFFSET = 14;
     const labelX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
     const textAnchor = isLeft ? "start" : "end";
+    const cc = annotation.color ?? CUE_STROKE;
 
     return (
       <g onClick={(e) => { e.stopPropagation(); onClick(); }} style={{ cursor: "pointer" }}>
@@ -2253,8 +2297,9 @@ function AnnotationShape({
           y={ry}
           width={rw}
           height={rh}
-          fill="rgba(239,68,68,0.08)"
-          stroke={CUE_STROKE}
+          fill={cc}
+          fillOpacity={0.08}
+          stroke={cc}
           strokeWidth={selected ? "2" : "1.5"}
         />
         {/* Leader line from bottom edge of box to margin */}
@@ -2263,18 +2308,18 @@ function AnnotationShape({
           y1={bottomY}
           x2={labelX}
           y2={bottomY}
-          stroke={CUE_STROKE}
+          stroke={cc}
           strokeWidth="1"
         />
         {/* End marker */}
-        <circle cx={labelX} cy={bottomY} r="3" fill={CUE_STROKE} />
+        <circle cx={labelX} cy={bottomY} r="3" fill={cc} />
         {/* Cue number */}
         <text
-          x={isLeft ? labelX + 5 : labelX - 5}
-          y={bottomY - 3}
+          x={isLeft ? labelX + 6 : labelX - 6}
+          y={bottomY - 4}
           textAnchor={textAnchor}
-          fontSize="11"
-          fill={CUE_STROKE}
+          fontSize="15"
+          fill={cc}
           fontWeight="700"
           fontFamily="system-ui, sans-serif"
         >
@@ -2283,11 +2328,11 @@ function AnnotationShape({
         {/* Cue description */}
         {annotation.cueDescription && (
           <text
-            x={isLeft ? labelX + 5 : labelX - 5}
-            y={bottomY + 13}
+            x={isLeft ? labelX + 6 : labelX - 6}
+            y={bottomY + 14}
             textAnchor={textAnchor}
-            fontSize="10"
-            fill={CUE_STROKE}
+            fontSize="11"
+            fill={cc}
             fontFamily="system-ui, sans-serif"
           >
             {annotation.cueDescription}
@@ -2631,7 +2676,10 @@ function PanelAnnotationItem({
   const [draftCueDesc, setDraftCueDesc] = useState("");
 
   const canEdit = annotation.type === "note" || annotation.type === "cue";
-  const accentColor = annotation.type === "cue" ? CUE_STROKE : annotation.color;
+  const accentColor =
+    annotation.type === "cue"
+      ? annotation.color ?? CUE_STROKE
+      : annotation.color;
 
   function startEdit(e: React.MouseEvent) {
     e.stopPropagation();
@@ -2742,10 +2790,38 @@ function PanelAnnotationItem({
                 placeholder="Description"
                 style={inputStyle}
               />
+              <div style={{ display: "flex", gap: 5, paddingTop: 2 }}>
+                {CUE_COLORS.map((c) => {
+                  const current = annotation.color ?? CUE_STROKE;
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      title={c.label}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() =>
+                        onEdit({ color: c.value } as Partial<Annotation>)
+                      }
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: "50%",
+                        border:
+                          current === c.value
+                            ? "2px solid var(--ink)"
+                            : "2px solid transparent",
+                        background: c.value,
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    />
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <>
-              <div style={{ fontSize: 12, fontWeight: 700, color: CUE_STROKE }}>{annotation.cueNumber}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: accentColor }}>{annotation.cueNumber}</div>
               {annotation.cueDescription && (
                 <div style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {annotation.cueDescription}

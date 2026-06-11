@@ -7,7 +7,7 @@ import {
   organizations,
   profiles,
 } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
 import { createOrganization } from "@/lib/organization";
 import { can } from "@/lib/permissions";
@@ -154,6 +154,75 @@ export async function transferWorkspaceOwnership(
 
   revalidatePath("/", "layout");
   return { success: true };
+}
+
+/**
+ * Soft-delete the current workspace. Admin-only, and gated behind a
+ * type-the-name confirmation (re-checked here, not just in the UI). Sets
+ * `organizations.deleted_at` so the workspace drops out of the switcher and
+ * is never resolved as anyone's active org — but the row and all its data are
+ * retained for 30 days so support can restore it. No hard delete here; the
+ * eventual purge is a deferred, separately-built step.
+ *
+ * The caller is moved to another workspace they belong to (or, if this was
+ * their only one, left with none — auth then spins up a fresh personal
+ * workspace on their next request).
+ */
+export async function deleteWorkspace(
+  confirmName: string,
+): Promise<WorkspaceActionResult & { nextOrganizationId?: string | null }> {
+  const user = await requireCurrentUser();
+
+  if (!can(user.role, "settings:manage")) {
+    return { error: "Only workspace admins can delete this workspace." };
+  }
+
+  const [org] = await db
+    .select({ name: organizations.name, deletedAt: organizations.deletedAt })
+    .from(organizations)
+    .where(eq(organizations.id, user.organizationId))
+    .limit(1);
+
+  if (!org || org.deletedAt) {
+    return { error: "Workspace not found." };
+  }
+  if ((confirmName || "").trim() !== org.name) {
+    return { error: "The name you typed doesn't match the workspace name." };
+  }
+
+  // Pick another live workspace to drop the caller into after deletion.
+  const [nextMembership] = await db
+    .select({ organizationId: organizationMemberships.organizationId })
+    .from(organizationMemberships)
+    .innerJoin(
+      organizations,
+      eq(organizations.id, organizationMemberships.organizationId),
+    )
+    .where(
+      and(
+        eq(organizationMemberships.userId, user.id),
+        ne(organizationMemberships.organizationId, user.organizationId),
+        isNull(organizations.deletedAt),
+      ),
+    )
+    .limit(1);
+
+  const nextOrgId = nextMembership?.organizationId ?? null;
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(organizations)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(organizations.id, user.organizationId));
+
+    await tx
+      .update(profiles)
+      .set({ selectedOrganizationId: nextOrgId, updatedAt: new Date() })
+      .where(eq(profiles.id, user.id));
+  });
+
+  revalidatePath("/", "layout");
+  return { success: true, nextOrganizationId: nextOrgId };
 }
 
 const LOGO_ALLOWED_TYPES = ["image/svg+xml", "image/png", "image/jpeg"];
