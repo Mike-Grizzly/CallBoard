@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type AuthResult = {
@@ -15,6 +16,26 @@ const OAUTH_PROVIDERS = ["google"] as const;
 type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
 
 /**
+ * The origin of the site the user is actually on (localhost, a Vercel preview,
+ * or production). We use this for the OAuth `redirectTo` instead of a fixed
+ * NEXT_PUBLIC_SITE_URL so the provider sends the user back to the SAME domain
+ * they started on — otherwise the PKCE code-verifier cookie (set on this
+ * domain) won't be present when the callback runs on a different one, and the
+ * session exchange fails. Falls back to the configured site URL.
+ */
+async function requestOrigin(): Promise<string> {
+  const h = await headers();
+  const origin = h.get("origin");
+  if (origin) return origin;
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  if (host) {
+    const proto = h.get("x-forwarded-proto") ?? "https";
+    return `${proto}://${host}`;
+  }
+  return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+}
+
+/**
  * Starts an OAuth sign-in/sign-up. Submitted from a plain <form> on the
  * login/signup pages with the chosen provider as a hidden field.
  *
@@ -26,7 +47,10 @@ type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
  * exactly like an email/password signup.
  *
  * Requires the Google/Apple providers to be enabled in the Supabase
- * dashboard (Authentication → Providers).
+ * dashboard (Authentication → Providers), and the `<origin>/auth/callback`
+ * URL to be allow-listed under Authentication → URL Configuration → Redirect
+ * URLs (Supabase falls back to the Site URL — i.e. the homepage — for any
+ * redirect target that isn't allow-listed).
  */
 export async function signInWithOAuth(formData: FormData): Promise<void> {
   const provider = formData.get("provider") as string;
@@ -35,12 +59,12 @@ export async function signInWithOAuth(formData: FormData): Promise<void> {
   }
 
   const supabase = await createSupabaseServerClient();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const origin = await requestOrigin();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: provider as OAuthProvider,
     options: {
-      redirectTo: `${siteUrl}/auth/callback?next=/dashboard`,
+      redirectTo: `${origin}/auth/callback?next=/dashboard`,
     },
   });
 

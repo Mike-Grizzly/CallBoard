@@ -37,7 +37,11 @@ As a theatre company member, I can create an account, log in, reset my password,
 - `signInWithOAuth()` server action (`app/actions/auth.ts`) asks Supabase for
   the provider's authorization URL and redirects the browser to it. The
   provider returns the user to `/auth/callback`, which already exchanges the
-  PKCE code for a session — no callback changes were needed.
+  PKCE code for a session — no callback changes were needed. The `redirectTo`
+  origin is derived from the **request headers** (`requestOrigin()`), not a
+  fixed `NEXT_PUBLIC_SITE_URL`, so the provider returns the user to the same
+  domain they started on (localhost / Vercel preview / production) — required
+  because the PKCE code-verifier cookie is domain-scoped.
 - `components/auth/oauth-buttons.tsx` renders the Google button on both
   `/login` and `/signup` (Supabase resolves an existing user to a sign-in and
   a new one to a signup, so the same button serves both).
@@ -52,9 +56,13 @@ As a theatre company member, I can create an account, log in, reset my password,
 - **Dashboard setup required (one-time):** In Supabase → Authentication →
   Providers, enable Google and supply the Google OAuth client ID/secret. Add
   `https://avqgfzrcwegebtbvmcwo.supabase.co/auth/v1/callback` as an authorized
-  redirect URI in the Google Cloud Console, and ensure the app's
-  `${NEXT_PUBLIC_SITE_URL}/auth/callback` is in Supabase's allowed redirect
-  URLs.
+  redirect URI in the Google Cloud Console. In Supabase → Authentication → URL
+  Configuration, add every origin's `/auth/callback` to **Redirect URLs**
+  (`http://localhost:3000/auth/callback`, the production callback, and a
+  preview wildcard like `https://*.vercel.app/auth/callback`). **This is
+  mandatory:** Supabase silently falls back to the **Site URL** (the homepage)
+  for any `redirectTo` that isn't allow-listed — the symptom is "OAuth lands on
+  the homepage instead of /dashboard".
 
 ## Server actions (`app/actions/auth.ts`)
 - `login()` — email/password sign in
