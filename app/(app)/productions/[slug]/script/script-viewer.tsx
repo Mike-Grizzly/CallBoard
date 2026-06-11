@@ -2523,14 +2523,17 @@ function compareCuePosition(a: CueAnn, b: CueAnn): number {
 }
 
 // Cue-label stacking. When several cue labels land in the same margin at
-// similar heights they overlap and become unreadable. We push the lower ones
-// further down so each (number + optional note) is clear; the leader then runs
-// horizontally out to the margin and drops at a 90° angle to the label, never
-// cutting diagonally across the script. Computed in the target surface's own
-// pixel space (screen SVG vs. 2× export canvas), so callers pass their canvasH.
-const CUE_LABEL_NUMBER_UP = 18; // number baseline sits this far above its anchor
-const CUE_LABEL_DESC_DOWN = 18; // description sits this far below it
-const CUE_LABEL_PAD = 5;
+// similar heights they overlap and their leaders cut across one another. We
+// push the lower ones down so each (number + optional note) is clear with a
+// generous gap — enough that a cue whose leader passes between two others (e.g.
+// a left-column cue sandwiched between two right-column cues in a two-column
+// script) has clean space rather than cutting through them. The leader then
+// runs horizontally out to the margin and drops at a 90° angle to the label,
+// never diagonally. Computed in the target surface's own pixel space (screen
+// SVG vs. 2× export canvas), so callers pass their canvasH.
+const CUE_LABEL_NUMBER_UP = 22; // number baseline sits this far above its anchor
+const CUE_LABEL_DESC_DOWN = 20; // description sits this far below it
+const CUE_LABEL_PAD = 14; // clear whitespace kept between stacked labels
 
 function stackCueLabels(
   cues: {
