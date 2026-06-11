@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proscene — Icon &amp; Favicon Pack</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Newsreader:ital,wght@0,500;1,400&display=swap">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--ink:#15181F;--ink2:#20252F;--gold:#E0A23A;--paper:#F5F2EA;--muted:#8A92A0;--line:#2B313C}
+  body{background:var(--ink);color:var(--paper);font-family:"Geist",system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;padding:56px 40px 80px}
+  .wrap{max-width:1080px;margin:0 auto}
+  .eyebrow{font-family:"Geist Mono",monospace;font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold)}
+  h1{font-family:"Newsreader",serif;font-weight:500;font-size:42px;letter-spacing:-.01em;margin:10px 0 8px}
+  .lede{color:var(--muted);font-size:15px;max-width:560px}
+  h2{font-family:"Geist Mono",monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:54px 0 20px;padding-bottom:12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline}
+  h2 em{font-style:normal;color:var(--gold);font-size:11px}
+  .grid{display:flex;flex-wrap:wrap;gap:30px;align-items:flex-end}
+  .item{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .item img{display:block;border-radius:0}
+  .cap{font-family:"Geist Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:center}
+  .cap b{display:block;color:var(--paper);font-weight:500;letter-spacing:.04em;margin-bottom:2px}
+  .tab{display:flex;align-items:center;gap:9px;background:var(--ink2);border:1px solid var(--line);border-radius:9px 9px 0 0;padding:9px 14px;width:230px}
+  .tab .dots{display:flex;gap:5px}.tab .dots i{width:9px;height:9px;border-radius:50%;background:#3a414d;display:block}
+  .tab img{width:16px;height:16px}
+  .tab span{font-size:12.5px;color:var(--paper)}
+  .files{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  .file{display:flex;align-items:center;gap:11px;background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+  .file img{width:30px;height:30px;border-radius:6px}
+  .file .fn{font-family:"Geist Mono",monospace;font-size:12px;color:var(--paper)}
+  .file .fm{font-size:11px;color:var(--muted)}
+  pre{background:#0E1116;border:1px solid var(--line);border-radius:12px;padding:20px 22px;overflow:auto;font-family:"Geist Mono",monospace;font-size:12.5px;line-height:1.7;color:#C9D2DE}
+  pre .t{color:#6E7686}.pre .a{color:var(--gold)}
+  code .k{color:var(--gold)}
+  .note{color:var(--muted);font-size:13px;margin-top:14px}
+  .swatches{display:flex;gap:10px;flex-wrap:wrap}
+  .sw{font-family:"Geist Mono",monospace;font-size:10.5px;border-radius:8px;padding:14px 16px;min-width:120px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Proscene · Brand</div>
+  <h1>Icon &amp; Favicon Pack</h1>
+  <p class="lede">Every file below is a real, exported asset — drop the whole folder at your web root and paste the snippet into your <code>&lt;head&gt;</code>.</p>
+
+  <h2>App icons <em>rounded · gold mark on ink</em></h2>
+  <div class="grid">
+    <div class="item"><img src="icon-1024.png" width="120" height="120" alt="1024"><div class="cap"><b>icon-1024</b>App Store · master</div></div>
+    <div class="item"><img src="icon-512.png" width="96" height="96" alt="512"><div class="cap"><b>icon-512</b>PWA · any</div></div>
+    <div class="item"><img src="icon-192.png" width="72" height="72" alt="192"><div class="cap"><b>icon-192</b>PWA · any</div></div>
+    <div class="item"><img src="apple-touch-icon.png" width="64" height="64" alt="apple" style="border-radius:14px"><div class="cap"><b>apple-touch</b>180 · full-bleed</div></div>
+    <div class="item"><img src="icon-512-maskable.png" width="64" height="64" alt="maskable" style="border-radius:14px"><div class="cap"><b>maskable</b>512 · safe-zone</div></div>
+  </div>
+
+  <h2>Favicons <em>16 / 32 / 48 + .ico + .svg</em></h2>
+  <div class="grid" style="align-items:flex-end">
+    <div class="item">
+      <div class="tab"><div class="dots"><i></i><i></i><i></i></div><img src="favicon-16.png" alt="tab"><span>Proscene</span></div>
+      <div class="cap">In a browser tab · 16px</div>
+    </div>
+    <div class="item"><img src="favicon-48.png" width="48" height="48" alt="48"><div class="cap"><b>48</b></div></div>
+    <div class="item"><img src="favicon-32.png" width="32" height="32" alt="32"><div class="cap"><b>32</b></div></div>
+    <div class="item"><img src="favicon-16.png" width="16" height="16" alt="16"><div class="cap"><b>16</b></div></div>
+  </div>
+
+  <h2>The snippet <em>paste into &lt;head&gt;</em></h2>
+  <pre><span class="t">&lt;!-- Proscene icons --&gt;</span>
+&lt;link rel="icon" href="<span style="color:#E0A23A">/favicon.ico</span>" sizes="any"&gt;
+&lt;link rel="icon" href="<span style="color:#E0A23A">/favicon.svg</span>" type="image/svg+xml"&gt;
+&lt;link rel="apple-touch-icon" href="<span style="color:#E0A23A">/apple-touch-icon.png</span>"&gt;
+&lt;link rel="manifest" href="<span style="color:#E0A23A">/site.webmanifest</span>"&gt;</pre>
+  <p class="note">SVG favicon for modern browsers, <code>.ico</code> (16/32/48) for legacy, apple-touch for iOS home screens, and the manifest wires the 192 / 512 / maskable PWA icons.</p>
+
+  <h2>What's in the folder</h2>
+  <div class="files">
+    <div class="file"><img src="icon.svg" alt=""><div><div class="fn">icon.svg</div><div class="fm">Scalable master</div></div></div>
+    <div class="file"><img src="favicon.svg" alt=""><div><div class="fn">favicon.svg</div><div class="fm">Scalable favicon</div></div></div>
+    <div class="file"><img src="favicon-32.png" alt=""><div><div class="fn">favicon.ico</div><div class="fm">16 · 32 · 48</div></div></div>
+    <div class="file"><img src="icon-512.png" alt=""><div><div class="fn">icon-192/512.png</div><div class="fm">PWA · purpose any</div></div></div>
+    <div class="file"><img src="icon-512-maskable.png" alt=""><div><div class="fn">icon-512-maskable</div><div class="fm">Android maskable</div></div></div>
+    <div class="file"><img src="apple-touch-icon.png" alt=""><div><div class="fn">apple-touch-icon</div><div class="fm">180 · iOS</div></div></div>
+    <div class="file"><img src="icon-1024.png" alt=""><div><div class="fn">icon-1024.png</div><div class="fm">App Store</div></div></div>
+    <div class="file"><img src="favicon-48.png" alt=""><div><div class="fn">site.webmanifest</div><div class="fm">PWA manifest</div></div></div>
+  </div>
+
+  <h2>Colors used</h2>
+  <div class="swatches">
+    <div class="sw" style="background:#15181F;color:#F5F2EA;border:1px solid #2B313C">Ink · #15181F</div>
+    <div class="sw" style="background:#222834;color:#F5F2EA">Ink Soft · #222834</div>
+    <div class="sw" style="background:#E0A23A;color:#15181F">Spotlight · #E0A23A</div>
+  </div>
+</div>
+</body>
+</html>
