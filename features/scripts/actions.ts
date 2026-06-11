@@ -751,7 +751,7 @@ export async function requestWizardScriptUpload(
     return { error: "Upload a PDF script." };
   }
   if (!fileName || fileSize <= 0) return { error: "Please choose a file." };
-  if (fileSize > 25 * 1024 * 1024) return { error: "File must be under 25MB." };
+  if (fileSize > 64 * 1024 * 1024) return { error: "File must be under 64MB." };
 
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storagePath = `wizard-scripts/${user.id}/${Date.now()}-${safeName}`;

@@ -202,7 +202,7 @@ export function DocumentUploadForm({
               marginBottom: 4,
             }}
           >
-            File (max 25MB)
+            File (max 64MB)
           </label>
           <input
             type="file"

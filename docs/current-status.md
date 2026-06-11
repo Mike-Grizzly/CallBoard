@@ -138,10 +138,10 @@
 ### Step 7: File Uploads — IMPLEMENTED
 - Supabase Storage integration using `attachments` bucket
 - Used by both report attachments (Step 5) and document center (Step 6)
-- Server action body size limit increased to 25MB in next.config.ts
+- Server action body size limit increased to 64MB in next.config.ts
 - Storage RLS policies: authenticated users can insert/select/delete
 - Signed URLs generated server-side with 1-hour expiry
-- File size validation: 25MB for documents, 10MB for report attachments
+- File size validation: 64MB for documents, 10MB for report attachments
 
 ### Step 8: Announcements — IMPLEMENTED
 - `announcements` table: org-scoped with optional `production_id` (null = org-wide)

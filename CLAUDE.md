@@ -35,7 +35,7 @@ Summarize your understanding and planned file changes before editing.
 5. **`params` is a Promise** in Next.js 16 pages — must be awaited
 6. **Constants must NOT be exported from `"use server"` files** — causes hydration errors. Use separate `constants.ts`
 7. **Supabase Storage** uses anon key client (not service role) — RLS policies required on bucket
-8. **`experimental.serverActions.bodySizeLimit: "25mb"`** in next.config.ts — required for file uploads
+8. **`experimental.serverActions.bodySizeLimit: "64mb"`** in next.config.ts — required for file uploads
 
 ## Known issues to not re-introduce
 
