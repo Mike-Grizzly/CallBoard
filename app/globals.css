@@ -1110,6 +1110,58 @@ textarea.field {
   background: var(--bg-muted);
   border-bottom: 1px solid var(--border);
 }
+.sv-cuesheet-section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Bookmarks panel scenes/songs toggle */
+.sv-bm-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  margin-bottom: 8px;
+  background: var(--bg-sunken);
+  border-radius: 7px;
+}
+.sv-bm-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 6px;
+  border: none;
+  background: none;
+  border-radius: 5px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-4);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.sv-bm-tab:hover {
+  color: var(--ink-2);
+}
+.sv-bm-tab.active {
+  background: var(--bg-elev);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+.sv-bm-tab-count {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  color: var(--ink-3);
+}
+.sv-bm-tab.active .sv-bm-tab-count {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
 .sv-cuesheet-row td {
   padding: 2px 8px;
   border-bottom: 1px solid var(--border-subtle, var(--border));

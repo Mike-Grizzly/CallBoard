@@ -33,6 +33,8 @@ import {
   Maximize2,
   Sparkles,
   ScanText,
+  Music,
+  Clapperboard,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -151,27 +153,80 @@ export function ScriptViewer({
 
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [zoomIndex, setZoomIndex] = useState(1); // index into ZOOM_STEPS; 1 = 100%
-  const [zoomMode, setZoomMode] = useState<"step" | "fit">("step");
+  // Default to fitting the whole page in the available height, so a script
+  // page presents complete (no scroll) until the user zooms in.
+  const [zoomMode, setZoomMode] = useState<"step" | "fit">("fit");
   const [readMode, setReadMode] = useState(false);
 
   // Page-jump input (the "n / total" becomes editable on focus).
   const [pageInput, setPageInput] = useState("");
   const [pageInputFocused, setPageInputFocused] = useState(false);
 
-  // Intrinsic page width (points) + workspace width drive "fit width".
-  const [pageWidthPts, setPageWidthPts] = useState(0);
-  const [workspaceW, setWorkspaceW] = useState(0);
+  // Phones present the script view-only (see the tool note below); also gates
+  // the render scale, so declared here before "fit page" math uses it.
+  const isPhone = useIsPhone();
 
+  // Intrinsic page size (points) + workspace size drive "fit whole page".
+  const [pageWidthPts, setPageWidthPts] = useState(0);
+  const [pageHeightPts, setPageHeightPts] = useState(0);
+  const [workspaceW, setWorkspaceW] = useState(0);
+  const [workspaceH, setWorkspaceH] = useState(0);
+
+  // "Fit" = contain the whole page in the workspace box (limited by width OR
+  // height, whichever is tighter), accounting for the workspace padding.
   const fitScale =
-    zoomMode === "fit" && pageWidthPts > 0 && workspaceW > 0
-      ? Math.min(4, Math.max(0.4, (workspaceW - 48) / pageWidthPts))
+    pageWidthPts > 0 && workspaceW > 0
+      ? Math.min(
+          4,
+          Math.max(
+            0.4,
+            Math.min(
+              (workspaceW - 64) / pageWidthPts,
+              workspaceH > 0 && pageHeightPts > 0
+                ? (workspaceH - 56) / pageHeightPts
+                : Infinity,
+            ),
+          ),
+        )
       : null;
-  const renderScale = fitScale ?? BASE_RENDER_SCALE * ZOOM_STEPS[zoomIndex];
+  // On phones the canvas is CSS-stretched to the column width regardless of
+  // scale, so render at a fixed high scale for sharpness; "fit page" is a
+  // desktop concern (it shapes the actual displayed size there).
+  const renderScale = isPhone
+    ? BASE_RENDER_SCALE
+    : zoomMode === "fit" && fitScale
+      ? fitScale
+      : BASE_RENDER_SCALE * ZOOM_STEPS[zoomIndex];
+
+  // Zoom in/out, transitioning cleanly to/from the whole-page "fit" baseline.
+  function zoomIn() {
+    if (zoomMode === "fit") {
+      const fit = fitScale ?? 0;
+      let idx = ZOOM_STEPS.findIndex((z) => z * BASE_RENDER_SCALE > fit + 1e-3);
+      if (idx === -1) idx = ZOOM_STEPS.length - 1;
+      setZoomIndex(idx);
+      setZoomMode("step");
+    } else {
+      setZoomIndex((i) => Math.min(ZOOM_STEPS.length - 1, i + 1));
+    }
+  }
+  function zoomOut() {
+    if (zoomMode === "fit") return; // already showing the whole page
+    const nextIdx = zoomIndex - 1;
+    // Zooming out past the whole-page scale snaps back to fit.
+    if (
+      nextIdx < 0 ||
+      (fitScale !== null && BASE_RENDER_SCALE * ZOOM_STEPS[nextIdx] <= fitScale)
+    ) {
+      setZoomMode("fit");
+    } else {
+      setZoomIndex(nextIdx);
+    }
+  }
 
   // The annotation tools are mouse-built (drag to draw) — on phones the
   // script is presented view-only: the tool is locked to "pointer" so the
   // canvas only pans, and the drawing tools / edit controls are hidden.
-  const isPhone = useIsPhone();
   const [activeToolState, setActiveTool] = useState<Tool>("pointer");
   const activeTool: Tool = isPhone ? "pointer" : activeToolState;
   const [activeColor, setActiveColor] = useState(DEFAULT_ANNOTATION_COLOR);
@@ -450,13 +505,17 @@ export function ScriptViewer({
     el.appendChild(frag);
   }, [ocr.status, ocr.pages, currentPage, canvasSize]);
 
-  // ── Intrinsic page width (for "fit width") ──────────────────────────────────
+  // ── Intrinsic page size (for "fit whole page") ──────────────────────────────
   useEffect(() => {
     let active = true;
     loadPdfDocument(pdfUrl)
       .then(async (pdf) => {
         const page = await pdf.getPage(1);
-        if (active) setPageWidthPts(page.getViewport({ scale: 1 }).width);
+        if (active) {
+          const vp = page.getViewport({ scale: 1 });
+          setPageWidthPts(vp.width);
+          setPageHeightPts(vp.height);
+        }
       })
       .catch(() => {});
     return () => {
@@ -468,7 +527,10 @@ export function ScriptViewer({
   useEffect(() => {
     const el = workspaceRef.current;
     if (!el) return;
-    const measure = () => setWorkspaceW(el.clientWidth);
+    const measure = () => {
+      setWorkspaceW(el.clientWidth);
+      setWorkspaceH(el.clientHeight);
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -1392,7 +1454,7 @@ export function ScriptViewer({
             <button
               className="btn ghost btn-icon"
               onClick={() => setZoomMode((m) => (m === "fit" ? "step" : "fit"))}
-              title="Fit page width"
+              title="Fit whole page"
               aria-pressed={zoomMode === "fit"}
               style={{
                 width: 28,
@@ -1406,11 +1468,8 @@ export function ScriptViewer({
             <div style={{ display: "flex", alignItems: "center", gap: 0, border: "1px solid var(--border)", borderRadius: 5, overflow: "hidden" }}>
               <button
                 className="btn ghost btn-icon"
-                onClick={() => {
-                  setZoomMode("step");
-                  setZoomIndex((i) => Math.max(0, i - 1));
-                }}
-                disabled={zoomMode === "step" && zoomIndex === 0}
+                onClick={zoomOut}
+                disabled={zoomMode === "fit"}
                 title="Zoom out"
                 style={{ width: 28, height: 28, borderRadius: 0, borderRight: "1px solid var(--border)" }}
               >
@@ -1421,10 +1480,7 @@ export function ScriptViewer({
               </span>
               <button
                 className="btn ghost btn-icon"
-                onClick={() => {
-                  setZoomMode("step");
-                  setZoomIndex((i) => Math.min(ZOOM_STEPS.length - 1, i + 1));
-                }}
+                onClick={zoomIn}
                 disabled={zoomMode === "step" && zoomIndex === ZOOM_STEPS.length - 1}
                 title="Zoom in"
                 style={{ width: 28, height: 28, borderRadius: 0, borderLeft: "1px solid var(--border)" }}
@@ -2242,10 +2298,15 @@ function stackCueLabels(
     id: string;
     rect: AnnotationRect;
     leaderSide: "left" | "right";
+    cueNumber: string;
     cueDescription: string;
   }[],
   canvasH: number,
 ): Map<string, number> {
+  // Roughly one text line of tolerance: cues this close vertically are treated
+  // as the "same line" and ordered by cue number rather than pixel position, so
+  // a cue 2 and cue 4 on one line stack 2-above-4 instead of by draw order.
+  const LINE_BUCKET = 14;
   const out = new Map<string, number>();
   for (const side of ["left", "right"] as const) {
     const group = cues
@@ -2253,9 +2314,18 @@ function stackCueLabels(
       .map((c) => ({
         id: c.id,
         y: (c.rect.y + c.rect.height) * canvasH,
+        cueNumber: c.cueNumber,
         hasDesc: c.cueDescription.trim().length > 0,
       }))
-      .sort((a, b) => a.y - b.y);
+      .sort((a, b) => {
+        const ba = Math.round(a.y / LINE_BUCKET);
+        const bb = Math.round(b.y / LINE_BUCKET);
+        if (ba !== bb) return ba - bb;
+        return a.cueNumber.localeCompare(b.cueNumber, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+      });
     let prevBottom = -Infinity;
     for (const item of group) {
       const y = Math.max(item.y, prevBottom + CUE_LABEL_NUMBER_UP + CUE_LABEL_PAD);
@@ -2269,39 +2339,49 @@ function stackCueLabels(
 // ── Cue sheet (CSV export + spreadsheet view) ───────────────────────────────
 
 type CueAnn = Extract<Annotation, { type: "cue" }>;
-type CueSheetSection = { label: string; rows: CueAnn[] };
+type CueSheetSection = {
+  label: string;
+  kind?: "scene" | "song";
+  rows: CueAnn[];
+};
 
 /**
- * Group every cue into ordered sections by the scene it falls under. Section
- * anchors are the non-song bookmarks (the AI/parsed scene breakdown plus any
- * hand-added markers), matched by page; cues before the first marker land in
- * "Top of show". Cues are ordered by page, then vertical position on the page.
+ * Group every cue into ordered sections by the bookmark it falls under — scenes
+ * AND songs, so a number like "#3 Our Prayer" gets its own section. Anchors are
+ * matched in document reading order (page, then the order bookmarks were
+ * detected), so a cue takes the most recent scene/song that starts before it.
+ * Cues before the first bookmark land in "Top of show".
+ *
+ * Note: bookmarks only carry a page, not a within-page position, so when a
+ * scene and a song share one page every cue on that page is filed under
+ * whichever was detected later (usually the song). Precise "between the scene
+ * and the song" ordering would need positional data we don't store yet.
  */
 function buildCueSheetSections(
   cues: CueAnn[],
   bookmarks: Bookmark[],
 ): CueSheetSection[] {
-  const marks = bookmarks
-    .filter((b) => b.kind !== "song")
-    .slice()
-    .sort((a, b) => a.page - b.page);
-  const labelFor = (page: number): string => {
-    let label = "Top of show";
+  // Stable sort by page keeps same-page bookmarks in detection (reading) order.
+  const marks = bookmarks.slice().sort((a, b) => a.page - b.page);
+  const anchorFor = (page: number): { label: string; kind?: "scene" | "song" } => {
+    let anchor: Bookmark | null = null;
     for (const m of marks) {
-      if (m.page <= page) label = m.title.trim() || label;
+      if (m.page <= page) anchor = m;
       else break;
     }
-    return label;
+    return anchor
+      ? { label: anchor.title.trim() || "Untitled", kind: anchor.kind }
+      : { label: "Top of show" };
   };
   const sorted = cues
     .slice()
     .sort((a, b) => (a.page !== b.page ? a.page - b.page : a.rect.y - b.rect.y));
   const sections: CueSheetSection[] = [];
   for (const cue of sorted) {
-    const label = labelFor(cue.page);
+    const a = anchorFor(cue.page);
     let section = sections[sections.length - 1];
-    if (!section || section.label !== label) {
-      section = { label, rows: [] };
+    if (!section || section.label !== a.label || section.kind !== a.kind) {
+      section = { label: a.label, kind: a.kind, rows: [] };
       sections.push(section);
     }
     section.rows.push(cue);
@@ -2401,7 +2481,16 @@ function CueSheetView({
               {sections.map((section) => (
                 <Fragment key={`${section.label}-${section.rows[0]?.id}`}>
                   <tr className="sv-cuesheet-section">
-                    <td colSpan={readOnly ? 3 : 4}>{section.label}</td>
+                    <td colSpan={readOnly ? 3 : 4}>
+                      <span className="sv-cuesheet-section-label">
+                        {section.kind === "song" ? (
+                          <Music size={12} />
+                        ) : section.kind === "scene" ? (
+                          <Clapperboard size={12} />
+                        ) : null}
+                        {section.label}
+                      </span>
+                    </td>
                   </tr>
                   {section.rows.map((cue) => (
                     <CueSheetRow
@@ -2767,14 +2856,21 @@ function BookmarksPanel({
 }) {
   const sorted = [...bookmarks].sort((a, b) => a.page - b.page);
   const [query, setQuery] = useState("");
+  // Scenes vs. songs view. Hand-added bookmarks (no kind) group with scenes.
+  const [tab, setTab] = useState<"scenes" | "songs">("scenes");
+  const sceneCount = sorted.filter((b) => b.kind !== "song").length;
+  const songCount = sorted.filter((b) => b.kind === "song").length;
+  const tabbed = sorted.filter((b) =>
+    tab === "songs" ? b.kind === "song" : b.kind !== "song",
+  );
   const q = query.trim().toLowerCase();
   const filtered = q
-    ? sorted.filter((b) =>
+    ? tabbed.filter((b) =>
         /^\d+$/.test(q)
           ? String(b.page).includes(q)
           : b.title.toLowerCase().includes(q),
       )
-    : sorted;
+    : tabbed;
 
   return (
     <div style={{ marginBottom: 16 }}>
@@ -2808,6 +2904,31 @@ function BookmarksPanel({
         )}
       </div>
 
+      {bookmarks.length > 0 && (
+        <div className="sv-bm-tabs">
+          <button
+            type="button"
+            className={tab === "scenes" ? "sv-bm-tab active" : "sv-bm-tab"}
+            onClick={() => setTab("scenes")}
+            aria-pressed={tab === "scenes"}
+          >
+            <Clapperboard size={12} />
+            Scenes
+            <span className="sv-bm-tab-count">{sceneCount}</span>
+          </button>
+          <button
+            type="button"
+            className={tab === "songs" ? "sv-bm-tab active" : "sv-bm-tab"}
+            onClick={() => setTab("songs")}
+            aria-pressed={tab === "songs"}
+          >
+            <Music size={12} />
+            Songs
+            <span className="sv-bm-tab-count">{songCount}</span>
+          </button>
+        </div>
+      )}
+
       {bookmarks.length > 3 && (
         <input
           value={query}
@@ -2832,6 +2953,10 @@ function BookmarksPanel({
       {sorted.length === 0 ? (
         <p style={{ fontSize: 12, color: "var(--ink-4)", padding: "4px 2px 12px" }}>
           No bookmarks yet.
+        </p>
+      ) : tabbed.length === 0 ? (
+        <p style={{ fontSize: 12, color: "var(--ink-4)", padding: "4px 2px 12px" }}>
+          No {tab === "songs" ? "songs" : "scenes"} yet.
         </p>
       ) : filtered.length === 0 ? (
         <p style={{ fontSize: 12, color: "var(--ink-4)", padding: "4px 2px 12px" }}>
