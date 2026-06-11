@@ -4,27 +4,31 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
-## Script tool: blank-page render for some valid PDFs (reported 2026-06-10 — PINNED, awaiting file)
+## Script tool: text not rendering for some valid PDFs (reported 2026-06-10 — ROOT-CAUSED + FIXED 2026-06-11, pending live verify)
 
-- **Symptom:** A tester's uploaded script showed the correct page count and the
-  page-shaped white rectangles in the **Script tool**, but the pages were blank
-  (no content). The *same file* displayed fine in the **Documents** PDF viewer.
-- **Root cause (narrowed):** The two viewers render differently. Documents uses
-  `<iframe src={url}>` → the browser's native PDF engine (PDFium), which is
-  tolerant. The Script tool uses the `pdfjs-dist` *library* drawing to `<canvas>`
-  (`lib/pdf.ts` → `loadPdfDocument`, rendered in `script-viewer.tsx` /
-  `mobile-script-reader.tsx`). For this file, `page.render()` resolves but paints
-  nothing. The blocking tool uses the same pdf.js pipeline and works, so the
-  worker setup is sound globally — this is file-specific.
-- **Likely culprits (unconfirmed without the file):** content on an optional-
-  content layer (OCG) pdf.js treats as hidden-by-default; content only in a
-  form/annotation layer not painted to the page canvas; or an image codec pdf.js
-  can't decode.
-- **Status:** Holding for the actual PDF (tester is sending it). Candidate fixes
-  once reproduced: (a) detect a blank render and fall back to the native iframe
-  engine, and/or (b) force all OCG layers visible before render. Note: pdf.js
-  render *rejections* leave the viewer stuck on "Loading script…", not blank — so
-  blank specifically means render resolved with no paint.
+- **Symptom:** In the **Script tool**, a tester's script rendered images (e.g. the
+  show logo on p.1) but the **text was missing**, while the *same file* read fine
+  in the **Documents** PDF viewer. (Earlier described as a fully "blank" page; the
+  sharper report — images present, text absent — was the key clue.)
+- **Root cause (confirmed in code):** `lib/pdf.ts` called `getDocument(url)` with
+  **no font configuration**. `pdfjs-dist` only renders **non-embedded** fonts
+  (Helvetica/Times/Arial — referenced-but-not-embedded, very common in scripts) if
+  `standardFontDataUrl` (and `cMapUrl`/`cMapPacked` for CID fonts) point at its
+  shipped asset folders. Without them pdfjs draws images but silently skips that
+  text. The Documents tab uses `<iframe>` → the browser's native PDF engine
+  (PDFium), which has its own fonts, so it rendered the text — explaining the
+  Documents-vs-Script discrepancy exactly.
+- **Fix:** `scripts/copy-pdfjs-assets.mjs` copies pdfjs-dist's `cmaps/` +
+  `standard_fonts/` into `public/pdfjs/` (run before `dev`/`build`; `public/pdfjs/`
+  gitignored), and `lib/pdf.ts` now passes `cMapUrl` / `cMapPacked` /
+  `standardFontDataUrl`. Covers every `loadPdfDocument` caller (script viewer,
+  mobile reader, blocking canvas); the blocking **setup wizard** was also routed
+  through `loadPdfDocument` instead of its own bare `getDocument`.
+- **Status:** Fix pushed on `claude/wonderful-newton-vo7sog` (PR #32). Needs live
+  verification on the tester's file via the preview deploy — confirm the script
+  text now renders in the Script tool. If text *still* misses after this, the
+  remaining suspects are optional-content (OCG) layers hidden-by-default or an
+  image-codec issue; fallback option is detect-blank-and-use-native-iframe.
 
 ## AI Script Analysis (Feature 19, Phase 1 — added 2026-06-09)
 

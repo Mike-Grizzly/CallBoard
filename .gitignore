@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# generated at build by scripts/copy-pdfjs-assets.mjs
+/public/pdfjs/
+
 # production
 /build
 
