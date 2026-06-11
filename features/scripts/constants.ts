@@ -54,6 +54,11 @@ export type CueAnnotation = {
   // Script text captured from under the cue's box at draw time (the "line" the
   // cue is called on). Absent on cues made before this was added.
   line?: string;
+  // How the cue is anchored on the page: a drawn "box" around words/lines
+  // (default) or a "pipe" — a single vertical line dropped between words / at a
+  // line end. For pipes, `rect` is zero-width at the pipe's x over its line,
+  // and `line` carries the surrounding words with "*" marking the pipe.
+  marker?: "box" | "pipe";
 };
 
 /**

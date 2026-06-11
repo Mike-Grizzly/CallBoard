@@ -35,6 +35,7 @@ import {
   ScanText,
   Music,
   Clapperboard,
+  Square,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -110,7 +111,7 @@ interface Props {
 
 type PendingAnnotation =
   | { type: "note"; rect: AnnotationRect; page: number }
-  | { type: "cue"; rect: AnnotationRect; page: number };
+  | { type: "cue"; rect: AnnotationRect; page: number; marker: "box" | "pipe" };
 
 export function ScriptViewer({
   script,
@@ -246,6 +247,9 @@ export function ScriptViewer({
     }
   }
   const [preferredLeaderSide, setPreferredLeaderSide] = useState<"left" | "right">("right");
+  // Cue anchor style: drag a "box" around words/lines, or drop a "pipe" (a
+  // single vertical line) between words / at a line end.
+  const [cueMarker, setCueMarker] = useState<"box" | "pipe">("box");
 
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
@@ -777,16 +781,33 @@ export function ScriptViewer({
 
   function handleSVGMouseUp(e: React.MouseEvent) {
     if (!drawStart || !drawCurrent) return;
+    const start = drawStart;
+    const end = drawCurrent;
 
     const rect: AnnotationRect = {
-      x: Math.min(drawStart.x, drawCurrent.x),
-      y: Math.min(drawStart.y, drawCurrent.y),
-      width: Math.abs(drawCurrent.x - drawStart.x),
-      height: Math.abs(drawCurrent.y - drawStart.y),
+      x: Math.min(start.x, end.x),
+      y: Math.min(start.y, end.y),
+      width: Math.abs(end.x - start.x),
+      height: Math.abs(end.y - start.y),
     };
 
     setDrawStart(null);
     setDrawCurrent(null);
+
+    // Pipe cue: a single click drops a vertical line at that point, snapped to
+    // the height of the text line under it (no drag needed).
+    if (activeTool === "cue" && cueMarker === "pipe") {
+      const band = pipeBandAt(end);
+      setPendingAnnotation({
+        type: "cue",
+        page: currentPage,
+        marker: "pipe",
+        rect: { x: end.x, y: band.yTop, width: 0, height: band.height },
+      });
+      setPendingCueNumber("");
+      setPendingCueDesc("");
+      return;
+    }
 
     // Ignore tiny accidental drags
     if (rect.width < 0.005 || rect.height < 0.003) return;
@@ -813,7 +834,7 @@ export function ScriptViewer({
       setPendingAnnotation({ type: "note", rect: noteRect, page: currentPage });
       setPendingText("");
     } else if (activeTool === "cue") {
-      setPendingAnnotation({ type: "cue", rect, page: currentPage });
+      setPendingAnnotation({ type: "cue", rect, page: currentPage, marker: "box" });
       setPendingCueNumber("");
       setPendingCueDesc("");
     }
@@ -912,6 +933,62 @@ export function ScriptViewer({
       .trim();
   }
 
+  // Find the text line under a click (fractional point) and return its band as
+  // fractional y/height, so a pipe matches the height of the line it sits on.
+  function pipeBandAt(p: { x: number; y: number }): { yTop: number; height: number } {
+    const fallbackH = 0.022;
+    const fallback = {
+      yTop: Math.max(0, Math.min(p.y - fallbackH / 2, 1 - fallbackH)),
+      height: fallbackH,
+    };
+    const layer = textLayerRef.current;
+    if (!layer || canvasSize.h === 0) return fallback;
+    const py = p.y * canvasSize.h;
+    let best: { top: number; h: number } | null = null;
+    let bestScore = Infinity;
+    for (const el of Array.from(layer.children) as HTMLElement[]) {
+      const top = el.offsetTop;
+      const h = el.offsetHeight;
+      if (h <= 0) continue;
+      const contains = py >= top && py <= top + h;
+      const score = contains ? 0 : Math.abs(top + h / 2 - py);
+      if (score < bestScore) {
+        bestScore = score;
+        best = { top, h };
+      }
+    }
+    if (!best) return fallback;
+    return { yTop: best.top / canvasSize.h, height: best.h / canvasSize.h };
+  }
+
+  // Build the line of script around a pipe, with "*" marking the pipe position.
+  function capturePipeLine(rect: AnnotationRect): string {
+    const layer = textLayerRef.current;
+    if (!layer || canvasSize.w === 0 || canvasSize.h === 0) return "*";
+    const pipeX = rect.x * canvasSize.w;
+    const bandCenter = (rect.y + rect.height / 2) * canvasSize.h;
+    const tol = rect.height * canvasSize.h * 0.6 + 2;
+    const spans: { left: number; text: string }[] = [];
+    for (const el of Array.from(layer.children) as HTMLElement[]) {
+      const center = el.offsetTop + el.offsetHeight / 2;
+      if (Math.abs(center - bandCenter) <= tol && el.textContent?.trim()) {
+        spans.push({ left: el.offsetLeft, text: el.textContent });
+      }
+    }
+    spans.sort((a, b) => a.left - b.left);
+    const parts: string[] = [];
+    let inserted = false;
+    for (const s of spans) {
+      if (!inserted && s.left >= pipeX) {
+        parts.push("*");
+        inserted = true;
+      }
+      parts.push(s.text);
+    }
+    if (!inserted) parts.push("*"); // pipe sits after the last word (line end)
+    return parts.join(" ").replace(/\s+/g, " ").trim();
+  }
+
   function confirmPending() {
     if (!pendingAnnotation) return;
 
@@ -934,6 +1011,7 @@ export function ScriptViewer({
         return;
       }
       const rect = pendingAnnotation.rect;
+      const isPipe = pendingAnnotation.marker === "pipe";
       addAnnotation({
         id: crypto.randomUUID(),
         page: pendingAnnotation.page,
@@ -943,7 +1021,8 @@ export function ScriptViewer({
         cueDescription: pendingCueDesc.trim(),
         leaderSide: preferredLeaderSide,
         color: cueColor,
-        line: captureLineText(rect),
+        marker: isPipe ? "pipe" : "box",
+        line: isPipe ? capturePipeLine(rect) : captureLineText(rect),
       });
     }
 
@@ -1197,6 +1276,47 @@ export function ScriptViewer({
             }}
           >
             <span style={{ fontSize: 9, color: "var(--ink-4)", letterSpacing: ".05em", textTransform: "uppercase" }}>
+              Style
+            </span>
+            <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
+              <button
+                title="Box — drag around words or lines"
+                onClick={() => setCueMarker("box")}
+                style={{
+                  width: 26,
+                  height: 24,
+                  display: "grid",
+                  placeItems: "center",
+                  border: "none",
+                  background: cueMarker === "box" ? "var(--accent)" : "transparent",
+                  color: cueMarker === "box" ? "white" : "var(--ink-3)",
+                  cursor: "pointer",
+                }}
+              >
+                <Square size={12} />
+              </button>
+              <button
+                title="Pipe — drop a vertical line between words / at a line end"
+                onClick={() => setCueMarker("pipe")}
+                style={{
+                  width: 26,
+                  height: 24,
+                  display: "grid",
+                  placeItems: "center",
+                  border: "none",
+                  borderLeft: "1px solid var(--border)",
+                  background: cueMarker === "pipe" ? "var(--accent)" : "transparent",
+                  color: cueMarker === "pipe" ? "white" : "var(--ink-3)",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: 15,
+                  lineHeight: 1,
+                }}
+              >
+                |
+              </button>
+            </div>
+            <span style={{ fontSize: 9, color: "var(--ink-4)", letterSpacing: ".05em", textTransform: "uppercase", marginTop: 6 }}>
               Margin
             </span>
             <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
@@ -1844,28 +1964,39 @@ export function ScriptViewer({
                 />
               ))}
 
-              {/* In-progress rectangle */}
-              {drawStart && drawCurrent && (
-                <rect
-                  x={Math.min(drawStart.x, drawCurrent.x) * canvasSize.w}
-                  y={Math.min(drawStart.y, drawCurrent.y) * canvasSize.h}
-                  width={
-                    Math.abs(drawCurrent.x - drawStart.x) * canvasSize.w
-                  }
-                  height={
-                    Math.abs(drawCurrent.y - drawStart.y) * canvasSize.h
-                  }
-                  fill={
-                    activeTool === "cue"
-                      ? `${cueColor}1a`
-                      : `${activeColor}55`
-                  }
-                  stroke={activeTool === "cue" ? cueColor : activeColor}
-                  strokeWidth="1.5"
-                  strokeDasharray="5,3"
-                  pointerEvents="none"
-                />
-              )}
+              {/* In-progress preview — a vertical line for the pipe cue, a box
+                  for everything else */}
+              {drawStart && drawCurrent &&
+                (activeTool === "cue" && cueMarker === "pipe" ? (
+                  (() => {
+                    const band = pipeBandAt(drawCurrent);
+                    const px = drawCurrent.x * canvasSize.w;
+                    return (
+                      <line
+                        x1={px}
+                        y1={band.yTop * canvasSize.h}
+                        x2={px}
+                        y2={(band.yTop + band.height) * canvasSize.h}
+                        stroke={cueColor}
+                        strokeWidth="2"
+                        strokeDasharray="4,3"
+                        pointerEvents="none"
+                      />
+                    );
+                  })()
+                ) : (
+                  <rect
+                    x={Math.min(drawStart.x, drawCurrent.x) * canvasSize.w}
+                    y={Math.min(drawStart.y, drawCurrent.y) * canvasSize.h}
+                    width={Math.abs(drawCurrent.x - drawStart.x) * canvasSize.w}
+                    height={Math.abs(drawCurrent.y - drawStart.y) * canvasSize.h}
+                    fill={activeTool === "cue" ? `${cueColor}1a` : `${activeColor}55`}
+                    stroke={activeTool === "cue" ? cueColor : activeColor}
+                    strokeWidth="1.5"
+                    strokeDasharray="5,3"
+                    pointerEvents="none"
+                  />
+                ))}
             </svg>
           )}
 
@@ -2801,13 +2932,30 @@ function drawAnnotationOnCanvas(
     const labelY = cueLabelY ?? bottomY;
     const cc = ann.color ?? CUE_STROKE;
 
-    ctx.globalAlpha = 0.08;
-    ctx.fillStyle = cc;
-    ctx.fillRect(rx, ry, rw, rh);
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = cc;
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(rx, ry, rw, rh);
+    if (ann.marker === "pipe") {
+      // Vertical caret over its text line.
+      ctx.strokeStyle = cc;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(rx, ry);
+      ctx.lineTo(rx, bottomY);
+      ctx.stroke();
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(rx - 3, ry);
+      ctx.lineTo(rx + 3, ry);
+      ctx.moveTo(rx - 3, bottomY);
+      ctx.lineTo(rx + 3, bottomY);
+      ctx.stroke();
+    } else {
+      ctx.globalAlpha = 0.08;
+      ctx.fillStyle = cc;
+      ctx.fillRect(rx, ry, rw, rh);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = cc;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(rx, ry, rw, rh);
+    }
     // Orthogonal leader: horizontal out to the margin, then a right-angle drop
     // to the (possibly stacked) label — never a diagonal across the page.
     ctx.beginPath();
@@ -2963,19 +3111,39 @@ function AnnotationShape({
     const textAnchor = isLeft ? "start" : "end";
     const cc = annotation.color ?? CUE_STROKE;
 
+    const isPipe = annotation.marker === "pipe";
+
     return (
       <g onClick={(e) => { e.stopPropagation(); onClick(); }} style={{ cursor: "pointer" }}>
-        {/* Box */}
-        <rect
-          x={rx}
-          y={ry}
-          width={rw}
-          height={rh}
-          fill={cc}
-          fillOpacity={0.08}
-          stroke={cc}
-          strokeWidth={selected ? "2" : "1.5"}
-        />
+        {isPipe ? (
+          <>
+            {/* Wide transparent hit target so the thin pipe is easy to click */}
+            <line x1={rx} y1={ry} x2={rx} y2={bottomY} stroke="transparent" strokeWidth="12" />
+            {/* The pipe: a vertical line with small serifs, like a text caret */}
+            <line
+              x1={rx}
+              y1={ry}
+              x2={rx}
+              y2={bottomY}
+              stroke={cc}
+              strokeWidth={selected ? "3" : "2"}
+            />
+            <line x1={rx - 3} y1={ry} x2={rx + 3} y2={ry} stroke={cc} strokeWidth="1.5" />
+            <line x1={rx - 3} y1={bottomY} x2={rx + 3} y2={bottomY} stroke={cc} strokeWidth="1.5" />
+          </>
+        ) : (
+          /* Box */
+          <rect
+            x={rx}
+            y={ry}
+            width={rw}
+            height={rh}
+            fill={cc}
+            fillOpacity={0.08}
+            stroke={cc}
+            strokeWidth={selected ? "2" : "1.5"}
+          />
+        )}
         {/* Orthogonal leader: horizontal out to the margin, then a right-angle
             drop to the (possibly stacked) label — never diagonal. */}
         <polyline
