@@ -48,7 +48,9 @@ export async function Rail() {
   return (
     <aside className="rail" id="app-rail">
       <Link href="/dashboard" className="rail-brand" aria-label="Proscene home">
-        <div className="rail-mark">P</div>
+        <div className="rail-mark">
+          <img src="/brand-mark.svg" alt="" width={18} height={18} />
+        </div>
         <div className="rail-name">
           Pro<em>scene</em>
         </div>

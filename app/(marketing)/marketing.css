@@ -51,11 +51,11 @@
   --radius-l: 14px;
   --radius-xl: 22px;
 
-  /* Inter is loaded by the marketing layout via next/font (--font-inter).
+  /* Geist is loaded by the marketing layout via next/font (--font-geist).
      --font-mono is intentionally not redeclared so it inherits the app's
      Geist Mono (loaded once in the root layout). */
-  --font-display: var(--font-inter), "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-ui: var(--font-inter), "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-geist), "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-ui: var(--font-geist), "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
 
   --maxw: 1180px;
   --pad-x: clamp(20px, 5vw, 40px);
@@ -107,13 +107,13 @@
   font-size:clamp(40px,6.2vw,76px);
   color:var(--ink);
 }
-.display em{font-style:italic;color:var(--accent)}
+.display em{font-style:normal;color:var(--accent)}
 h2.title{
   font-family:var(--font-display);
   font-weight:700;letter-spacing:-.025em;line-height:1.08;
   font-size:clamp(30px,4.4vw,48px);
 }
-h2.title em{font-style:italic;color:var(--accent)}
+h2.title em{font-style:normal;color:var(--accent)}
 h3.subtitle{
   font-family:var(--font-display);
   font-weight:600;letter-spacing:-.018em;line-height:1.15;
@@ -247,7 +247,7 @@ h3.subtitle{
 }
 .brand-mark svg{width:19px;height:19px}
 .brand-name{font-family:var(--font-display);font-weight:600;font-size:21px;letter-spacing:-.01em}
-.brand-name em{font-style:italic;color:var(--accent);font-weight:500}
+.brand-name em{font-style:normal;color:var(--accent);font-weight:500}
 .nav-links{display:flex;align-items:center;gap:4px;margin-left:8px}
 .nav-link{
   padding:8px 13px;border-radius:8px;
@@ -274,7 +274,7 @@ h3.subtitle{
 .trust{display:flex;align-items:center;gap:clamp(20px,4vw,52px);flex-wrap:wrap;justify-content:center}
 .trust-label{font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);font-weight:600}
 .trust-logo{
-  font-family:var(--font-display);font-style:italic;font-weight:500;
+  font-family:var(--font-display);font-style:normal;font-weight:500;
   font-size:19px;color:var(--ink-3);white-space:nowrap;
   transition:color .15s;
 }
@@ -282,7 +282,7 @@ h3.subtitle{
 
 /* ─── Stat row ─────────────────────────────────────────────────────────── */
 .stat-num{font-family:var(--font-display);font-weight:600;font-size:clamp(34px,4vw,46px);letter-spacing:-.02em;line-height:1}
-.stat-num em{font-style:italic;color:var(--accent)}
+.stat-num em{font-style:normal;color:var(--accent)}
 .stat-label{color:var(--ink-3);font-size:14.5px;margin-top:6px}
 
 /* ─── App window mock (CSS recreation of the product) ──────────────────── */
@@ -359,7 +359,7 @@ h3.subtitle{
   color:#fff;position:relative;overflow:hidden;
 }
 .cta-band .display,.cta-band h2.title{color:#fff}
-.cta-band .display em,.cta-band h2.title em{color:color-mix(in oklch,var(--accent-soft) 90%, white);font-style:italic}
+.cta-band .display em,.cta-band h2.title em{color:color-mix(in oklch,var(--accent-soft) 90%, white);font-style:normal}
 .cta-band .lede{color:color-mix(in oklch,#fff 86%, var(--accent))}
 .cta-band .btn.primary{background:#fff;color:var(--accent-ink);border-color:#fff}
 .cta-band .btn.primary:hover{background:color-mix(in oklch,#fff 92%, var(--accent))}
@@ -385,7 +385,7 @@ h3.subtitle{
 
 /* ─── Step (how it works) ──────────────────────────────────────────────── */
 .step-num{
-  font-family:var(--font-display);font-style:italic;font-weight:500;
+  font-family:var(--font-display);font-style:normal;font-weight:500;
   font-size:15px;color:var(--accent-ink);
   width:38px;height:38px;border-radius:50%;
   border:1.5px solid var(--accent);

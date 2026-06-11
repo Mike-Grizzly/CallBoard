@@ -72,7 +72,7 @@
 [data-page="home"] .step p{color:var(--ink-3);font-size:15px;line-height:1.55}
 
 [data-page="home"] .quote{font-family:var(--font-display);font-weight:500;font-size:clamp(24px,3.2vw,38px);line-height:1.28;letter-spacing:-.012em;text-wrap:balance}
-[data-page="home"] .quote em{font-style:italic;color:color-mix(in oklch,var(--accent) 72%, white)}
+[data-page="home"] .quote em{font-style:normal;color:color-mix(in oklch,var(--accent) 72%, white)}
 [data-page="home"] .quote-by{display:flex;align-items:center;gap:14px;margin-top:30px}
 [data-page="home"] .quote-av{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600;font-size:16px;background:linear-gradient(135deg,var(--c-clay),var(--accent))}
 [data-page="home"] .quote-by b{display:block;color:var(--night-ink);font-weight:600}
