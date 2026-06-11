@@ -604,3 +604,16 @@ with an honest "coming soon" and pulled from the nav.
 **Deferred UI follow-ups:**
 - **Decided NOT to build:** one-click "Repertory after my trial" CTA (2026-06-09); filtering `/productions` so participants don't see other shows' names — **intentionally left as-is** (cast may see all org show titles but can only open shows they're assigned to; the rail/dashboard/calendar are already scoped to their own shows).
 - **Still available if wanted:** explicit in-app upgrade buttons (vs routing through the Stripe portal); per-org unique 15%-off promo codes auto-wired into the day-30 nudge; the AI-credits Company model when AI tooling is built.
+
+---
+
+## OCR accuracy of the searchable-scan text layer (2026-06-11)
+
+The browser rebuild (PDFium + tesseract) preserves the **visible** scanned page
+exactly; OCR only populates an **invisible** text layer used for search / select
+/ copy / AI parse. On rough photocopies tesseract is good but imperfect, so that
+hidden layer can have occasional misreads → a search miss or a copy/AI typo
+(never a change to the script users read). Open question: is tesseract's
+accuracy sufficient for search + AI breakdown on real scripts, or do we want a
+**stronger-OCR toggle** (cloud OCR or Claude vision) for the text layer? Current
+DPI is 216; 300 dpi would help accuracy at higher client memory/time cost.

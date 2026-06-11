@@ -1763,3 +1763,17 @@ create index if not exists script_ocr_lookup_idx
 **Product decisions (with user):** the rebuilt searchable file **replaces the default script** (version-bumped; the original upload stays in the document list as a backup). The rebuild is **offered at first view** of an unrenderable scan (where blank-render detection is reliable) via a *Make searchable* button; relocating the prompt into the upload flow itself is a follow-up. Decline keeps the original + native-engine viewing.
 
 **Impact.** New dep `@hyzyla/pdfium`. New: `lib/pdf-ocr-rebuild.ts`, `app/(app)/productions/[slug]/script/use-script-rebuild.ts`, server actions `createRebuiltScriptUploadUrl` / `finalizeRebuiltScript` (`features/scripts/ocr-actions.ts`). Extended `script-viewer.tsx` (blank detection, native fallback, rebuild UI). `tsc`/`eslint` clean; `next build` compiles. Not yet live-verified end-to-end (needs a running browser + the real file).
+
+---
+
+## 2026-06-11 — Wider scan coverage + OCR quality model (image uploads, higher DPI)
+
+**Context.** After shipping the searchable-scan rebuild (PR #32), two follow-ups to widen the umbrella for photocopied/scanned scripts, plus a clarification on what OCR does and doesn't change.
+
+**Decisions.**
+- **Image-file scripts.** A script uploaded as a bare JPEG/PNG/WebP (not only a PDF) is now scan-detected and rebuilt into a one-page searchable PDF (`rebuildImageAsSearchablePdf`: `createImageBitmap` with `imageOrientation:"from-image"` for EXIF rotation → OCR → jsPDF text layer). Per-page assembly shared with the PDF path via `appendOcrPage`; `installSearchableScript` takes a `File` and dispatches image-vs-PDF; `needsScriptOcr` = supported image type OR no-text-layer PDF. (Low real-world demand, but cheap once the engine existed.)
+- **Higher OCR DPI.** PDFium render scale 2.0→3.0 (144→216 dpi). Measured on the real test file: +11% words recovered (314→349 over 3 pages) and higher mean confidence (78.0→78.7), at modest memory/output-size cost. Not pushed to 300 dpi to keep client-side memory/time bounded on long scripts.
+
+**OCR quality model (important, recorded for future work).** The rebuilt PDF is two layers: (1) the **visible page is the original scan image, untouched** — no script/lyric content is ever lost, altered, or dropped from what users read/print/annotate; (2) an **invisible text layer** from OCR drives search/select/copy and AI parse. OCR imperfections live *only* in layer 2 (a search miss, a copy typo, an occasional AI mis-parse) — never in the visible script. "Words recovered" in the DPI benchmark refers to how completely OCR populates layer 2, not deletion from the script. This mirrors Adobe's model (image + text layer); the only gap is tesseract vs. Adobe's commercial OCR accuracy. **Upgrade path if exact search/AI fidelity is needed:** route pages through a stronger OCR (cloud OCR or Claude vision) — the visible script is safe regardless of engine.
+
+**Impact.** Engine `lib/pdf-ocr-rebuild.ts` (image fn + `appendOcrPage` + scale), `lib/install-searchable-script.ts` (File dispatch), `lib/pdf-scan-detect.ts` (`needsScriptOcr`), `document-upload-form.tsx`, `use-script-rebuild.ts`. `tsc`/`eslint`/`next build` clean.

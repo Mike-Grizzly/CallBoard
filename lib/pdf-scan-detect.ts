@@ -1,4 +1,5 @@
 import { loadPdfDocument } from "./pdf";
+import { OCR_IMAGE_TYPES } from "./pdf-ocr-rebuild";
 
 /**
  * Is this PDF an image-only scan (no real text layer)? Samples the first few
@@ -29,4 +30,13 @@ export async function isScannedPdf(file: File): Promise<boolean> {
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+/**
+ * Should we offer to make this uploaded script searchable? True for a
+ * supported image (always image-only) or a PDF with no real text layer.
+ */
+export async function needsScriptOcr(file: File): Promise<boolean> {
+  if (OCR_IMAGE_TYPES.includes(file.type)) return true;
+  return isScannedPdf(file);
 }
