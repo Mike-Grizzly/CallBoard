@@ -1684,9 +1684,14 @@ export function ScriptViewer({
             alignItems: "center",
             justifyContent: "space-between",
             gap: 8,
+            // Wrap the toolbar onto a second row when the canvas is too narrow
+            // to hold every control on one line, instead of overflowing into
+            // the bookmarks panel beside it.
+            flexWrap: "wrap",
+            rowGap: 8,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
             <button
               className="btn ghost btn-icon"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -1791,7 +1796,7 @@ export function ScriptViewer({
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
             {canManage && (
               <Link
                 href={`/productions/${slug}/script/ai`}
