@@ -39,6 +39,7 @@ export const PRICING_TIERS_HTML = `
             <li>${TICK} Unlimited cast &amp; crew</li>
             <li>${TICK} Reports, calls, scripts, blocking</li>
             <li>${TICK} Document &amp; media library</li>
+            <li>${TICK} 100 GB document &amp; media storage</li>
             <li>${TICK} Mobile app for the whole company</li>
           </ul>
         </div>
@@ -52,7 +53,7 @@ export const PRICING_TIERS_HTML = `
           <ul class="tier-list">
             <li>${TICK} Up to 3 productions at once</li>
             <li>${TICK} Everything in Season</li>
-            <li>${TICK} Unlimited cast &amp; crew</li>
+            <li>${TICK} 250 GB storage</li>
             <li>${TICK} The complete production toolset</li>
             <li>${TICK} Email support</li>
           </ul>
@@ -66,7 +67,7 @@ export const PRICING_TIERS_HTML = `
           <ul class="tier-list">
             <li>${TICK} Unlimited productions</li>
             <li>${TICK} Everything in Repertory</li>
-            <li>${TICK} Unlimited cast &amp; crew</li>
+            <li>${TICK} 500 GB storage</li>
             <li>${TICK} Custom branding</li>
             <li>${TICK} Priority support</li>
           </ul>
@@ -107,6 +108,7 @@ export const PRICING_REST_HTML = `
             <tr class="grouphd"><td colspan="4">The essentials</td></tr>
             <tr><td>Active productions at once</td><td>1</td><td>3</td><td>Unlimited</td></tr>
             <tr><td>Cast, crew &amp; designers</td><td>Unlimited</td><td>Unlimited</td><td>Unlimited</td></tr>
+            <tr><td>Document &amp; media storage</td><td>100 GB</td><td>250 GB</td><td>500 GB</td></tr>
             <tr><td>Calls, calendar &amp; confirmations</td>${YES}${YES}${YES}</tr>
             <tr class="grouphd"><td colspan="4">The book</td></tr>
             <tr><td>Script &amp; scene breakdown</td>${YES}${YES}${YES}</tr>
@@ -134,6 +136,7 @@ export const PRICING_REST_HTML = `
         <details class="qa"><summary>What happens when the trial ends?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>So we never pull the rug out mid-tech, your day-to-day stays on: you keep sending rehearsal reports, announcements, and call schedules for a grace period to finish your run. The script and blocking tools pause until you subscribe, and you can always view and export everything you've made.</p></details>
         <details class="qa"><summary>Can I be a participant without paying?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Absolutely. Sign up as a participant and you'll join the productions you're invited to with no cost and no company to set up. If you ever decide to run your own show, you can create a workspace any time.</p></details>
         <details class="qa"><summary>Is there pricing for schools?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Yes — drama departments and university programs get discounted education pricing for the school year. <a href="/contact?reason=school">Reach out</a> and we'll verify your program by hand and get you set up.</p></details>
+        <details class="qa"><summary>How much file storage do I get?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Plenty for the paperwork of a show: 100&nbsp;GB on Season, 250&nbsp;GB on Repertory, and 500&nbsp;GB on Company, measured across your whole workspace — thousands of scripts, plots, and production photos. Large-scale video hosting isn't part of the plans yet; if that's on your wishlist, <a href="/contact">tell us</a> and it helps us prioritize.</p></details>
         <details class="qa"><summary>What happens to my data if I cancel?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Your productions are yours. Export everything to PDF and CSV at any time, and closed shows stay readable. We never remove uploaded files without warning you well in advance, with time to download them first.</p></details>
       </div>
       <p class="center" style="margin-top:34px"><a class="btn-link" href="/faq" style="display:inline-flex">Read the full FAQ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a></p>

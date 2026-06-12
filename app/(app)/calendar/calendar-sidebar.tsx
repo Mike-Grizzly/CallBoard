@@ -81,7 +81,6 @@ export function CalSidebar({
             style={{
               fontSize: 12,
               color: "var(--ink-4)",
-              fontStyle: "italic",
             }}
           >
             Nothing on the horizon.

@@ -196,7 +196,7 @@ function CharacterNameEditor({
         onClick={() => setEditing(true)}
       >
         {current ? (
-          <span style={{ fontStyle: "italic" }}>{current}</span>
+          <span>{current}</span>
         ) : (
           <span className="muted">+ Add character</span>
         )}

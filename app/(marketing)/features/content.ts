@@ -190,23 +190,36 @@ export const FEATURES_HTML = `
         <div>
           <span class="pill" data-c="sage"><span class="dot"></span>Script</span>
           <h2 class="title" style="margin:16px 0 16px">The book, <em>live</em> and shared.</h2>
-          <p class="lede" style="margin-bottom:22px">Upload the script and Proscene threads it through everything — calls reference scenes, blocking pins to lines, and notes attach to exactly the moment they're about. Line changes reach the whole company at once.</p>
+          <p class="lede" style="margin-bottom:22px">Upload your script as a PDF and call the show right on the page. Drop light, sound, and fly cues as numbered marks pinned to the exact line — then share the prompt book with the company or export the whole cue sheet.</p>
           <ul class="checklist">
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Scene &amp; French-scene breakdown built in</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Line notes and cuts tracked by version</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Jump from any call straight to its pages</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Number LX, sound &amp; fly cues right on the page</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Pipe or box markers pinned to the exact line</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Export a clean cue sheet to CSV</li>
           </ul>
         </div>
         <div class="split-media">
           <div class="panel">
-            <div class="panel-row panel-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 3H8a2 2 0 0 0-2 2v14a2 2 0 0 1-2-2h13a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><path d="M10 8h7M10 12h7M10 16h4"/></svg> Act II, Scene 1 · p.42</div>
-            <div class="demo-script" data-demo="script" data-phases="5" data-interval="1400" data-rest="4">
-              <span class="sm-ch">Mabel</span>
-              <span class="sm-tx sm-hl1">Stay, Frederic, stay!</span><span class="sm-caret sm-caret1"></span><span class="sm-cue sm-cue1">↪ cross DSL</span><br>
-              They have no legal claim, no shadow of a claim—
-              <span class="sm-ch">Pirate King</span>
-              <span class="sm-tx sm-hl2">We have proof.</span><span class="sm-caret sm-caret2"></span><span class="sm-cue note sm-cue2">✎ hold for laugh</span><br>
-              You were born in leap-year, and so I'm afraid you'll have to wait…
+            <div class="panel-row panel-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 3H8a2 2 0 0 0-2 2v14a2 2 0 0 1-2-2h13a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><path d="M10 8h7M10 12h7M10 16h4"/></svg> Act II, Scene 1 · p.42<span class="sc-mode">Calling script</span></div>
+            <div class="demo-script" data-demo="script" data-phases="4" data-interval="1400" data-rest="3">
+              <div class="sc-line">
+                <span class="sc-cue sc-r1" data-c="amber"><i>LX</i>14</span>
+                <span class="sc-pipe sc-r1" data-c="amber"></span>
+                <span class="sc-tx"><b>MABEL.</b> Stay, Frederic, stay!</span>
+              </div>
+              <div class="sc-line"><span class="sc-tx dim">They have no legal claim, no shadow of a claim—</span></div>
+              <div class="sc-line">
+                <span class="sc-cue sc-r2" data-c="dusk"><i>SQ</i>7</span>
+                <span class="sc-pipe sc-r2" data-c="dusk"></span>
+                <span class="sc-tx"><b>PIRATE KING.</b> We have proof.</span>
+              </div>
+              <div class="sc-line"><span class="sc-tx dim">You were born in leap-year, and so I'm afraid…</span></div>
+              <div class="sc-line">
+                <span class="sc-cue sc-r3" data-c="clay"><i>FLY</i>3</span>
+                <span class="sc-pipe sc-r3" data-c="clay"></span>
+                <span class="sc-tx dim">…you'll only have been existing twenty-one—</span>
+              </div>
+              <div class="sc-foot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h12M3 10h12M3 15h7"/><path d="M19 5v14M19 5l-2 2M19 5l2 2"/></svg> <b>3 cues</b> on this page<span class="sc-export">Export cue sheet · CSV</span></div>
+              <span class="demo-cursor"></span>
             </div>
           </div>
         </div>

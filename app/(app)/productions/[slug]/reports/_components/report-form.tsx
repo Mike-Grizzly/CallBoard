@@ -536,7 +536,6 @@ export function ReportForm({
                           fontSize: 13,
                           lineHeight: 1.55,
                           color: "var(--ink-4)",
-                          fontStyle: "italic",
                         }}
                       >
                         Click to add notes for {d.label.toLowerCase()}…

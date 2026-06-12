@@ -1,19 +1,5 @@
 import Link from "next/link";
 
-const ARCH = (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M5 20V11a7 7 0 0 1 14 0v9" />
-    <path d="M3 20h18" />
-  </svg>
-);
-
 const COLS = [
   {
     h: "Product",
@@ -58,7 +44,9 @@ export function Footer() {
         <div className="footer-grid">
           <div>
             <Link className="brand" href="/" aria-label="Proscene home">
-              <span className="brand-mark">{ARCH}</span>
+              <span className="brand-mark">
+                <img src="/brand-paper.svg" alt="" width={30} height={30} />
+              </span>
               <span className="brand-name">
                 Pro<em>scene</em>
               </span>
