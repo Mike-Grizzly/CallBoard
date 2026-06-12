@@ -4,9 +4,11 @@ import {
   forwardRef,
   useEffect,
   useImperativeHandle,
+  useId,
   useRef,
 } from "react";
 import type { VideoProvider } from "@/features/videos/constants";
+import { buildEmbedUrl } from "@/features/videos/validation";
 
 /**
  * Imperative API the notes panel uses to drive playback (seek to a note's
@@ -28,8 +30,9 @@ type Props = {
   onReady?: (durationSeconds: number) => void;
 };
 
-// ---- Minimal structural types for the two third-party players. We load both
-// SDKs from a <script> tag rather than adding an npm dependency. ----
+// ---- Minimal structural types for the two third-party players. We render the
+// iframe ourselves (so playback never depends on the SDK loading) and only
+// attach these APIs to the existing iframe for programmatic control. ----
 
 type YTPlayer = {
   seekTo: (seconds: number, allowSeekAhead: boolean) => void;
@@ -41,12 +44,8 @@ type YTPlayer = {
 
 type YTNamespace = {
   Player: new (
-    el: HTMLElement,
-    opts: {
-      videoId: string;
-      playerVars?: Record<string, number | string>;
-      events?: { onReady?: (e: { target: YTPlayer }) => void };
-    },
+    el: HTMLElement | string,
+    opts: { events?: { onReady?: (e: { target: YTPlayer }) => void } },
   ) => YTPlayer;
 };
 
@@ -59,18 +58,13 @@ type VimeoPlayer = {
   destroy: () => Promise<void>;
 };
 
-type VimeoNamespace = {
-  Player: new (
-    el: HTMLElement,
-    opts: { id: string; h?: string; responsive?: boolean },
-  ) => VimeoPlayer;
-};
+type VimeoCtor = new (el: HTMLIFrameElement) => VimeoPlayer;
 
 declare global {
   interface Window {
     YT?: YTNamespace;
     onYouTubeIframeAPIReady?: () => void;
-    Vimeo?: { Player: VimeoNamespace["Player"] };
+    Vimeo?: { Player: VimeoCtor };
   }
 }
 
@@ -113,32 +107,37 @@ function loadYouTube(): Promise<YTNamespace> {
   });
 }
 
-function loadVimeo(): Promise<VimeoNamespace> {
-  if (window.Vimeo?.Player) {
-    return Promise.resolve({ Player: window.Vimeo.Player });
-  }
-  return loadScript("vimeo-player-api", "https://player.vimeo.com/api/player.js").then(
-    () => {
-      if (!window.Vimeo) throw new Error("Vimeo SDK failed to load");
-      return { Player: window.Vimeo.Player };
-    },
-  );
+function loadVimeo(): Promise<VimeoCtor> {
+  if (window.Vimeo?.Player) return Promise.resolve(window.Vimeo.Player);
+  return loadScript(
+    "vimeo-player-api",
+    "https://player.vimeo.com/api/player.js",
+  ).then(() => {
+    if (!window.Vimeo) throw new Error("Vimeo SDK failed to load");
+    return window.Vimeo.Player;
+  });
 }
 
 export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
   { provider, videoId, embedHash, onReady },
   ref,
 ) {
-  const mountRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const ytRef = useRef<YTPlayer | null>(null);
   const vimeoRef = useRef<VimeoPlayer | null>(null);
 
   // Keep the latest onReady without making it an effect dependency — otherwise
-  // a new callback identity each render would needlessly rebuild the player.
+  // a new callback identity each render would needlessly re-attach the player.
   const onReadyRef = useRef(onReady);
   useEffect(() => {
     onReadyRef.current = onReady;
   }, [onReady]);
+
+  // Stable DOM id for the iframe (YouTube's API can bind by element id).
+  const reactId = useId();
+  const frameId = `vid-${reactId.replace(/[:]/g, "")}`;
+
+  const src = buildEmbedUrl(provider, videoId, embedHash);
 
   useImperativeHandle(ref, () => ({
     seekTo(seconds: number) {
@@ -156,25 +155,18 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
     },
   }));
 
+  // Attach the provider's JS API to the iframe we already rendered. Playback
+  // works from the iframe src regardless; this only adds seek/rate control and
+  // duration reporting.
   useEffect(() => {
     let cancelled = false;
-    const mount = mountRef.current;
-    if (!mount) return;
-
-    // Fresh element for the SDK to take over (so re-mounts/strict-mode don't
-    // stack iframes).
-    mount.innerHTML = "";
-    const host = document.createElement("div");
-    host.style.width = "100%";
-    host.style.height = "100%";
-    mount.appendChild(host);
+    const iframe = iframeRef.current;
+    if (!iframe) return;
 
     if (provider === "youtube") {
       void loadYouTube().then((YT) => {
-        if (cancelled) return;
-        ytRef.current = new YT.Player(host, {
-          videoId,
-          playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
+        if (cancelled || !iframeRef.current) return;
+        ytRef.current = new YT.Player(iframeRef.current, {
           events: {
             onReady: (e) => {
               if (cancelled) return;
@@ -185,13 +177,9 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
         });
       });
     } else {
-      void loadVimeo().then(({ Player }) => {
-        if (cancelled) return;
-        const player = new Player(host, {
-          id: videoId,
-          ...(embedHash ? { h: embedHash } : {}),
-          responsive: true,
-        });
+      void loadVimeo().then((Player) => {
+        if (cancelled || !iframeRef.current) return;
+        const player = new Player(iframeRef.current);
         vimeoRef.current = player;
         void player.ready().then(() =>
           player.getDuration().then((d) => {
@@ -206,23 +194,29 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
       try {
         ytRef.current?.destroy();
       } catch {
-        /* player may not be initialised yet */
+        /* not initialised yet */
       }
       void vimeoRef.current?.destroy().catch(() => {});
       ytRef.current = null;
       vimeoRef.current = null;
     };
-    // Rebuild the player whenever the selected video changes.
-  }, [provider, videoId, embedHash]);
+    // Re-attach whenever the embedded video changes.
+  }, [provider, src]);
 
   return (
-    <div
-      ref={mountRef}
+    <iframe
+      ref={iframeRef}
+      id={frameId}
+      src={src}
+      title="Rehearsal video"
+      allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+      allowFullScreen
       style={{
         position: "absolute",
         inset: 0,
         width: "100%",
         height: "100%",
+        border: "none",
       }}
     />
   );

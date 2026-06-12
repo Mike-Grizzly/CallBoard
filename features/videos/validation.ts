@@ -93,7 +93,7 @@ export function buildEmbedUrl(
   embedHash: string | null,
 ): string {
   if (provider === "youtube") {
-    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1`;
+    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1&playsinline=1`;
   }
   // Vimeo
   const params = new URLSearchParams();
