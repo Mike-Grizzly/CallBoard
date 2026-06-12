@@ -68,6 +68,13 @@ const ZOOM_STEPS = [0.75, 1.0, 1.25, 1.5, 2.0] as const;
 const ZOOM_LABELS = ["75%", "100%", "125%", "150%", "200%"] as const;
 const BASE_RENDER_SCALE = 1.8;
 
+// Cursor for the pipe-cue tool: a vertical line (white halo for contrast on the
+// page), hotspot at its centre — so it's obvious you're dropping a pipe and
+// exactly where. Falls back to the text I-beam.
+const PIPE_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='18' height='26'><line x1='9' y1='4' x2='9' y2='22' stroke='white' stroke-width='4' stroke-linecap='round'/><line x1='9' y1='4' x2='9' y2='22' stroke='black' stroke-width='2' stroke-linecap='round'/></svg>",
+)}") 9 13, text`;
+
 /**
  * Is a rendered page (near-)blank? Downsamples to a small canvas and measures
  * the fraction of non-white ("ink") pixels. A scanned page that pdfjs failed to
@@ -1242,7 +1249,9 @@ export function ScriptViewer({
       ? panning ? "grabbing" : "grab"
       : activeTool === "highlight-text"
         ? "text"
-        : "crosshair";
+        : activeTool === "cue" && cueMarker === "pipe"
+          ? PIPE_CURSOR
+          : "crosshair";
 
   const svgPointerEvents =
     activeTool === "highlight-text" ? "none" : "all";
@@ -2082,14 +2091,16 @@ export function ScriptViewer({
                   (() => {
                     const band = pipeBandAt(drawCurrent);
                     const px = drawCurrent.x * canvasSize.w;
+                    const inset = band.height * canvasSize.h * 0.15;
                     return (
                       <line
                         x1={px}
-                        y1={band.yTop * canvasSize.h}
+                        y1={band.yTop * canvasSize.h + inset}
                         x2={px}
-                        y2={(band.yTop + band.height) * canvasSize.h}
+                        y2={(band.yTop + band.height) * canvasSize.h - inset}
                         stroke={cueColor}
                         strokeWidth="2"
+                        strokeLinecap="round"
                         strokeDasharray="4,3"
                         pointerEvents="none"
                       />
@@ -3102,20 +3113,15 @@ function drawAnnotationOnCanvas(
     const serif = 3 * s;
 
     if (ann.marker === "pipe") {
-      // Vertical caret over its text line.
+      // A clean vertical line, inset a little from the line band (no serifs).
       ctx.strokeStyle = cc;
       ctx.lineWidth = 2 * s;
+      ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(rx, ry);
-      ctx.lineTo(rx, bottomY);
+      ctx.moveTo(rx, ry + rh * 0.15);
+      ctx.lineTo(rx, bottomY - rh * 0.15);
       ctx.stroke();
-      ctx.lineWidth = 1.5 * s;
-      ctx.beginPath();
-      ctx.moveTo(rx - serif, ry);
-      ctx.lineTo(rx + serif, ry);
-      ctx.moveTo(rx - serif, bottomY);
-      ctx.lineTo(rx + serif, bottomY);
-      ctx.stroke();
+      ctx.lineCap = "butt";
     } else {
       ctx.globalAlpha = 0.08;
       ctx.fillStyle = cc;
@@ -3308,17 +3314,17 @@ function AnnotationShape({
           <>
             {/* Wide transparent hit target so the thin pipe is easy to click */}
             <line x1={rx} y1={ry} x2={rx} y2={bottomY} stroke="transparent" strokeWidth={12 * s} />
-            {/* The pipe: a vertical line with small serifs, like a text caret */}
+            {/* The pipe: a clean vertical line, inset a little from the line band
+                so it doesn't overrun the text height (no serifs). */}
             <line
               x1={rx}
-              y1={ry}
+              y1={ry + rh * 0.15}
               x2={rx}
-              y2={bottomY}
+              y2={bottomY - rh * 0.15}
               stroke={cc}
               strokeWidth={(selected ? 3 : 2) * s}
+              strokeLinecap="round"
             />
-            <line x1={rx - serif} y1={ry} x2={rx + serif} y2={ry} stroke={cc} strokeWidth={1.5 * s} />
-            <line x1={rx - serif} y1={bottomY} x2={rx + serif} y2={bottomY} stroke={cc} strokeWidth={1.5 * s} />
           </>
         ) : (
           /* Box */
