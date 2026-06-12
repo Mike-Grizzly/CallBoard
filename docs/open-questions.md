@@ -638,3 +638,31 @@ hidden layer can have occasional misreads → a search miss or a copy/AI typo
 accuracy sufficient for search + AI breakdown on real scripts, or do we want a
 **stronger-OCR toggle** (cloud OCR or Claude vision) for the text layer? Current
 DPI is 216; 300 dpi would help accuracy at higher client memory/time cost.
+
+---
+
+## Google consent screen shows `…supabase.co`, not "Proscene" (2026-06-12)
+
+**Status: DEFERRED (cosmetic, sign-in works).** On the Google "Sign in with
+Google" consent screen, the headline and the "Allow … to access" / Privacy &
+Terms host all read `avqgfzrcwegebtbvmcwo.supabase.co` instead of Proscene.
+
+**What was tried and ruled out (free):** the OAuth consent screen **App name =
+"Proscene"**, a logo, and the Google-Group support email are all saved — but
+they **do not** appear in the actual consent test. Confirmed empirically. Cause:
+the app is in **Testing** status (unverified) and the OAuth callback lives on
+Supabase's **shared `…supabase.co` domain**, so Google shows the raw domain and
+the App-name/logo branding doesn't override it. Reordering Authorized domains
+(adding `proscene.app`, keeping `…supabase.co`) does not change this. Note:
+`…supabase.co` MUST stay in Authorized domains or sign-in breaks.
+
+**The only reliable fix (paid):** Supabase **Custom Domain** add-on (Pro plan,
+~$10/mo). Moves auth to e.g. `auth.proscene.app`; re-register that callback in
+Google Cloud and the whole screen reads as your domain. App-side this is just an
+env change (`NEXT_PUBLIC_SUPABASE_URL` → custom domain) — the OAuth redirect
+already derives from the request origin, so little/no code. Google's own
+verification+publish path is free but heavy and still wouldn't remove the
+`…supabase.co` text, so it's not worth it.
+
+**Recommendation:** defer the custom domain until closer to public launch;
+acceptable for beta.
