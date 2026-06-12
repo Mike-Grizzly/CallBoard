@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proscene — Transparent Icons</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Newsreader:ital,wght@0,500&display=swap">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--ink:#15181F;--ink2:#20252F;--gold:#E0A23A;--paper:#F5F2EA;--muted:#8A92A0;--line:#2B313C}
+  body{background:var(--ink);color:var(--paper);font-family:"Geist",system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;padding:56px 40px 90px}
+  .wrap{max-width:1000px;margin:0 auto}
+  .eyebrow{font-family:"Geist Mono",monospace;font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold)}
+  h1{font-family:"Newsreader",serif;font-weight:500;font-size:42px;letter-spacing:-.01em;margin:10px 0 8px}
+  .lede{color:var(--muted);font-size:15px;max-width:600px}
+  h2{font-family:"Geist Mono",monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:50px 0 22px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+  .checker{--c:#39414e;background-color:#2a313b;background-image:linear-gradient(45deg,var(--c) 25%,transparent 25%),linear-gradient(-45deg,var(--c) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,var(--c) 75%),linear-gradient(-45deg,transparent 75%,var(--c) 75%);background-size:22px 22px;background-position:0 0,0 11px,11px -11px,-11px 0}
+  .variants{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .v{border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .v .stage{display:flex;align-items:center;justify-content:center;gap:30px;padding:38px}
+  .v .stage img{width:120px;height:120px;display:block}
+  .v .small{display:flex;align-items:flex-end;gap:14px}
+  .v .small img{display:block}
+  .v .label{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--ink2);border-top:1px solid var(--line)}
+  .v .label .name{font-family:"Newsreader",serif;font-size:20px;font-weight:500}
+  .v .label .mono{font-family:"Geist Mono",monospace;font-size:11px;color:var(--muted)}
+  .ctx{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:8px}
+  .chip{border:1px solid var(--line);border-radius:12px;padding:22px;display:flex;flex-direction:column;align-items:center;gap:12px}
+  .chip img{width:52px;height:52px}
+  .chip .cap{font-family:"Geist Mono",monospace;font-size:10px;color:var(--muted);letter-spacing:.05em}
+  .on-ink{background:#15181F}.on-paper{background:#F5F2EA}.on-gold{background:#E0A23A}
+  .note{color:var(--muted);font-size:13px;margin-top:18px;max-width:640px}
+  code{font-family:"Geist Mono",monospace;color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Proscene · Brand</div>
+  <h1>Transparent Icons</h1>
+  <p class="lede">The portal mark as a single solid color — the plate and the three slats are both punched out to full transparency. The checkerboard below <em>is</em> the transparency showing through.</p>
+
+  <h2>Ink &amp; Paper · on transparency</h2>
+  <div class="variants">
+    <div class="v">
+      <div class="stage checker">
+        <img src="ink/icon-512.png" alt="Ink mark">
+        <div class="small"><img src="ink/favicon-48.png" width="48" height="48" alt=""><img src="ink/favicon-32.png" width="32" height="32" alt=""><img src="ink/favicon-16.png" width="16" height="16" alt=""></div>
+      </div>
+      <div class="label"><span class="name">Ink</span><span class="mono">#15181F · transparent</span></div>
+    </div>
+    <div class="v">
+      <div class="stage checker">
+        <img src="paper/icon-512.png" alt="Paper mark">
+        <div class="small"><img src="paper/favicon-48.png" width="48" height="48" alt=""><img src="paper/favicon-32.png" width="32" height="32" alt=""><img src="paper/favicon-16.png" width="16" height="16" alt=""></div>
+      </div>
+      <div class="label"><span class="name">Paper</span><span class="mono">#F5F2EA · transparent</span></div>
+    </div>
+  </div>
+
+  <h2>Drops onto any ground</h2>
+  <div class="ctx">
+    <div class="chip on-paper"><img src="ink/icon-512.png" alt=""><span class="cap" style="color:#6b6456">INK / PAPER</span></div>
+    <div class="chip on-gold"><img src="ink/icon-512.png" alt=""><span class="cap" style="color:#5a4416">INK / GOLD</span></div>
+    <div class="chip on-ink"><img src="paper/icon-512.png" alt=""><span class="cap">PAPER / INK</span></div>
+    <div class="chip checker"><img src="paper/icon-512.png" alt=""><span class="cap">PAPER / ANY</span></div>
+  </div>
+
+  <h2>Each folder</h2>
+  <p class="lede" style="max-width:none">icon-1024 · icon-512 · icon-192 · apple-touch-icon · icon-512-maskable · favicon-16/32/48 · favicon.ico · icon.svg · favicon.svg · site.webmanifest — all transparent.</p>
+  <p class="note">Note: transparent app icons are ideal for the web and embedding on colored grounds. iOS home-screen icons (apple-touch) render any transparency as <strong>black</strong>, so for an installed iOS app you'll want the solid <code>ink/</code> or <code>paper/</code> plate version instead.</p>
+</div>
+</body>
+</html>
