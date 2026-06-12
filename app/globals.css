@@ -247,6 +247,12 @@ select {
   grid-template-columns: var(--rail-w) minmax(0, 1fr);
   min-height: 100vh;
   width: 100%;
+  /* Invariant: the app shell never scrolls sideways. Content regions that are
+     legitimately wide (PDF viewer, data tables) own their own scroll; anything
+     else that overflows is clipped here rather than pushing the whole page.
+     `clip` (not `scroll`/`auto`) so no horizontal scrollbar is ever created
+     and the vertical axis stays in normal flow. */
+  overflow-x: clip;
 }
 
 /* ─── Left rail ──────────────────────────────────────────────────────── */
