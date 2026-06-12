@@ -68,6 +68,13 @@ const ZOOM_STEPS = [0.75, 1.0, 1.25, 1.5, 2.0] as const;
 const ZOOM_LABELS = ["75%", "100%", "125%", "150%", "200%"] as const;
 const BASE_RENDER_SCALE = 1.8;
 
+// Cursor for the pipe-cue tool: a vertical line (white halo for contrast on the
+// page), hotspot at its centre — so it's obvious you're dropping a pipe and
+// exactly where. Falls back to the text I-beam.
+const PIPE_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='18' height='26'><line x1='9' y1='4' x2='9' y2='22' stroke='white' stroke-width='4' stroke-linecap='round'/><line x1='9' y1='4' x2='9' y2='22' stroke='black' stroke-width='2' stroke-linecap='round'/></svg>",
+)}") 9 13, text`;
+
 /**
  * Is a rendered page (near-)blank? Downsamples to a small canvas and measures
  * the fraction of non-white ("ink") pixels. A scanned page that pdfjs failed to
@@ -199,6 +206,13 @@ export function ScriptViewer({
       ? fitScale
       : BASE_RENDER_SCALE * ZOOM_STEPS[zoomIndex];
 
+  // The cue overlay (label font, leader/pipe strokes, stacking gaps) is sized
+  // in screen pixels, so without this it looks huge when the page renders small
+  // (Fit on a small monitor) and tiny when zoomed in. Scaling every overlay
+  // dimension by renderScale/BASE keeps it a fixed size relative to the script
+  // text at any zoom or monitor. =1 at the default 100%.
+  const cueScale = renderScale / BASE_RENDER_SCALE;
+
   // Zoom in/out, transitioning cleanly to/from the whole-page "fit" baseline.
   function zoomIn() {
     if (zoomMode === "fit") {
@@ -260,6 +274,18 @@ export function ScriptViewer({
   const [pendingCueDesc, setPendingCueDesc] = useState("");
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Cue-label dragging: `labelDrag` is the active drag (window listeners live
+  // while it's set); `draggingLabel` is the live position the label renders at.
+  const [labelDrag, setLabelDrag] = useState<{ id: string } | null>(null);
+  const [draggingLabel, setDraggingLabel] = useState<{
+    id: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const labelDragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const labelMovedRef = useRef(false);
+  const draggingPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const [showAddBookmark, setShowAddBookmark] = useState(false);
   const [newBookmarkTitle, setNewBookmarkTitle] = useState("");
@@ -700,18 +726,67 @@ export function ScriptViewer({
 
   // ── Coordinate helpers ─────────────────────────────────────────────────────
 
-  function getSVGCoords(e: React.MouseEvent): { x: number; y: number } {
+  function normFromClient(clientX: number, clientY: number): { x: number; y: number } {
     const svg = svgRef.current;
     if (!svg) return { x: 0, y: 0 };
     const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
+    pt.x = clientX;
+    pt.y = clientY;
     const svgPt = pt.matrixTransform(svg.getScreenCTM()!.inverse());
     return {
       x: svgPt.x / canvasSize.w,
       y: svgPt.y / canvasSize.h,
     };
   }
+
+  function getSVGCoords(e: React.MouseEvent): { x: number; y: number } {
+    return normFromClient(e.clientX, e.clientY);
+  }
+
+  // ── Cue-label dragging ──────────────────────────────────────────────────────
+  // Grab a cue's number and place it manually; the orthogonal leader follows.
+  // A drag below the move threshold is treated as a plain select (so a click
+  // still opens the cue for editing).
+  function startLabelDrag(id: string, e: React.MouseEvent) {
+    if (!canManage || isPhone) return;
+    labelDragStartRef.current = { x: e.clientX, y: e.clientY };
+    labelMovedRef.current = false;
+    draggingPosRef.current = null;
+    setLabelDrag({ id });
+  }
+
+  useEffect(() => {
+    if (!labelDrag) return;
+    const dragId = labelDrag.id;
+    const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+    function onMove(e: MouseEvent) {
+      const start = labelDragStartRef.current;
+      if (start && Math.abs(e.clientX - start.x) + Math.abs(e.clientY - start.y) > 3) {
+        labelMovedRef.current = true;
+      }
+      const n = normFromClient(e.clientX, e.clientY);
+      const pos = { x: clamp01(n.x), y: clamp01(n.y) };
+      draggingPosRef.current = pos;
+      setDraggingLabel({ id: dragId, ...pos });
+    }
+    function onUp() {
+      const pos = draggingPosRef.current;
+      if (labelMovedRef.current && pos) {
+        updateAnnotation(dragId, { labelPos: pos } as Partial<Annotation>);
+      } else {
+        setSelectedId((cur) => (cur === dragId ? null : dragId));
+      }
+      setLabelDrag(null);
+      setDraggingLabel(null);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [labelDrag]);
 
   // ── Annotation CRUD ────────────────────────────────────────────────────────
 
@@ -1071,6 +1146,8 @@ export function ScriptViewer({
         const PRINT_SCALE = 2;
         const viewport = page.getViewport({ scale: PRINT_SCALE });
         const nativeViewport = page.getViewport({ scale: 1 });
+        // Match the on-screen overlay sizing (fixed size in PDF-point space).
+        const exportCueScale = PRINT_SCALE / BASE_RENDER_SCALE;
 
         const canvas = document.createElement("canvas");
         canvas.width = viewport.width;
@@ -1087,6 +1164,7 @@ export function ScriptViewer({
             (a): a is Extract<Annotation, { type: "cue" }> => a.type === "cue",
           ),
           viewport.height,
+          exportCueScale,
         );
         for (const ann of pageAnns) {
           drawAnnotationOnCanvas(
@@ -1095,6 +1173,7 @@ export function ScriptViewer({
             viewport.width,
             viewport.height,
             ann.type === "cue" ? exportCueLabels.get(ann.id) : undefined,
+            exportCueScale,
           );
         }
 
@@ -1158,8 +1237,9 @@ export function ScriptViewer({
           (a): a is Extract<Annotation, { type: "cue" }> => a.type === "cue",
         ),
         canvasSize.h,
+        cueScale,
       ),
-    [pageAnnotations, canvasSize.h],
+    [pageAnnotations, canvasSize.h, cueScale],
   );
 
   // ── SVG cursor style ───────────────────────────────────────────────────────
@@ -1169,7 +1249,9 @@ export function ScriptViewer({
       ? panning ? "grabbing" : "grab"
       : activeTool === "highlight-text"
         ? "text"
-        : "crosshair";
+        : activeTool === "cue" && cueMarker === "pipe"
+          ? PIPE_CURSOR
+          : "crosshair";
 
   const svgPointerEvents =
     activeTool === "highlight-text" ? "none" : "all";
@@ -1975,19 +2057,32 @@ export function ScriptViewer({
               }}
             >
               {/* Existing annotations for this page */}
-              {pageAnnotations.map((ann) => (
-                <AnnotationShape
-                  key={ann.id}
-                  annotation={ann}
-                  canvasW={canvasSize.w}
-                  canvasH={canvasSize.h}
-                  selected={selectedId === ann.id}
-                  onClick={() =>
-                    setSelectedId(selectedId === ann.id ? null : ann.id)
-                  }
-                  cueLabel={ann.type === "cue" ? cueLabels.get(ann.id) : undefined}
-                />
-              ))}
+              {pageAnnotations.map((ann) => {
+                // While a label is being dragged, render it at the live spot.
+                const shown =
+                  draggingLabel?.id === ann.id && ann.type === "cue"
+                    ? { ...ann, labelPos: { x: draggingLabel.x, y: draggingLabel.y } }
+                    : ann;
+                return (
+                  <AnnotationShape
+                    key={ann.id}
+                    annotation={shown}
+                    canvasW={canvasSize.w}
+                    canvasH={canvasSize.h}
+                    selected={selectedId === ann.id}
+                    onClick={() =>
+                      setSelectedId(selectedId === ann.id ? null : ann.id)
+                    }
+                    cueLabel={shown.type === "cue" ? cueLabels.get(ann.id) : undefined}
+                    cueScale={cueScale}
+                    onLabelPointerDown={
+                      canManage && !isPhone && ann.type === "cue"
+                        ? (e) => startLabelDrag(ann.id, e)
+                        : undefined
+                    }
+                  />
+                );
+              })}
 
               {/* In-progress preview — a vertical line for the pipe cue, a box
                   for everything else */}
@@ -1996,14 +2091,16 @@ export function ScriptViewer({
                   (() => {
                     const band = pipeBandAt(drawCurrent);
                     const px = drawCurrent.x * canvasSize.w;
+                    const inset = band.height * canvasSize.h * 0.15;
                     return (
                       <line
                         x1={px}
-                        y1={band.yTop * canvasSize.h}
+                        y1={band.yTop * canvasSize.h + inset}
                         x2={px}
-                        y2={(band.yTop + band.height) * canvasSize.h}
+                        y2={(band.yTop + band.height) * canvasSize.h - inset}
                         stroke={cueColor}
                         strokeWidth="2"
+                        strokeLinecap="round"
                         strokeDasharray="4,3"
                         pointerEvents="none"
                       />
@@ -2522,21 +2619,20 @@ function compareCuePosition(a: CueAnn, b: CueAnn): number {
   return a.rect.x - b.rect.x;
 }
 
-// Cue-label placement. When several cue labels land in the same margin at
-// similar heights they overlap and their leaders cut across one another. We
-// keep each label near its line by using TWO lanes per margin: a cue is placed
-// in the inner (primary) lane at its natural height when there's room, and
-// overflows to the second lane only when the inner one is occupied — so sparse
-// pages stay single-column and dense clusters stagger between two lanes (the
-// overflow label threads between its neighbours rather than being pushed far
-// down). If both lanes are full it falls back to pushing down in the freer one.
-// The leader runs horizontally to its lane then drops at a 90° angle, never
-// diagonally. Computed in the target surface's own pixel space, so callers pass
-// canvasH; lane X is derived from canvasW at render time.
+// Cue-label placement. Labels in a margin are laid out in CUE-NUMBER ORDER so
+// the numbers always read in sequence (10, 12, 13…) top to bottom — a higher
+// number never sits above a lower one. Default is a single column: each label
+// sits at its anchor's height, dropping down only enough to clear the previous
+// (lower-numbered) label. When a column gets busy — a label would be pushed
+// more than CUE_CROWD past its anchor — the overflow spills into a second
+// column nearer the text instead of pushing the whole stack further down, so
+// two cues on a line still stack vertically but dense clusters fan into two
+// columns. The leader runs horizontally then drops at 90°, never diagonally.
+// Computed in the target surface's own pixel space, so callers pass canvasH.
 const CUE_LABEL_NUMBER_UP = 20; // number baseline sits this far above its anchor
 const CUE_LABEL_DESC_DOWN = 18; // description sits this far below it
 const CUE_LABEL_PAD = 12; // clear whitespace kept between stacked labels
-const CUE_LANE_GAP = 34; // horizontal offset of the 2nd lane toward the text
+const CUE_LANE_GAP = 34; // horizontal offset of the 2nd column toward the text
 
 type CueLabelPos = { y: number; lane: number };
 
@@ -2545,46 +2641,77 @@ function stackCueLabels(
     id: string;
     rect: AnnotationRect;
     leaderSide: "left" | "right";
+    cueNumber: string;
     cueDescription: string;
+    labelPos?: { x: number; y: number };
   }[],
   canvasH: number,
+  scale = 1,
 ): Map<string, CueLabelPos> {
-  // Roughly one text line of tolerance: cues this close vertically are treated
-  // as the "same line" and ordered left-to-right (their position on the line),
-  // so two cues on one line stack in reading order instead of by draw order.
-  const LINE_BUCKET = 14;
-  const GAP = CUE_LABEL_NUMBER_UP + CUE_LABEL_PAD;
+  // Offsets are in screen px; scale them so stacks stay proportional to the
+  // page (and the text) at any zoom — see `cueScale`.
+  const NUMBER_UP = CUE_LABEL_NUMBER_UP * scale;
+  const DESC_DOWN = CUE_LABEL_DESC_DOWN * scale;
+  const GAP = NUMBER_UP + CUE_LABEL_PAD * scale;
+  // Up to this many labels stack vertically in one column before the next one
+  // that can't seat at its line overflows into the second column.
+  const MAX_STACK = 2;
   const out = new Map<string, CueLabelPos>();
   for (const side of ["left", "right"] as const) {
     const group = cues
-      .filter((c) => c.leaderSide === side)
+      // Manually-placed labels (dragged) sit where the user put them, so they
+      // don't take part in auto-stacking.
+      .filter((c) => c.leaderSide === side && !c.labelPos)
       .map((c) => ({
         id: c.id,
         y: (c.rect.y + c.rect.height) * canvasH,
-        x: c.rect.x,
         hasDesc: c.cueDescription.trim().length > 0,
+        cueNumber: c.cueNumber,
       }))
-      .sort((a, b) => {
-        const ba = Math.round(a.y / LINE_BUCKET);
-        const bb = Math.round(b.y / LINE_BUCKET);
-        if (ba !== bb) return ba - bb;
-        return a.x - b.x;
-      });
-    // Bottom of the last label placed in each lane (inner = 0, second = 1).
-    const laneBottom = [-Infinity, -Infinity];
+      // Whole margin ordered by cue number (numeric-aware: "2" < "10").
+      .sort((a, b) =>
+        a.cueNumber.localeCompare(b.cueNumber, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        }),
+      );
+    // Greedy, in number order: keep each label at its line in the first column;
+    // when the first column is mid-pile and can't seat it there, stack it
+    // (up to MAX_STACK) or overflow into the second column. Earlier labels are
+    // never moved, and a label is never placed above the previous (lower)
+    // number — so adding a cue only places the new one and order is preserved.
+    const bottom = [-Infinity, -Infinity]; // bottom of last label per column
+    const run = [0, 0]; // labels stacked in the current pile, per column
+    let lastY = -Infinity; // previous label's y — keeps numbers in order
     for (const item of group) {
-      // Prefer the inner lane; use the second only when the inner is occupied
-      // at this height. If neither is free, push down in the freer lane.
-      let lane = [0, 1].find((l) => item.y >= laneBottom[l] + GAP) ?? -1;
+      // A column's pile ends once this cue's line clears its last label.
+      if (item.y >= bottom[0] + GAP) run[0] = 0;
+      if (item.y >= bottom[1] + GAP) run[1] = 0;
+
+      const floor = Math.max(item.y, lastY);
+      const y0 = Math.max(floor, bottom[0] + GAP);
+      let lane: number;
       let y: number;
-      if (lane === -1) {
-        lane = laneBottom[0] <= laneBottom[1] ? 0 : 1;
-        y = laneBottom[lane] + GAP;
+      if (y0 <= item.y + 0.5 || run[0] < MAX_STACK) {
+        // Seats at its line in column 0, or column 0's pile still has room.
+        lane = 0;
+        y = y0;
       } else {
-        y = item.y;
+        // Column 0's pile is full — overflow into column 1.
+        const y1 = Math.max(floor, bottom[1] + GAP);
+        if (y1 <= item.y + 0.5 || run[1] < MAX_STACK) {
+          lane = 1;
+          y = y1;
+        } else {
+          // Both piles full — push down in whichever column is shorter.
+          lane = y0 <= y1 ? 0 : 1;
+          y = lane === 0 ? y0 : y1;
+        }
       }
       out.set(item.id, { y, lane });
-      laneBottom[lane] = y + (item.hasDesc ? CUE_LABEL_DESC_DOWN : 0);
+      run[lane] = y <= item.y + 0.5 ? 1 : run[lane] + 1;
+      bottom[lane] = y + (item.hasDesc ? DESC_DOWN : 0);
+      lastY = y;
     }
   }
   return out;
@@ -2903,6 +3030,7 @@ function drawAnnotationOnCanvas(
   canvasW: number,
   canvasH: number,
   cueLabel?: CueLabelPos,
+  cueScale = 1,
 ) {
   if (ann.type === "ink") {
     if (ann.points.length === 0) return;
@@ -2967,38 +3095,40 @@ function drawAnnotationOnCanvas(
     ctx.lineWidth = 1;
     ctx.stroke();
   } else if (ann.type === "cue") {
+    const s = cueScale;
     const bottomY = ry + rh;
     const isLeft = ann.leaderSide === "left";
     const lineStartX = isLeft ? rx : rx + rw;
-    const MARGIN_OFFSET = 14;
+    const MARGIN_OFFSET = 14 * s;
     const lane = cueLabel?.lane ?? 0;
     const baseX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
-    const labelX = isLeft ? baseX + lane * CUE_LANE_GAP : baseX - lane * CUE_LANE_GAP;
-    const labelY = cueLabel?.y ?? bottomY;
+    // A dragged label sits at its stored position; otherwise it's auto-stacked.
+    const labelX = ann.labelPos
+      ? ann.labelPos.x * canvasW
+      : isLeft
+        ? baseX + lane * CUE_LANE_GAP * s
+        : baseX - lane * CUE_LANE_GAP * s;
+    const labelY = ann.labelPos ? ann.labelPos.y * canvasH : (cueLabel?.y ?? bottomY);
     const cc = ann.color ?? CUE_STROKE;
+    const serif = 3 * s;
 
     if (ann.marker === "pipe") {
-      // Vertical caret over its text line.
+      // A clean vertical line, inset a little from the line band (no serifs).
       ctx.strokeStyle = cc;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2 * s;
+      ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(rx, ry);
-      ctx.lineTo(rx, bottomY);
+      ctx.moveTo(rx, ry + rh * 0.15);
+      ctx.lineTo(rx, bottomY - rh * 0.15);
       ctx.stroke();
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(rx - 3, ry);
-      ctx.lineTo(rx + 3, ry);
-      ctx.moveTo(rx - 3, bottomY);
-      ctx.lineTo(rx + 3, bottomY);
-      ctx.stroke();
+      ctx.lineCap = "butt";
     } else {
       ctx.globalAlpha = 0.08;
       ctx.fillStyle = cc;
       ctx.fillRect(rx, ry, rw, rh);
       ctx.globalAlpha = 1;
       ctx.strokeStyle = cc;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.5 * s;
       ctx.strokeRect(rx, ry, rw, rh);
     }
     // Orthogonal leader: horizontal out to the margin, then a right-angle drop
@@ -3007,19 +3137,19 @@ function drawAnnotationOnCanvas(
     ctx.moveTo(lineStartX, bottomY);
     ctx.lineTo(labelX, bottomY);
     if (labelY !== bottomY) ctx.lineTo(labelX, labelY);
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 * s;
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(labelX, labelY, 3, 0, Math.PI * 2);
+    ctx.arc(labelX, labelY, serif, 0, Math.PI * 2);
     ctx.fillStyle = cc;
     ctx.fill();
     ctx.fillStyle = cc;
     ctx.textAlign = isLeft ? "left" : "right";
-    ctx.font = "bold 13px system-ui, sans-serif";
-    ctx.fillText(ann.cueNumber, isLeft ? labelX + 6 : labelX - 6, labelY - 4);
+    ctx.font = `bold ${13 * s}px system-ui, sans-serif`;
+    ctx.fillText(ann.cueNumber, isLeft ? labelX + 6 * s : labelX - 6 * s, labelY - 4 * s);
     if (ann.cueDescription) {
-      ctx.font = "9px system-ui, sans-serif";
-      ctx.fillText(ann.cueDescription, isLeft ? labelX + 6 : labelX - 6, labelY + 12);
+      ctx.font = `${9 * s}px system-ui, sans-serif`;
+      ctx.fillText(ann.cueDescription, isLeft ? labelX + 6 * s : labelX - 6 * s, labelY + 12 * s);
     }
   }
 
@@ -3035,6 +3165,8 @@ function AnnotationShape({
   selected,
   onClick,
   cueLabel,
+  cueScale = 1,
+  onLabelPointerDown,
 }: {
   annotation: Annotation;
   canvasW: number;
@@ -3042,6 +3174,9 @@ function AnnotationShape({
   selected: boolean;
   onClick: () => void;
   cueLabel?: CueLabelPos;
+  cueScale?: number;
+  /** When provided, the cue label is a drag handle (mousedown starts a drag). */
+  onLabelPointerDown?: (e: React.MouseEvent) => void;
 }) {
   if (annotation.type === "ink") {
     return (
@@ -3150,16 +3285,26 @@ function AnnotationShape({
   }
 
   if (annotation.type === "cue") {
+    const s = cueScale;
     const bottomY = ry + rh;
     const isLeft = annotation.leaderSide === "left";
     const lineStartX = isLeft ? rx : rx + rw;
-    const MARGIN_OFFSET = 14;
+    const MARGIN_OFFSET = 14 * s;
     const lane = cueLabel?.lane ?? 0;
     const baseX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
-    const labelX = isLeft ? baseX + lane * CUE_LANE_GAP : baseX - lane * CUE_LANE_GAP;
-    const labelY = cueLabel?.y ?? bottomY;
+    // A dragged label sits at its stored position; otherwise it's auto-stacked.
+    const labelX = annotation.labelPos
+      ? annotation.labelPos.x * canvasW
+      : isLeft
+        ? baseX + lane * CUE_LANE_GAP * s
+        : baseX - lane * CUE_LANE_GAP * s;
+    const labelY = annotation.labelPos
+      ? annotation.labelPos.y * canvasH
+      : (cueLabel?.y ?? bottomY);
     const textAnchor = isLeft ? "start" : "end";
     const cc = annotation.color ?? CUE_STROKE;
+    const serif = 3 * s;
+    const draggable = !!onLabelPointerDown;
 
     const isPipe = annotation.marker === "pipe";
 
@@ -3168,18 +3313,18 @@ function AnnotationShape({
         {isPipe ? (
           <>
             {/* Wide transparent hit target so the thin pipe is easy to click */}
-            <line x1={rx} y1={ry} x2={rx} y2={bottomY} stroke="transparent" strokeWidth="12" />
-            {/* The pipe: a vertical line with small serifs, like a text caret */}
+            <line x1={rx} y1={ry} x2={rx} y2={bottomY} stroke="transparent" strokeWidth={12 * s} />
+            {/* The pipe: a clean vertical line, inset a little from the line band
+                so it doesn't overrun the text height (no serifs). */}
             <line
               x1={rx}
-              y1={ry}
+              y1={ry + rh * 0.15}
               x2={rx}
-              y2={bottomY}
+              y2={bottomY - rh * 0.15}
               stroke={cc}
-              strokeWidth={selected ? "3" : "2"}
+              strokeWidth={(selected ? 3 : 2) * s}
+              strokeLinecap="round"
             />
-            <line x1={rx - 3} y1={ry} x2={rx + 3} y2={ry} stroke={cc} strokeWidth="1.5" />
-            <line x1={rx - 3} y1={bottomY} x2={rx + 3} y2={bottomY} stroke={cc} strokeWidth="1.5" />
           </>
         ) : (
           /* Box */
@@ -3191,7 +3336,7 @@ function AnnotationShape({
             fill={cc}
             fillOpacity={0.08}
             stroke={cc}
-            strokeWidth={selected ? "2" : "1.5"}
+            strokeWidth={(selected ? 2 : 1.5) * s}
           />
         )}
         {/* Orthogonal leader: horizontal out to the margin, then a right-angle
@@ -3204,35 +3349,57 @@ function AnnotationShape({
           }
           fill="none"
           stroke={cc}
-          strokeWidth="1"
+          strokeWidth={1 * s}
         />
-        {/* End marker */}
-        <circle cx={labelX} cy={labelY} r="3" fill={cc} />
-        {/* Cue number */}
-        <text
-          x={isLeft ? labelX + 6 : labelX - 6}
-          y={labelY - 4}
-          textAnchor={textAnchor}
-          fontSize="13"
-          fill={cc}
-          fontWeight="700"
-          fontFamily="system-ui, sans-serif"
+        {/* Label: end dot + number (+ description). Draggable when editable —
+            grab it to place it manually; the leader follows. */}
+        <g
+          onMouseDown={
+            draggable
+              ? (e) => {
+                  e.stopPropagation();
+                  onLabelPointerDown?.(e);
+                }
+              : undefined
+          }
+          onClick={draggable ? (e) => e.stopPropagation() : undefined}
+          style={draggable ? { cursor: "move" } : undefined}
         >
-          {annotation.cueNumber}
-        </text>
-        {/* Cue description */}
-        {annotation.cueDescription && (
+          {/* Invisible hit target so the label is easy to grab */}
+          {draggable && (
+            <rect
+              x={isLeft ? labelX - 4 * s : labelX - 44 * s}
+              y={labelY - 16 * s}
+              width={48 * s}
+              height={annotation.cueDescription ? 32 * s : 22 * s}
+              fill="transparent"
+            />
+          )}
+          <circle cx={labelX} cy={labelY} r={serif} fill={cc} />
           <text
-            x={isLeft ? labelX + 6 : labelX - 6}
-            y={labelY + 12}
+            x={isLeft ? labelX + 6 * s : labelX - 6 * s}
+            y={labelY - 4 * s}
             textAnchor={textAnchor}
-            fontSize="9"
+            fontSize={13 * s}
             fill={cc}
+            fontWeight="700"
             fontFamily="system-ui, sans-serif"
           >
-            {annotation.cueDescription}
+            {annotation.cueNumber}
           </text>
-        )}
+          {annotation.cueDescription && (
+            <text
+              x={isLeft ? labelX + 6 * s : labelX - 6 * s}
+              y={labelY + 12 * s}
+              textAnchor={textAnchor}
+              fontSize={9 * s}
+              fill={cc}
+              fontFamily="system-ui, sans-serif"
+            >
+              {annotation.cueDescription}
+            </text>
+          )}
+        </g>
       </g>
     );
   }
@@ -3750,6 +3917,28 @@ function PanelAnnotationItem({
                   );
                 })}
               </div>
+              {annotation.labelPos && (
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() =>
+                    onEdit({ labelPos: undefined } as Partial<Annotation>)
+                  }
+                  style={{
+                    marginTop: 4,
+                    fontSize: 11,
+                    color: "var(--ink-3)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                    textDecoration: "underline",
+                    textAlign: "left",
+                  }}
+                >
+                  Reset label position
+                </button>
+              )}
             </div>
           ) : (
             <>
