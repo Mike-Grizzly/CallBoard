@@ -290,11 +290,13 @@ export function VideosClient({
         />
       )}
 
-      {/* Player + timestamp notes */}
+      {/* Player + timestamp notes. The player column is capped so a 16:9 frame
+          tops out at ~50vh instead of filling a wide monitor; the notes panel
+          sits right beside it and any extra width is left to the right. */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) 320px",
+          gridTemplateColumns: "minmax(0, calc(50vh * 16 / 9)) 320px",
           gap: 16,
           alignItems: "start",
         }}
