@@ -493,7 +493,10 @@ function NPTopBar({ overlay, onClose }: { overlay: boolean; onClose?: () => void
           <span>Back to productions</span>
         </button>
         <div className="brand" style={{ marginLeft: "auto" }}>
-          <div className="brand-mark">C</div>
+          <div className="brand-mark">
+            <img className="brand-badge is-light" src="/brand-ink.svg" alt="" width={26} height={26} />
+            <img className="brand-badge is-dark" src="/brand-paper.svg" alt="" width={26} height={26} />
+          </div>
           <span>New production</span>
         </div>
         <button
@@ -510,8 +513,11 @@ function NPTopBar({ overlay, onClose }: { overlay: boolean; onClose?: () => void
   return (
     <div className="topbar">
       <div className="brand">
-        <div className="brand-mark">C</div>
-        <span>CallBoard</span>
+        <div className="brand-mark">
+          <img className="brand-badge is-light" src="/brand-ink.svg" alt="" width={26} height={26} />
+          <img className="brand-badge is-dark" src="/brand-paper.svg" alt="" width={26} height={26} />
+        </div>
+        <span>Proscene</span>
       </div>
       <div className="top-crumbs">
         <Icon name="ChevronRight" size={12} />
@@ -782,7 +788,7 @@ function StepCalendar({ data, set }: { data: WizardData; set: (p: Partial<Wizard
         <Icon name="Info" size={16} />
         <div>
           <b style={{ fontWeight: 600 }}>Only opening night is required.</b> Everything else can be set
-          later, but adding them now lets CallBoard plan ahead — flag conflicts, schedule auto-reminders,
+          later, but adding them now lets Proscene plan ahead — flag conflicts, schedule auto-reminders,
           and structure your default rehearsal calendar.
         </div>
       </div>

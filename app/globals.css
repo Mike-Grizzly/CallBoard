@@ -68,9 +68,9 @@
 
   /* font-family vars are populated by next/font in app/layout.tsx; these
      fallbacks let the file stand alone if the layout vars are missing.
-     Display headings now use Inter too (was Newsreader serif). */
-  --font-display: var(--font-ui, "Inter", ui-sans-serif, system-ui, sans-serif);
-  --font-ui: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+     Display headings now use Geist too (was Newsreader serif). */
+  --font-display: var(--font-ui, "Geist", ui-sans-serif, system-ui, sans-serif);
+  --font-ui: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
 
   --rail-w: 232px;
@@ -267,16 +267,29 @@ select {
 .rail-mark {
   width: 28px;
   height: 28px;
-  border-radius: 7px;
-  background: var(--ink);
-  color: var(--bg);
   display: grid;
   place-items: center;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 16px;
-  font-style: italic;
-  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+.rail-mark img {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+/* Brand badge — paper (cream tile, ink mark) on light themes; ink (dark tile,
+   paper mark) on dark/dusk. Both variants are rendered and toggled by the
+   active theme so the mark always matches its surface. */
+.brand-badge.is-dark {
+  display: none;
+}
+body[data-theme="dark"] .brand-badge.is-light,
+body[data-theme="dusk"] .brand-badge.is-light {
+  display: none;
+}
+body[data-theme="dark"] .brand-badge.is-dark,
+body[data-theme="dusk"] .brand-badge.is-dark {
+  display: block;
 }
 .rail-name {
   font-family: var(--font-display);
@@ -285,7 +298,7 @@ select {
   letter-spacing: -0.01em;
 }
 .rail-name em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
   font-weight: 500;
 }
@@ -619,7 +632,7 @@ select {
   margin: 0;
 }
 .show-title em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
 }
 .show-sub {
@@ -1177,7 +1190,7 @@ textarea.field {
 }
 .sv-cuesheet-line {
   color: var(--ink-3);
-  font-style: italic;
+  font-style: normal;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1435,7 +1448,7 @@ textarea.field {
   letter-spacing: -.03em;
 }
 .today-headline em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
   font-weight: 400;
 }
@@ -1457,7 +1470,7 @@ textarea.field {
 .today-clock em {
   font-size: .5em;
   color: rgba(255,255,255,.55);
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
   margin-left: 4px;
 }
@@ -1772,7 +1785,7 @@ textarea.field {
   line-height: 1.02;
 }
 .home-hero-title em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
   font-weight: 400;
 }
@@ -3264,7 +3277,7 @@ div.mention:hover {
 .day-side-mon {
   font-family: var(--font-display);
   font-size: 14px;
-  font-style: italic;
+  font-style: normal;
   color: var(--ink-3);
 }
 .day-side-event {
@@ -3356,7 +3369,7 @@ div.mention:hover {
 }
 .agenda-day-mon {
   font-size: 11px;
-  font-style: italic;
+  font-style: normal;
   color: var(--ink-4);
 }
 .agenda-today-pill {
@@ -3743,14 +3756,14 @@ button.month-cell {
 .auth-mark {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
   display: grid;
   place-items: center;
-  background: var(--accent);
-  color: #fff;
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 600;
+  flex-shrink: 0;
+}
+.auth-mark img {
+  width: 30px;
+  height: 30px;
+  display: block;
 }
 .auth-wordmark {
   font-family: var(--font-display);
@@ -3760,7 +3773,7 @@ button.month-cell {
   color: var(--ink);
 }
 .auth-wordmark em {
-  font-style: italic;
+  font-style: normal;
   font-weight: 500;
   color: var(--accent);
 }
@@ -4440,7 +4453,7 @@ button.month-cell {
 .pp-empty-sm {
   color: var(--ink-4);
   font-size: 12.5px;
-  font-style: italic;
+  font-style: normal;
   padding: 8px 0;
 }
 
@@ -5066,7 +5079,7 @@ select.pp-field {
 .pp-preview-more {
   text-align: center;
   color: var(--ink-4);
-  font-style: italic;
+  font-style: normal;
   padding: 8px;
 }
 
@@ -5568,7 +5581,7 @@ select.pp-field {
     margin: 0;
   }
   .mt-greeting-title em {
-    font-style: italic;
+    font-style: normal;
     color: var(--accent);
   }
   .mt-greeting-sub {
@@ -5627,7 +5640,7 @@ select.pp-field {
   }
   .mt-call-focus {
     font-family: var(--font-display);
-    font-style: italic;
+    font-style: normal;
     font-size: 16px;
     color: var(--ink-2);
     margin-top: 8px;
@@ -5840,7 +5853,7 @@ select.pp-field {
   }
   .mr-summary-empty {
     color: var(--ink-4);
-    font-style: italic;
+    font-style: normal;
   }
   .mr-foot {
     font-size: 11.5px;
@@ -6064,7 +6077,7 @@ select.pp-field {
   .rd-dept-empty {
     font-size: 12.5px;
     color: var(--ink-4);
-    font-style: italic;
+    font-style: normal;
   }
   .rd-dept-body {
     font-size: 13px;
@@ -6681,7 +6694,7 @@ select.pp-field {
  * the dark / cool theme switch instead of pinning the light palette.
  * ============================================================ */
 .np-root {
-  --font-display: var(--font-ui, "Inter", ui-sans-serif, system-ui, sans-serif);
+  --font-display: var(--font-ui, "Geist", ui-sans-serif, system-ui, sans-serif);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -6726,15 +6739,13 @@ select.pp-field {
 .np-root .brand-mark {
   width: 26px;
   height: 26px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, var(--accent), oklch(0.45 0.18 18));
   display: grid;
   place-items: center;
-  color: white;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 14px;
-  font-style: italic;
+  flex-shrink: 0;
+}
+.np-root .brand-mark img {
+  width: 26px;
+  height: 26px;
 }
 .np-root .top-crumbs {
   margin-left: 14px;
@@ -7537,7 +7548,7 @@ select.pp-field {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 36px;
-  font-style: italic;
+  font-style: normal;
   box-shadow: 0 20px 60px -10px color-mix(in oklch, var(--accent) 40%, transparent);
 }
 .np-root .launch h2 {
@@ -8378,7 +8389,7 @@ textarea.cform-field {
   background: linear-gradient(135deg, var(--accent), oklch(0.45 0.18 18));
   color: #fff;
   font-family: var(--font-display);
-  font-style: italic;
+  font-style: normal;
   font-weight: 600;
   font-size: 15px;
   margin-left: 2px;
@@ -8900,7 +8911,7 @@ textarea.cform-field {
   line-height: 1.04;
 }
 .dd-greet h1 em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
   font-weight: 400;
 }
@@ -9954,7 +9965,7 @@ textarea.cform-field {
   margin: 4px 0 0;
 }
 .md-root .md-greet h1 em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
 }
 .md-root .md-greet-date {

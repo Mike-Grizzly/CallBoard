@@ -2,6 +2,47 @@
 // inter-page links rewired to the new Next routes (features.html → /features,
 // pricing.html → /pricing). Rendered as static markup by home/page.tsx.
 // Content is trusted/authored (no user input), so it is safe to inject.
+// Open-beta transparency band + founding-member offer. Surfaced just above the
+// pricing teaser so the lifetime discount sits next to the prices it applies to.
+// Change BETA_DISCOUNT_PCT in this one place to update every mention on the page.
+const BETA_DISCOUNT_PCT = 30;
+
+const OPEN_BETA_HTML = `
+  <!-- OPEN BETA -->
+  <section class="section" id="beta" style="background:var(--bg-muted);border-top:1px solid var(--border)">
+    <div class="wrap-narrow">
+      <div class="reveal" style="border:1px solid var(--border-strong);border-radius:20px;padding:clamp(28px,5vw,48px);background:var(--bg-elev);box-shadow:var(--shadow-2)">
+        <div style="text-align:center">
+          <span class="pill" data-c="accent"><span class="dot"></span>Open beta · built in the open</span>
+          <h2 class="title" style="margin:18px 0 0">Honest truth: we're still in <em>open beta.</em></h2>
+          <p class="lede" style="margin:16px auto 0;max-width:60ch">Proscene is live and running real shows, but we're building actively — you may meet the odd rough edge. Tell us when you do, and you'll shape the tool stage managers actually want. The companies who help us now get rewarded for it.</p>
+        </div>
+        <div class="grid grid-3" style="margin-top:38px">
+          <div class="feature-card">
+            <div class="feature-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></div>
+            <h3>Run a real show</h3>
+            <p>Everything works today — calls, calendar, script, blocking, and reports. Take a production from first read to closing night.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-ico" data-c="dusk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+            <h3>Tell us what's missing</h3>
+            <p>Share what's clunky, broken, or not there yet. We read every message and ship fast — your feedback steers the roadmap.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-ico" data-c="amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7z"/></svg></div>
+            <h3>Keep ${BETA_DISCOUNT_PCT}% — for life</h3>
+            <p>Join during the beta and lock in a founding rate: ${BETA_DISCOUNT_PCT}% off any plan, for as long as you stay with us.</p>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:36px">
+          <a class="btn primary lg" href="/signup">Join the beta — free to start <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+          <p class="kicker" style="margin-top:14px">No card to start · your founding ${BETA_DISCOUNT_PCT}% applies the day you subscribe</p>
+        </div>
+      </div>
+    </div>
+  </section>
+`;
+
 export const HOME_HTML = `
   <!-- HERO -->
   <section class="hero" data-screen-label="Hero">
@@ -83,6 +124,7 @@ export const HOME_HTML = `
     </div>
   </section>
 
+${OPEN_BETA_HTML}
   <!-- TRUST — add real customer logos here once we have them -->
 
 
@@ -350,6 +392,7 @@ export const HOME_HERO_MOCK_HTML = `
 
 // Everything on the home page below the hero (static for now).
 export const HOME_REST_HTML = `
+${OPEN_BETA_HTML}
   <!-- TRUST — add real customer logos here once we have them -->
 
 

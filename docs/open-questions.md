@@ -696,3 +696,22 @@ verification+publish path is free but heavy and still wouldn't remove the
 
 **Recommendation:** defer the custom domain until closer to public launch;
 acceptable for beta.
+
+---
+
+## Pricing / storage / beta follow-ups (added 2026-06-12)
+
+- **Lifetime founding discount is advertised but not built.** The homepage open-beta
+  band promises a founding discount (`BETA_DISCOUNT_PCT`, currently 30%), but there is
+  **no Stripe coupon / promotion code** and no logic to apply it at checkout. The number
+  is a recommendation, not yet a committed/finalized price; needs the founder's sign-off
+  before it's a real offer.
+- **Storage allowances are advertised but not enforced.** `STORAGE_LIMIT_GB`
+  (100/250/500 GB) is shown on the pricing page but nothing measures or caps a workspace's
+  usage. Decision was "start conservative, raise for free later"; enforcement (and a
+  fair-use/overage policy) is deferred. When ceilings grow / native video arrives, migrate
+  file blobs to a zero-egress object store (Cloudflare R2) — see `decision-log.md`.
+- **Marketing UI mockups need a visual verification pass.** The hand-built product demos
+  on `/` and `/features` were rebuilt (Script) / audited (the rest) against the real
+  components for accuracy, but none were rendered in-session. Eyeball them on a preview
+  deploy and flag any styling drift for a precise fix.

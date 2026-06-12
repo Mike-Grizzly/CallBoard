@@ -48,7 +48,22 @@ export async function Rail() {
   return (
     <aside className="rail" id="app-rail">
       <Link href="/dashboard" className="rail-brand" aria-label="Proscene home">
-        <div className="rail-mark">P</div>
+        <div className="rail-mark">
+          <img
+            className="brand-badge is-light"
+            src="/brand-ink.svg"
+            alt=""
+            width={28}
+            height={28}
+          />
+          <img
+            className="brand-badge is-dark"
+            src="/brand-paper.svg"
+            alt=""
+            width={28}
+            height={28}
+          />
+        </div>
         <div className="rail-name">
           Pro<em>scene</em>
         </div>

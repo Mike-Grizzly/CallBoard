@@ -388,7 +388,7 @@ export default async function ReportDetailPage({
                       <b style={{ fontSize: 13, fontWeight: 600 }}>{d.label}</b>
                     </div>
                     {empty ? (
-                      <div style={{ fontSize: 13, lineHeight: 1.55, color: "var(--ink-4)", fontStyle: "italic" }}>
+                      <div style={{ fontSize: 13, lineHeight: 1.55, color: "var(--ink-4)" }}>
                         No notes
                       </div>
                     ) : (

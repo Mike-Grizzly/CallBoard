@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./marketing.css";
 import { Nav } from "./_components/nav";
 import { Footer } from "./_components/footer";
 import { MarketingInteractions } from "./_components/marketing-interactions";
 
-const inter = Inter({
+const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-geist",
   display: "swap",
 });
 
@@ -23,7 +23,7 @@ export default function MarketingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`ps-site ${inter.variable}`}>
+    <div className={`ps-site ${geist.variable}`}>
       <Nav />
       <main>{children}</main>
       <Footer />

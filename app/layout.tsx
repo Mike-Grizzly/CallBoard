@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import Script from "next/script";
 import "./globals.css";
@@ -9,9 +9,8 @@ import "./globals.css";
 // the GTM web UI with no code changes. Overridable via NEXT_PUBLIC_GTM_ID.
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID || "GTM-PLR3RW32";
 
-const inter = Inter({
+const geist = Geist({
   subsets: ["latin"],
-  style: ["normal", "italic"],
   variable: "--font-ui",
   display: "swap",
 });
@@ -28,7 +27,11 @@ export const metadata: Metadata = {
     "A lightweight production portal for small theatre companies.",
   applicationName: "Proscene",
   icons: {
-    icon: "/icon.svg",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: "/apple-touch-icon.png",
   },
   appleWebApp: {
     capable: true,
@@ -63,7 +66,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geist.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       {GTM_ID && (

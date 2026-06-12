@@ -90,3 +90,26 @@ export const PLAN_LABELS: Record<PlanId, string> = {
   repertory: "Repertory",
   company: "Company",
 };
+
+// ─── Storage allowances ─────────────────────────────────────────────────────
+// Per-plan storage ceiling in GB (measured across the whole workspace). Like
+// productions, storage scales with the plan, not seats.
+//
+// These are intentionally CONSERVATIVE at launch. Real usage is PDFs and
+// images — rarely more than a few GB — so even a *full* tier costs only a few
+// dollars a year on Supabase Storage ($0.252/GB/yr). Starting low caps our
+// worst-case exposure while we learn real usage; we then raise ceilings "for
+// free" later as a goodwill/retention lever. Caps only ever go UP.
+//
+// Large-scale video hosting is deliberately NOT included yet. That feature —
+// and meaningfully bigger ceilings — is when a move to zero-egress object
+// storage (Cloudflare R2) earns its keep. See docs/decision-log.md.
+//
+// NOTE: single source of truth for marketing copy + any future quota
+// enforcement. Quota enforcement is NOT wired up yet.
+export const STORAGE_LIMIT_GB: Record<PlanId, number> = {
+  free: 5,
+  season: 100,
+  repertory: 250,
+  company: 500,
+};

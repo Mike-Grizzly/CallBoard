@@ -93,7 +93,6 @@ export function DayView({
               style={{
                 fontSize: 12,
                 color: "var(--ink-4)",
-                fontStyle: "italic",
               }}
             >
               No calls scheduled.
