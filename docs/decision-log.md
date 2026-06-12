@@ -1944,3 +1944,26 @@ path can't carry multi-GB films).
 Edited: `lib/permissions.ts`, `db/schema/index.ts`, the production `layout.tsx`
 + `production-tabs.tsx`. `tsc`/`eslint` clean; not browser-verified. **Requires
 `npm run db:push` before use.**
+
+---
+
+## 2026-06-12 — Enabled RLS on `announcement_productions`
+
+**Context.** The Supabase security advisor flagged `public.announcement_productions`
+as the only table with **RLS disabled** — meaning the anon key could read/write
+every row. It pre-dated this work (the `08-announcements` join table).
+
+**Decision.** Enabled RLS with **no policies** (migration
+`enable_rls_announcement_productions`), matching every other table. Verified
+first that the table is accessed exclusively through the Drizzle pooler
+connection (`features/announcements/{queries,actions}.ts` → `db` from `@/db`,
+postgres role, bypasses RLS) and that **no Supabase anon/SSR client performs
+table reads anywhere in the repo** (the Supabase JS client is used only for
+Storage `attachments` + Auth). So enabling RLS closes the anon exposure with no
+behavior change.
+
+**Impact.** Critical `rls_disabled` advisory cleared. The app's standing
+convention is now uniform: RLS on, no policies, DB access via the pooler. New
+tables (incl. `rehearsal_videos`/`video_timestamp_notes`) follow the same.
+Left open: Supabase Auth "leaked password protection" is disabled (advisor
+WARN) — a dashboard toggle, deferred to the user.
