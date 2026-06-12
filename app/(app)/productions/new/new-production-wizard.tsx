@@ -494,8 +494,8 @@ function NPTopBar({ overlay, onClose }: { overlay: boolean; onClose?: () => void
         </button>
         <div className="brand" style={{ marginLeft: "auto" }}>
           <div className="brand-mark">
-            <img className="brand-badge is-light" src="/brand-paper.svg" alt="" width={26} height={26} />
-            <img className="brand-badge is-dark" src="/brand-ink.svg" alt="" width={26} height={26} />
+            <img className="brand-badge is-light" src="/brand-ink.svg" alt="" width={26} height={26} />
+            <img className="brand-badge is-dark" src="/brand-paper.svg" alt="" width={26} height={26} />
           </div>
           <span>New production</span>
         </div>
@@ -514,8 +514,8 @@ function NPTopBar({ overlay, onClose }: { overlay: boolean; onClose?: () => void
     <div className="topbar">
       <div className="brand">
         <div className="brand-mark">
-          <img className="brand-badge is-light" src="/brand-paper.svg" alt="" width={26} height={26} />
-          <img className="brand-badge is-dark" src="/brand-ink.svg" alt="" width={26} height={26} />
+          <img className="brand-badge is-light" src="/brand-ink.svg" alt="" width={26} height={26} />
+          <img className="brand-badge is-dark" src="/brand-paper.svg" alt="" width={26} height={26} />
         </div>
         <span>Proscene</span>
       </div>

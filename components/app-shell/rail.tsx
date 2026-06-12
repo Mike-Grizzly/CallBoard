@@ -51,14 +51,14 @@ export async function Rail() {
         <div className="rail-mark">
           <img
             className="brand-badge is-light"
-            src="/brand-paper.svg"
+            src="/brand-ink.svg"
             alt=""
             width={28}
             height={28}
           />
           <img
             className="brand-badge is-dark"
-            src="/brand-ink.svg"
+            src="/brand-paper.svg"
             alt=""
             width={28}
             height={28}
