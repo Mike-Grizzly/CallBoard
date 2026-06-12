@@ -767,6 +767,16 @@ body[data-theme="dusk"] .brand-badge.is-dark {
   padding-left: var(--pad-x);
   padding-right: var(--pad-x);
   padding-bottom: 1px;
+  /* Soft right-edge fade so it reads as scrollable when the tabs overflow.
+     The strip is left-aligned, so when everything fits the fade falls over
+     empty space and is invisible; when it overflows it veils the last tab,
+     hinting "there's more →". */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 calc(100% - 32px),
+    transparent
+  );
+  mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
 }
 .tabs::-webkit-scrollbar {
   display: none;
