@@ -12,6 +12,7 @@ import {
 } from "@/features/members/queries";
 import { getReportCountByProduction, getDeletedReportCountByProduction } from "@/features/reports/queries";
 import { getDocumentCountByProduction, getDeletedDocumentCountByProduction } from "@/features/documents/queries";
+import { getVideoCountByProduction } from "@/features/videos/queries";
 import { getAnnouncementCountByProduction } from "@/features/announcements/queries";
 import { TrashDrawer } from "./trash-drawer";
 import { ProductionTabsNav, type ProductionTab } from "./production-tabs";
@@ -79,11 +80,13 @@ export default async function ProductionLayout({
   const canCreateReports = can(user.role, "reports:create");
   const canViewBlocking = can(user.role, "blocking:view");
   const canViewNotes = can(user.role, "notes:view");
+  const canViewVideos = can(user.role, "videos:view");
 
   const [
     members,
     reportCount,
     documentCount,
+    videoCount,
     announcementCount,
     deletedDocCount,
     deletedReportCount,
@@ -91,6 +94,7 @@ export default async function ProductionLayout({
     getProductionMembers(production.id),
     getReportCountByProduction(production.id),
     getDocumentCountByProduction(production.id),
+    getVideoCountByProduction(production.id),
     getAnnouncementCountByProduction(production.id, user.organizationId),
     getDeletedDocumentCountByProduction(production.id),
     getDeletedReportCountByProduction(production.id),
@@ -144,6 +148,15 @@ export default async function ProductionLayout({
       count: announcementCount,
     },
   );
+
+  if (canViewVideos) {
+    tabs.push({
+      label: "Rehearsal Video",
+      href: `/productions/${slug}/videos`,
+      icon: "Clapperboard",
+      count: videoCount,
+    });
+  }
 
   if (canViewBlocking) {
     tabs.push({

@@ -641,6 +641,36 @@ DPI is 216; 300 dpi would help accuracy at higher client memory/time cost.
 
 ---
 
+## Rehearsal Video (link-only) — open items (added 2026-06-12)
+
+- **DB migration applied.** `rehearsal_videos` + `video_timestamp_notes` were
+  created directly on the Supabase `CallBoard` project (migration
+  `add_rehearsal_videos_and_timestamp_notes`), with RLS enabled / no policies
+  to match the app convention (DB access goes through the Drizzle pooler
+  connection, which bypasses RLS). No `db:push` needed.
+- **Not browser-verified.** The player wrapper loads the YouTube IFrame API /
+  Vimeo Player SDK from a `<script>` and drives them via an imperative handle —
+  this needs a real browser test (especially: seek-on-click, duration capture,
+  speed change, and a Vimeo private/unlisted link with an `h=` hash).
+- **Vimeo private embeds need domain allow-listing.** Unlisted/private Vimeo
+  videos only embed if the Vimeo account allow-lists the app's domain;
+  otherwise the player shows a privacy error. Worth surfacing in the add-video
+  help text once confirmed.
+- **No real thumbnails or durations until first open.** Library cards use
+  deterministic gradient tiles; `durationSeconds` is null until someone opens
+  the video and the player reports it (then it persists). YouTube exposes a
+  thumbnail URL with no API call (`img.youtube.com/vi/{id}/...`); Vimeo needs an
+  oEmbed fetch — deferred.
+- **Native hosting is the real ask down the road.** This is the interim. Native
+  upload/hosting (Mux/Cloudflare Stream) brings transcoding, adaptive delivery,
+  Download, true clip trim and a custom scrubber — and an egress cost that
+  should be priced as a paid tier. See decision-log 2026-06-12.
+- **Soft-deleted videos aren't purged.** Like documents/productions, removed
+  videos set `deletedAt` only; no hard purge exists (same gap as the soft-delete
+  section above). Low urgency — rows are tiny metadata, no Storage objects.
+
+---
+
 ## Google consent screen shows `…supabase.co`, not "Proscene" (2026-06-12)
 
 **Status: DEFERRED (cosmetic, sign-in works).** On the Google "Sign in with
