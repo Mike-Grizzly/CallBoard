@@ -1904,3 +1904,20 @@ create index if not exists script_ocr_lookup_idx
 - **Deferred:** the Documents tab badge still counts hidden docs (a number, no titles — acceptable v1 leak); the Script tool's default-script path isn't folder-gated; restriction is role-based, not per-person or per-department.
 
 **Impact.** New: `folder-editor.tsx`, `feature-specs/13-document-folder-privacy.md`. Edited: `db/schema/documents.ts`, `features/documents/{constants,actions,queries}.ts`, the documents page + `[documentId]` viewer + `documents-client.tsx`. `tsc`/`eslint` clean; not browser-verified. Shipped as its own PR off `main`.
+
+---
+
+## 2026-06-12 — Per-plan storage allowances (100 / 250 / 500 GB)
+
+**Decision.** Paid plans get a storage ceiling, measured across the whole workspace: **Season 100 GB, Repertory 250 GB, Company 500 GB** (Free 5 GB). Defined as `STORAGE_LIMIT_GB` in `features/billing/constants.ts`. No price change.
+
+**Reason.** Storage is the one variable cost that actually scales (Supabase Storage ≈ $0.252/GB/yr at rest, plus egress). Real usage is PDFs and images — a few GB at most — so even a *full* tier costs only a few dollars a year and stays a small fraction of revenue (and well within margin even with the planned ~30% lifetime founding discount). We start **conservative** to cap worst-case exposure while we learn real usage, then raise ceilings **"for free"** later as a goodwill/retention lever. Caps only ever go **up** (raising an allowance delights; cutting one burns trust), so starting low is the safe asymmetry.
+
+**Impact.**
+- `STORAGE_LIMIT_GB` is the single source of truth for marketing copy and any future quota enforcement. **Enforcement is NOT wired up yet** — these are advertised ceilings only for now.
+- Pricing page updated: tier cards, the comparison table, and a new storage FAQ (with a fair-use note that large-scale video isn't included yet). Sanity-driven tier docs, if/when populated, should mirror these numbers.
+- The lifetime founding discount applies to the **subscription only**, never to storage overages/add-ons.
+
+**Deferred / future.**
+- **Large-scale video hosting is explicitly out of scope** of current plans, so today's plans don't implicitly promise it. When we add video and/or meaningfully bigger ceilings, migrate file blobs to a **zero-egress object store (Cloudflare R2)** — that's what makes TB-scale and streaming financially safe. Not worth the migration cost today (PDF/image usage, low egress).
+- Treat video / bigger caps as **additive** (a paid add-on SKU or new tiers), never a retroactive base-price hike on existing or lifetime users.
