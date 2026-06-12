@@ -59,6 +59,10 @@ export type CueAnnotation = {
   // line end. For pipes, `rect` is zero-width at the pipe's x over its line,
   // and `line` carries the surrounding words with "*" marking the pipe.
   marker?: "box" | "pipe";
+  // User-dragged label position (normalized page coords of the label's anchor
+  // dot). When set, the label sits here instead of being auto-stacked; the
+  // orthogonal leader follows it. Cleared to return the cue to auto-placement.
+  labelPos?: { x: number; y: number };
 };
 
 /**
