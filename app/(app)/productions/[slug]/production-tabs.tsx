@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import {
   Bell,
+  Clapperboard,
   FileText,
   FolderOpen,
   Layout as LayoutIcon,
@@ -24,6 +25,7 @@ const ICONS: Record<string, LucideIcon> = {
   PenLine,
   Users,
   Bell,
+  Clapperboard,
 };
 
 export type ProductionTab = {

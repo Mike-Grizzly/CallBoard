@@ -1921,3 +1921,66 @@ create index if not exists script_ocr_lookup_idx
 **Deferred / future.**
 - **Large-scale video hosting is explicitly out of scope** of current plans, so today's plans don't implicitly promise it. When we add video and/or meaningfully bigger ceilings, migrate file blobs to a **zero-egress object store (Cloudflare R2)** — that's what makes TB-scale and streaming financially safe. Not worth the migration cost today (PDF/image usage, low egress).
 - Treat video / bigger caps as **additive** (a paid add-on SKU or new tiers), never a retroactive base-price hike on existing or lifetime users.
+
+---
+
+## 2026-06-12 — Rehearsal Video: link-only embeds before native hosting
+
+**Context.** Product wants to offer rehearsal video sharing (pro companies film
+every rehearsal and distribute to cast/crew). Native hosting raises the cost
+question. Analysis: storage at rest is cheap; **egress/bandwidth is the real
+cost driver** and scales with viewing, plus native hosting needs transcoding,
+adaptive-bitrate delivery and a resumable-upload pipeline (the 64MB server-action
+path can't carry multi-GB films).
+
+**Decisions.**
+- **Ship a link-only interim first.** A "Rehearsal Video" production tab where
+  leadership/SMs paste YouTube/Vimeo links that embed on the page. The platform
+  hosts/transcodes/streams, so it adds **zero storage or egress cost** and no
+  upload pipeline. Native hosting (Mux/Cloudflare Stream) is a deliberate later
+  phase, gated as a paid feature so heavy-watching orgs fund their own bandwidth.
+- **Build the embed via the platforms' player SDKs**, not a bare iframe, so the
+  concept's timestamped-notes panel works: the YouTube IFrame API / Vimeo Player
+  SDK (loaded via injected `<script>`, no npm dep) give `seekTo`/`getCurrentTime`/
+  `setPlaybackRate`. Notes seek the player on click.
+- **Embed URLs are constructed from a validated provider+id**, never from
+  user-supplied HTML — deliberately avoiding the documented `dangerouslySetInnerHTML`
+  sanitization risk. `parseVideoUrl` rejects any non-YouTube/Vimeo input.
+- **New capabilities `videos:view` (all) + `videos:create` (leadership + SMs).**
+  A dedicated pair (not reusing `documents:upload`) so video access can be
+  granted/revoked independently later. Timestamp notes are open to any member.
+- **Omitted what hosted links can't honestly do:** no Download (impossible for
+  hosted video), no true clip trim ("Share clip" copies a timestamped deep
+  link), no custom scrubber-with-markers (deferred — uses native player chrome).
+- **Two new tables, pushed via `drizzle-kit push`** (`rehearsal_videos`,
+  `video_timestamp_notes`); no composite unique constraints (avoids the known
+  push hang). `durationSeconds` is backfilled idempotently from the player.
+
+**Impact.** New: `db/schema/rehearsal-videos.ts`, `features/videos/*`,
+`app/(app)/productions/[slug]/videos/*`, `feature-specs/20-rehearsal-video.md`.
+Edited: `lib/permissions.ts`, `db/schema/index.ts`, the production `layout.tsx`
++ `production-tabs.tsx`. `tsc`/`eslint` clean; not browser-verified. **Requires
+`npm run db:push` before use.**
+
+---
+
+## 2026-06-12 — Enabled RLS on `announcement_productions`
+
+**Context.** The Supabase security advisor flagged `public.announcement_productions`
+as the only table with **RLS disabled** — meaning the anon key could read/write
+every row. It pre-dated this work (the `08-announcements` join table).
+
+**Decision.** Enabled RLS with **no policies** (migration
+`enable_rls_announcement_productions`), matching every other table. Verified
+first that the table is accessed exclusively through the Drizzle pooler
+connection (`features/announcements/{queries,actions}.ts` → `db` from `@/db`,
+postgres role, bypasses RLS) and that **no Supabase anon/SSR client performs
+table reads anywhere in the repo** (the Supabase JS client is used only for
+Storage `attachments` + Auth). So enabling RLS closes the anon exposure with no
+behavior change.
+
+**Impact.** Critical `rls_disabled` advisory cleared. The app's standing
+convention is now uniform: RLS on, no policies, DB access via the pooler. New
+tables (incl. `rehearsal_videos`/`video_timestamp_notes`) follow the same.
+Left open: Supabase Auth "leaked password protection" is disabled (advisor
+WARN) — a dashboard toggle, deferred to the user.

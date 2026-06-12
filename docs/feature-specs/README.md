@@ -40,3 +40,4 @@ Each feature spec must be updated when its feature changes. Status should reflec
 | `13-document-folder-privacy.md` | Role-Restricted (Private) Document Folders | Implemented (not browser-verified) |
 | `16-people-directory.md` | People Directory & Mass Upload | Implemented (not fully verified) |
 | `17-push-notifications.md` | Web Push Notifications (PWA) | Implemented (not fully verified) |
+| `20-rehearsal-video.md` | Rehearsal Video (link-only embeds + timestamp notes) | Implemented (not browser-verified) |
