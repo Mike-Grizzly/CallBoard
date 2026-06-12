@@ -244,7 +244,7 @@ select {
 /* ─── App layout ─────────────────────────────────────────────────────── */
 .app {
   display: grid;
-  grid-template-columns: var(--rail-w) 1fr;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
   min-height: 100vh;
   width: 100%;
 }
@@ -1569,7 +1569,7 @@ textarea.field {
 }
 @media (max-width: 720px) {
   .today-hero-content { padding: 20px 20px 18px; }
-  .today-stats { grid-template-columns: repeat(2, 1fr); gap: 14px 0; }
+  .today-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 0; }
   .today-stat { padding: 0 14px; }
   .today-stat:nth-child(3) { border-left: 0; }
 }
@@ -2530,7 +2530,7 @@ div.mention:hover {
   .right-now-grid,
   .prod-cards,
   .pin-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 680px) {
@@ -2641,7 +2641,7 @@ div.mention:hover {
 
 .cal {
   display: grid;
-  grid-template-columns: 248px 1fr;
+  grid-template-columns: 248px minmax(0, 1fr);
   gap: 18px;
   height: 100%;
   min-height: 0;
@@ -2758,7 +2758,7 @@ div.mention:hover {
 }
 .mini-month-wk {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   font-size: 10px;
   color: var(--ink-4);
   text-align: center;
@@ -2767,7 +2767,7 @@ div.mention:hover {
 }
 .mini-month-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1px;
 }
 .mini-day {
@@ -3105,7 +3105,7 @@ div.mention:hover {
 }
 .month-head {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   border-bottom: 1px solid var(--border);
 }
 .month-h-cell {
@@ -3125,8 +3125,8 @@ div.mention:hover {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: repeat(6, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr));
   border-top: 1px solid var(--border);
   margin-top: -1px;
 }
@@ -3242,7 +3242,7 @@ div.mention:hover {
 /* ─── Day view ────────────────────────────────────────────────────── */
 .day {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: minmax(0, 1fr) 280px;
   height: 100%;
   min-height: 0;
 }
@@ -3405,7 +3405,7 @@ div.mention:hover {
   border-radius: var(--radius-s);
   padding: 10px 14px;
   display: grid;
-  grid-template-columns: 4px 76px 1fr 180px;
+  grid-template-columns: 4px 76px minmax(0, 1fr) 180px;
   gap: 14px;
   align-items: center;
   text-align: left;
@@ -3733,7 +3733,7 @@ button.month-cell {
     display: none;
   }
   .agenda-item {
-    grid-template-columns: 4px 70px 1fr;
+    grid-template-columns: 4px 70px minmax(0, 1fr);
   }
   .agenda-loc {
     display: none;
@@ -4153,7 +4153,7 @@ button.month-cell {
 
 .pp-stats {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 22px;
 }
@@ -5025,7 +5025,7 @@ select.pp-field {
 }
 .pp-map-row {
   display: grid;
-  grid-template-columns: 110px 1fr 1fr;
+  grid-template-columns: 110px minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
   align-items: center;
 }
@@ -5169,7 +5169,7 @@ select.pp-field {
 
 @media (max-width: 1100px) {
   .pp-stats {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 @media (max-width: 720px) {
@@ -5177,7 +5177,7 @@ select.pp-field {
     font-size: 28px;
   }
   .pp-stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .pp-form-grid {
     grid-template-columns: 1fr;
@@ -6790,7 +6790,7 @@ select.pp-field {
 /* Layout */
 .np-root .body {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px minmax(0, 1fr);
   flex: 1;
   min-height: 0;
 }
@@ -7119,7 +7119,7 @@ select.pp-field {
 /* Department toggle cards */
 .np-root .dept-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 .np-root .dept-card {
@@ -7441,7 +7441,7 @@ select.pp-field {
 /* Date band */
 .np-root .date-band {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   padding: 16px;
   background: var(--bg-sunken);
@@ -8775,7 +8775,7 @@ textarea.cform-field {
   min-height: 0;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   padding: 8px 14px calc(20px + env(safe-area-inset-bottom, 0px));
 }
@@ -9375,7 +9375,7 @@ textarea.cform-field {
 /* Your shows */
 .dd-shows {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 .dd-show {
@@ -9848,7 +9848,7 @@ textarea.cform-field {
     grid-column: 1 / -1;
   }
   .dd-shows {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
