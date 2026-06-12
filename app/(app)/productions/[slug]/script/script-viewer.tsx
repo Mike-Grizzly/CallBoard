@@ -2568,9 +2568,9 @@ function stackCueLabels(
   const NUMBER_UP = CUE_LABEL_NUMBER_UP * scale;
   const DESC_DOWN = CUE_LABEL_DESC_DOWN * scale;
   const GAP = NUMBER_UP + CUE_LABEL_PAD * scale;
-  // Look-ahead window (~one label tall): if another cue sits this close below,
-  // stacking a colliding label straight down would run into it.
-  const FOLLOW = GAP + DESC_DOWN;
+  // Up to this many labels stack vertically in one column before the next one
+  // that can't seat at its line overflows into the second column.
+  const MAX_STACK = 2;
   const out = new Map<string, CueLabelPos>();
   for (const side of ["left", "right"] as const) {
     const group = cues
@@ -2588,34 +2588,44 @@ function stackCueLabels(
           sensitivity: "base",
         }),
       );
-    // For each cue, is there another cue just below its line? If so, stacking a
-    // label down here would collide with it, so we fan into the 2nd column
-    // instead. An isolated same-line group (nothing close below) just stacks.
-    const followed = group.map((it) =>
-      group.some((o) => o !== it && o.y > it.y + 0.5 && o.y <= it.y + FOLLOW),
-    );
+    // Greedy, in number order: keep each label at its line in the first column;
+    // when the first column is mid-pile and can't seat it there, stack it
+    // (up to MAX_STACK) or overflow into the second column. Earlier labels are
+    // never moved, and a label is never placed above the previous (lower)
+    // number — so adding a cue only places the new one and order is preserved.
     const bottom = [-Infinity, -Infinity]; // bottom of last label per column
+    const run = [0, 0]; // labels stacked in the current pile, per column
     let lastY = -Infinity; // previous label's y — keeps numbers in order
-    group.forEach((item, i) => {
-      // Never above the anchor or the previous (lower) number.
+    for (const item of group) {
+      // A column's pile ends once this cue's line clears its last label.
+      if (item.y >= bottom[0] + GAP) run[0] = 0;
+      if (item.y >= bottom[1] + GAP) run[1] = 0;
+
       const floor = Math.max(item.y, lastY);
       const y0 = Math.max(floor, bottom[0] + GAP);
-      let lane = 0;
-      let y = y0;
-      // y0 above its line means column 0 can't seat it without pushing down.
-      // Fan into the 2nd column only when this cue is closely followed below
-      // (so stacking down would collide); otherwise stack vertically.
-      if (y0 > item.y + 0.5 && followed[i]) {
+      let lane: number;
+      let y: number;
+      if (y0 <= item.y + 0.5 || run[0] < MAX_STACK) {
+        // Seats at its line in column 0, or column 0's pile still has room.
+        lane = 0;
+        y = y0;
+      } else {
+        // Column 0's pile is full — overflow into column 1.
         const y1 = Math.max(floor, bottom[1] + GAP);
-        if (y1 < y0) {
+        if (y1 <= item.y + 0.5 || run[1] < MAX_STACK) {
           lane = 1;
           y = y1;
+        } else {
+          // Both piles full — push down in whichever column is shorter.
+          lane = y0 <= y1 ? 0 : 1;
+          y = lane === 0 ? y0 : y1;
         }
       }
       out.set(item.id, { y, lane });
+      run[lane] = y <= item.y + 0.5 ? 1 : run[lane] + 1;
       bottom[lane] = y + (item.hasDesc ? DESC_DOWN : 0);
       lastY = y;
-    });
+    }
   }
   return out;
 }
