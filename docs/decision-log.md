@@ -1984,3 +1984,17 @@ convention is now uniform: RLS on, no policies, DB access via the pooler. New
 tables (incl. `rehearsal_videos`/`video_timestamp_notes`) follow the same.
 Left open: Supabase Auth "leaked password protection" is disabled (advisor
 WARN) — a dashboard toggle, deferred to the user.
+
+---
+
+## 2026-06-12 — Typography + brand identity refresh (marketing/app cosmetics)
+
+**Decision.** A cosmetic pass across the marketing site and app chrome (no app logic):
+- **Geist** is the main UI font (`next/font/google`), replacing Inter, in both the root and marketing layouts. Geist Mono unchanged.
+- **No italics in chrome.** Every `font-style: italic` in our own CSS/inline styles is now `normal`; the crimson accent colour on the wordmark + marketing headline accents is **kept** ("keep crimson, drop slant"). Rich-text content (`.prose`) and the editor's Italic button are deliberately untouched (user content).
+- **Brand mark = the Proscene call-board glyph** in two colours: **paper** (cream `#F5F2EA`) and **ink** (dark `#15181F`). The in-page marks are **transparent** (no tile), so they're applied by **contrast** — ink on light surfaces, paper on dark — via theme-adaptive `body[data-theme]` pairs for app surfaces and static choices for the always-light nav / always-dark footer. Canonical sources in `transparent-icons/`.
+- The **favicon + installed-app-icon pack is intentionally frozen** on the prior dark badge set (user: "keep the current favicon"); `favicon.svg` adapts to the OS light/dark preference. Installed-app icons use the dark (ink) badge to match the dark manifest splash.
+
+**Reason.** Founder-driven brand direction; transparency for new users (the open-beta band); and accuracy (the marketing UI mockups were based on early models — the Script demo was rebuilt to match the real PDF-cue-sheet tool).
+
+**Impact.** Marketing-only/chrome-only; no schema, permissions, or server actions touched. Not browser-verified in-session (incomplete `node_modules`); relies on CI / a Vercel preview. The marketing product demos other than Script were audited as faithful and left as-is; a visual verification pass on a preview is the open follow-up.
