@@ -754,32 +754,11 @@ body[data-theme="dusk"] .brand-badge.is-dark {
   align-items: center;
   gap: 2px;
   margin-bottom: -1px;
-  /* Scroll within itself instead of widening the page when the tab list is
-     longer than the viewport (common on narrow / 4:3 screens, not just
-     phones). Negative margins + matching padding let it scroll edge-to-edge
-     while keeping the first tab aligned with the header content. */
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  margin-left: calc(-1 * var(--pad-x));
-  margin-right: calc(-1 * var(--pad-x));
-  padding-left: var(--pad-x);
-  padding-right: var(--pad-x);
-  padding-bottom: 1px;
-  /* Soft right-edge fade so it reads as scrollable when the tabs overflow.
-     The strip is left-aligned, so when everything fits the fade falls over
-     empty space and is invisible; when it overflows it veils the last tab,
-     hinting "there's more →". */
-  -webkit-mask-image: linear-gradient(
-    to right,
-    #000 calc(100% - 32px),
-    transparent
-  );
-  mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
-}
-.tabs::-webkit-scrollbar {
-  display: none;
+  /* Wrap onto multiple rows when the tabs don't all fit, so every section
+     stays visible in one view (nothing hidden behind a scroll) on narrow /
+     4:3 screens. Phones keep the compact horizontal scroller (media query
+     below overrides this). */
+  flex-wrap: wrap;
 }
 .tab {
   appearance: none;
