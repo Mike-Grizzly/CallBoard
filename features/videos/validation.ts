@@ -13,6 +13,7 @@ export type ParsedVideo = {
 
 const YOUTUBE_ID = /^[a-zA-Z0-9_-]{11}$/;
 const VIMEO_ID = /^\d+$/;
+const DRIVE_ID = /^[a-zA-Z0-9_-]{10,}$/;
 
 /**
  * Parse a YouTube or Vimeo URL into a provider + id. Returns null for
@@ -24,6 +25,8 @@ const VIMEO_ID = /^\d+$/;
  *             youtube.com/shorts/ID, youtube.com/live/ID
  *   Vimeo   — vimeo.com/123, vimeo.com/123/HASH, player.vimeo.com/video/123,
  *             vimeo.com/channels/NAME/123, vimeo.com/groups/NAME/videos/123
+ *   Drive   — drive.google.com/file/d/FILE_ID/view, /preview,
+ *             drive.google.com/open?id=FILE_ID, /uc?id=FILE_ID
  */
 export function parseVideoUrl(raw: string): ParsedVideo | null {
   const trimmed = raw.trim();
@@ -79,6 +82,24 @@ export function parseVideoUrl(raw: string): ParsedVideo | null {
     return { provider: "vimeo", videoId: id, embedHash };
   }
 
+  // ----- Google Drive -----
+  if (host === "drive.google.com") {
+    // /file/d/FILE_ID/...
+    if (segments[0] === "file") {
+      const dIndex = segments.indexOf("d");
+      const id = dIndex !== -1 ? segments[dIndex + 1] : undefined;
+      if (id && DRIVE_ID.test(id)) {
+        return { provider: "gdrive", videoId: id, embedHash: null };
+      }
+    }
+    // ?id=FILE_ID (open / uc links)
+    const qid = url.searchParams.get("id");
+    if (qid && DRIVE_ID.test(qid)) {
+      return { provider: "gdrive", videoId: qid, embedHash: null };
+    }
+    return null;
+  }
+
   return null;
 }
 
@@ -94,6 +115,11 @@ export function buildEmbedUrl(
 ): string {
   if (provider === "youtube") {
     return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1&playsinline=1`;
+  }
+  if (provider === "gdrive") {
+    // Drive's embeddable preview player. No JS API (no seek/rate), so the UI
+    // degrades for this provider.
+    return `https://drive.google.com/file/d/${videoId}/preview`;
   }
   // Vimeo
   const params = new URLSearchParams();
@@ -116,6 +142,10 @@ export function buildShareUrl(
   const t = Math.max(0, Math.floor(seconds));
   if (provider === "youtube") {
     return `https://youtu.be/${videoId}?t=${t}`;
+  }
+  if (provider === "gdrive") {
+    // Drive has no timestamp deep link — share the file view URL.
+    return `https://drive.google.com/file/d/${videoId}/view`;
   }
   const hash = embedHash ? `/${embedHash}` : "";
   return `https://vimeo.com/${videoId}${hash}#t=${t}s`;

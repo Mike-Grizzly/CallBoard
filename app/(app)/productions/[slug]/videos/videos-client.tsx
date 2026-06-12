@@ -14,6 +14,7 @@ import {
 import {
   formatTimecode,
   gradientForId,
+  supportsTimestampNotes,
   type VideoProvider,
 } from "@/features/videos/constants";
 import { buildShareUrl } from "@/features/videos/validation";
@@ -75,11 +76,16 @@ export function VideosClient({
   const [pending, startTransition] = useTransition();
 
   const selected = videos.find((v) => v.id === selectedId) ?? null;
+  // Google Drive embeds have no JS player API, so timestamp notes / seeking /
+  // speed control don't apply — the UI degrades to a plain player for them.
+  const hasTimestamps = selected
+    ? supportsTimestampNotes(selected.provider)
+    : false;
 
   // Poll the player for the playhead so the "add note at …" affordances track
   // playback live (matches the concept's "@ 4:47" labels).
   useEffect(() => {
-    if (!selected) return;
+    if (!selected || !supportsTimestampNotes(selected.provider)) return;
     const interval = setInterval(() => {
       void playerRef.current?.getCurrentTime().then((t) => {
         if (Number.isFinite(t)) setCurrentTime(t);
@@ -224,7 +230,7 @@ export function VideosClient({
           </p>
           <p style={{ fontSize: 13, maxWidth: 360 }}>
             {canCreate
-              ? "Paste a YouTube or Vimeo link to share rehearsal footage with the cast and crew. The video stays on the platform — nothing is uploaded here."
+              ? "Paste a YouTube, Vimeo, or Google Drive link to share rehearsal footage with the cast and crew. The video stays on the platform — nothing is uploaded here."
               : "A stage manager or member of the creative team can link rehearsal footage from YouTube or Vimeo here."}
           </p>
           {canCreate && (
@@ -383,27 +389,32 @@ export function VideosClient({
               flexWrap: "wrap",
             }}
           >
-            <span
-              style={{
-                fontSize: 13,
-                color: "var(--ink-3)",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {formatTimecode(currentTime)}
-            </span>
+            {hasTimestamps && (
+              <span
+                style={{
+                  fontSize: 13,
+                  color: "var(--ink-3)",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {formatTimecode(currentTime)}
+              </span>
+            )}
             <button type="button" className="btn ghost" onClick={copyShareLink}>
               <Share2 className="ico" aria-hidden />
-              <span>{shareLabel}</span>
+              <span>{hasTimestamps ? shareLabel : shareLabel === "Share clip" ? "Copy link" : shareLabel}</span>
             </button>
-            <button type="button" className="btn ghost" onClick={cycleSpeed}>
-              <Gauge className="ico" aria-hidden />
-              <span>Speed {speed % 1 === 0 ? `${speed}.0` : speed}×</span>
-            </button>
+            {hasTimestamps && (
+              <button type="button" className="btn ghost" onClick={cycleSpeed}>
+                <Gauge className="ico" aria-hidden />
+                <span>Speed {speed % 1 === 0 ? `${speed}.0` : speed}×</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Timestamp notes panel */}
+        {/* Timestamp notes panel — or a notice for providers without a JS API */}
+        {hasTimestamps ? (
         <aside
           style={{
             background: "var(--bg-elev)",
@@ -552,6 +563,31 @@ export function VideosClient({
             </button>
           </form>
         </aside>
+        ) : (
+          <aside
+            style={{
+              background: "var(--bg-elev)",
+              border: "1px solid var(--line, rgba(0,0,0,0.08))",
+              borderRadius: "var(--radius)",
+              padding: "16px 14px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              color: "var(--ink-3)",
+            }}
+          >
+            <strong style={{ fontSize: 14, color: "var(--ink-2)" }}>
+              Timestamps unavailable
+            </strong>
+            <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+              Google Drive videos embed and play here, but Drive doesn&apos;t
+              expose a player API — so timestamp notes, seeking and speed
+              control aren&apos;t available. Link the same footage from{" "}
+              <strong>YouTube</strong> or <strong>Vimeo</strong> for the full
+              experience.
+            </p>
+          </aside>
+        )}
       </div>
 
       {/* Library */}
@@ -776,7 +812,7 @@ function AddVideoForm({
         )}
 
         <label style={labelStyle}>
-          YouTube or Vimeo link
+          Video link
           <input
             name="url"
             type="url"
@@ -784,6 +820,11 @@ function AddVideoForm({
             placeholder="https://www.youtube.com/watch?v=…"
             style={inputStyle}
           />
+          <span style={{ fontSize: 12, fontWeight: 400, color: "var(--ink-3)" }}>
+            Works best with <strong>YouTube</strong> or <strong>Vimeo</strong>{" "}
+            (timestamp notes, seeking and speed control). Google Drive links
+            embed too, but play only — no timestamp features.
+          </span>
         </label>
 
         <label style={labelStyle}>

@@ -4,12 +4,22 @@
  * components without tripping the constants-in-server-file hydration trap.
  */
 
-export type VideoProvider = "youtube" | "vimeo";
+export type VideoProvider = "youtube" | "vimeo" | "gdrive";
 
 export const PROVIDER_LABELS: Record<VideoProvider, string> = {
   youtube: "YouTube",
   vimeo: "Vimeo",
+  gdrive: "Google Drive",
 };
+
+/**
+ * Providers with a JavaScript player API we can drive (seek, read the
+ * playhead, set speed). Google Drive has none, so its videos embed but can't
+ * support timestamp notes / seeking / speed control — the UI degrades for it.
+ */
+export function supportsTimestampNotes(provider: string): boolean {
+  return provider === "youtube" || provider === "vimeo";
+}
 
 export const MAX_TITLE_LENGTH = 120;
 export const MAX_DESCRIPTION_LENGTH = 2000;

@@ -77,9 +77,22 @@ can be deleted by its author or a production manager (`productions:manage`).
 - Tab registered in `productions/[slug]/layout.tsx` (icon `Clapperboard`, count
   badge) and `production-tabs.tsx` ICON map.
 
+## Providers
+- **YouTube** and **Vimeo** — full experience (embedded player + JS API for
+  seek, playhead, speed; timestamp notes work).
+- **Google Drive** (added 2026-06-12) — `drive.google.com/file/d/{id}/...`,
+  `open?id=`, `uc?id=` links embed via the `/file/d/{id}/preview` player.
+  Drive exposes **no JS player API**, so for Drive videos the UI degrades:
+  no timestamp notes, no seeking, no speed control. The notes panel is
+  replaced with a "Timestamps unavailable — use YouTube/Vimeo" notice, and the
+  add-video modal says it works best with YouTube/Vimeo. `supportsTimestampNotes(provider)`
+  in `features/videos/constants.ts` is the single switch. Caveats: the Drive
+  file must be shared "anyone with the link", and Drive enforces playback
+  quotas (not a CDN), so popular files can hit "can't be played right now".
+
 ## Known limitations / future
 - **No Download** and no true clip trim ("Share clip" copies a timestamped deep
-  link) — both require native hosting.
+  link; for Drive it copies the file view URL) — both require native hosting.
 - Library cards use deterministic gradient tiles, not real thumbnails (those
   need a per-provider API call).
 - Custom dark scrubber with note markers (from the concept) was deferred — the

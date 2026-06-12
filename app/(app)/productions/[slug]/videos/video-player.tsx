@@ -163,6 +163,9 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
     const iframe = iframeRef.current;
     if (!iframe) return;
 
+    // Google Drive has no JS player API — the iframe just plays; no attach.
+    if (provider === "gdrive") return;
+
     if (provider === "youtube") {
       void loadYouTube().then((YT) => {
         if (cancelled || !iframeRef.current) return;

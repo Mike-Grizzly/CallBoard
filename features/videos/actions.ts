@@ -46,7 +46,7 @@ export async function createVideo(
 
   const parsed = parseVideoUrl(url);
   if (!parsed) {
-    return { error: "Enter a valid YouTube or Vimeo link." };
+    return { error: "Enter a valid YouTube, Vimeo, or Google Drive link." };
   }
 
   if (!(await userCanAccessProduction(user, productionId))) {
