@@ -124,6 +124,9 @@ export function CalendarClient({
   // (and single-production workspaces) go straight to that production; the
   // multi-production workspace picks one first.
   const [pickOpen, setPickOpen] = useState(false);
+  // On narrow screens the sidebar (calendars + filters) is no longer pinned;
+  // this toggles it in as an off-canvas drawer so its filters stay reachable.
+  const [sideOpen, setSideOpen] = useState(false);
   const [tray, setTray] = useState<{ slug: string; title?: string } | null>(
     null,
   );
@@ -140,7 +143,7 @@ export function CalendarClient({
 
   return (
     <div className="cal-page anim-in">
-      <div className="cal">
+      <div className="cal" data-side-open={sideOpen ? "1" : "0"}>
         <CalSidebar
           cursor={cursor}
           setCursor={setCursor}
@@ -154,6 +157,14 @@ export function CalendarClient({
         <main className="cal-main">
           <header className="cal-toolbar">
             <div className="row gap-sm">
+              <button
+                className="btn ghost btn-icon cal-side-toggle"
+                onClick={() => setSideOpen(true)}
+                title="Show calendars & filters"
+                aria-label="Show calendars and filters"
+              >
+                <Icon name="Layers" className="ico" />
+              </button>
               <button
                 className="btn ghost btn-icon"
                 onClick={goPrev}
@@ -238,6 +249,14 @@ export function CalendarClient({
             )}
           </div>
         </main>
+
+        {sideOpen && (
+          <div
+            className="cal-scrim cal-side-scrim"
+            onClick={() => setSideOpen(false)}
+            aria-hidden
+          />
+        )}
 
         {canEdit && (
           <button

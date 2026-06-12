@@ -2441,6 +2441,17 @@ export function ScriptViewer({
               }}
               onDelete={deleteBookmark}
             />
+            {/* Page notes too, so collapsing the side panel on tablet/phone
+                doesn't hide annotations. */}
+            <AnnotationsPanel
+              annotations={pageAnnotations}
+              currentPage={currentPage}
+              selectedId={selectedId}
+              onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
+              onDelete={deleteAnnotation}
+              onEdit={updateAnnotation}
+              readOnly={isPhone}
+            />
           </div>
         </div>
       </>
