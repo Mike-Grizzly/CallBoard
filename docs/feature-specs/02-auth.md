@@ -89,6 +89,11 @@ mind before re-debugging:
   button "vanished" and the post-login redirect had nowhere to land. Ship to
   `main` and redeploy production before testing there. Env var changes
   (`NEXT_PUBLIC_SITE_URL`) require a fresh deploy to take effect.
+- **Consent screen shows `…supabase.co`, not "Proscene" (cosmetic, deferred).**
+  Setting the Google OAuth App name + logo does NOT override this on a Testing
+  (unverified) app using Supabase's shared callback domain. The only reliable
+  fix is the Supabase **Custom Domain** add-on (paid). Details + recommendation
+  in `open-questions.md` → "Google consent screen shows `…supabase.co`".
 
 ## Server actions (`app/actions/auth.ts`)
 - `login()` — email/password sign in
