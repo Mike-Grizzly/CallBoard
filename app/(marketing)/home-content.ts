@@ -124,6 +124,7 @@ export const HOME_HTML = `
     </div>
   </section>
 
+${OPEN_BETA_HTML}
   <!-- TRUST — add real customer logos here once we have them -->
 
 
@@ -278,7 +279,7 @@ export const HOME_HTML = `
 
   <!-- TESTIMONIAL + STATS removed — add real quotes/metrics here once we have them -->
 
-${OPEN_BETA_HTML}
+
   <!-- PRICING TEASER -->
   <section class="section" style="background:var(--bg-muted);border-top:1px solid var(--border)">
     <div class="wrap">
@@ -391,6 +392,7 @@ export const HOME_HERO_MOCK_HTML = `
 
 // Everything on the home page below the hero (static for now).
 export const HOME_REST_HTML = `
+${OPEN_BETA_HTML}
   <!-- TRUST — add real customer logos here once we have them -->
 
 
@@ -545,7 +547,7 @@ export const HOME_REST_HTML = `
 
   <!-- TESTIMONIAL + STATS removed — add real quotes/metrics here once we have them -->
 
-${OPEN_BETA_HTML}
+
   <!-- PRICING TEASER -->
   <section class="section" style="background:var(--bg-muted);border-top:1px solid var(--border)">
     <div class="wrap">
