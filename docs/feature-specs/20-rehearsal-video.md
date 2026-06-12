@@ -33,9 +33,11 @@ omitted here because it isn't possible for hosted links.
 - `video_timestamp_notes` — `videoId`, `authorId`, `seconds`, `body`,
   `createdAt`.
 
-> **Migration:** the project uses `drizzle-kit push` (no SQL migration files).
-> Run `npm run db:push` to create both tables. Equivalent raw SQL is in the
-> session notes if applying via the Supabase SQL editor instead.
+> **Migration:** applied directly to the Supabase `CallBoard` project
+> (migration `add_rehearsal_videos_and_timestamp_notes`, 2026-06-12) — both
+> tables exist with RLS enabled / no policies, matching the app convention
+> (DB access is via the Drizzle pooler connection, which bypasses RLS). No
+> `db:push` needed.
 
 ## Permissions (`lib/permissions.ts`)
 Two new capabilities:

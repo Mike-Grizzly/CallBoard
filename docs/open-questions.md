@@ -643,9 +643,11 @@ DPI is 216; 300 dpi would help accuracy at higher client memory/time cost.
 
 ## Rehearsal Video (link-only) — open items (added 2026-06-12)
 
-- **DB push required.** `rehearsal_videos` + `video_timestamp_notes` are new
-  tables that must be created with `npm run db:push` (or equivalent SQL) before
-  the tab works. Until then the tab/queries error.
+- **DB migration applied.** `rehearsal_videos` + `video_timestamp_notes` were
+  created directly on the Supabase `CallBoard` project (migration
+  `add_rehearsal_videos_and_timestamp_notes`), with RLS enabled / no policies
+  to match the app convention (DB access goes through the Drizzle pooler
+  connection, which bypasses RLS). No `db:push` needed.
 - **Not browser-verified.** The player wrapper loads the YouTube IFrame API /
   Vimeo Player SDK from a `<script>` and drives them via an imperative handle —
   this needs a real browser test (especially: seek-on-click, duration capture,
@@ -666,3 +668,31 @@ DPI is 216; 300 dpi would help accuracy at higher client memory/time cost.
 - **Soft-deleted videos aren't purged.** Like documents/productions, removed
   videos set `deletedAt` only; no hard purge exists (same gap as the soft-delete
   section above). Low urgency — rows are tiny metadata, no Storage objects.
+
+---
+
+## Google consent screen shows `…supabase.co`, not "Proscene" (2026-06-12)
+
+**Status: DEFERRED (cosmetic, sign-in works).** On the Google "Sign in with
+Google" consent screen, the headline and the "Allow … to access" / Privacy &
+Terms host all read `avqgfzrcwegebtbvmcwo.supabase.co` instead of Proscene.
+
+**What was tried and ruled out (free):** the OAuth consent screen **App name =
+"Proscene"**, a logo, and the Google-Group support email are all saved — but
+they **do not** appear in the actual consent test. Confirmed empirically. Cause:
+the app is in **Testing** status (unverified) and the OAuth callback lives on
+Supabase's **shared `…supabase.co` domain**, so Google shows the raw domain and
+the App-name/logo branding doesn't override it. Reordering Authorized domains
+(adding `proscene.app`, keeping `…supabase.co`) does not change this. Note:
+`…supabase.co` MUST stay in Authorized domains or sign-in breaks.
+
+**The only reliable fix (paid):** Supabase **Custom Domain** add-on (Pro plan,
+~$10/mo). Moves auth to e.g. `auth.proscene.app`; re-register that callback in
+Google Cloud and the whole screen reads as your domain. App-side this is just an
+env change (`NEXT_PUBLIC_SUPABASE_URL` → custom domain) — the OAuth redirect
+already derives from the request origin, so little/no code. Google's own
+verification+publish path is free but heavy and still wouldn't remove the
+`…supabase.co` text, so it's not worth it.
+
+**Recommendation:** defer the custom domain until closer to public launch;
+acceptable for beta.
