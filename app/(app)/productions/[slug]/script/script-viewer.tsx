@@ -268,6 +268,18 @@ export function ScriptViewer({
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // Cue-label dragging: `labelDrag` is the active drag (window listeners live
+  // while it's set); `draggingLabel` is the live position the label renders at.
+  const [labelDrag, setLabelDrag] = useState<{ id: string } | null>(null);
+  const [draggingLabel, setDraggingLabel] = useState<{
+    id: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const labelDragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const labelMovedRef = useRef(false);
+  const draggingPosRef = useRef<{ x: number; y: number } | null>(null);
+
   const [showAddBookmark, setShowAddBookmark] = useState(false);
   const [newBookmarkTitle, setNewBookmarkTitle] = useState("");
   // Phone-only quick-access bookmarks sheet (the inline right panel
@@ -707,18 +719,67 @@ export function ScriptViewer({
 
   // ── Coordinate helpers ─────────────────────────────────────────────────────
 
-  function getSVGCoords(e: React.MouseEvent): { x: number; y: number } {
+  function normFromClient(clientX: number, clientY: number): { x: number; y: number } {
     const svg = svgRef.current;
     if (!svg) return { x: 0, y: 0 };
     const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
+    pt.x = clientX;
+    pt.y = clientY;
     const svgPt = pt.matrixTransform(svg.getScreenCTM()!.inverse());
     return {
       x: svgPt.x / canvasSize.w,
       y: svgPt.y / canvasSize.h,
     };
   }
+
+  function getSVGCoords(e: React.MouseEvent): { x: number; y: number } {
+    return normFromClient(e.clientX, e.clientY);
+  }
+
+  // ── Cue-label dragging ──────────────────────────────────────────────────────
+  // Grab a cue's number and place it manually; the orthogonal leader follows.
+  // A drag below the move threshold is treated as a plain select (so a click
+  // still opens the cue for editing).
+  function startLabelDrag(id: string, e: React.MouseEvent) {
+    if (!canManage || isPhone) return;
+    labelDragStartRef.current = { x: e.clientX, y: e.clientY };
+    labelMovedRef.current = false;
+    draggingPosRef.current = null;
+    setLabelDrag({ id });
+  }
+
+  useEffect(() => {
+    if (!labelDrag) return;
+    const dragId = labelDrag.id;
+    const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+    function onMove(e: MouseEvent) {
+      const start = labelDragStartRef.current;
+      if (start && Math.abs(e.clientX - start.x) + Math.abs(e.clientY - start.y) > 3) {
+        labelMovedRef.current = true;
+      }
+      const n = normFromClient(e.clientX, e.clientY);
+      const pos = { x: clamp01(n.x), y: clamp01(n.y) };
+      draggingPosRef.current = pos;
+      setDraggingLabel({ id: dragId, ...pos });
+    }
+    function onUp() {
+      const pos = draggingPosRef.current;
+      if (labelMovedRef.current && pos) {
+        updateAnnotation(dragId, { labelPos: pos } as Partial<Annotation>);
+      } else {
+        setSelectedId((cur) => (cur === dragId ? null : dragId));
+      }
+      setLabelDrag(null);
+      setDraggingLabel(null);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [labelDrag]);
 
   // ── Annotation CRUD ────────────────────────────────────────────────────────
 
@@ -1987,20 +2048,32 @@ export function ScriptViewer({
               }}
             >
               {/* Existing annotations for this page */}
-              {pageAnnotations.map((ann) => (
-                <AnnotationShape
-                  key={ann.id}
-                  annotation={ann}
-                  canvasW={canvasSize.w}
-                  canvasH={canvasSize.h}
-                  selected={selectedId === ann.id}
-                  onClick={() =>
-                    setSelectedId(selectedId === ann.id ? null : ann.id)
-                  }
-                  cueLabel={ann.type === "cue" ? cueLabels.get(ann.id) : undefined}
-                  cueScale={cueScale}
-                />
-              ))}
+              {pageAnnotations.map((ann) => {
+                // While a label is being dragged, render it at the live spot.
+                const shown =
+                  draggingLabel?.id === ann.id && ann.type === "cue"
+                    ? { ...ann, labelPos: { x: draggingLabel.x, y: draggingLabel.y } }
+                    : ann;
+                return (
+                  <AnnotationShape
+                    key={ann.id}
+                    annotation={shown}
+                    canvasW={canvasSize.w}
+                    canvasH={canvasSize.h}
+                    selected={selectedId === ann.id}
+                    onClick={() =>
+                      setSelectedId(selectedId === ann.id ? null : ann.id)
+                    }
+                    cueLabel={shown.type === "cue" ? cueLabels.get(ann.id) : undefined}
+                    cueScale={cueScale}
+                    onLabelPointerDown={
+                      canManage && !isPhone && ann.type === "cue"
+                        ? (e) => startLabelDrag(ann.id, e)
+                        : undefined
+                    }
+                  />
+                );
+              })}
 
               {/* In-progress preview — a vertical line for the pipe cue, a box
                   for everything else */}
@@ -2559,6 +2632,7 @@ function stackCueLabels(
     leaderSide: "left" | "right";
     cueNumber: string;
     cueDescription: string;
+    labelPos?: { x: number; y: number };
   }[],
   canvasH: number,
   scale = 1,
@@ -2574,7 +2648,9 @@ function stackCueLabels(
   const out = new Map<string, CueLabelPos>();
   for (const side of ["left", "right"] as const) {
     const group = cues
-      .filter((c) => c.leaderSide === side)
+      // Manually-placed labels (dragged) sit where the user put them, so they
+      // don't take part in auto-stacking.
+      .filter((c) => c.leaderSide === side && !c.labelPos)
       .map((c) => ({
         id: c.id,
         y: (c.rect.y + c.rect.height) * canvasH,
@@ -3015,10 +3091,13 @@ function drawAnnotationOnCanvas(
     const MARGIN_OFFSET = 14 * s;
     const lane = cueLabel?.lane ?? 0;
     const baseX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
-    const labelX = isLeft
-      ? baseX + lane * CUE_LANE_GAP * s
-      : baseX - lane * CUE_LANE_GAP * s;
-    const labelY = cueLabel?.y ?? bottomY;
+    // A dragged label sits at its stored position; otherwise it's auto-stacked.
+    const labelX = ann.labelPos
+      ? ann.labelPos.x * canvasW
+      : isLeft
+        ? baseX + lane * CUE_LANE_GAP * s
+        : baseX - lane * CUE_LANE_GAP * s;
+    const labelY = ann.labelPos ? ann.labelPos.y * canvasH : (cueLabel?.y ?? bottomY);
     const cc = ann.color ?? CUE_STROKE;
     const serif = 3 * s;
 
@@ -3081,6 +3160,7 @@ function AnnotationShape({
   onClick,
   cueLabel,
   cueScale = 1,
+  onLabelPointerDown,
 }: {
   annotation: Annotation;
   canvasW: number;
@@ -3089,6 +3169,8 @@ function AnnotationShape({
   onClick: () => void;
   cueLabel?: CueLabelPos;
   cueScale?: number;
+  /** When provided, the cue label is a drag handle (mousedown starts a drag). */
+  onLabelPointerDown?: (e: React.MouseEvent) => void;
 }) {
   if (annotation.type === "ink") {
     return (
@@ -3204,13 +3286,19 @@ function AnnotationShape({
     const MARGIN_OFFSET = 14 * s;
     const lane = cueLabel?.lane ?? 0;
     const baseX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
-    const labelX = isLeft
-      ? baseX + lane * CUE_LANE_GAP * s
-      : baseX - lane * CUE_LANE_GAP * s;
-    const labelY = cueLabel?.y ?? bottomY;
+    // A dragged label sits at its stored position; otherwise it's auto-stacked.
+    const labelX = annotation.labelPos
+      ? annotation.labelPos.x * canvasW
+      : isLeft
+        ? baseX + lane * CUE_LANE_GAP * s
+        : baseX - lane * CUE_LANE_GAP * s;
+    const labelY = annotation.labelPos
+      ? annotation.labelPos.y * canvasH
+      : (cueLabel?.y ?? bottomY);
     const textAnchor = isLeft ? "start" : "end";
     const cc = annotation.color ?? CUE_STROKE;
     const serif = 3 * s;
+    const draggable = !!onLabelPointerDown;
 
     const isPipe = annotation.marker === "pipe";
 
@@ -3257,33 +3345,55 @@ function AnnotationShape({
           stroke={cc}
           strokeWidth={1 * s}
         />
-        {/* End marker */}
-        <circle cx={labelX} cy={labelY} r={serif} fill={cc} />
-        {/* Cue number */}
-        <text
-          x={isLeft ? labelX + 6 * s : labelX - 6 * s}
-          y={labelY - 4 * s}
-          textAnchor={textAnchor}
-          fontSize={13 * s}
-          fill={cc}
-          fontWeight="700"
-          fontFamily="system-ui, sans-serif"
+        {/* Label: end dot + number (+ description). Draggable when editable —
+            grab it to place it manually; the leader follows. */}
+        <g
+          onMouseDown={
+            draggable
+              ? (e) => {
+                  e.stopPropagation();
+                  onLabelPointerDown?.(e);
+                }
+              : undefined
+          }
+          onClick={draggable ? (e) => e.stopPropagation() : undefined}
+          style={draggable ? { cursor: "move" } : undefined}
         >
-          {annotation.cueNumber}
-        </text>
-        {/* Cue description */}
-        {annotation.cueDescription && (
+          {/* Invisible hit target so the label is easy to grab */}
+          {draggable && (
+            <rect
+              x={isLeft ? labelX - 4 * s : labelX - 44 * s}
+              y={labelY - 16 * s}
+              width={48 * s}
+              height={annotation.cueDescription ? 32 * s : 22 * s}
+              fill="transparent"
+            />
+          )}
+          <circle cx={labelX} cy={labelY} r={serif} fill={cc} />
           <text
             x={isLeft ? labelX + 6 * s : labelX - 6 * s}
-            y={labelY + 12 * s}
+            y={labelY - 4 * s}
             textAnchor={textAnchor}
-            fontSize={9 * s}
+            fontSize={13 * s}
             fill={cc}
+            fontWeight="700"
             fontFamily="system-ui, sans-serif"
           >
-            {annotation.cueDescription}
+            {annotation.cueNumber}
           </text>
-        )}
+          {annotation.cueDescription && (
+            <text
+              x={isLeft ? labelX + 6 * s : labelX - 6 * s}
+              y={labelY + 12 * s}
+              textAnchor={textAnchor}
+              fontSize={9 * s}
+              fill={cc}
+              fontFamily="system-ui, sans-serif"
+            >
+              {annotation.cueDescription}
+            </text>
+          )}
+        </g>
       </g>
     );
   }
@@ -3801,6 +3911,28 @@ function PanelAnnotationItem({
                   );
                 })}
               </div>
+              {annotation.labelPos && (
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() =>
+                    onEdit({ labelPos: undefined } as Partial<Annotation>)
+                  }
+                  style={{
+                    marginTop: 4,
+                    fontSize: 11,
+                    color: "var(--ink-3)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                    textDecoration: "underline",
+                    textAlign: "left",
+                  }}
+                >
+                  Reset label position
+                </button>
+              )}
             </div>
           ) : (
             <>
