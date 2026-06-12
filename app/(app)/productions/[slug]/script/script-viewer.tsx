@@ -1313,6 +1313,13 @@ export function ScriptViewer({
         display: "flex",
         gap: 0,
         minHeight: 0,
+        // A definite width is required here: inside `.page` (a flex column),
+        // `margin: 0 auto` overrides the default stretch, so without `width`
+        // the shell sizes to its content's max width and overflows the
+        // viewport on narrow / 4:3 screens — pushing the bookmarks panel off
+        // the right edge. `width: 100%` (still capped + centered by maxWidth +
+        // auto margins) lets the canvas shrink to fit instead.
+        width: "100%",
         maxWidth: 1440,
         margin: "0 auto",
         ...(shellHeight ? { height: shellHeight } : {}),
