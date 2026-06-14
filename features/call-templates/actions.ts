@@ -8,6 +8,12 @@ import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { assertCanOperate } from "@/features/billing/guard";
 import { can } from "@/lib/permissions";
+import {
+  DATE_RE,
+  MAX_GENERATED_CALLS,
+  datesInRange,
+  weekdayOf,
+} from "./recurring";
 
 export type TemplateResult = {
   error?: string;
@@ -22,15 +28,10 @@ export type GenerateResult = {
   slug?: string;
 };
 
-/** Guard against runaway generation (e.g. a typo'd 10-year range). */
-const MAX_GENERATED_CALLS = 200;
-
 function trim(v: FormDataEntryValue | null): string | null {
   const s = (v as string | null)?.trim();
   return s || null;
 }
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 async function getSlug(productionId: string): Promise<string | null> {
   const rows = await db
@@ -146,23 +147,6 @@ export async function deleteTemplate(formData: FormData): Promise<void> {
   const slug = await getSlug(productionId);
   revalidatePath(`/productions/${slug}/calls/templates`);
   redirect(`/productions/${slug}/calls/templates`);
-}
-
-/** Inclusive list of "YYYY-MM-DD" dates from start to end, iterated in UTC so
- *  the local timezone can't shift which calendar day a date lands on. */
-function datesInRange(start: string, end: string): string[] {
-  const out: string[] = [];
-  const cursor = new Date(`${start}T00:00:00Z`);
-  const last = new Date(`${end}T00:00:00Z`);
-  while (cursor <= last) {
-    out.push(cursor.toISOString().slice(0, 10));
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-  }
-  return out;
-}
-
-function weekdayOf(date: string): number {
-  return new Date(`${date}T00:00:00Z`).getUTCDay();
 }
 
 /**
