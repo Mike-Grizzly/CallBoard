@@ -3256,6 +3256,19 @@ div.mention:hover {
   grid-template-columns: minmax(0, 1fr) 280px;
   height: 100%;
   min-height: 0;
+  position: relative;
+}
+/* Day-detail drawer toggle — only present on narrow screens (see the
+   max-width: 980px block, where .day-side becomes an off-canvas drawer). */
+.day-side-toggle {
+  display: none;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
 }
 .day-track {
   display: grid;
@@ -3761,8 +3774,27 @@ button.month-cell {
   .day {
     grid-template-columns: 1fr;
   }
+  /* Day-detail panel becomes a right off-canvas drawer (timeline gets full
+     width); the toggle button slides it in. */
   .day-side {
-    display: none;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 300px;
+    max-width: 86vw;
+    background: var(--bg-elev);
+    border-left: 1px solid var(--border);
+    box-shadow: var(--shadow-3);
+    z-index: 100;
+    transform: translateX(100%);
+    transition: transform 0.22s ease-out;
+  }
+  .day[data-side-open="1"] .day-side {
+    transform: translateX(0);
+  }
+  .day-side-toggle {
+    display: inline-flex;
   }
   .agenda-item {
     grid-template-columns: 4px 70px minmax(0, 1fr);
