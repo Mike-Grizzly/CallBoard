@@ -156,7 +156,7 @@ export async function signup(
   if (data.user && (data.user.identities?.length ?? 0) === 0) {
     return {
       error:
-        "An account with this email already exists. Sign in, or use Forgot password if you've lost access.",
+        "An account with this email already exists — if you were invited to a team, your account is already set up. Sign in below, or use “Forgot password” to set or reset your password.",
     };
   }
 
