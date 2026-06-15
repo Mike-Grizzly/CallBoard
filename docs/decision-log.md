@@ -2011,3 +2011,13 @@ WARN) — a dashboard toggle, deferred to the user.
 - **No role gate.** Consistent with the pre-existing `createWorkspace` action — any signed-in user may create a workspace. This is intentionally also the path a previously view-only user takes to become an admin of their own company.
 
 **Impact.** New: `app/(app)/workspaces/new/{page.tsx,create-workspace-wizard.tsx}`, `features/workspace/constants.ts`. Edited: `db/schema/organizations.ts`, `lib/organization.ts`, `features/workspace/actions.ts` (`createWorkspace` now takes a string **or** `CreateWorkspaceInput`), `app/(app)/(default)/settings/workspace-switcher.tsx` (inline form → link). `tsc`/`eslint` clean; not browser-verified. **Schema applied live (2026-06-15)** to the `CallBoard` Supabase project via `apply_migration` (`add_onboarding_survey_columns_to_organizations`) rather than `npm run db:push` — schema changes are now applied through Supabase directly (development is no longer local).
+
+---
+
+## 2026-06-15 — `--accent-strong` token for white-on-accent button contrast
+
+**Decision:** Filled accent **action buttons** that carry white label text use a new `--accent-strong` token for their background/border instead of `--accent`. `--accent-strong` equals `var(--accent)` in the light and cool themes, and is a deeper red in dark (`oklch(0.585 0.17 25)`) and dusk (`oklch(0.575 0.17 28)`).
+
+**Reason:** `--accent` is deliberately *lightened* in the dark/dusk themes because it doubles as a text/icon colour on dark surfaces (where a darker red would be illegible). But that same lightness (L≈0.68–0.70) makes white button labels only ~3:1 — below WCAG AA for normal text. Darkening `--accent` globally would fix buttons but break accent-coloured text/icons on dark backgrounds. Splitting out a button-surface token resolves the conflict: text/icon uses keep the lighter `--accent`, filled buttons get the deeper `--accent-strong` (≈4.8:1 white-on-accent). Light/cool are defined as `var(--accent)` so light mode is visually unchanged.
+
+**Impact:** `app/globals.css` only. Token defined in all four theme blocks; applied to `.btn.primary`, `.btn-hero.primary`, `.np-root .btn.primary`/`.accent`, `.dd-btn-primary`, `.md-root .mbtn.primary`, `.ac-btn.primary`, `.ac-pcard-ackbtn .b1`, `.rd-edit-btn`, and the mobile FAB (plus their hover states). Decorative accent uses (count badges, calendar "today" markers, avatars, progress fills) intentionally keep `--accent`. Not browser-verified — the dark/dusk values are tuned by contrast math and want a visual check across all four themes. The broader audit found no actual black-on-black/white-on-white pairings in the current button/toggle/tab system.
