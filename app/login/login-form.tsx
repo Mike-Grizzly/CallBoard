@@ -12,7 +12,18 @@ export function LoginForm() {
 
   return (
     <form action={formAction} className="card card-pad">
-      {state?.error && <div className="auth-error">{state.error}</div>}
+      {state?.error && (
+        <div className="auth-error" style={{ textAlign: "left" }}>
+          {state.error}
+          <p style={{ margin: "6px 0 0", fontWeight: 400, fontSize: 13 }}>
+            Were you invited, or never set a password?{" "}
+            <Link href="/forgot-password" className="auth-link">
+              Set / reset it here
+            </Link>
+            .
+          </p>
+        </div>
+      )}
 
       <div className="auth-field">
         <label htmlFor="email" className="label">

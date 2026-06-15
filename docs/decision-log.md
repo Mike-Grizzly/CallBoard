@@ -2011,3 +2011,27 @@ WARN) — a dashboard toggle, deferred to the user.
 - **No role gate.** Consistent with the pre-existing `createWorkspace` action — any signed-in user may create a workspace. This is intentionally also the path a previously view-only user takes to become an admin of their own company.
 
 **Impact.** New: `app/(app)/workspaces/new/{page.tsx,create-workspace-wizard.tsx}`, `features/workspace/constants.ts`. Edited: `db/schema/organizations.ts`, `lib/organization.ts`, `features/workspace/actions.ts` (`createWorkspace` now takes a string **or** `CreateWorkspaceInput`), `app/(app)/(default)/settings/workspace-switcher.tsx` (inline form → link). `tsc`/`eslint` clean; not browser-verified. **Schema applied live (2026-06-15)** to the `CallBoard` Supabase project via `apply_migration` (`add_onboarding_survey_columns_to_organizations`) rather than `npm run db:push` — schema changes are now applied through Supabase directly (development is no longer local).
+
+---
+
+## 2026-06-15 — `--accent-strong` token for white-on-accent button contrast
+
+**Decision:** Filled accent **action buttons** that carry white label text use a new `--accent-strong` token for their background/border instead of `--accent`. `--accent-strong` equals `var(--accent)` in the light and cool themes, and is a deeper red in dark (`oklch(0.585 0.17 25)`) and dusk (`oklch(0.575 0.17 28)`).
+
+**Reason:** `--accent` is deliberately *lightened* in the dark/dusk themes because it doubles as a text/icon colour on dark surfaces (where a darker red would be illegible). But that same lightness (L≈0.68–0.70) makes white button labels only ~3:1 — below WCAG AA for normal text. Darkening `--accent` globally would fix buttons but break accent-coloured text/icons on dark backgrounds. Splitting out a button-surface token resolves the conflict: text/icon uses keep the lighter `--accent`, filled buttons get the deeper `--accent-strong` (≈4.8:1 white-on-accent). Light/cool are defined as `var(--accent)` so light mode is visually unchanged.
+
+**Impact:** `app/globals.css` only. Token defined in all four theme blocks; applied to `.btn.primary`, `.btn-hero.primary`, `.np-root .btn.primary`/`.accent`, `.dd-btn-primary`, `.md-root .mbtn.primary`, `.ac-btn.primary`, `.ac-pcard-ackbtn .b1`, `.rd-edit-btn`, and the mobile FAB (plus their hover states). Decorative accent uses (count badges, calendar "today" markers, avatars, progress fills) intentionally keep `--accent`. Not browser-verified — the dark/dusk values are tuned by contrast math and want a visual check across all four themes. The broader audit found no actual black-on-black/white-on-white pairings in the current button/toggle/tab system.
+
+---
+
+## 2026-06-15 — Account self-service: email change, global sign-out, self-delete; time zone declined
+
+**Decision:** Added three account-management features (Settings → Account) and deliberately declined a fourth.
+- **Change email** via `supabase.auth.updateUser({email})` with email confirmation. `profiles.email` is reconciled from the verified auth email in `getCurrentUser` (by auth UID) rather than written optimistically, since Supabase confirms out-of-band with no DB callback.
+- **Sign out everywhere** via `signOut({scope:"global"})`.
+- **Delete my own account**: cascades like `deletePerson` (removes memberships everywhere, soft-deletes memberless orgs, deletes profile + auth user), gated so the last admin of a populated org can't orphan it. Requires typing the account email.
+- **Per-user time zone: NOT built.** Investigation found call/rehearsal times are stored timezone-naive (`calls.callTime`/`endTime` are plain `text` like "19:00", `callDate` a bare date) and rendered as wall-clock time with no UTC conversion. This is the correct model for theatre — a call is "7 PM at the venue" and must not shift based on where a cast member currently is. A per-user tz override would actively misrepresent those times. Absolute timestamps (report/note times) already render in the browser's tz, which is what users want. So a tz preference offers no value here and real downside.
+
+**Reason:** These are standard account-settings expectations; the email-reconciliation-by-UID keeps the safe "never link profiles by email" invariant (see the 2026-06-03 orphan-profiles note). The time-zone decision follows dev-rules: flag a feature that conflicts with the data model instead of building it.
+
+**Impact:** `features/account/actions.ts` (+`changeEmail`/`signOutEverywhere`/`deleteOwnAccount`), `lib/auth.ts` (email reconciliation), new `app/(app)/(default)/settings/account/{change-email-form,account-danger-zone}.tsx`, edited account `page.tsx` + `account-profile-form.tsx`, login page notices. No schema change. Not browser-verified.

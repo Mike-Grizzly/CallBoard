@@ -31,6 +31,13 @@
   --accent: oklch(0.55 0.16 25);
   --accent-soft: oklch(0.93 0.04 25);
   --accent-ink: oklch(0.4 0.14 25);
+  /* Accent for filled BUTTON surfaces that carry white label text. In light
+     themes this is the accent itself (already ~5:1 on white). In dark/dusk the
+     plain --accent is lightened (for use as text/icon colour on dark surfaces),
+     which drops white-on-accent button contrast below AA — so those themes
+     override this with a deeper red. Light/cool keep it identical to --accent,
+     so light mode is visually unchanged. */
+  --accent-strong: var(--accent);
 
   /* Status / categorical pills */
   --c-sage: oklch(0.7 0.07 145);
@@ -128,6 +135,8 @@ body[data-theme="dark"] {
   --accent: oklch(0.7 0.16 25);
   --accent-soft: oklch(0.32 0.08 25);
   --accent-ink: oklch(0.85 0.14 25);
+  /* Deeper than --accent so white button labels clear AA in dark mode. */
+  --accent-strong: oklch(0.585 0.17 25);
   --c-sage-soft: oklch(0.28 0.05 145);
   --c-amber-soft: oklch(0.3 0.07 80);
   --c-dusk-soft: oklch(0.28 0.05 260);
@@ -157,6 +166,8 @@ body[data-theme="dusk"] {
   --accent: oklch(0.68 0.16 28);
   --accent-soft: oklch(0.4 0.09 28);
   --accent-ink: oklch(0.86 0.13 28);
+  /* Deeper than --accent so white button labels clear AA in dusk. */
+  --accent-strong: oklch(0.575 0.17 28);
   --c-sage-soft: oklch(0.4 0.05 145);
   --c-amber-soft: oklch(0.42 0.07 80);
   --c-dusk-soft: oklch(0.4 0.05 260);
@@ -184,6 +195,7 @@ body[data-theme="cool"] {
   --accent: oklch(0.55 0.16 250);
   --accent-soft: oklch(0.93 0.04 250);
   --accent-ink: oklch(0.4 0.14 250);
+  --accent-strong: var(--accent);
 }
 
 /* Density */
@@ -708,13 +720,13 @@ body[data-theme="dusk"] .brand-badge.is-dark {
   transform: translateY(0.5px);
 }
 .btn.primary {
-  background: var(--accent);
+  background: var(--accent-strong);
   color: white;
-  border-color: var(--accent);
+  border-color: var(--accent-strong);
 }
 .btn.primary:hover {
-  background: color-mix(in oklch, var(--accent) 88%, black);
-  border-color: color-mix(in oklch, var(--accent) 88%, black);
+  background: color-mix(in oklch, var(--accent-strong) 88%, black);
+  border-color: color-mix(in oklch, var(--accent-strong) 88%, black);
 }
 .btn.ghost {
   background: transparent;
@@ -799,8 +811,21 @@ body[data-theme="dusk"] .brand-badge.is-dark {
    stack top-to-bottom inside it. */
 .page {
   flex: 1;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
+  /* Desktop horizontal-overflow guard. A 16:10 / squarer laptop (a 13"
+     MacBook at ~1280–1440px) is narrower than the 16:9 monitors the app was
+     built on, so an intrinsically-wide child (a fixed grid track, a many-column
+     table, a long unbroken string) used to push the whole page sideways and run
+     the right edge off-screen. min-width:0 lets flex/grid children shrink,
+     overflow-wrap breaks long strings, and overflow-x:hidden is the backstop —
+     intentional content scrollers (tables, the script/blocking tools) live in
+     their own containers and scroll internally, so nothing legitimate is
+     clipped. Mirrors the ≤720px guard, now active at every width. */
+  overflow-x: hidden;
+  overflow-wrap: break-word;
+  max-width: 100%;
   padding: 24px var(--pad-x);
   display: flex;
   flex-direction: column;
@@ -1544,17 +1569,17 @@ textarea.field {
 }
 .btn-hero:active { transform: translateY(.5px); }
 .btn-hero.primary {
-  background: var(--accent);
+  background: var(--accent-strong);
   color: white;
-  border-color: var(--accent);
+  border-color: var(--accent-strong);
   padding-right: 10px;
   box-shadow:
-    0 6px 18px -6px var(--accent),
+    0 6px 18px -6px var(--accent-strong),
     0 1px 0 rgba(255,255,255,.18) inset;
 }
 .btn-hero.primary:hover {
-  background: color-mix(in oklch, var(--accent) 90%, white);
-  border-color: color-mix(in oklch, var(--accent) 90%, white);
+  background: color-mix(in oklch, var(--accent-strong) 90%, white);
+  border-color: color-mix(in oklch, var(--accent-strong) 90%, white);
 }
 @media (max-width: 720px) {
   .today-hero-content { padding: 20px 20px 18px; }
@@ -2630,7 +2655,7 @@ div.mention:hover {
 
 .cal {
   display: grid;
-  grid-template-columns: 248px 1fr;
+  grid-template-columns: 248px minmax(0, 1fr);
   gap: 18px;
   height: 100%;
   min-height: 0;
@@ -3231,7 +3256,7 @@ div.mention:hover {
 /* ─── Day view ────────────────────────────────────────────────────── */
 .day {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: minmax(0, 1fr) 280px;
   height: 100%;
   min-height: 0;
 }
@@ -3931,7 +3956,11 @@ button.month-cell {
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: 10px;
-  overflow: hidden;
+  /* Many-column directory table: scroll horizontally inside the card on a
+     narrow desktop (13" MacBook) rather than being clipped by the page guard
+     or pushing the layout sideways. */
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .pp-table {
   width: 100%;
@@ -5986,7 +6015,7 @@ select.pp-field {
     width: 100%;
     height: 42px;
     border-radius: 10px;
-    background: var(--accent);
+    background: var(--accent-strong);
     color: white;
     text-decoration: none;
     font-size: 13.5px;
@@ -6779,7 +6808,7 @@ select.pp-field {
 /* Layout */
 .np-root .body {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px minmax(0, 1fr);
   flex: 1;
   min-height: 0;
 }
@@ -7022,9 +7051,9 @@ select.pp-field {
   cursor: default;
 }
 .np-root .btn.primary {
-  background: var(--accent);
+  background: var(--accent-strong);
   color: white;
-  border-color: var(--accent);
+  border-color: var(--accent-strong);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset,
     0 1px 2px rgba(120, 30, 15, 0.25);
 }
@@ -7033,9 +7062,9 @@ select.pp-field {
   border-color: oklch(0.5 0.17 25);
 }
 .np-root .btn.accent {
-  background: var(--accent);
+  background: var(--accent-strong);
   color: white;
-  border-color: var(--accent);
+  border-color: var(--accent-strong);
 }
 .np-root .btn.accent:hover {
   background: oklch(0.5 0.16 25);
@@ -8126,7 +8155,7 @@ textarea.cform-field {
     height: 52px;
     border-radius: 999px;
     border: none;
-    background: var(--accent);
+    background: var(--accent-strong);
     color: #fff;
     cursor: pointer;
     box-shadow:
@@ -9219,7 +9248,7 @@ textarea.cform-field {
   text-decoration: none;
 }
 .dd-btn-primary {
-  background: var(--accent);
+  background: var(--accent-strong);
   color: #fff;
   box-shadow: var(--shadow-1);
 }
@@ -9930,9 +9959,9 @@ textarea.cform-field {
   color: var(--ink);
 }
 .md-root .mbtn.primary {
-  background: var(--accent);
+  background: var(--accent-strong);
   color: #fff;
-  border-color: var(--accent);
+  border-color: var(--accent-strong);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset,
     0 1px 2px rgba(120, 30, 15, 0.18);
 }
@@ -12166,9 +12195,9 @@ textarea.cform-field {
   background: var(--bg-muted);
 }
 .ac-btn.primary {
-  background: var(--accent);
+  background: var(--accent-strong);
   color: #fff;
-  border-color: var(--accent);
+  border-color: var(--accent-strong);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset;
 }
 .ac-btn.primary:hover {
@@ -12276,7 +12305,7 @@ textarea.cform-field {
   flex: 1;
   height: 32px;
   border-radius: 8px;
-  background: var(--accent);
+  background: var(--accent-strong);
   color: #fff;
   font: 600 12px var(--font-ui);
   display: flex;

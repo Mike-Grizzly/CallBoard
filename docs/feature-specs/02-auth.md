@@ -104,6 +104,102 @@ mind before re-debugging:
 - `updatePassword()` — validates and updates password
 - `logout()` — signs out and redirects to /login
 
+## Invite / sign-in clarity (2026-06-15)
+Two fixes for invited users getting stranded (beta feedback "issues signing in"):
+- **Existing-account invites now notify.** A brand-new invitee gets Supabase's
+  `inviteUserByEmail` email (set-password link → `/invite/accept`). But someone
+  who *already* has a Proscene account is added to the org silently by
+  `inviteMembers`' `"added"` branch. That branch now calls
+  `sendOrgInviteNotification()` (`features/notifications/announce.ts`): an in-app
+  notification (type `org_invite`, scoped to the new org for the cross-org
+  switcher bubble) + a best-effort "you've been added to {org}" email, both
+  respecting notification prefs. Best-effort — never fails the invite.
+- **Signup "account exists" is now actionable.** `AuthResult` carries an optional
+  `code: "account_exists"`; `signup()` sets it when Supabase reports an existing
+  account (empty `identities[]`). `app/signup/signup-form.tsx` renders that case
+  with "Were you invited? Check your email for the invite link" + **Sign in** /
+  **Set / reset password** links instead of a dead-end sentence. This does NOT
+  change Supabase's anti-enumeration behavior (we already disclosed "account
+  exists"); the open-questions note about the reset screen not naming the invite
+  stands.
+- **Forgot-password confirm** (`app/forgot-password/confirm/page.tsx`) notes the
+  reset link doubles as first-password setup for invited users.
+
+### Invite hardening — self-service recovery (2026-06-15)
+Closes the remaining "can't join" dead-ends for invitees (expired/used links,
+no-password login):
+- **Expired/used email links no longer dead-end.** `app/auth/callback/route.ts`
+  and `app/auth/confirm/page.tsx` used to send *every* verification failure to
+  `/login?error=auth_callback` — useless for an invitee with no password.
+  Failures on **invite/recovery** links (detected by the `next` param —
+  `/invite/accept` or `/reset-password`) now route to `/forgot-password?expired=1`;
+  OAuth/other failures keep the login error.
+- **`/forgot-password?expired=1`** shows a "Get a new link" banner explaining the
+  link expired/was used and that a fresh one also sets a first password for
+  invited users. Reuses the existing `requestPasswordReset` action — Supabase
+  recovery works on unconfirmed invited accounts, so it's a universal
+  self-service recovery path that doesn't depend on the original invite link
+  still being alive.
+- **Login dead-end (E).** A failed sign-in (`app/login/login-form.tsx`) now shows
+  a "Were you invited, or never set a password? Set / reset it here" recovery
+  link. Generic for all failures, so no account-enumeration change.
+
+**Config the user owns (not code):**
+- **Email-link expiry.** Bump Supabase → Authentication → Email → "Email OTP
+  Expiration" so invite/recovery links don't lapse before people check mail.
+  Tradeoff: the security advisor prefers short OTP expiry; the new self-service
+  recovery above makes the exact TTL far less critical (a lapsed link is now
+  recoverable in two clicks), so set it to taste.
+- **Deliverability.** Invite emails are sent by Supabase Auth via the configured
+  Resend SMTP. If invites aren't arriving: confirm SMTP is enabled in Supabase →
+  Auth → SMTP, the `send.proscene.app` domain is verified in Resend, and check
+  Supabase Auth logs for send failures.
+
+**Future option (not built):** a passwordless "email me a sign-in link"
+(`signInWithOtp`) on `/login` would make joining essentially failure-proof, at
+the cost of a new action + UI. The forgot-password recovery path already gives
+passwordless entry (link → set password → in), so this is deferred.
+
+**Manual test steps (needs a live deploy — not sandbox-verifiable):**
+1. Invite a brand-new email → it gets a Supabase invite email → click link →
+   `/invite/accept` → set password → lands in app. (happy path unchanged)
+2. Invite a brand-new email, then **don't** click the link — go to `/signup`
+   and sign up with that email → see "account already exists" with Sign in /
+   Set-reset password links → click "Set / reset password" → request link →
+   email → set password → in.
+3. Click an **expired** (or already-used) invite link → land on
+   `/forgot-password?expired=1` with the "Get a new link" banner → request →
+   fresh link → set password → in.
+4. Invite an email that **already has an account** → invitee gets an in-app
+   notification (org switcher bubble) + email "you've been added to {org}".
+5. Try to **log in** as an invited-but-no-password user → "Invalid login
+   credentials" → recovery link → forgot-password → in.
+
+## Account settings (Settings → Account, 2026-06-15)
+Self-serve account management in `features/account/actions.ts`:
+- **`updateAccountProfile`** — name / phone / pronouns (existing).
+- **`changePassword`** — verifies current password via a sign-in attempt, then
+  `updateUser({password})` (existing). Note: only works for password accounts;
+  an OAuth-only user has no current password.
+- **`changeEmail`** — `updateUser({email}, {emailRedirectTo})`; Supabase emails a
+  confirmation (and, with "Secure email change" on, also the old address) and
+  flips the auth email only on confirm. `profiles.email` is **not** written here;
+  `lib/auth.ts#getCurrentUser` reconciles it from the verified auth email on the
+  next request (keyed on auth UID — never an email lookup, so it can't adopt
+  another profile).
+- **`signOutEverywhere`** — `signOut({scope:"global"})` revokes every session
+  including the current one → `/login?signed_out=1`.
+- **`deleteOwnAccount`** — type-your-email confirm (re-checked server-side).
+  Removes the user's production + org memberships everywhere, soft-deletes any
+  org left memberless, deletes the `profiles` row (cascades authored content,
+  like `deletePerson`) and the Supabase auth user → `/login?deleted=1`.
+  **Guarded**: refuses if the user is the only admin of an org that still has
+  other members (hand off admin / delete that workspace first).
+- **Time zone — intentionally not offered.** Call/rehearsal times are stored
+  timezone-naive (`calls.callTime` is plain text) and shown as wall-clock time,
+  which is the correct theatre model ("7 PM at the theatre"). A per-user tz
+  override would misrepresent them. See `decision-log.md` (2026-06-15).
+
 ## Route protection (`proxy.ts`)
 - Public routes: `/login`, `/signup`, `/auth/callback`, `/forgot-password`, `/reset-password`
 - Unauthenticated users on protected routes → redirect to `/login` with `next` param
