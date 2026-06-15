@@ -122,6 +122,35 @@ methods.
   seat earns its keep specifically for the **non-paying** companies and for
   solo prep, where they fall back to their own private workspace.
 
+## Referral incentive (designers as a distribution channel)
+
+Designers touch many companies a year, each a high-trust warm intro to a
+potential org subscriber — arguably the most valuable thing about this whole
+sub-product. So reward designers for converting the orgs they work with.
+
+- **Two-sided.** The referred org gets a first-term discount (reuse the planned
+  "15% off first term" coupon from Feature 18); the designer earns seat credit.
+  Two-sided referrals convert materially better than one-sided.
+- **Stacking reward (decided):** **3 months free** on the designer's seat **per
+  org** that subscribes, **stacking up to 12 months / year.** This rewards the
+  designers who refer *several* orgs — their actual strength — rather than a
+  one-and-done bonus. Reward is **comped time / account credit, not cash**
+  (avoids affiliate-payout fraud + tax overhead for a small company).
+- **Anti-fraud vesting.** The reward vests **only after the referred org's first
+  invoice clears and is not refunded** (ideally also surviving ~60 days), to stop
+  someone spinning up a throwaway org, claiming free months, and cancelling.
+  Attribution via a **referral code the org applies at checkout**.
+
+**Economics.** A designer seat is ~$99–179/yr of forgone revenue; an org sub is
+$249–799/yr — so comping seat time to land an org subscriber is strongly
+net-positive. Note the reward mostly benefits the designer on their *other*
+(non-paying) gigs, since a converted org already loops them into its full suite
+for free.
+
+**Build note.** This is likely the change that finally justifies real Stripe
+coupon / promotion-code infrastructure (Feature 18 left the 15%-off nudge as a
+manual reply-for-a-code stub).
+
 ## Caps & cost guardrails
 
 - **1 active script + 1 active ground plan** on Single/Bundle (swap-and-replace).

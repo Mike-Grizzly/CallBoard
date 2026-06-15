@@ -2044,3 +2044,24 @@ entitlement; AI parse cap + a modest storage ceiling must scale for Designer Pro
 Focus view is a shell variant, not a fork of the Script/Blocking tools. Preserve
 the CallBoard-specific **orthogonal elbow leader lines** with draggable,
 text-anchored cue cards. Public brand is **Proscene** (relabel mockups).
+
+---
+
+## 2026-06-15 — Designer referral incentive (stacking, two-sided)
+
+**Decision.** Reward designers for converting the orgs they work with: **two-sided**
+(referred org gets the planned 15%-off-first-term coupon from Feature 18; designer
+earns seat credit), **stacking 3 months free per referred org up to 12 months/year**
+(rewards repeat referrers — the persona's strength — over a one-and-done bonus),
+paid as **comped time/credit, not cash**. Reward **vests only after the org's first
+invoice clears and isn't refunded** (attribution via a referral code applied at
+checkout) to prevent throwaway-org fraud.
+
+**Reason.** Designers touch many companies a year, each a high-trust warm intro —
+the most valuable distribution channel for reaching org subscribers. A seat-year
+(~$99–179) is a fraction of an org sub ($249–799/yr), so the trade is strongly
+net-positive; the reward mostly helps the designer on their *other* non-paying gigs
+since a converted org already comps them the full suite. Likely the change that
+finally justifies real Stripe coupon/promo-code infra (Feature 18 left it a stub).
+
+**Impact.** Added to `docs/feature-specs/21-designer-seats.md` (still PROPOSED).
