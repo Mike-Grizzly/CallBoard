@@ -3764,6 +3764,121 @@ button.month-cell {
     radial-gradient(125% 75% at 50% 0%, var(--bg-elev) 0%, var(--bg) 58%),
     var(--bg);
 }
+
+/* ─── Split-screen signup: branded panel + form ───────────────────────── */
+.auth-split {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+}
+.auth-aside {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 40px;
+  padding: 52px 56px;
+  /* Fixed dark crimson brand panel (does NOT flip with theme — it's a brand
+     splash). Light text reads on it in every theme. */
+  color: oklch(0.97 0.01 75);
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in oklch, var(--accent) 55%, transparent) 0%, transparent 55%),
+    linear-gradient(155deg, oklch(0.36 0.11 25) 0%, oklch(0.24 0.07 25) 55%, oklch(0.18 0.04 25) 100%);
+  overflow: hidden;
+}
+.auth-aside-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.auth-aside-wordmark {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.auth-aside-wordmark em {
+  font-style: normal;
+  font-weight: 500;
+  color: oklch(0.82 0.12 25);
+}
+.auth-aside-head {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0 0 26px;
+  max-width: 13ch;
+}
+.auth-aside-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.auth-aside-list li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.auth-aside-check {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.14);
+  color: oklch(0.92 0.05 75);
+  margin-top: 1px;
+}
+.auth-aside-pt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.auth-aside-t {
+  font-weight: 600;
+  font-size: 14.5px;
+}
+.auth-aside-d {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.45;
+}
+.auth-aside-foot {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+}
+.auth-main {
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background:
+    radial-gradient(125% 75% at 50% 0%, var(--bg-elev) 0%, var(--bg) 58%),
+    var(--bg);
+}
+/* On the split layout the brand lives in the aside, so hide the form's own
+   brand header at desktop widths. It returns when the aside is hidden below. */
+.auth-main .auth-brand {
+  display: none;
+}
+@media (max-width: 880px) {
+  .auth-split {
+    grid-template-columns: 1fr;
+  }
+  .auth-aside {
+    display: none;
+  }
+  .auth-main .auth-brand {
+    display: inline-flex;
+  }
+}
+
 .auth-card-wrap {
   width: 100%;
   max-width: 384px;
