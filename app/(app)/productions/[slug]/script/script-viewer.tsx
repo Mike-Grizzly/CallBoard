@@ -53,6 +53,13 @@ import {
   type Bookmark,
   type PageOverrides,
 } from "@/features/scripts/constants";
+import { cueSheetToEosAscii } from "@/features/scripts/eos-ascii";
+import {
+  useEosFollow,
+  eosCueMatches,
+  type EosCue,
+  type EosFollowStatus,
+} from "@/features/scripts/use-eos-follow";
 import type { DefaultScript } from "@/features/scripts/queries";
 import { loadPdfDocument } from "@/lib/pdf";
 import { useIsPhone } from "@/lib/use-is-phone";
@@ -274,6 +281,27 @@ export function ScriptViewer({
   const [pendingCueDesc, setPendingCueDesc] = useState("");
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // ── Follow Eos (PROTOTYPE) ────────────────────────────────────────────────
+  // When on, subscribe to the local Eos bridge (tools/eos-bridge) and jump the
+  // script to whatever cue the board op fires. Off by default; opt-in per session.
+  const [followEos, setFollowEos] = useState(false);
+  const [eosBridgeUrl, setEosBridgeUrl] = useState("http://localhost:8080/eos");
+  const handleEosCue = useCallback((cue: EosCue) => {
+    const match = latestAnnotationsRef.current.find(
+      (a): a is Extract<Annotation, { type: "cue" }> =>
+        a.type === "cue" && eosCueMatches(cue.cue, a.cueNumber),
+    );
+    if (!match) return;
+    setViewMode("script");
+    setCurrentPage(match.page);
+    setSelectedId(match.id);
+  }, []);
+  const { status: eosStatus, lastCue: eosLastCue } = useEosFollow({
+    enabled: followEos,
+    url: eosBridgeUrl,
+    onCue: handleEosCue,
+  });
 
   // Cue-label dragging: `labelDrag` is the active drag (window listeners live
   // while it's set); `draggingLabel` is the live position the label renders at.
@@ -1215,6 +1243,25 @@ export function ScriptViewer({
     URL.revokeObjectURL(url);
   }
 
+  // Export the cue list as a USITT ASCII Showfile (.asc) for import into ETC
+  // Eos (File ▸ Import ▸ USITT ASCII) — seeds the LD's cue stack with our
+  // numbers + labels. See features/scripts/eos-ascii.ts.
+  function exportCueSheetEosAscii() {
+    const cues = latestAnnotationsRef.current.filter(
+      (a): a is CueAnn => a.type === "cue",
+    );
+    const asc = cueSheetToEosAscii(cues, script.title || "Script");
+    const blob = new Blob([asc], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${script.title || "script"}.asc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   function handleDismissStale() {
     const formData = new FormData();
     formData.set("script_id", script.id);
@@ -1928,6 +1975,13 @@ export function ScriptViewer({
             onEdit={updateAnnotation}
             onDelete={deleteAnnotation}
             onExportCsv={exportCueSheetCsv}
+            onExportEos={exportCueSheetEosAscii}
+            followEos={followEos}
+            onToggleFollowEos={() => setFollowEos((v) => !v)}
+            eosBridgeUrl={eosBridgeUrl}
+            onChangeEosBridgeUrl={setEosBridgeUrl}
+            eosStatus={eosStatus}
+            eosLastCue={eosLastCue}
             onGoToCue={(cue) => {
               setViewMode("script");
               setCurrentPage(cue.page);
@@ -2807,6 +2861,13 @@ function CueSheetView({
   onDelete,
   onGoToCue,
   onExportCsv,
+  onExportEos,
+  followEos,
+  onToggleFollowEos,
+  eosBridgeUrl,
+  onChangeEosBridgeUrl,
+  eosStatus,
+  eosLastCue,
 }: {
   cues: CueAnn[];
   bookmarks: Bookmark[];
@@ -2816,6 +2877,13 @@ function CueSheetView({
   onDelete: (id: string) => void;
   onGoToCue: (cue: CueAnn) => void;
   onExportCsv: () => void;
+  onExportEos: () => void;
+  followEos: boolean;
+  onToggleFollowEos: () => void;
+  eosBridgeUrl: string;
+  onChangeEosBridgeUrl: (url: string) => void;
+  eosStatus: EosFollowStatus;
+  eosLastCue: EosCue | null;
 }) {
   const sections = useMemo(
     () => buildCueSheetSections(cues, bookmarks),
@@ -2831,16 +2899,73 @@ function CueSheetView({
             {cues.length} cue{cues.length === 1 ? "" : "s"} · {scriptTitle}
           </div>
         </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            className="btn ghost"
+            onClick={onExportCsv}
+            disabled={cues.length === 0}
+            style={{ fontSize: 12, height: 28, gap: 5 }}
+            title="Export the cue sheet as CSV"
+          >
+            <Download size={13} />
+            <span>Export CSV</span>
+          </button>
+          <button
+            className="btn ghost"
+            onClick={onExportEos}
+            disabled={cues.length === 0}
+            style={{ fontSize: 12, height: 28, gap: 5 }}
+            title="Export a USITT ASCII Showfile (.asc) for import into ETC Eos"
+          >
+            <Download size={13} />
+            <span>Export for Eos</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Follow Eos (prototype): subscribe to the local bridge and let the board
+          op drive the script. Off by default. */}
+      <div className="sv-eos-follow">
         <button
-          className="btn ghost"
-          onClick={onExportCsv}
-          disabled={cues.length === 0}
+          className={`btn ${followEos ? "primary" : "ghost"}`}
+          onClick={onToggleFollowEos}
           style={{ fontSize: 12, height: 28, gap: 5 }}
-          title="Export the cue sheet as CSV"
+          title="Follow ETC Eos live — the script jumps to the active cue"
         >
-          <Download size={13} />
-          <span>Export CSV</span>
+          <Zap size={13} />
+          <span>{followEos ? "Following Eos" : "Follow Eos"}</span>
         </button>
+        <input
+          type="text"
+          value={eosBridgeUrl}
+          onChange={(e) => onChangeEosBridgeUrl(e.target.value)}
+          disabled={followEos}
+          placeholder="http://localhost:8080/eos"
+          aria-label="Eos bridge URL"
+          style={{
+            fontSize: 12,
+            height: 28,
+            padding: "0 8px",
+            border: "1px solid var(--border)",
+            borderRadius: 6,
+            background: "var(--bg)",
+            color: "var(--ink-1)",
+            minWidth: 220,
+          }}
+        />
+        {followEos && (
+          <span style={{ fontSize: 12, color: "var(--ink-4)" }}>
+            {eosStatus === "live"
+              ? eosLastCue
+                ? `live · cue ${eosLastCue.cue}${eosLastCue.label ? ` — ${eosLastCue.label}` : ""}`
+                : "live · waiting for a cue…"
+              : eosStatus === "connecting"
+                ? "connecting…"
+                : eosStatus === "error"
+                  ? "can't reach bridge"
+                  : ""}
+          </span>
+        )}
       </div>
 
       {cues.length === 0 ? (
