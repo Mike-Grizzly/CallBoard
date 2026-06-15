@@ -175,6 +175,31 @@ passwordless entry (link → set password → in), so this is deferred.
 5. Try to **log in** as an invited-but-no-password user → "Invalid login
    credentials" → recovery link → forgot-password → in.
 
+## Account settings (Settings → Account, 2026-06-15)
+Self-serve account management in `features/account/actions.ts`:
+- **`updateAccountProfile`** — name / phone / pronouns (existing).
+- **`changePassword`** — verifies current password via a sign-in attempt, then
+  `updateUser({password})` (existing). Note: only works for password accounts;
+  an OAuth-only user has no current password.
+- **`changeEmail`** — `updateUser({email}, {emailRedirectTo})`; Supabase emails a
+  confirmation (and, with "Secure email change" on, also the old address) and
+  flips the auth email only on confirm. `profiles.email` is **not** written here;
+  `lib/auth.ts#getCurrentUser` reconciles it from the verified auth email on the
+  next request (keyed on auth UID — never an email lookup, so it can't adopt
+  another profile).
+- **`signOutEverywhere`** — `signOut({scope:"global"})` revokes every session
+  including the current one → `/login?signed_out=1`.
+- **`deleteOwnAccount`** — type-your-email confirm (re-checked server-side).
+  Removes the user's production + org memberships everywhere, soft-deletes any
+  org left memberless, deletes the `profiles` row (cascades authored content,
+  like `deletePerson`) and the Supabase auth user → `/login?deleted=1`.
+  **Guarded**: refuses if the user is the only admin of an org that still has
+  other members (hand off admin / delete that workspace first).
+- **Time zone — intentionally not offered.** Call/rehearsal times are stored
+  timezone-naive (`calls.callTime` is plain text) and shown as wall-clock time,
+  which is the correct theatre model ("7 PM at the theatre"). A per-user tz
+  override would misrepresent them. See `decision-log.md` (2026-06-15).
+
 ## Route protection (`proxy.ts`)
 - Public routes: `/login`, `/signup`, `/auth/callback`, `/forgot-password`, `/reset-password`
 - Unauthenticated users on protected routes → redirect to `/login` with `next` param
