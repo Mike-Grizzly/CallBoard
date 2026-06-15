@@ -6,6 +6,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type AuthResult = {
   error?: string;
+  // Lets a form react to a specific failure beyond the message text — e.g.
+  // signup detecting an existing account so it can offer sign-in / reset /
+  // invite next steps instead of a dead-end sentence.
+  code?: "account_exists";
 };
 
 // Providers we offer one-click sign-in for. Kept as a local const (not
@@ -155,8 +159,8 @@ export async function signup(
   // screen waiting for mail that will never arrive.
   if (data.user && (data.user.identities?.length ?? 0) === 0) {
     return {
-      error:
-        "An account with this email already exists. Sign in, or use Forgot password if you've lost access.",
+      code: "account_exists",
+      error: "An account with this email already exists.",
     };
   }
 

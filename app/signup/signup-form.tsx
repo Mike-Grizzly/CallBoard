@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { signup, type AuthResult } from "@/app/actions/auth";
 
 type AccountType = "individual" | "organization";
@@ -15,7 +16,25 @@ export function SignupForm() {
 
   return (
     <form action={formAction} className="card card-pad">
-      {state?.error && <div className="auth-error">{state.error}</div>}
+      {state?.code === "account_exists" ? (
+        <div className="auth-error" style={{ textAlign: "left" }}>
+          <strong>{state.error}</strong>
+          <p style={{ margin: "8px 0 0", fontWeight: 400 }}>
+            Were you invited? Check your email for the invite link to set your
+            password. Otherwise:
+          </p>
+          <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
+            <Link href="/login" className="auth-link">
+              Sign in
+            </Link>
+            <Link href="/forgot-password" className="auth-link">
+              Set / reset password
+            </Link>
+          </div>
+        </div>
+      ) : (
+        state?.error && <div className="auth-error">{state.error}</div>
+      )}
 
       <div className="auth-field">
         <span className="label">How will you use Proscene?</span>

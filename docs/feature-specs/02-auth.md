@@ -104,6 +104,27 @@ mind before re-debugging:
 - `updatePassword()` — validates and updates password
 - `logout()` — signs out and redirects to /login
 
+## Invite / sign-in clarity (2026-06-15)
+Two fixes for invited users getting stranded (beta feedback "issues signing in"):
+- **Existing-account invites now notify.** A brand-new invitee gets Supabase's
+  `inviteUserByEmail` email (set-password link → `/invite/accept`). But someone
+  who *already* has a Proscene account is added to the org silently by
+  `inviteMembers`' `"added"` branch. That branch now calls
+  `sendOrgInviteNotification()` (`features/notifications/announce.ts`): an in-app
+  notification (type `org_invite`, scoped to the new org for the cross-org
+  switcher bubble) + a best-effort "you've been added to {org}" email, both
+  respecting notification prefs. Best-effort — never fails the invite.
+- **Signup "account exists" is now actionable.** `AuthResult` carries an optional
+  `code: "account_exists"`; `signup()` sets it when Supabase reports an existing
+  account (empty `identities[]`). `app/signup/signup-form.tsx` renders that case
+  with "Were you invited? Check your email for the invite link" + **Sign in** /
+  **Set / reset password** links instead of a dead-end sentence. This does NOT
+  change Supabase's anti-enumeration behavior (we already disclosed "account
+  exists"); the open-questions note about the reset screen not naming the invite
+  stands.
+- **Forgot-password confirm** (`app/forgot-password/confirm/page.tsx`) notes the
+  reset link doubles as first-password setup for invited users.
+
 ## Route protection (`proxy.ts`)
 - Public routes: `/login`, `/signup`, `/auth/callback`, `/forgot-password`, `/reset-password`
 - Unauthenticated users on protected routes → redirect to `/login` with `next` param

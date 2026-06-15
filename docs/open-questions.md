@@ -23,6 +23,21 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
+## Lint baseline drift in a fresh `npm install` (added 2026-06-15)
+
+- Running `npm run lint` in a freshly-`npm install`ed sandbox reports **44
+  problems (12 errors, 32 warnings)** on `main` *before any local edits* (e.g.
+  `react/no-unescaped-entities` on existing apostrophes, `react-hooks/set-state-in-effect`).
+  Since PRs keep merging to `main`, CI is evidently green — so CI must resolve
+  different (lockfile-pinned) plugin versions than a plain `npm install` pulls,
+  or gates on `next build` rather than `eslint`. The 2026-06-15 invite/sign-in
+  edits were verified to add **zero** net problems (baseline 44 == with-edits 44).
+- Follow-up: confirm what the CI lint step actually runs and whether the lockfile
+  needs refreshing so local `npm install` matches CI. Until then, judge local
+  lint by the *delta* a change introduces, not the absolute count.
+
+---
+
 ## Soft-delete: deferred hard purge (added 2026-06-10)
 
 - **No 30-day hard purge exists.** Productions and organizations soft-delete via
@@ -472,6 +487,11 @@ default in place today.
   list now flags `invited` status, but the public reset screen still can't tell
   a user "you were invited, accept the invite instead" without leaking account
   existence. Acceptable for now; revisit if it confuses testers.
+  - **Partly addressed 2026-06-15:** the signup form now guides an invited user
+    who hits "account already exists" toward the invite email / password reset,
+    and existing-account invitees now get an in-app + email notification (see
+    `feature-specs/02-auth.md` → "Invite / sign-in clarity"). The core
+    anti-enumeration limitation above is unchanged.
 - **Latent risk:** do NOT add profile↔login reconciliation by email outside the
   admin invite flow without requiring verified email ownership — that would turn
   pre-seeded roles into an account-takeover vector. Current linking is by auth
