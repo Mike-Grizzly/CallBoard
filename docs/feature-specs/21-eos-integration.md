@@ -11,65 +11,93 @@ Bridge CallBoard's script-cue tool to the lighting console most theatre LDs use,
    CallBoard).
 
 ## Status: PROTOTYPE (not browser-verified, not hardware-verified)
-Built end-to-end and unit-exercised against crafted OSC packets + a mock cue
-stream, but **not yet validated against a real Eos console / Nomad**. Eos is
-picky about ASCII import idents and OSC port config; treat both halves as
-"works in principle, verify on hardware."
+Built end-to-end; the OSC parser + pairing round-trip are unit-exercised and the
+helper files syntax-check, but it's **not yet validated against a real Eos
+console / Nomad**, nor run as a packaged app. Treat as "works in principle,
+verify on hardware."
+
+## Architecture (why it works on Vercel)
+The key decision: live cues route through **Supabase Realtime**, not a direct
+browser↔local link. A browser can't read Eos's OSC/UDP, and an https page (the
+Vercel-hosted site) can't reach into the local network (Chrome's Local Network
+Access gate, shipped Chrome 142). So:
+
+```
+Eos ──OSC/UDP──▶ Eos Helper app ──wss──▶ Supabase Realtime ──wss──▶ Proscene (browser)
+   (lighting LAN)   (booth computer)       (your project)            jumps the script
+```
+
+Both the helper and the browser connect **outbound** over wss — no
+browser-to-localhost, so it works from the hosted https site.
 
 ## Why these shapes
-
 - **Export is USITT ASCII, not CSV.** Eos imports cue lists via the USITT ASCII
-  Showfile format (`File ▸ Import ▸ USITT ASCII`), not plain CSV (CSV is for
-  patch). So the existing CSV export stays for humans; a new `.asc` export is the
-  "lands in Eos" path. We emit only cue **number + label** (as the cue `Text`) —
-  deliberately *not* channel levels or fade times, so importing seeds the LD's
-  cue stack with our labels without touching their programmed looks.
-- **Live follow needs a local bridge.** A browser can't open the raw UDP socket
-  Eos broadcasts OSC on. So a tiny zero-dependency Node program
-  (`tools/eos-bridge/`) sits on the booth machine, listens to Eos's OSC output,
-  and re-emits the active cue to the browser as **Server-Sent Events** (SSE,
-  chosen over WebSocket: one-way, auto-reconnecting, no handshake code, no deps).
-  The eventual "just connect your device" UX would fold this listener into a
-  native CallBoard desktop app; the bridge proves the loop first.
+  Showfile format (`File ▸ Import ▸ USITT ASCII`), not plain CSV. We emit only
+  cue **number + label** (as the cue `Text`) — deliberately not channel levels
+  or fade times — so importing seeds the LD's stack with our labels without
+  touching their programmed looks.
+- **Live follow needs a native helper.** Browsers can't read OSC. The helper is
+  a small Electron desktop app on the booth computer. Cues go over Supabase
+  Realtime **broadcast** (no DB writes, no RLS — just cue navigation).
 
 ## What was built
 
 ### 1. Eos ASCII export — `features/scripts/eos-ascii.ts`
-`cueSheetToEosAscii(cues, title)` → a USITT ASCII v3.0 showfile string: header
-(`Ident 3:0` / `Manufacturer ETC` / `Console Eos`), `Clear All`, then one
-`Cue <n>` / `Text <label>` block per cue (sorted ascending, numeric-aware;
-script line emitted as a `!` comment). Wired into the cue sheet as an **"Export
-for Eos"** button beside "Export CSV" (`exportCueSheetEosAscii` in
-`script-viewer.tsx`, downloads `<title>.asc`).
+`cueSheetToEosAscii(cues, title)` → a USITT ASCII v3.0 showfile (header,
+`Clear All`, then `Cue <n>` / `Text <label>` blocks, sorted numeric-aware).
+Wired as an **"Export for Eos"** button beside "Export CSV" in the cue sheet.
 
-### 2. Eos → CallBoard bridge — `tools/eos-bridge/eos-bridge.mjs`
-Node core only (`dgram` + `http`). Listens for Eos OSC on UDP (default `:8000`),
-parses `/eos/out/active/cue/<list>/<cue>` (+ `/…/cue/text` for the label,
-including OSC bundle unpacking), and broadcasts `{ list, cue, label }` as SSE on
-`http://localhost:8080/eos`. `--mock` cycles fake cues so the whole loop is
-demoable with no console. See `tools/eos-bridge/README.md` for Eos network
-setup and run flags.
+### 2. Pairing — `features/scripts/eos-pairing.ts`
+`channelForProduction(productionId)` → `eos:<id>`. `buildPairingCode(productionId)`
+returns base64 JSON of `{ url, anonKey, channel }` (the public NEXT_PUBLIC
+Supabase values + the channel). Shown in the Follow Eos panel as a **Copy
+pairing code** button; the user pastes it into the helper. `parsePairingCode`
+is the inverse (the helper re-implements it in plain JS).
 
 ### 3. Live follow client — `features/scripts/use-eos-follow.ts` + cue sheet UI
-`useEosFollow({ enabled, url, onCue })` subscribes via `EventSource` and fires
-`onCue` per active cue; `eosCueMatches(eosCue, ours)` matches by cue number
-(exact, then numeric). In the cue sheet, a **"Follow Eos"** toggle + bridge-URL
-input (default `http://localhost:8080/eos`) drives the existing jump path
-(`setViewMode("script")` + `setCurrentPage` + `setSelectedId`) when a cue fires.
-Off by default, opt-in per session, status line shows connecting/live/last cue.
+`useEosFollow({ enabled, channel, onCue })` subscribes to the Supabase Realtime
+channel and fires `onCue` per broadcast cue; `eosCueMatches` matches by cue
+number (exact, then numeric). In the cue sheet, a **"Follow Eos"** toggle + the
+pairing-code copy button drive the existing jump path (`setViewMode("script")` +
+`setCurrentPage` + `setSelectedId`). Off by default; status line shows
+connecting/live/last cue. Disabled (with "Realtime not configured") if the
+NEXT_PUBLIC Supabase env vars are absent.
+
+### 4. The helper app — `tools/eos-helper/` (Electron)
+- `main.js` — main process: window, OSC UDP socket (`dgram`), IPC, mock cue
+  generator.
+- `preload.js` — contextIsolated IPC bridge (renderer has no Node access).
+- `renderer/` — single status page: pairing-code box, OSC port, Start/Stop,
+  two status dots (Eos OSC / Proscene Realtime), last cue, **Send test cues**,
+  **Quit**.
+- `osc.js` — minimal OSC parser + active-cue extractor (handles bundles; merges
+  the cue-number frame with the following label-text frame).
+- `publisher.js` — decodes the pairing code, opens the Realtime channel (Node
+  `ws` transport), broadcasts cues, re-sends the last cue on (re)subscribe.
+- `headless.js` — no-GUI variant for CI/servers (`--code`, `--osc-port`, `--mock`).
+
+### 5. Settings entry — `app/(app)/(default)/settings/eos-helper/page.tsx`
+A **"Lighting console (Eos helper)"** item in Settings: what it is, **Get the Eos
+helper app** button (links to the repo folder; run from source for now), and the
+3-step setup (install → pair from the show's cue sheet → point Eos's OSC at the
+helper).
 
 ## Matching contract
-Follow-along keys off the **cue number** — the numbers in CallBoard must line up
-with Eos. Exact string match first (so "5.5" is exact), then numeric equality
-("5" == "5.0"). Labels are display-only and best-effort.
+Follow-along keys off the **cue number** — exact string, then numeric equality.
+Labels are display-only.
 
 ## Known limitations / follow-ups
-- **Not validated on real Eos hardware** (ASCII import + OSC). Verify on Nomad.
-- **Mixed content:** SSE from an `https://` page to `http://localhost` is blocked
-  by browsers — built for `next dev` over http. Production needs the bridge over
-  https or a localhost exception (or the native-app path).
-- **One-way only.** Two-way (CallBoard advancing/firing Eos cues) is deliberately
-  out of scope for the prototype — would require strict permissions per the LD.
+- **Not validated on real Eos hardware** (ASCII import + OSC) or as a packaged
+  app — run from source. Verify on Nomad.
+- **Unsigned, run-from-source.** A signed Mac/Windows installer + auto-update is
+  the production step; the Settings "Get the helper" button links to source for
+  now (a real one-click install can't be done from a web button anyway — it
+  downloads an installer).
+- **Channel security:** broadcast channel is `eos:<productionId>` with the public
+  anon key — fine for cue navigation (no data), but anyone with the code could
+  publish cues to that show. Acceptable for the prototype; a signed/token-scoped
+  channel is a follow-up if needed.
+- **One-way only.** Two-way (Proscene firing Eos cues) is out of scope; would
+  need strict per-LD permissions.
 - **Single console.** grandMA3 / ChamSys (also OSC-capable) are future targets.
 - Label text from Eos may carry trailing timing; cosmetic only.
-- The bridge is dev tooling, not packaged/installed; eventual UX is a native app.

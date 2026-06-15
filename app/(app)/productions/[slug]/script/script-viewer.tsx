@@ -24,6 +24,7 @@ import {
   Bookmark as BookmarkIcon,
   Plus,
   Check,
+  Copy,
   Download,
   LayoutList,
   ZoomIn,
@@ -60,6 +61,10 @@ import {
   type EosCue,
   type EosFollowStatus,
 } from "@/features/scripts/use-eos-follow";
+import {
+  buildPairingCode,
+  channelForProduction,
+} from "@/features/scripts/eos-pairing";
 import type { DefaultScript } from "@/features/scripts/queries";
 import { loadPdfDocument } from "@/lib/pdf";
 import { useIsPhone } from "@/lib/use-is-phone";
@@ -283,10 +288,18 @@ export function ScriptViewer({
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // ── Follow Eos (PROTOTYPE) ────────────────────────────────────────────────
-  // When on, subscribe to the local Eos bridge (tools/eos-bridge) and jump the
-  // script to whatever cue the board op fires. Off by default; opt-in per session.
+  // When on, subscribe to this production's Supabase Realtime cue channel — fed
+  // by the local Eos helper app (tools/eos-helper) — and jump the script to
+  // whatever cue the board op fires. Off by default; opt-in per session.
   const [followEos, setFollowEos] = useState(false);
-  const [eosBridgeUrl, setEosBridgeUrl] = useState("http://localhost:8080/eos");
+  const eosChannel = useMemo(
+    () => channelForProduction(productionId),
+    [productionId],
+  );
+  const eosPairingCode = useMemo(
+    () => buildPairingCode(productionId),
+    [productionId],
+  );
   const handleEosCue = useCallback((cue: EosCue) => {
     const match = latestAnnotationsRef.current.find(
       (a): a is Extract<Annotation, { type: "cue" }> =>
@@ -299,7 +312,7 @@ export function ScriptViewer({
   }, []);
   const { status: eosStatus, lastCue: eosLastCue } = useEosFollow({
     enabled: followEos,
-    url: eosBridgeUrl,
+    channel: eosChannel,
     onCue: handleEosCue,
   });
 
@@ -1978,8 +1991,7 @@ export function ScriptViewer({
             onExportEos={exportCueSheetEosAscii}
             followEos={followEos}
             onToggleFollowEos={() => setFollowEos((v) => !v)}
-            eosBridgeUrl={eosBridgeUrl}
-            onChangeEosBridgeUrl={setEosBridgeUrl}
+            eosPairingCode={eosPairingCode}
             eosStatus={eosStatus}
             eosLastCue={eosLastCue}
             onGoToCue={(cue) => {
@@ -2771,6 +2783,35 @@ function stackCueLabels(
   return out;
 }
 
+/**
+ * "Copy pairing code" button for the Follow Eos panel. The code carries the
+ * Supabase URL + anon key + this show's channel; the user pastes it into the
+ * local Eos helper app so it publishes cues to the right channel.
+ */
+function EosPairingButton({ code }: { code: string | null }) {
+  const [copied, setCopied] = useState(false);
+  if (!code) return null;
+  return (
+    <button
+      className="btn ghost"
+      style={{ fontSize: 12, height: 28, gap: 5 }}
+      title="Copy this show's pairing code for the Eos helper app"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(code);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          // Clipboard blocked — leave the button as-is.
+        }
+      }}
+    >
+      {copied ? <Check size={13} /> : <Copy size={13} />}
+      <span>{copied ? "Copied" : "Copy pairing code"}</span>
+    </button>
+  );
+}
+
 // ── Cue sheet (CSV export + spreadsheet view) ───────────────────────────────
 
 type CueAnn = Extract<Annotation, { type: "cue" }>;
@@ -2864,8 +2905,7 @@ function CueSheetView({
   onExportEos,
   followEos,
   onToggleFollowEos,
-  eosBridgeUrl,
-  onChangeEosBridgeUrl,
+  eosPairingCode,
   eosStatus,
   eosLastCue,
 }: {
@@ -2880,8 +2920,7 @@ function CueSheetView({
   onExportEos: () => void;
   followEos: boolean;
   onToggleFollowEos: () => void;
-  eosBridgeUrl: string;
-  onChangeEosBridgeUrl: (url: string) => void;
+  eosPairingCode: string | null;
   eosStatus: EosFollowStatus;
   eosLastCue: EosCue | null;
 }) {
@@ -2923,49 +2962,36 @@ function CueSheetView({
         </div>
       </div>
 
-      {/* Follow Eos (prototype): subscribe to the local bridge and let the board
-          op drive the script. Off by default. */}
+      {/* Follow Eos (prototype): subscribe to this show's Realtime cue channel,
+          fed by the local Eos helper app, and let the board op drive the script.
+          Off by default. */}
       <div className="sv-eos-follow">
         <button
           className={`btn ${followEos ? "primary" : "ghost"}`}
           onClick={onToggleFollowEos}
+          disabled={!eosPairingCode}
           style={{ fontSize: 12, height: 28, gap: 5 }}
           title="Follow ETC Eos live — the script jumps to the active cue"
         >
           <Zap size={13} />
           <span>{followEos ? "Following Eos" : "Follow Eos"}</span>
         </button>
-        <input
-          type="text"
-          value={eosBridgeUrl}
-          onChange={(e) => onChangeEosBridgeUrl(e.target.value)}
-          disabled={followEos}
-          placeholder="http://localhost:8080/eos"
-          aria-label="Eos bridge URL"
-          style={{
-            fontSize: 12,
-            height: 28,
-            padding: "0 8px",
-            border: "1px solid var(--border)",
-            borderRadius: 6,
-            background: "var(--bg)",
-            color: "var(--ink-1)",
-            minWidth: 220,
-          }}
-        />
-        {followEos && (
-          <span style={{ fontSize: 12, color: "var(--ink-4)" }}>
-            {eosStatus === "live"
-              ? eosLastCue
-                ? `live · cue ${eosLastCue.cue}${eosLastCue.label ? ` — ${eosLastCue.label}` : ""}`
-                : "live · waiting for a cue…"
-              : eosStatus === "connecting"
-                ? "connecting…"
-                : eosStatus === "error"
-                  ? "can't reach bridge"
-                  : ""}
-          </span>
-        )}
+        <EosPairingButton code={eosPairingCode} />
+        <span style={{ fontSize: 12, color: "var(--ink-4)" }}>
+          {!eosPairingCode
+            ? "Realtime not configured"
+            : followEos
+              ? eosStatus === "live"
+                ? eosLastCue
+                  ? `live · cue ${eosLastCue.cue}${eosLastCue.label ? ` — ${eosLastCue.label}` : ""}`
+                  : "live · waiting for a cue…"
+                : eosStatus === "connecting"
+                  ? "connecting…"
+                  : eosStatus === "error"
+                    ? "connection error"
+                    : ""
+              : "Paste the pairing code into the Eos helper app"}
+        </span>
       </div>
 
       {cues.length === 0 ? (

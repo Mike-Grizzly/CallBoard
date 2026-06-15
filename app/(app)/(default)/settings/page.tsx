@@ -129,6 +129,15 @@ export default async function SettingsPage() {
             <Icon name="ChevronRight" className="more-item-chev" aria-hidden />
           </Link>
         </li>
+        <li>
+          <Link href="/settings/eos-helper" className="more-item">
+            <span className="more-item-ico">
+              <Icon name="Lightbulb" aria-hidden />
+            </span>
+            <span className="more-item-label">Lighting console (Eos helper)</span>
+            <Icon name="ChevronRight" className="more-item-chev" aria-hidden />
+          </Link>
+        </li>
         {canManage && (
           <li>
             <Link href="/settings/workspace" className="more-item">

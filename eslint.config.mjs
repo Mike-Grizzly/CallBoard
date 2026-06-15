@@ -18,6 +18,9 @@ const eslintConfig = defineConfig([
     // Vendored tesseract.js engine (worker + WASM core), copied into public/
     // at build by scripts/copy-tesseract-assets.mjs. Minified third-party code.
     "public/tesseract/**",
+    // Standalone Electron helper (own package.json + Node/CommonJS runtime).
+    // Not part of the Next web app; lives outside the build.
+    "tools/eos-helper/**",
   ]),
 ]);
 
