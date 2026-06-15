@@ -2065,3 +2065,22 @@ since a converted org already comps them the full suite. Likely the change that
 finally justifies real Stripe coupon/promo-code infra (Feature 18 left it a stub).
 
 **Impact.** Added to `docs/feature-specs/21-designer-seats.md` (still PROPOSED).
+
+---
+
+## 2026-06-15 — Designer referral: lockstep vesting (anti-fraud fix)
+
+**Decision.** Correcting the prior entry: the referral reward is **NOT** granted
+upfront and "after first invoice clears" is insufficient. Instead, **grant 1 free
+designer-month per month the referred org stays paid, in arrears, capped at 3.**
+Annual org subs ($249+) may vest all 3 upfront (prepay dwarfs the reward). Claw
+back on refund/chargeback; exclude education/heavily-discounted orgs; self-referral
+heuristics as a tripwire.
+
+**Reason.** The "fake org, pay one $25 month, claim 3 free months, cancel" exploit
+nets the attacker +$5–20. Lockstep vesting kills it structurally: an org-month
+($25) always costs more than a designer-month ($9.99–14.99), so each paid org-month
+bought to unlock a free designer-month is a guaranteed net loss — no "is this org
+real?" judgment required.
+
+**Impact.** Updated the referral section of `docs/feature-specs/21-designer-seats.md`.

@@ -136,10 +136,22 @@ sub-product. So reward designers for converting the orgs they work with.
   designers who refer *several* orgs — their actual strength — rather than a
   one-and-done bonus. Reward is **comped time / account credit, not cash**
   (avoids affiliate-payout fraud + tax overhead for a small company).
-- **Anti-fraud vesting.** The reward vests **only after the referred org's first
-  invoice clears and is not refunded** (ideally also surviving ~60 days), to stop
-  someone spinning up a throwaway org, claiming free months, and cancelling.
-  Attribution via a **referral code the org applies at checkout**.
+- **Anti-fraud — lockstep vesting (the load-bearing rule).** Do NOT grant the
+  free months upfront. **Grant 1 free designer-month per month the referred org
+  actually stays paid, in arrears, capped at 3.** Because an org-month ($25) >
+  a designer-month ($9.99–14.99), every paid org-month an attacker buys to
+  unlock a free designer-month is a **guaranteed net loss** — so a "subscribe a
+  fake org for one month, claim 3 free months, cancel" exploit is structurally
+  unprofitable, with no need to detect whether the org is "real." (An earlier
+  draft vesting "after the first invoice clears" was insufficient: one invoice
+  does clear, then they cancel — net positive for the attacker.)
+  - **Annual org subs may vest upfront** — a $249+ prepay dwarfs the ~$45
+    reward, so grant all 3 immediately; this also nudges referred orgs to annual.
+  - **Claw back** vested credit on refund/chargeback; **exclude
+    education/heavily-discounted orgs** whose monthly rate could fall below a
+    Pro seat and reopen the price gap; self-referral heuristics (matching
+    card/billing email) as a tripwire, not the primary defense.
+  - Attribution via a **referral code the org applies at checkout**.
 
 **Economics.** A designer seat is ~$99–179/yr of forgone revenue; an org sub is
 $249–799/yr — so comping seat time to land an org subscriber is strongly
