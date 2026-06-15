@@ -8,6 +8,10 @@ As a theatre company member, I can create an account, log in, reset my password,
 
 ## Status: IMPLEMENTED
 - Password reset flow exists in code but was not fully tested due to Supabase email rate limits during development. Needs verification.
+- Social sign-in (Google) — **LIVE and verified working in production**
+  (`www.proscene.app`), merged to `main` via PR #41. The Google provider is
+  enabled in the Supabase dashboard. Apple is intentionally held off (needs a
+  paid Apple Developer membership) — see "Social sign-in" below.
 
 ## Data model
 - `profiles` — auto-created on first login from Supabase auth user (id, email, firstName, lastName, requestedRole)
@@ -29,8 +33,71 @@ As a theatre company member, I can create an account, log in, reset my password,
 - `app/reset-password/reset-password-form.tsx` — client form with password + confirm
 - `app/signup/confirm/resend-form.tsx` — resend verification email
 
+## Social sign-in (Google)
+- `signInWithOAuth()` server action (`app/actions/auth.ts`) asks Supabase for
+  the provider's authorization URL and redirects the browser to it. The
+  provider returns the user to `/auth/callback`, which already exchanges the
+  PKCE code for a session — no callback changes were needed. The `redirectTo`
+  origin is derived from the **request headers** (`requestOrigin()`), not a
+  fixed `NEXT_PUBLIC_SITE_URL`, so the provider returns the user to the same
+  domain they started on (localhost / Vercel preview / production) — required
+  because the PKCE code-verifier cookie is domain-scoped.
+- `components/auth/oauth-buttons.tsx` renders the Google button on both
+  `/login` and `/signup` (Supabase resolves an existing user to a sign-in and
+  a new one to a signup, so the same button serves both).
+- OAuth users have no `first_name`/`last_name` metadata, so
+  `lib/auth.ts → deriveName()` falls back to Google's `given_name`/`family_name`
+  or splits a `full_name`/`name`. Profile + org creation is otherwise identical
+  to email/password signup.
+- **Apple held off:** the wiring is provider-agnostic — re-enable it by adding
+  `"apple"` to `OAUTH_PROVIDERS` (`app/actions/auth.ts`) and a second button in
+  `oauth-buttons.tsx`. Deferred because Apple Sign In requires a paid Apple
+  Developer Program membership.
+- **Dashboard setup required (one-time):** In Supabase → Authentication →
+  Providers, enable Google and supply the Google OAuth client ID/secret. Add
+  `https://avqgfzrcwegebtbvmcwo.supabase.co/auth/v1/callback` as an authorized
+  redirect URI in the Google Cloud Console. In Supabase → Authentication → URL
+  Configuration, add every origin's `/auth/callback` to **Redirect URLs**
+  (`http://localhost:3000/auth/callback`, the production callback, and a
+  preview wildcard like `https://*.vercel.app/auth/callback`). **This is
+  mandatory:** Supabase silently falls back to the **Site URL** (the homepage)
+  for any `redirectTo` that isn't allow-listed — the symptom is "OAuth lands on
+  the homepage instead of /dashboard".
+
+## OAuth troubleshooting (lessons from the initial rollout)
+The Google flow worked end-to-end once these were understood — keep them in
+mind before re-debugging:
+- **Read the Supabase auth logs** (Authentication → Logs, or MCP `get_logs`
+  service `auth`). The healthy sequence is `GET /authorize → GET /callback →
+  POST /token (200) → app redirects to /dashboard`. A **successful `login`
+  audit event but NO `POST /token`** means the browser was sent somewhere
+  other than `/auth/callback`, so the code was never redeemed — i.e. the
+  redirect fell back to the Site URL (homepage).
+- **Test on the canonical production domain, not a preview.** The PKCE
+  code-verifier cookie is domain-scoped: if you start the flow on a Vercel
+  preview (`*.vercel.app`) but `redirectTo`/Site URL sends you to
+  `www.proscene.app`, the cookie set on the preview isn't present on prod and
+  the exchange fails. (The `requestOrigin()` change keeps the redirect on the
+  starting domain, but the cleanest test is still prod-on-prod.)
+- **apex vs www.** `proscene.app` and `www.proscene.app` are different cookie
+  origins. The Supabase Site URL, `NEXT_PUBLIC_SITE_URL`, and the domain you
+  actually visit should all be the **same** host (`www.proscene.app`). An
+  apex→www redirect that drops the path will strip `/auth/callback?code=…` and
+  dump the user on the homepage.
+- **The feature only works where its code is deployed.** During rollout,
+  production briefly ran a `main` build without the OAuth code, so the Google
+  button "vanished" and the post-login redirect had nowhere to land. Ship to
+  `main` and redeploy production before testing there. Env var changes
+  (`NEXT_PUBLIC_SITE_URL`) require a fresh deploy to take effect.
+- **Consent screen shows `…supabase.co`, not "Proscene" (cosmetic, deferred).**
+  Setting the Google OAuth App name + logo does NOT override this on a Testing
+  (unverified) app using Supabase's shared callback domain. The only reliable
+  fix is the Supabase **Custom Domain** add-on (paid). Details + recommendation
+  in `open-questions.md` → "Google consent screen shows `…supabase.co`".
+
 ## Server actions (`app/actions/auth.ts`)
 - `login()` — email/password sign in
+- `signInWithOAuth()` — starts Google OAuth (redirects to provider)
 - `signup()` — creates account, stores first_name/last_name/requested_role in user metadata
 - `resendVerification()` — resend signup confirmation email
 - `requestPasswordReset()` — sends reset email
@@ -70,6 +137,8 @@ As a theatre company member, I can create an account, log in, reset my password,
 - [ ] Second user gets cast role
 - [ ] Requested role from signup appears in profile
 - [ ] Password reset flow works end-to-end (NEEDS VERIFICATION)
+- [x] Sign in with Google works end-to-end (verified in production, 2026-06-11)
+- [ ] New Google user lands in an auto-created admin workspace with name from Google profile
 
 ## Architecture notes to preserve
 - Three Supabase client factories: server (async cookies), browser (public keys), proxy (NextRequest/NextResponse)

@@ -1,13 +1,29 @@
 import Link from "next/link";
 import { LoginForm } from "./login-form";
+import { OAuthButtons } from "@/components/auth/oauth-buttons";
 
-export default function LoginPage() {
+const ERROR_MESSAGES: Record<string, string> = {
+  oauth: "We couldn't sign you in with that provider. Please try again.",
+  auth_callback: "That sign-in link is invalid or has expired. Please try again.",
+};
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
+  const errorMessage = error ? ERROR_MESSAGES[error] : undefined;
+
   return (
     <div className="auth-screen">
       <div className="auth-card-wrap">
         <div className="auth-head">
           <div className="auth-brand">
-            <span className="auth-mark">P</span>
+            <span className="auth-mark">
+              <img className="brand-badge is-light" src="/brand-ink.svg" alt="" width={30} height={30} />
+              <img className="brand-badge is-dark" src="/brand-paper.svg" alt="" width={30} height={30} />
+            </span>
             <span className="auth-wordmark">
               Pro<em>scene</em>
             </span>
@@ -15,7 +31,9 @@ export default function LoginPage() {
           <h1 className="auth-title">Welcome back</h1>
           <p className="auth-sub">Sign in to your production workspace.</p>
         </div>
+        {errorMessage && <div className="auth-error">{errorMessage}</div>}
         <LoginForm />
+        <OAuthButtons />
         <p className="auth-foot">
           Don&apos;t have an account? <Link href="/signup">Sign up</Link>
         </p>

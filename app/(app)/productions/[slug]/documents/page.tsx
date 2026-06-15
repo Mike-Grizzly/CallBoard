@@ -11,6 +11,7 @@ import {
   getFoldersByProduction,
 } from "@/features/documents/queries";
 import { getPinnedItemIds } from "@/features/pins/queries";
+import { canViewFolder } from "@/features/documents/constants";
 import { DocumentsClient } from "./documents-client";
 
 export default async function DocumentsPage({
@@ -32,12 +33,12 @@ export default async function DocumentsPage({
   }
 
   const canManage = can(user.role, "productions:manage");
-  if (!canManage) {
-    const membership = await getProductionMembership(user.id, production.id);
-    if (!membership) {
-      redirect("/productions");
-    }
+  const membership = await getProductionMembership(user.id, production.id);
+  if (!canManage && !membership) {
+    redirect("/productions");
   }
+  // Folder visibility keys off the viewer's production role (managers see all).
+  const viewerRole = membership?.role ?? null;
 
   const [documents, folders, members, pinnedDocIds] = await Promise.all([
     getDocumentsByProduction(production.id),
@@ -46,12 +47,22 @@ export default async function DocumentsPage({
     getPinnedItemIds(user.id, "document"),
   ]);
 
+  // Hide restricted folders the viewer can't see, and any documents filed in
+  // them. Unfiled documents (no folder) stay visible to all members.
+  const visibleFolders = folders.filter((f) =>
+    canViewFolder(f, viewerRole, canManage),
+  );
+  const visibleFolderIds = new Set(visibleFolders.map((f) => f.id));
+  const visibleDocuments = documents.filter(
+    (d) => !d.folderId || visibleFolderIds.has(d.folderId),
+  );
+
   const canUpload = can(user.role, "documents:upload");
 
   return (
     <DocumentsClient
-      documents={documents}
-      folders={folders}
+      documents={visibleDocuments}
+      folders={visibleFolders}
       members={members}
       productionId={production.id}
       productionTitle={production.title}

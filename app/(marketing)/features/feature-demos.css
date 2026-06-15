@@ -95,48 +95,64 @@
 [data-phase="2"] .bp-cap .cap2{opacity:1;transform:none}
 
 /* ───────────────────────── SCRIPT ─────────────────────────────── */
-.demo-script{
-  padding:18px 20px;font-family:var(--font-display);font-size:15px;line-height:2.05;
-  color:var(--ink-2);min-height:200px;
+/* The real tool is a PDF you "call" on: numbered LX / sound / fly cues are
+   placed on the page (pipe or box markers), pinned to the line, then exported
+   as a cue sheet. The demo reveals three cues being placed as you scroll. */
+.demo-script{padding:14px 16px 16px;min-height:200px}
+.sc-mode{margin-left:auto;font-family:var(--font-ui);font-size:11px;font-weight:500;color:var(--ink-4)}
+.sc-line{
+  position:relative;display:grid;grid-template-columns:54px 1fr;gap:12px;
+  align-items:baseline;padding:4px 0;
 }
-.sm-ch{
-  display:block;font-variant:small-caps;letter-spacing:.06em;color:var(--ink);
-  font-weight:700;font-family:var(--font-ui);font-size:12px;text-transform:uppercase;
-  margin-top:10px;
+.sc-tx{
+  grid-column:2;
+  font-family:var(--font-display);font-size:14.5px;line-height:1.55;color:var(--ink-2);
 }
-.sm-ch:first-child{margin-top:0}
-.sm-tx{position:relative;z-index:1;border-radius:4px}
-.sm-tx::before{
-  content:"";position:absolute;inset:-1px -4px;border-radius:5px;z-index:-1;
-  background:var(--accent-soft);
-  transform:scaleX(0);transform-origin:left center;
-  transition:transform .55s cubic-bezier(.5,.02,.2,1);
-}
-.sm-cue{
-  display:inline-block;vertical-align:baseline;margin-left:6px;white-space:nowrap;
-  background:var(--accent-soft);color:var(--accent-ink);border-radius:5px;
-  padding:1px 7px;font-family:var(--font-ui);font-size:12px;font-weight:500;
-  opacity:0;transform:scale(.7) translateY(3px);transform-origin:left center;
+.sc-cue{grid-column:1}
+.sc-tx b{color:var(--ink);font-weight:600;font-size:12px;letter-spacing:.04em;
+  text-transform:uppercase;margin-right:4px}
+.sc-tx.dim{color:var(--ink-4)}
+/* cue number chip, sits in the left margin */
+.sc-cue{
+  justify-self:end;display:inline-flex;align-items:baseline;gap:3px;
+  padding:1px 7px;border-radius:5px;font-family:var(--font-ui);font-size:12px;
+  font-weight:600;line-height:1.5;white-space:nowrap;
+  background:var(--accent-soft);color:var(--accent-ink);
+  opacity:0;transform:translateX(7px) scale(.82);transform-origin:right center;
   transition:opacity .35s,transform .42s cubic-bezier(.34,1.56,.64,1);
 }
-.sm-cue.note{background:color-mix(in oklch,var(--c-sage) 22%,var(--bg));color:color-mix(in oklch,var(--c-sage) 60%,var(--ink))}
-/* highlight 1 — phases 1-4 */
-[data-phase="1"] .sm-hl1::before,[data-phase="2"] .sm-hl1::before,
-[data-phase="3"] .sm-hl1::before,[data-phase="4"] .sm-hl1::before{transform:scaleX(1)}
-/* cue 1 — phases 2-4 */
-[data-phase="2"] .sm-cue1,[data-phase="3"] .sm-cue1,[data-phase="4"] .sm-cue1{opacity:1;transform:none}
-/* highlight 2 — phases 3-4 */
-[data-phase="3"] .sm-hl2::before,[data-phase="4"] .sm-hl2::before{transform:scaleX(1)}
-/* cue 2 — phase 4 */
-[data-phase="4"] .sm-cue2{opacity:1;transform:none}
-/* editing caret */
-.sm-caret{
-  display:inline-block;width:2px;height:1.05em;vertical-align:text-bottom;margin-left:1px;
-  background:var(--accent);opacity:0;border-radius:1px;
+.sc-cue i{font-style:normal;font-size:9px;letter-spacing:.05em;opacity:.75}
+.sc-cue[data-c="dusk"]{background:var(--c-dusk-soft);color:color-mix(in oklch,var(--c-dusk) 55%,var(--ink))}
+.sc-cue[data-c="clay"]{background:var(--c-clay-soft);color:color-mix(in oklch,var(--c-clay) 52%,var(--ink))}
+.sc-cue[data-c="amber"]{background:var(--c-amber-soft);color:color-mix(in oklch,var(--c-amber) 48%,var(--ink))}
+/* pipe marker — a coloured vertical line dropped on the cued line */
+.sc-pipe{
+  position:absolute;left:54px;top:3px;bottom:3px;width:2px;border-radius:2px;
+  background:var(--accent);
+  opacity:0;transform:scaleY(.25);transform-origin:top center;
+  transition:opacity .3s,transform .4s cubic-bezier(.5,.02,.2,1);
 }
-[data-phase="1"] .sm-caret1,[data-phase="2"] .sm-caret1,
-[data-phase="3"] .sm-caret2,[data-phase="4"] .sm-caret2{opacity:1;animation:smBlink 1s steps(2,start) infinite}
-@keyframes smBlink{50%{opacity:0}}
+.sc-pipe[data-c="dusk"]{background:var(--c-dusk)}
+.sc-pipe[data-c="clay"]{background:var(--c-clay)}
+.sc-pipe[data-c="amber"]{background:var(--c-amber)}
+.sc-foot{
+  display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;
+  border-top:1px solid var(--border);
+  font-family:var(--font-ui);font-size:12.5px;color:var(--ink-3);
+}
+.sc-foot svg{width:15px;height:15px;flex-shrink:0}
+.sc-foot b{color:var(--ink-2);font-weight:600}
+.sc-export{
+  margin-left:auto;font-size:11.5px;font-weight:500;color:var(--accent-ink);
+  background:var(--accent-soft);padding:2px 9px;border-radius:6px;
+}
+/* phase reveal: cue 1 @ p≥1, cue 2 @ p≥2, cue 3 @ p≥3 */
+[data-phase="1"] .sc-cue.sc-r1,[data-phase="2"] .sc-cue.sc-r1,[data-phase="3"] .sc-cue.sc-r1,
+[data-phase="2"] .sc-cue.sc-r2,[data-phase="3"] .sc-cue.sc-r2,
+[data-phase="3"] .sc-cue.sc-r3{opacity:1;transform:none}
+[data-phase="1"] .sc-pipe.sc-r1,[data-phase="2"] .sc-pipe.sc-r1,[data-phase="3"] .sc-pipe.sc-r1,
+[data-phase="2"] .sc-pipe.sc-r2,[data-phase="3"] .sc-pipe.sc-r2,
+[data-phase="3"] .sc-pipe.sc-r3{opacity:1;transform:none}
 
 /* ───────────────────────── CALLS ──────────────────────────────── */
 .demo-calls{position:relative}
@@ -252,9 +268,8 @@
 [data-phase="4"] .rp-send .pill{transform:none}
 
 @media (prefers-reduced-motion: reduce){
-  .bp-tok,.sm-tx::before,.sm-cue,.cl-num i,.cl-ack,.cl-status .pill,.cl-av,.demo-cursor,
+  .bp-tok,.sc-cue,.sc-pipe,.cl-num i,.cl-ack,.cl-status .pill,.cl-av,.demo-cursor,
   .cal-target,.cal-flag > span,.cal-time > span,.cal-toast,.rp-note,.rp-send,.rp-send .pill{transition:none !important}
   .bp-trails .trail{animation:none !important;opacity:.85;stroke-dashoffset:0 !important}
   .bp-tok::after,.demo-livedot{animation:none !important}
-  .sm-caret{animation:none !important}
 }

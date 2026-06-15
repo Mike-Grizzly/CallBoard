@@ -165,7 +165,7 @@ function CastSelector({
 
   if (castMembers.length === 0) {
     return (
-      <p className="text-sm text-[color:var(--muted-foreground)] italic">
+      <p className="text-sm text-[color:var(--muted-foreground)]">
         No cast members assigned to this production yet.
       </p>
     );

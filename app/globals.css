@@ -68,9 +68,9 @@
 
   /* font-family vars are populated by next/font in app/layout.tsx; these
      fallbacks let the file stand alone if the layout vars are missing.
-     Display headings now use Inter too (was Newsreader serif). */
-  --font-display: var(--font-ui, "Inter", ui-sans-serif, system-ui, sans-serif);
-  --font-ui: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+     Display headings now use Geist too (was Newsreader serif). */
+  --font-display: var(--font-ui, "Geist", ui-sans-serif, system-ui, sans-serif);
+  --font-ui: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
 
   --rail-w: 232px;
@@ -267,16 +267,29 @@ select {
 .rail-mark {
   width: 28px;
   height: 28px;
-  border-radius: 7px;
-  background: var(--ink);
-  color: var(--bg);
   display: grid;
   place-items: center;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 16px;
-  font-style: italic;
-  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+.rail-mark img {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+/* Brand badge — paper (cream tile, ink mark) on light themes; ink (dark tile,
+   paper mark) on dark/dusk. Both variants are rendered and toggled by the
+   active theme so the mark always matches its surface. */
+.brand-badge.is-dark {
+  display: none;
+}
+body[data-theme="dark"] .brand-badge.is-light,
+body[data-theme="dusk"] .brand-badge.is-light {
+  display: none;
+}
+body[data-theme="dark"] .brand-badge.is-dark,
+body[data-theme="dusk"] .brand-badge.is-dark {
+  display: block;
 }
 .rail-name {
   font-family: var(--font-display);
@@ -285,7 +298,7 @@ select {
   letter-spacing: -0.01em;
 }
 .rail-name em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
   font-weight: 500;
 }
@@ -619,7 +632,7 @@ select {
   margin: 0;
 }
 .show-title em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
 }
 .show-sub {
@@ -1039,6 +1052,203 @@ textarea.field {
   font-size: 13px;
   color: var(--ink-2);
 }
+
+/* Cue sheet view (editable spreadsheet of cues) */
+.sv-cuesheet {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.sv-cuesheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.sv-cuesheet-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.sv-cuesheet-sub {
+  font-size: 12px;
+  color: var(--ink-4);
+  margin-top: 1px;
+}
+.sv-cuesheet-empty {
+  padding: 28px 16px;
+  font-size: 13px;
+  color: var(--ink-4);
+  text-align: center;
+}
+.sv-cuesheet-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.sv-cuesheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.sv-cuesheet-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-elev);
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  border-bottom: 1px solid var(--border);
+}
+.sv-cuesheet-section td {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  background: var(--bg-muted);
+  border-bottom: 1px solid var(--border);
+}
+.sv-cuesheet-section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Bookmarks panel scenes/songs toggle */
+.sv-bm-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  margin-bottom: 8px;
+  background: var(--bg-sunken);
+  border-radius: 7px;
+}
+.sv-bm-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 6px;
+  border: none;
+  background: none;
+  border-radius: 5px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-4);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.sv-bm-tab:hover {
+  color: var(--ink-2);
+}
+.sv-bm-tab.active {
+  background: var(--bg-elev);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+.sv-bm-tab-count {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  color: var(--ink-3);
+}
+.sv-bm-tab.active .sv-bm-tab-count {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.sv-cuesheet-row td {
+  padding: 2px 8px;
+  border-bottom: 1px solid var(--border-subtle, var(--border));
+  vertical-align: middle;
+}
+.sv-cuesheet-row:hover td {
+  background: var(--bg-muted);
+}
+.sv-cuesheet-cue {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.sv-cuesheet-line {
+  color: var(--ink-3);
+  font-style: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0;
+  min-width: 120px;
+}
+.sv-cuesheet-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sv-cuesheet-input {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 5px 7px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+.sv-cuesheet-input:hover {
+  border-color: var(--border);
+}
+.sv-cuesheet-input:focus {
+  border-color: var(--accent);
+  background: var(--bg);
+}
+.sv-cuesheet-page {
+  border: none;
+  background: none;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+  border-radius: 5px;
+}
+.sv-cuesheet-page:hover {
+  background: var(--bg-muted);
+  text-decoration: underline;
+}
+.sv-cuesheet-del {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: none;
+  color: var(--ink-4);
+  cursor: pointer;
+  border-radius: 5px;
+}
+.sv-cuesheet-del:hover {
+  color: var(--c-clay);
+  background: color-mix(in oklch, var(--c-clay) 10%, transparent);
+}
 .sv-ocr-banner-error {
   background: color-mix(in oklch, var(--c-red, #dc2626) 10%, transparent);
   border-color: color-mix(in oklch, var(--c-red, #dc2626) 30%, transparent);
@@ -1238,7 +1448,7 @@ textarea.field {
   letter-spacing: -.03em;
 }
 .today-headline em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
   font-weight: 400;
 }
@@ -1260,7 +1470,7 @@ textarea.field {
 .today-clock em {
   font-size: .5em;
   color: rgba(255,255,255,.55);
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
   margin-left: 4px;
 }
@@ -1575,7 +1785,7 @@ textarea.field {
   line-height: 1.02;
 }
 .home-hero-title em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
   font-weight: 400;
 }
@@ -3067,7 +3277,7 @@ div.mention:hover {
 .day-side-mon {
   font-family: var(--font-display);
   font-size: 14px;
-  font-style: italic;
+  font-style: normal;
   color: var(--ink-3);
 }
 .day-side-event {
@@ -3159,7 +3369,7 @@ div.mention:hover {
 }
 .agenda-day-mon {
   font-size: 11px;
-  font-style: italic;
+  font-style: normal;
   color: var(--ink-4);
 }
 .agenda-today-pill {
@@ -3546,14 +3756,14 @@ button.month-cell {
 .auth-mark {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
   display: grid;
   place-items: center;
-  background: var(--accent);
-  color: #fff;
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 600;
+  flex-shrink: 0;
+}
+.auth-mark img {
+  width: 30px;
+  height: 30px;
+  display: block;
 }
 .auth-wordmark {
   font-family: var(--font-display);
@@ -3563,7 +3773,7 @@ button.month-cell {
   color: var(--ink);
 }
 .auth-wordmark em {
-  font-style: italic;
+  font-style: normal;
   font-weight: 500;
   color: var(--accent);
 }
@@ -3625,6 +3835,30 @@ button.month-cell {
   justify-content: center;
   height: 38px;
   margin-top: 2px;
+}
+.auth-oauth {
+  margin-top: 16px;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  color: var(--ink-4);
+  font-size: 11.5px;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.auth-oauth-btn {
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
 }
 .auth-error,
 .auth-success {
@@ -4219,7 +4453,7 @@ button.month-cell {
 .pp-empty-sm {
   color: var(--ink-4);
   font-size: 12.5px;
-  font-style: italic;
+  font-style: normal;
   padding: 8px 0;
 }
 
@@ -4845,7 +5079,7 @@ select.pp-field {
 .pp-preview-more {
   text-align: center;
   color: var(--ink-4);
-  font-style: italic;
+  font-style: normal;
   padding: 8px;
 }
 
@@ -5347,7 +5581,7 @@ select.pp-field {
     margin: 0;
   }
   .mt-greeting-title em {
-    font-style: italic;
+    font-style: normal;
     color: var(--accent);
   }
   .mt-greeting-sub {
@@ -5406,7 +5640,7 @@ select.pp-field {
   }
   .mt-call-focus {
     font-family: var(--font-display);
-    font-style: italic;
+    font-style: normal;
     font-size: 16px;
     color: var(--ink-2);
     margin-top: 8px;
@@ -5619,7 +5853,7 @@ select.pp-field {
   }
   .mr-summary-empty {
     color: var(--ink-4);
-    font-style: italic;
+    font-style: normal;
   }
   .mr-foot {
     font-size: 11.5px;
@@ -5843,7 +6077,7 @@ select.pp-field {
   .rd-dept-empty {
     font-size: 12.5px;
     color: var(--ink-4);
-    font-style: italic;
+    font-style: normal;
   }
   .rd-dept-body {
     font-size: 13px;
@@ -6460,7 +6694,7 @@ select.pp-field {
  * the dark / cool theme switch instead of pinning the light palette.
  * ============================================================ */
 .np-root {
-  --font-display: var(--font-ui, "Inter", ui-sans-serif, system-ui, sans-serif);
+  --font-display: var(--font-ui, "Geist", ui-sans-serif, system-ui, sans-serif);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -6505,15 +6739,13 @@ select.pp-field {
 .np-root .brand-mark {
   width: 26px;
   height: 26px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, var(--accent), oklch(0.45 0.18 18));
   display: grid;
   place-items: center;
-  color: white;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 14px;
-  font-style: italic;
+  flex-shrink: 0;
+}
+.np-root .brand-mark img {
+  width: 26px;
+  height: 26px;
 }
 .np-root .top-crumbs {
   margin-left: 14px;
@@ -7316,7 +7548,7 @@ select.pp-field {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 36px;
-  font-style: italic;
+  font-style: normal;
   box-shadow: 0 20px 60px -10px color-mix(in oklch, var(--accent) 40%, transparent);
 }
 .np-root .launch h2 {
@@ -8157,7 +8389,7 @@ textarea.cform-field {
   background: linear-gradient(135deg, var(--accent), oklch(0.45 0.18 18));
   color: #fff;
   font-family: var(--font-display);
-  font-style: italic;
+  font-style: normal;
   font-weight: 600;
   font-size: 15px;
   margin-left: 2px;
@@ -8679,7 +8911,7 @@ textarea.cform-field {
   line-height: 1.04;
 }
 .dd-greet h1 em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
   font-weight: 400;
 }
@@ -9733,7 +9965,7 @@ textarea.cform-field {
   margin: 4px 0 0;
 }
 .md-root .md-greet h1 em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
 }
 .md-root .md-greet-date {

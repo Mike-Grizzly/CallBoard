@@ -1,22 +1,23 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect } from "react";
+import { useState } from "react";
 import {
   File,
   Upload as UploadIcon,
   List as ListIcon,
   Grid2X2,
   FolderPlus,
-  Check,
-  X,
   Folder,
+  Lock,
+  Pencil,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { createFolder } from "@/features/documents/actions";
 import { DocumentUploadForm } from "./document-upload-form";
 import { DocumentRowMenu } from "./document-row-menu";
 import { DocumentDrawer } from "./document-drawer";
 import { FolderSelect } from "./folder-select";
+import { FolderEditor } from "./folder-editor";
+import { ROLE_LABELS } from "@/features/documents/constants";
+import type { Role } from "@/types/roles";
 import type {
   DocumentWithUploader,
   DocumentFolder,
@@ -76,53 +77,18 @@ export function DocumentsClient({
   initialDocId,
   pinnedDocIds,
 }: Props) {
-  const router = useRouter();
   const [activeFolder, setActiveFolder] = useState(ALL_FILES);
   const [view, setView] = useState<"list" | "grid">("list");
   const [openDoc, setOpenDoc] = useState<DocumentWithUploader | null>(() =>
     initialDocId ? (documents.find((d) => d.id === initialDocId) ?? null) : null,
   );
   const [showUpload, setShowUpload] = useState(false);
-  const [addingFolder, setAddingFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
-  const [folderError, setFolderError] = useState<string | null>(null);
-  const [isSavingFolder, startFolderTransition] = useTransition();
-  const folderInputRef = useRef<HTMLInputElement>(null);
+  // null = closed; { folder } open for edit; {} open for create.
+  const [folderEditor, setFolderEditor] = useState<{
+    folder?: DocumentFolder;
+  } | null>(null);
 
-  function handleAddFolderClick() {
-    setAddingFolder(true);
-    setNewFolderName("");
-    setFolderError(null);
-    setTimeout(() => folderInputRef.current?.focus(), 0);
-  }
-
-  function handleFolderKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Escape") {
-      setAddingFolder(false);
-      setNewFolderName("");
-    } else if (e.key === "Enter") {
-      submitNewFolder();
-    }
-  }
-
-  function submitNewFolder() {
-    const name = newFolderName.trim();
-    if (!name) return;
-    setFolderError(null);
-    const formData = new FormData();
-    formData.set("production_id", productionId);
-    formData.set("name", name);
-    startFolderTransition(async () => {
-      const result = await createFolder(formData);
-      if (result.error) {
-        setFolderError(result.error);
-      } else {
-        setAddingFolder(false);
-        setNewFolderName("");
-        router.refresh();
-      }
-    });
-  }
+  const activeFolderObj = folders.find((f) => f.name === activeFolder);
 
   const visible =
     activeFolder === ALL_FILES
@@ -171,7 +137,9 @@ export function DocumentsClient({
                   name={f.name}
                   count={count}
                   active={activeFolder === f.name}
+                  restricted={f.visibility === "restricted"}
                   onClick={() => setActiveFolder(f.name)}
+                  onEdit={canUpload ? () => setFolderEditor({ folder: f }) : undefined}
                 />
               );
             })}
@@ -187,108 +155,22 @@ export function DocumentsClient({
 
           {canUpload && (
             <div style={{ marginTop: 6 }}>
-              {addingFolder ? (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    padding: "4px 4px 4px 10px",
-                  }}
-                >
-                  <FolderPlus
-                    size={13}
-                    style={{ color: "var(--ink-4)", flexShrink: 0 }}
-                  />
-                  <input
-                    ref={folderInputRef}
-                    value={newFolderName}
-                    onChange={(e) => setNewFolderName(e.target.value)}
-                    onKeyDown={handleFolderKeyDown}
-                    placeholder="Folder name"
-                    maxLength={50}
-                    style={{
-                      flex: 1,
-                      fontSize: 13,
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-s)",
-                      padding: "3px 6px",
-                      background: "var(--bg-elev)",
-                      color: "var(--ink)",
-                      outline: "none",
-                      minWidth: 0,
-                    }}
-                  />
-                  <button
-                    className="btn-icon"
-                    onClick={submitNewFolder}
-                    disabled={isSavingFolder || !newFolderName.trim()}
-                    title="Create folder"
-                    style={{
-                      width: 24,
-                      height: 24,
-                      border: "none",
-                      background: "none",
-                      cursor: "pointer",
-                      color: "var(--accent)",
-                      flexShrink: 0,
-                      display: "grid",
-                      placeItems: "center",
-                    }}
-                  >
-                    <Check size={13} />
-                  </button>
-                  <button
-                    className="btn-icon"
-                    onClick={() => {
-                      setAddingFolder(false);
-                      setNewFolderName("");
-                    }}
-                    title="Cancel"
-                    style={{
-                      width: 24,
-                      height: 24,
-                      border: "none",
-                      background: "none",
-                      cursor: "pointer",
-                      color: "var(--ink-4)",
-                      flexShrink: 0,
-                      display: "grid",
-                      placeItems: "center",
-                    }}
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  className="btn ghost"
-                  onClick={handleAddFolderClick}
-                  style={{
-                    marginTop: 10,
-                    height: 28,
-                    padding: "0 10px",
-                    fontSize: 12,
-                    width: "100%",
-                    justifyContent: "flex-start",
-                    gap: 6,
-                  }}
-                >
-                  <FolderPlus size={13} />
-                  <span>New folder</span>
-                </button>
-              )}
-              {folderError && (
-                <p
-                  style={{
-                    fontSize: 11.5,
-                    color: "var(--c-clay)",
-                    padding: "2px 10px",
-                  }}
-                >
-                  {folderError}
-                </p>
-              )}
+              <button
+                className="btn ghost"
+                onClick={() => setFolderEditor({})}
+                style={{
+                  marginTop: 10,
+                  height: 28,
+                  padding: "0 10px",
+                  fontSize: 12,
+                  width: "100%",
+                  justifyContent: "flex-start",
+                  gap: 6,
+                }}
+              >
+                <FolderPlus size={13} />
+                <span>New folder</span>
+              </button>
             </div>
           )}
 
@@ -345,8 +227,20 @@ export function DocumentsClient({
               <div
                 style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 2 }}
               >
-                {visible.length} {visible.length === 1 ? "file" : "files"} ·
-                shared with {productionTitle} team
+                {visible.length} {visible.length === 1 ? "file" : "files"} ·{" "}
+                {activeFolderObj?.visibility === "restricted" ? (
+                  <span
+                    style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+                  >
+                    <Lock size={11} />
+                    visible to{" "}
+                    {(activeFolderObj.allowedRoles ?? [])
+                      .map((r) => ROLE_LABELS[r as Role] ?? r)
+                      .join(", ") || "managers only"}
+                  </span>
+                ) : (
+                  <>shared with {productionTitle} team</>
+                )}
               </div>
             </div>
             <div className="row" style={{ gap: 8 }}>
@@ -655,6 +549,15 @@ export function DocumentsClient({
           onClose={() => setOpenDoc(null)}
         />
       )}
+
+      {/* ── Folder create / edit ── */}
+      {folderEditor && (
+        <FolderEditor
+          productionId={productionId}
+          folder={folderEditor.folder}
+          onClose={() => setFolderEditor(null)}
+        />
+      )}
     </>
   );
 }
@@ -664,45 +567,95 @@ function FolderRailItem({
   count,
   active,
   onClick,
+  restricted = false,
+  onEdit,
 }: {
   name: string;
   count: number;
   active: boolean;
   onClick: () => void;
+  restricted?: boolean;
+  onEdit?: () => void;
 }) {
+  const [hover, setHover] = useState(false);
   return (
-    <button
-      onClick={onClick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "7px 10px",
-        borderRadius: 6,
-        cursor: "pointer",
-        fontSize: 13,
-        border: "none",
-        textAlign: "left",
-        width: "100%",
-        background: active ? "var(--bg-elev)" : "transparent",
-        boxShadow: active ? "var(--shadow-1)" : "none",
-        color: active ? "var(--ink)" : "var(--ink-3)",
-        fontWeight: active ? 500 : 400,
-      }}
-      onMouseEnter={(e) => {
-        if (!active)
-          (e.currentTarget as HTMLButtonElement).style.background =
-            "var(--bg-muted)";
-      }}
-      onMouseLeave={(e) => {
-        if (!active)
-          (e.currentTarget as HTMLButtonElement).style.background =
-            "transparent";
-      }}
+    <div
+      style={{ position: "relative", display: "flex", alignItems: "center" }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
     >
-      <Folder size={14} />
-      <span style={{ flex: 1 }}>{name}</span>
-      <span style={{ fontSize: 11.5, color: "var(--ink-4)" }}>{count}</span>
-    </button>
+      <button
+        onClick={onClick}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "7px 10px",
+          borderRadius: 6,
+          cursor: "pointer",
+          fontSize: 13,
+          border: "none",
+          textAlign: "left",
+          width: "100%",
+          background: active || hover ? "var(--bg-elev)" : "transparent",
+          boxShadow: active ? "var(--shadow-1)" : "none",
+          color: active ? "var(--ink)" : "var(--ink-3)",
+          fontWeight: active ? 500 : 400,
+        }}
+      >
+        <Folder size={14} />
+        <span
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+            minWidth: 0,
+          }}
+        >
+          <span
+            style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {name}
+          </span>
+          {restricted && (
+            <Lock size={11} style={{ flexShrink: 0, color: "var(--ink-4)" }} />
+          )}
+        </span>
+        {onEdit && hover ? (
+          <span style={{ width: 16 }} />
+        ) : (
+          <span style={{ fontSize: 11.5, color: "var(--ink-4)" }}>{count}</span>
+        )}
+      </button>
+      {onEdit && hover && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          title="Edit folder"
+          className="btn-icon"
+          style={{
+            position: "absolute",
+            right: 6,
+            width: 22,
+            height: 22,
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            color: "var(--ink-3)",
+            display: "grid",
+            placeItems: "center",
+          }}
+        >
+          <Pencil size={12} />
+        </button>
+      )}
+    </div>
   );
 }

@@ -1874,6 +1874,133 @@ create index if not exists script_ocr_lookup_idx
 
 ---
 
+## 2026-06-11 — Google social sign-in (Apple deferred; origin-derived OAuth redirect)
+
+**Decision.** Added "Sign in with Google" on `/login` and `/signup` via Supabase OAuth (PKCE), alongside the existing email/password flow. Apple Sign In is deliberately **not** shipped.
+
+**Reasons / choices.**
+- **Google only, for now.** Apple Sign In requires a paid Apple Developer Program membership ($99/yr), so it was held off. The implementation is provider-agnostic: re-enabling Apple is `"apple"` in `OAUTH_PROVIDERS` (`app/actions/auth.ts`) plus a second button in `components/auth/oauth-buttons.tsx`.
+- **No new callback.** The pre-existing `/auth/callback` route already does the PKCE `exchangeCodeForSession`, so OAuth reused it unchanged.
+- **`redirectTo` is derived from the request origin, not `NEXT_PUBLIC_SITE_URL`.** A fixed site URL sent users back to a different domain than the one that started the flow; since the PKCE code-verifier cookie is **domain-scoped**, the exchange then failed and Supabase fell back to the Site URL (homepage). `requestOrigin()` (Origin / x-forwarded-host headers) keeps the round-trip on one host.
+- **Canonical domain = `www.proscene.app`.** Supabase Site URL, `NEXT_PUBLIC_SITE_URL`, and the tested host are all `www` to avoid apex↔www cookie/redirect mismatches.
+- **OAuth name backfill.** OAuth users lack `first_name`/`last_name` metadata, so `lib/auth.ts → deriveName()` falls back to Google's `given_name`/`family_name` (or splits `full_name`/`name`). Profile + org auto-creation is otherwise identical to email/password signup — a new Google user gets their own admin workspace.
+
+**Rollout lesson (why it took several passes).** The break was never the app code — it was deploy/config: production briefly ran a `main` build with no OAuth code (button "vanished", redirect had nowhere to land), and testing happened on Vercel previews where the domain-scoped cookie can't survive the hop to prod. Diagnosed from Supabase auth logs: a `login` event with **no following `POST /token`** = the code was never redeemed. Fix = merge to `main`, deploy prod, test on `www.proscene.app`. Full runbook in `feature-specs/02-auth.md` → "OAuth troubleshooting".
+
+**Impact.** New: `components/auth/oauth-buttons.tsx`. Edited: `app/actions/auth.ts` (`signInWithOAuth`, `requestOrigin`), `lib/auth.ts` (`deriveName`), `app/login/page.tsx` (+ `?error=` surfacing), `app/signup/page.tsx`, `app/globals.css` (`.auth-divider`/`.auth-oauth*`). Merged via PR #41; verified working in production 2026-06-11. Requires the Google provider enabled in the Supabase dashboard (not in code).
+
+---
+
+## 2026-06-11 — Role-restricted (private) document folders
+
+**Context.** Backlog item "per-role private folders" (flagged as needing design decisions). The Document Center had production-scoped folders, but every folder/document was visible to all members.
+
+**Decisions.**
+- **Restrict by role, stored on the folder.** Added `visibility` ('everyone'|'restricted') + `allowed_roles text[]` to `document_folders` rather than a join table — roles are a small fixed enum, so an array column is the lean choice. Live additive migration (`add_folder_visibility`); existing folders default to `everyone`, no behavior change.
+- **Visibility keys off the viewer's _production_ role** (`production_memberships.role`), not the org role, since a person's role varies per show. Managers (`productions:manage` = admin/producer) always see every folder. One pure helper `canViewFolder` shared by server filtering and client UI.
+- **Documents inherit folder visibility; unfiled docs stay public.** No per-document ACL — keeps the model simple and matches how teams think ("the SM folder").
+- **Reused `documents:upload`** for creating/editing restricted folders — no new capability.
+- **Enforced at the page + viewer**, not via RLS (the app reads through the Drizzle service connection, so filtering lives in app code). The documents list filters folders + docs; the viewer `notFound()`s on a hidden doc to block direct-URL access.
+- **Deferred:** the Documents tab badge still counts hidden docs (a number, no titles — acceptable v1 leak); the Script tool's default-script path isn't folder-gated; restriction is role-based, not per-person or per-department.
+
+**Impact.** New: `folder-editor.tsx`, `feature-specs/13-document-folder-privacy.md`. Edited: `db/schema/documents.ts`, `features/documents/{constants,actions,queries}.ts`, the documents page + `[documentId]` viewer + `documents-client.tsx`. `tsc`/`eslint` clean; not browser-verified. Shipped as its own PR off `main`.
+
+---
+
+## 2026-06-12 — Per-plan storage allowances (100 / 250 / 500 GB)
+
+**Decision.** Paid plans get a storage ceiling, measured across the whole workspace: **Season 100 GB, Repertory 250 GB, Company 500 GB** (Free 5 GB). Defined as `STORAGE_LIMIT_GB` in `features/billing/constants.ts`. No price change.
+
+**Reason.** Storage is the one variable cost that actually scales (Supabase Storage ≈ $0.252/GB/yr at rest, plus egress). Real usage is PDFs and images — a few GB at most — so even a *full* tier costs only a few dollars a year and stays a small fraction of revenue (and well within margin even with the planned ~30% lifetime founding discount). We start **conservative** to cap worst-case exposure while we learn real usage, then raise ceilings **"for free"** later as a goodwill/retention lever. Caps only ever go **up** (raising an allowance delights; cutting one burns trust), so starting low is the safe asymmetry.
+
+**Impact.**
+- `STORAGE_LIMIT_GB` is the single source of truth for marketing copy and any future quota enforcement. **Enforcement is NOT wired up yet** — these are advertised ceilings only for now.
+- Pricing page updated: tier cards, the comparison table, and a new storage FAQ (with a fair-use note that large-scale video isn't included yet). Sanity-driven tier docs, if/when populated, should mirror these numbers.
+- The lifetime founding discount applies to the **subscription only**, never to storage overages/add-ons.
+
+**Deferred / future.**
+- **Large-scale video hosting is explicitly out of scope** of current plans, so today's plans don't implicitly promise it. When we add video and/or meaningfully bigger ceilings, migrate file blobs to a **zero-egress object store (Cloudflare R2)** — that's what makes TB-scale and streaming financially safe. Not worth the migration cost today (PDF/image usage, low egress).
+- Treat video / bigger caps as **additive** (a paid add-on SKU or new tiers), never a retroactive base-price hike on existing or lifetime users.
+
+---
+
+## 2026-06-12 — Rehearsal Video: link-only embeds before native hosting
+
+**Context.** Product wants to offer rehearsal video sharing (pro companies film
+every rehearsal and distribute to cast/crew). Native hosting raises the cost
+question. Analysis: storage at rest is cheap; **egress/bandwidth is the real
+cost driver** and scales with viewing, plus native hosting needs transcoding,
+adaptive-bitrate delivery and a resumable-upload pipeline (the 64MB server-action
+path can't carry multi-GB films).
+
+**Decisions.**
+- **Ship a link-only interim first.** A "Rehearsal Video" production tab where
+  leadership/SMs paste YouTube/Vimeo links that embed on the page. The platform
+  hosts/transcodes/streams, so it adds **zero storage or egress cost** and no
+  upload pipeline. Native hosting (Mux/Cloudflare Stream) is a deliberate later
+  phase, gated as a paid feature so heavy-watching orgs fund their own bandwidth.
+- **Build the embed via the platforms' player SDKs**, not a bare iframe, so the
+  concept's timestamped-notes panel works: the YouTube IFrame API / Vimeo Player
+  SDK (loaded via injected `<script>`, no npm dep) give `seekTo`/`getCurrentTime`/
+  `setPlaybackRate`. Notes seek the player on click.
+- **Embed URLs are constructed from a validated provider+id**, never from
+  user-supplied HTML — deliberately avoiding the documented `dangerouslySetInnerHTML`
+  sanitization risk. `parseVideoUrl` rejects any non-YouTube/Vimeo input.
+- **New capabilities `videos:view` (all) + `videos:create` (leadership + SMs).**
+  A dedicated pair (not reusing `documents:upload`) so video access can be
+  granted/revoked independently later. Timestamp notes are open to any member.
+- **Omitted what hosted links can't honestly do:** no Download (impossible for
+  hosted video), no true clip trim ("Share clip" copies a timestamped deep
+  link), no custom scrubber-with-markers (deferred — uses native player chrome).
+- **Two new tables, pushed via `drizzle-kit push`** (`rehearsal_videos`,
+  `video_timestamp_notes`); no composite unique constraints (avoids the known
+  push hang). `durationSeconds` is backfilled idempotently from the player.
+
+**Impact.** New: `db/schema/rehearsal-videos.ts`, `features/videos/*`,
+`app/(app)/productions/[slug]/videos/*`, `feature-specs/20-rehearsal-video.md`.
+Edited: `lib/permissions.ts`, `db/schema/index.ts`, the production `layout.tsx`
++ `production-tabs.tsx`. `tsc`/`eslint` clean; not browser-verified. **Requires
+`npm run db:push` before use.**
+
+---
+
+## 2026-06-12 — Enabled RLS on `announcement_productions`
+
+**Context.** The Supabase security advisor flagged `public.announcement_productions`
+as the only table with **RLS disabled** — meaning the anon key could read/write
+every row. It pre-dated this work (the `08-announcements` join table).
+
+**Decision.** Enabled RLS with **no policies** (migration
+`enable_rls_announcement_productions`), matching every other table. Verified
+first that the table is accessed exclusively through the Drizzle pooler
+connection (`features/announcements/{queries,actions}.ts` → `db` from `@/db`,
+postgres role, bypasses RLS) and that **no Supabase anon/SSR client performs
+table reads anywhere in the repo** (the Supabase JS client is used only for
+Storage `attachments` + Auth). So enabling RLS closes the anon exposure with no
+behavior change.
+
+**Impact.** Critical `rls_disabled` advisory cleared. The app's standing
+convention is now uniform: RLS on, no policies, DB access via the pooler. New
+tables (incl. `rehearsal_videos`/`video_timestamp_notes`) follow the same.
+Left open: Supabase Auth "leaked password protection" is disabled (advisor
+WARN) — a dashboard toggle, deferred to the user.
+
+---
+
+## 2026-06-12 — Typography + brand identity refresh (marketing/app cosmetics)
+
+**Decision.** A cosmetic pass across the marketing site and app chrome (no app logic):
+- **Geist** is the main UI font (`next/font/google`), replacing Inter, in both the root and marketing layouts. Geist Mono unchanged.
+- **No italics in chrome.** Every `font-style: italic` in our own CSS/inline styles is now `normal`; the crimson accent colour on the wordmark + marketing headline accents is **kept** ("keep crimson, drop slant"). Rich-text content (`.prose`) and the editor's Italic button are deliberately untouched (user content).
+- **Brand mark = the Proscene call-board glyph** in two colours: **paper** (cream `#F5F2EA`) and **ink** (dark `#15181F`). The in-page marks are **transparent** (no tile), so they're applied by **contrast** — ink on light surfaces, paper on dark — via theme-adaptive `body[data-theme]` pairs for app surfaces and static choices for the always-light nav / always-dark footer. Canonical sources in `transparent-icons/`.
+- The **favicon + installed-app-icon pack is intentionally frozen** on the prior dark badge set (user: "keep the current favicon"); `favicon.svg` adapts to the OS light/dark preference. Installed-app icons use the dark (ink) badge to match the dark manifest splash.
+
+**Reason.** Founder-driven brand direction; transparency for new users (the open-beta band); and accuracy (the marketing UI mockups were based on early models — the Script demo was rebuilt to match the real PDF-cue-sheet tool).
+
+**Impact.** Marketing-only/chrome-only; no schema, permissions, or server actions touched. Not browser-verified in-session (incomplete `node_modules`); relies on CI / a Vercel preview. The marketing product demos other than Script were audited as faithful and left as-is; a visual verification pass on a preview is the open follow-up.
+
+---
+
 ## 2026-06-15 — Org-creation wizard + onboarding survey columns
 
 **Decision:** Promote workspace creation from a single-field inline form to a guided four-step wizard at `/workspaces/new`, and persist an optional onboarding survey on the organization.

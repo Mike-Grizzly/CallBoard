@@ -655,3 +655,80 @@ hidden layer can have occasional misreads → a search miss or a copy/AI typo
 accuracy sufficient for search + AI breakdown on real scripts, or do we want a
 **stronger-OCR toggle** (cloud OCR or Claude vision) for the text layer? Current
 DPI is 216; 300 dpi would help accuracy at higher client memory/time cost.
+
+---
+
+## Rehearsal Video (link-only) — open items (added 2026-06-12)
+
+- **DB migration applied.** `rehearsal_videos` + `video_timestamp_notes` were
+  created directly on the Supabase `CallBoard` project (migration
+  `add_rehearsal_videos_and_timestamp_notes`), with RLS enabled / no policies
+  to match the app convention (DB access goes through the Drizzle pooler
+  connection, which bypasses RLS). No `db:push` needed.
+- **Not browser-verified.** The player wrapper loads the YouTube IFrame API /
+  Vimeo Player SDK from a `<script>` and drives them via an imperative handle —
+  this needs a real browser test (especially: seek-on-click, duration capture,
+  speed change, and a Vimeo private/unlisted link with an `h=` hash).
+- **Vimeo private embeds need domain allow-listing.** Unlisted/private Vimeo
+  videos only embed if the Vimeo account allow-lists the app's domain;
+  otherwise the player shows a privacy error. Worth surfacing in the add-video
+  help text once confirmed.
+- **No real thumbnails or durations until first open.** Library cards use
+  deterministic gradient tiles; `durationSeconds` is null until someone opens
+  the video and the player reports it (then it persists). YouTube exposes a
+  thumbnail URL with no API call (`img.youtube.com/vi/{id}/...`); Vimeo needs an
+  oEmbed fetch — deferred.
+- **Native hosting is the real ask down the road.** This is the interim. Native
+  upload/hosting (Mux/Cloudflare Stream) brings transcoding, adaptive delivery,
+  Download, true clip trim and a custom scrubber — and an egress cost that
+  should be priced as a paid tier. See decision-log 2026-06-12.
+- **Soft-deleted videos aren't purged.** Like documents/productions, removed
+  videos set `deletedAt` only; no hard purge exists (same gap as the soft-delete
+  section above). Low urgency — rows are tiny metadata, no Storage objects.
+
+---
+
+## Google consent screen shows `…supabase.co`, not "Proscene" (2026-06-12)
+
+**Status: DEFERRED (cosmetic, sign-in works).** On the Google "Sign in with
+Google" consent screen, the headline and the "Allow … to access" / Privacy &
+Terms host all read `avqgfzrcwegebtbvmcwo.supabase.co` instead of Proscene.
+
+**What was tried and ruled out (free):** the OAuth consent screen **App name =
+"Proscene"**, a logo, and the Google-Group support email are all saved — but
+they **do not** appear in the actual consent test. Confirmed empirically. Cause:
+the app is in **Testing** status (unverified) and the OAuth callback lives on
+Supabase's **shared `…supabase.co` domain**, so Google shows the raw domain and
+the App-name/logo branding doesn't override it. Reordering Authorized domains
+(adding `proscene.app`, keeping `…supabase.co`) does not change this. Note:
+`…supabase.co` MUST stay in Authorized domains or sign-in breaks.
+
+**The only reliable fix (paid):** Supabase **Custom Domain** add-on (Pro plan,
+~$10/mo). Moves auth to e.g. `auth.proscene.app`; re-register that callback in
+Google Cloud and the whole screen reads as your domain. App-side this is just an
+env change (`NEXT_PUBLIC_SUPABASE_URL` → custom domain) — the OAuth redirect
+already derives from the request origin, so little/no code. Google's own
+verification+publish path is free but heavy and still wouldn't remove the
+`…supabase.co` text, so it's not worth it.
+
+**Recommendation:** defer the custom domain until closer to public launch;
+acceptable for beta.
+
+---
+
+## Pricing / storage / beta follow-ups (added 2026-06-12)
+
+- **Lifetime founding discount is advertised but not built.** The homepage open-beta
+  band promises a founding discount (`BETA_DISCOUNT_PCT`, currently 30%), but there is
+  **no Stripe coupon / promotion code** and no logic to apply it at checkout. The number
+  is a recommendation, not yet a committed/finalized price; needs the founder's sign-off
+  before it's a real offer.
+- **Storage allowances are advertised but not enforced.** `STORAGE_LIMIT_GB`
+  (100/250/500 GB) is shown on the pricing page but nothing measures or caps a workspace's
+  usage. Decision was "start conservative, raise for free later"; enforcement (and a
+  fair-use/overage policy) is deferred. When ceilings grow / native video arrives, migrate
+  file blobs to a zero-egress object store (Cloudflare R2) — see `decision-log.md`.
+- **Marketing UI mockups need a visual verification pass.** The hand-built product demos
+  on `/` and `/features` were rebuilt (Script) / audited (the rest) against the real
+  components for accuracy, but none were rendered in-session. Eyeball them on a preview
+  deploy and flag any styling drift for a precise fix.

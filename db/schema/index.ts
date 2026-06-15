@@ -8,6 +8,7 @@ export * from "./production-memberships";
 export * from "./rehearsal-reports";
 export * from "./report-attachments";
 export * from "./documents";
+export * from "./rehearsal-videos";
 export * from "./announcements";
 export * from "./announcement-productions";
 export * from "./announcement-acks";

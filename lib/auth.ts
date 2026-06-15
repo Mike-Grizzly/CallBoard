@@ -42,6 +42,35 @@ function personalWorkspaceName(firstName: string, email: string) {
   return `${label}'s workspace`;
 }
 
+/**
+ * Pulls a first/last name out of auth metadata. Email/password signups set
+ * `first_name`/`last_name` directly (see app/actions/auth.ts). OAuth providers
+ * use their own keys instead — Google sends `given_name`/`family_name` (and a
+ * combined `name`/`full_name`), Apple sends `full_name` only on the first
+ * consent. We try the explicit fields first, then fall back to splitting a
+ * full name so OAuth users don't land with a blank name.
+ */
+function deriveName(
+  meta: Record<string, unknown>,
+): { firstName: string; lastName: string } {
+  const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+
+  const first = str(meta.first_name) || str(meta.given_name);
+  const last = str(meta.last_name) || str(meta.family_name);
+  if (first || last) return { firstName: first, lastName: last };
+
+  const full = str(meta.full_name) || str(meta.name);
+  if (full) {
+    const parts = full.split(/\s+/);
+    return {
+      firstName: parts[0] ?? "",
+      lastName: parts.slice(1).join(" "),
+    };
+  }
+
+  return { firstName: "", lastName: "" };
+}
+
 async function resolveActiveMembership(
   userId: string,
   selectedOrgId: string | null,
@@ -117,8 +146,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     // an account-takeover vector. Email-based reconciliation belongs only in the
     // admin-gated invite flow (features/members/actions.ts → inviteMembers).
     const meta = authUser.user_metadata ?? {};
-    const firstName = (meta.first_name as string) || "";
-    const lastName = (meta.last_name as string) || "";
+    const { firstName, lastName } = deriveName(meta);
     const email = authUser.email ?? "";
     const accountType = (meta.account_type as string) || "organization";
     const requestedOrgName = ((meta.organization_name as string) || "").trim();
