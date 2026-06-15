@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Designer Seats — mockups</title>
+<style>
+  :root{
+    --bg:oklch(0.985 0.005 75);--ink:oklch(0.22 0.012 60);--ink-3:oklch(0.52 0.012 60);
+    --line:oklch(0.9 0.008 70);--accent:oklch(0.55 0.16 25);--bg-elev:oklch(1 0 0);
+    --shadow:0 1px 2px oklch(0.2 0.01 60 / .06),0 8px 24px oklch(0.2 0.01 60 / .08);
+  }
+  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg);color:var(--ink);min-height:100vh;display:grid;place-items:center;padding:40px}
+  .wrap{width:min(640px,100%)}
+  .eyebrow{color:var(--accent);font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+  h1{font-size:30px;margin:8px 0 4px;letter-spacing:-.01em}
+  p.lede{color:var(--ink-3);margin:0 0 26px;font-size:15px;line-height:1.5}
+  a.card{display:block;text-decoration:none;color:inherit;background:var(--bg-elev);border:1px solid var(--line);
+    border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:var(--shadow);transition:border-color .15s,transform .1s}
+  a.card:hover{border-color:var(--accent);transform:translateY(-1px)}
+  a.card .t{font-weight:700;font-size:16px}
+  a.card .d{color:var(--ink-3);font-size:13.5px;margin-top:4px}
+  .note{color:var(--ink-3);font-size:12.5px;margin-top:22px;line-height:1.5}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <span class="eyebrow">Proscene · Designer Seats</span>
+    <h1>Designer Focus view — mockups</h1>
+    <p class="lede">Static, non-wired mockups of the curated single-purpose chrome a designer-seat user would see for the Script tool. See <code>docs/feature-specs/21-designer-seats.md</code> for the full plan.</p>
+
+    <a class="card" href="./designer-focus-view.html">
+      <div class="t">v1 — Focus view</div>
+      <div class="d">Slim top bar, cross-org gig switcher, left tool rail, maximized script canvas, bookmarks/highlight panel.</div>
+    </a>
+    <a class="card" href="./designer-focus-view-v2.html">
+      <div class="t">v2 — Focus view + Layers &amp; margin</div>
+      <div class="d">Adds a Layers panel (per-layer visibility), margin annotation view with orthogonal elbow leader lines (draggable, text-anchored cues), Margin-view toggle, copyright watermark.</div>
+    </a>
+
+    <p class="note">These are hand-built HTML, not part of the app — copied into <code>public/mockups/</code> only so they're viewable on the Vercel preview. Canonical copies live in <code>docs/mockups/</code>.</p>
+  </div>
+</body>
+</html>
