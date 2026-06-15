@@ -2011,3 +2011,36 @@ WARN) — a dashboard toggle, deferred to the user.
 - **No role gate.** Consistent with the pre-existing `createWorkspace` action — any signed-in user may create a workspace. This is intentionally also the path a previously view-only user takes to become an admin of their own company.
 
 **Impact.** New: `app/(app)/workspaces/new/{page.tsx,create-workspace-wizard.tsx}`, `features/workspace/constants.ts`. Edited: `db/schema/organizations.ts`, `lib/organization.ts`, `features/workspace/actions.ts` (`createWorkspace` now takes a string **or** `CreateWorkspaceInput`), `app/(app)/(default)/settings/workspace-switcher.tsx` (inline form → link). `tsc`/`eslint` clean; not browser-verified. Requires `npm run db:push`.
+
+---
+
+## 2026-06-15 — Designer Seats: à la carte sub-product for itinerant designers
+
+**Decision.** Add a personal (per-user) sub-product, separate from the org plans,
+so itinerant designers who pay $0 today can keep the Script + Blocking tools
+across gigs. It is a **single-player, siloed workspace** (own uploaded script +
+AI parse + one ground plan; **no Document Center**, no scheduling/reports/sharing),
+NOT access into any org's data. Ladder: **Single tool $5.99/mo**, **Designer
+bundle (Script+Blocking) $9.99/mo** — both 1 production swap-and-replace — and
+**Designer Pro $14.99/mo** for unlimited concurrent productions. All monthly +
+annual (~10×). When a paying org **invites** a designer they become a normal
+member and gain the org's full suite on top — **no extra charge, no org discount.**
+A "pro/fullsize" **Focus view** (curated single-purpose chrome) is the default
+shell for designer-seat users and an optional toggle for full-suite users.
+
+**Reason.** Reviewer interviews surfaced a real population that won't buy the full
+suite and often designs for non-subscribing companies. Single-player siloing makes
+the seat **useless as an org-plan dodge** (no sharing/scheduling/reports), so it
+only ever converts $0 users — no cannibalization. $14.99 sits cleanly between the
+$9.99 bundle and Season's $25 (1 production, full toolset) on a different value
+axis (many-shows/two-tools/solo vs one-show/all-tools/shared).
+
+**Impact.** Spec: `docs/feature-specs/21-designer-seats.md` (PROPOSED — no code,
+schema, or Stripe products yet). Mockups: `docs/mockups/designer-focus-view*.html`.
+When built: a new per-user entitlement axis layered on top of `can()` and the org
+billing guard (never grants a role-lacked capability, never touches org billing);
+designer is a persona, not a 7th role; personal Stripe subs flip a per-user
+entitlement; AI parse cap + a modest storage ceiling must scale for Designer Pro.
+Focus view is a shell variant, not a fork of the Script/Blocking tools. Preserve
+the CallBoard-specific **orthogonal elbow leader lines** with draggable,
+text-anchored cue cards. Public brand is **Proscene** (relabel mockups).

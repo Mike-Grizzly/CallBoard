@@ -41,3 +41,4 @@ Each feature spec must be updated when its feature changes. Status should reflec
 | `16-people-directory.md` | People Directory & Mass Upload | Implemented (not fully verified) |
 | `17-push-notifications.md` | Web Push Notifications (PWA) | Implemented (not fully verified) |
 | `20-rehearsal-video.md` | Rehearsal Video (link-only embeds + timestamp notes) | Implemented (not browser-verified) |
+| `21-designer-seats.md` | Designer Seats (à la carte sub-product + Focus view) | Proposed / not implemented |
