@@ -125,9 +125,13 @@
   .mcard.note .badge{background:var(--c-dusk)}
   .mcard .who{margin-left:auto;font-size:10px;color:var(--ink-4);font-weight:600}
   .mcard .body{font-size:12px;color:var(--ink-2);margin-top:4px;font-family:var(--font);line-height:1.4}
-  /* leader lines drawn in an SVG overlay */
+  /* leader lines drawn in an SVG overlay — ORTHOGONAL elbows (CallBoard's
+     own style, not the straight diagonal the reference apps use). The line
+     stays anchored to the text when a cue card is dragged. */
   .leaders{position:absolute;inset:0;z-index:1;pointer-events:none}
-  .leaders path{stroke:var(--ink-4);stroke-width:1;fill:none;opacity:.5}
+  .leaders path{stroke:var(--ink-3);stroke-width:1.2;fill:none;opacity:.55}
+  .leaders circle{fill:var(--c-clay)}
+  .leaders circle.note{fill:var(--c-dusk)}
 
   /* floating page nav */
   .pagebar{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;
@@ -177,7 +181,7 @@
 <body>
 
   <div class="mock-note">
-    Static mockup <b>v2</b> — Designer Focus view, now with a <b>Layers</b> panel + <b>margin annotation view</b> (patterns borrowed from Cuelist / Stage Write, kept in CallBoard's own look). Nothing wired up.
+    Static mockup <b>v2</b> — Designer Focus view: <b>Layers</b> panel + <b>margin view</b> with CallBoard's <b>orthogonal elbow</b> leader lines (anchor dots show where the line stays fixed to the text while a draggable cue card moves). Nothing wired up.
   </div>
 
   <!-- top bar -->
@@ -243,11 +247,17 @@
           <div class="watermark">Copyrighted material — authorized for licensed production use only</div>
         </article>
 
-        <!-- leader lines (hand-placed for the mock) -->
+        <!-- leader lines (hand-placed for the mock): orthogonal elbows —
+             horizontal out of the text, right-angle step, horizontal into the
+             card. The anchor dot marks where the line stays fixed to the text
+             while the card is dragged up/down. -->
         <svg class="leaders" viewBox="0 0 960 620" preserveAspectRatio="none">
-          <path d="M560 96 C 640 96, 640 70, 700 70" />
-          <path d="M560 168 C 640 168, 640 196, 700 196" />
-          <path d="M560 250 C 640 250, 640 300, 700 300" />
+          <path d="M558 96 H 632 V 70 H 700" />
+          <circle cx="558" cy="96" r="3" />
+          <path d="M558 168 H 632 V 196 H 700" />
+          <circle class="note" cx="558" cy="168" r="3" />
+          <path d="M558 250 H 632 V 300 H 700" />
+          <circle cx="558" cy="250" r="3" />
         </svg>
 
         <!-- margin cards -->
