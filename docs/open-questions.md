@@ -4,6 +4,23 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
+## Onboarding survey data is captured but unused (added 2026-06-15)
+
+- The create-workspace wizard (`/workspaces/new`) now stores `organizations.annual_shows`,
+  `team_size`, and `production_types`, but **nothing reads them yet**. The stated
+  intent was to "tailor defaults" (e.g. pre-seed departments/seasons in the New
+  Production wizard from `production_types`) and for product insight. Follow-up:
+  either wire them into a default-seeding path or an analytics surface, or revisit
+  whether collecting them is worth it. Until then they are write-only.
+- **`db:push` not run in this session** (sandbox had no `DATABASE_URL`). The three
+  new columns must be pushed before `createWorkspace` can insert them, or org
+  creation will error in any environment whose DB predates this change.
+- Wizard is **`tsc`/`eslint`-clean but not browser-verified** — the multi-step flow,
+  logo-after-create upload, and best-effort invite warnings haven't been exercised
+  against a live Supabase/Storage backend.
+
+---
+
 ## Soft-delete: deferred hard purge (added 2026-06-10)
 
 - **No 30-day hard purge exists.** Productions and organizations soft-delete via
