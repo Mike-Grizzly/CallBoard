@@ -30,11 +30,23 @@ async function uniqueSlugFor(name: string): Promise<string> {
   throw new Error("Could not generate a unique organization slug.");
 }
 
+/** Optional self-reported company profile gathered by the create-workspace
+ *  wizard. All fields are optional; omitted ones are left null. */
+export type OrganizationProfile = {
+  annualShows?: string | null;
+  teamSize?: string | null;
+  productionTypes?: string[];
+};
+
 /**
  * Creates a new organization. Caller is responsible for inserting the
  * creator's `organization_memberships` row (typically with role "admin").
+ * `profile` carries the optional onboarding survey answers, when present.
  */
-export async function createOrganization(name: string) {
+export async function createOrganization(
+  name: string,
+  profile?: OrganizationProfile,
+) {
   const trimmed = name.trim() || "New organization";
   const slug = await uniqueSlugFor(trimmed);
   const [org] = await db
@@ -43,7 +55,16 @@ export async function createOrganization(name: string) {
     // trial is anchored to the org's first production (see
     // features/billing/guard.ts → startTrialIfFirstProduction), not signup,
     // so an empty workspace can sit at $0 indefinitely until it runs a show.
-    .values({ name: trimmed, slug })
+    .values({
+      name: trimmed,
+      slug,
+      annualShows: profile?.annualShows ?? null,
+      teamSize: profile?.teamSize ?? null,
+      productionTypes:
+        profile?.productionTypes && profile.productionTypes.length > 0
+          ? profile.productionTypes
+          : null,
+    })
     .returning();
   return org;
 }

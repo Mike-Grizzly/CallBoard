@@ -19,6 +19,13 @@ export type WorkspaceActionResult = {
   success?: boolean;
 };
 
+export type CreateWorkspaceInput = {
+  name: string;
+  annualShows?: string | null;
+  teamSize?: string | null;
+  productionTypes?: string[];
+};
+
 const MAX_NAME_LENGTH = 60;
 
 export async function renameWorkspace(
@@ -55,11 +62,18 @@ export async function renameWorkspace(
  * its first admin and we auto-switch them into it so the next request
  * already renders inside the new org. Any user can do this — multi-org
  * membership isn't gated by role.
+ *
+ * Accepts the optional onboarding-survey answers gathered by the
+ * create-workspace wizard; a bare name (e.g. the legacy quick-create path)
+ * still works because every survey field is optional.
  */
 export async function createWorkspace(
-  name: string,
+  input: string | CreateWorkspaceInput,
 ): Promise<WorkspaceActionResult & { organizationId?: string }> {
   const user = await requireCurrentUser();
+
+  const { name, annualShows, teamSize, productionTypes } =
+    typeof input === "string" ? { name: input } : input;
 
   const trimmed = (name || "").trim();
   if (!trimmed) {
@@ -69,7 +83,11 @@ export async function createWorkspace(
     return { error: `Keep it under ${MAX_NAME_LENGTH} characters.` };
   }
 
-  const org = await createOrganization(trimmed);
+  const org = await createOrganization(trimmed, {
+    annualShows: annualShows ?? null,
+    teamSize: teamSize ?? null,
+    productionTypes: productionTypes ?? [],
+  });
 
   await db.insert(organizationMemberships).values({
     userId: user.id,

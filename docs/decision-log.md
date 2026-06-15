@@ -1998,3 +1998,16 @@ WARN) — a dashboard toggle, deferred to the user.
 **Reason.** Founder-driven brand direction; transparency for new users (the open-beta band); and accuracy (the marketing UI mockups were based on early models — the Script demo was rebuilt to match the real PDF-cue-sheet tool).
 
 **Impact.** Marketing-only/chrome-only; no schema, permissions, or server actions touched. Not browser-verified in-session (incomplete `node_modules`); relies on CI / a Vercel preview. The marketing product demos other than Script were audited as faithful and left as-is; a visual verification pass on a preview is the open follow-up.
+
+---
+
+## 2026-06-15 — Org-creation wizard + onboarding survey columns
+
+**Decision:** Promote workspace creation from a single-field inline form to a guided four-step wizard at `/workspaces/new`, and persist an optional onboarding survey on the organization.
+
+- **New route, reused chrome.** The wizard renders full-screen via the existing `.np-overlay`/`.np-root` CSS island (shared with the New Production wizard) rather than a new design system. Steps: Workspace (name + logo) → About your company (survey) → Invite team → Review.
+- **Schema addition — accepted as deliberate, not speculative.** Added three **nullable** columns to `organizations`: `annual_shows`, `team_size`, `production_types` (text[]). Dev-rules discourage speculative schema, but the user explicitly wanted onboarding to capture this; columns are nullable (survey fully skippable) and stored as the free-text bucket labels from `features/workspace/constants.ts`. They are **never used for access decisions**. Threaded through `createOrganization(name, profile?)`; the legacy signup path passes no profile and is unaffected.
+- **Logo uploaded after creation.** The signed-upload path is org-scoped (`org-logos/{orgId}/…`), so the picked file is held in the browser and uploaded only once `createWorkspace` has returned an org id and switched the user in. Logo + invites are best-effort: a failure surfaces as a non-fatal warning on the success screen because the workspace already exists and the caller is its admin.
+- **No role gate.** Consistent with the pre-existing `createWorkspace` action — any signed-in user may create a workspace. This is intentionally also the path a previously view-only user takes to become an admin of their own company.
+
+**Impact.** New: `app/(app)/workspaces/new/{page.tsx,create-workspace-wizard.tsx}`, `features/workspace/constants.ts`. Edited: `db/schema/organizations.ts`, `lib/organization.ts`, `features/workspace/actions.ts` (`createWorkspace` now takes a string **or** `CreateWorkspaceInput`), `app/(app)/(default)/settings/workspace-switcher.tsx` (inline form → link). `tsc`/`eslint` clean; not browser-verified. Requires `npm run db:push`.
