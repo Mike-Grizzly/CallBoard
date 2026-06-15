@@ -2010,7 +2010,31 @@ WARN) — a dashboard toggle, deferred to the user.
 - **Logo uploaded after creation.** The signed-upload path is org-scoped (`org-logos/{orgId}/…`), so the picked file is held in the browser and uploaded only once `createWorkspace` has returned an org id and switched the user in. Logo + invites are best-effort: a failure surfaces as a non-fatal warning on the success screen because the workspace already exists and the caller is its admin.
 - **No role gate.** Consistent with the pre-existing `createWorkspace` action — any signed-in user may create a workspace. This is intentionally also the path a previously view-only user takes to become an admin of their own company.
 
-**Impact.** New: `app/(app)/workspaces/new/{page.tsx,create-workspace-wizard.tsx}`, `features/workspace/constants.ts`. Edited: `db/schema/organizations.ts`, `lib/organization.ts`, `features/workspace/actions.ts` (`createWorkspace` now takes a string **or** `CreateWorkspaceInput`), `app/(app)/(default)/settings/workspace-switcher.tsx` (inline form → link). `tsc`/`eslint` clean; not browser-verified. Requires `npm run db:push`.
+**Impact.** New: `app/(app)/workspaces/new/{page.tsx,create-workspace-wizard.tsx}`, `features/workspace/constants.ts`. Edited: `db/schema/organizations.ts`, `lib/organization.ts`, `features/workspace/actions.ts` (`createWorkspace` now takes a string **or** `CreateWorkspaceInput`), `app/(app)/(default)/settings/workspace-switcher.tsx` (inline form → link). `tsc`/`eslint` clean; not browser-verified. **Schema applied live (2026-06-15)** to the `CallBoard` Supabase project via `apply_migration` (`add_onboarding_survey_columns_to_organizations`) rather than `npm run db:push` — schema changes are now applied through Supabase directly (development is no longer local).
+
+---
+
+## 2026-06-15 — `--accent-strong` token for white-on-accent button contrast
+
+**Decision:** Filled accent **action buttons** that carry white label text use a new `--accent-strong` token for their background/border instead of `--accent`. `--accent-strong` equals `var(--accent)` in the light and cool themes, and is a deeper red in dark (`oklch(0.585 0.17 25)`) and dusk (`oklch(0.575 0.17 28)`).
+
+**Reason:** `--accent` is deliberately *lightened* in the dark/dusk themes because it doubles as a text/icon colour on dark surfaces (where a darker red would be illegible). But that same lightness (L≈0.68–0.70) makes white button labels only ~3:1 — below WCAG AA for normal text. Darkening `--accent` globally would fix buttons but break accent-coloured text/icons on dark backgrounds. Splitting out a button-surface token resolves the conflict: text/icon uses keep the lighter `--accent`, filled buttons get the deeper `--accent-strong` (≈4.8:1 white-on-accent). Light/cool are defined as `var(--accent)` so light mode is visually unchanged.
+
+**Impact:** `app/globals.css` only. Token defined in all four theme blocks; applied to `.btn.primary`, `.btn-hero.primary`, `.np-root .btn.primary`/`.accent`, `.dd-btn-primary`, `.md-root .mbtn.primary`, `.ac-btn.primary`, `.ac-pcard-ackbtn .b1`, `.rd-edit-btn`, and the mobile FAB (plus their hover states). Decorative accent uses (count badges, calendar "today" markers, avatars, progress fills) intentionally keep `--accent`. Not browser-verified — the dark/dusk values are tuned by contrast math and want a visual check across all four themes. The broader audit found no actual black-on-black/white-on-white pairings in the current button/toggle/tab system.
+
+---
+
+## 2026-06-15 — Account self-service: email change, global sign-out, self-delete; time zone declined
+
+**Decision:** Added three account-management features (Settings → Account) and deliberately declined a fourth.
+- **Change email** via `supabase.auth.updateUser({email})` with email confirmation. `profiles.email` is reconciled from the verified auth email in `getCurrentUser` (by auth UID) rather than written optimistically, since Supabase confirms out-of-band with no DB callback.
+- **Sign out everywhere** via `signOut({scope:"global"})`.
+- **Delete my own account**: cascades like `deletePerson` (removes memberships everywhere, soft-deletes memberless orgs, deletes profile + auth user), gated so the last admin of a populated org can't orphan it. Requires typing the account email.
+- **Per-user time zone: NOT built.** Investigation found call/rehearsal times are stored timezone-naive (`calls.callTime`/`endTime` are plain `text` like "19:00", `callDate` a bare date) and rendered as wall-clock time with no UTC conversion. This is the correct model for theatre — a call is "7 PM at the venue" and must not shift based on where a cast member currently is. A per-user tz override would actively misrepresent those times. Absolute timestamps (report/note times) already render in the browser's tz, which is what users want. So a tz preference offers no value here and real downside.
+
+**Reason:** These are standard account-settings expectations; the email-reconciliation-by-UID keeps the safe "never link profiles by email" invariant (see the 2026-06-03 orphan-profiles note). The time-zone decision follows dev-rules: flag a feature that conflicts with the data model instead of building it.
+
+**Impact:** `features/account/actions.ts` (+`changeEmail`/`signOutEverywhere`/`deleteOwnAccount`), `lib/auth.ts` (email reconciliation), new `app/(app)/(default)/settings/account/{change-email-form,account-danger-zone}.tsx`, edited account `page.tsx` + `account-profile-form.tsx`, login page notices. No schema change. Not browser-verified.
 
 ---
 
@@ -2053,9 +2077,8 @@ text-anchored cue cards. Public brand is **Proscene** (relabel mockups).
 (referred org gets the planned 15%-off-first-term coupon from Feature 18; designer
 earns seat credit), **stacking 3 months free per referred org up to 12 months/year**
 (rewards repeat referrers — the persona's strength — over a one-and-done bonus),
-paid as **comped time/credit, not cash**. Reward **vests only after the org's first
-invoice clears and isn't refunded** (attribution via a referral code applied at
-checkout) to prevent throwaway-org fraud.
+paid as **comped time/credit, not cash**. Vesting is **lockstep** (see next entry),
+attribution via a referral code applied at checkout.
 
 **Reason.** Designers touch many companies a year, each a high-trust warm intro —
 the most valuable distribution channel for reaching org subscribers. A seat-year
@@ -2070,12 +2093,11 @@ finally justifies real Stripe coupon/promo-code infra (Feature 18 left it a stub
 
 ## 2026-06-15 — Designer referral: lockstep vesting (anti-fraud fix)
 
-**Decision.** Correcting the prior entry: the referral reward is **NOT** granted
-upfront and "after first invoice clears" is insufficient. Instead, **grant 1 free
-designer-month per month the referred org stays paid, in arrears, capped at 3.**
-Annual org subs ($249+) may vest all 3 upfront (prepay dwarfs the reward). Claw
-back on refund/chargeback; exclude education/heavily-discounted orgs; self-referral
-heuristics as a tripwire.
+**Decision.** The referral reward is **NOT** granted upfront, and "after first
+invoice clears" is insufficient. Instead, **grant 1 free designer-month per month
+the referred org stays paid, in arrears, capped at 3.** Annual org subs ($249+)
+may vest all 3 upfront (prepay dwarfs the reward). Claw back on refund/chargeback;
+exclude education/heavily-discounted orgs; self-referral heuristics as a tripwire.
 
 **Reason.** The "fake org, pay one $25 month, claim 3 free months, cancel" exploit
 nets the attacker +$5–20. Lockstep vesting kills it structurally: an org-month

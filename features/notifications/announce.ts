@@ -143,6 +143,100 @@ export async function sendScriptParseReady(input: {
   }
 }
 
+/**
+ * Tell someone who ALREADY has a Proscene account that they've been added to a
+ * new organization. Brand-new invitees get a Supabase invite email (with a
+ * set-password link) instead, so this only fires for existing accounts — which
+ * `inviteMembers` would otherwise add silently. Delivered in-app (scoped to the
+ * new org so it surfaces in that workspace's switcher bubble) and via email,
+ * both respecting the user's preferences. Best-effort: a failure here must
+ * never fail the invite.
+ */
+export async function sendOrgInviteNotification(input: {
+  userId: string;
+  email: string;
+  organizationId: string;
+  organizationName: string;
+  invitedByName: string;
+}): Promise<void> {
+  try {
+    const prefs = await getPreferencesForUsers([input.userId]);
+    const link = "/dashboard";
+    const title = `You've been added to ${input.organizationName}`;
+    const body = `${input.invitedByName} added you to ${input.organizationName} on Proscene.`;
+
+    if (prefs[input.userId]?.inApp ?? true) {
+      await db.insert(notifications).values({
+        recipientId: input.userId,
+        organizationId: input.organizationId,
+        type: "org_invite",
+        title,
+        body,
+        link,
+      });
+    }
+
+    if (prefs[input.userId]?.email && input.email) {
+      await sendOrgInviteEmail({
+        to: input.email,
+        title,
+        organizationName: input.organizationName,
+        invitedByName: input.invitedByName,
+        link,
+      });
+    }
+
+    if (prefs[input.userId]?.push) {
+      await sendPushToUsers([input.userId], {
+        title,
+        body,
+        url: link,
+        tag: `org-invite-${input.organizationId}`,
+      });
+    }
+  } catch (err) {
+    console.error("Failed to send org-invite notification:", err);
+  }
+}
+
+async function sendOrgInviteEmail(p: {
+  to: string;
+  title: string;
+  organizationName: string;
+  invitedByName: string;
+  link: string;
+}): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+
+  const from = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
+  ).replace(/\/$/, "");
+  const url = `${siteUrl}${p.link}`;
+
+  const html = `
+  <div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1a1a1a;">
+    <p style="font-size: 13px; color: #6b7280; margin: 0 0 6px;">Proscene</p>
+    <h1 style="font-size: 20px; margin: 0 0 8px;">${escapeHtml(p.title)}</h1>
+    <p style="font-size: 15px; line-height: 1.5; margin: 0 0 20px;">${escapeHtml(p.invitedByName)} added you to <strong>${escapeHtml(p.organizationName)}</strong>. Sign in with your existing Proscene account to get started — no new account needed.</p>
+    <a href="${url}" style="display: inline-block; background: #1a1a1a; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-size: 14px;">Open Proscene</a>
+    <p style="font-size: 12px; color: #9ca3af; margin: 24px 0 0;">You're receiving this because you already have a Proscene account. Manage how you get alerts in Settings → Notifications.</p>
+  </div>`;
+
+  try {
+    const resend = new Resend(apiKey);
+    await resend.emails.send({
+      from,
+      to: [p.to],
+      subject: p.title,
+      html,
+    });
+  } catch (err) {
+    console.error("Failed to send org-invite email:", err);
+  }
+}
+
 async function sendAnnouncementEmails(
   recipients: AnnouncementAudienceMember[],
   input: FanoutInput,

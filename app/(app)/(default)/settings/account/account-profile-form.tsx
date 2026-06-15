@@ -14,7 +14,6 @@ export function AccountProfileForm({
     lastName: string;
     phone: string;
     pronouns: string;
-    email: string;
   };
 }) {
   const [state, formAction, pending] = useActionState<
@@ -71,24 +70,6 @@ export function AccountProfileForm({
             className="field"
           />
         </div>
-      </div>
-
-      <div className="auth-field">
-        <label htmlFor="email" className="label">
-          Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          defaultValue={initial.email}
-          disabled
-          className="field"
-          style={{ opacity: 0.7 }}
-        />
-        <p className="auth-hint">
-          Email changes aren&apos;t supported yet — contact your admin if you
-          need a new one.
-        </p>
       </div>
 
       <div className="auth-field">

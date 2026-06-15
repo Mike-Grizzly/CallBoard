@@ -25,6 +25,10 @@ export default async function ForgotPasswordConfirmPage({
 
         <div className="card card-pad">
           <p className="auth-note">
+            Were you invited and never set a password? This same link lets you
+            choose one and sign in.
+          </p>
+          <p className="auth-note">
             Didn&apos;t receive the email? Check your spam folder, or go back and
             try again.
           </p>

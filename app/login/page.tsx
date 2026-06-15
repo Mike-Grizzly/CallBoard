@@ -10,10 +10,16 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; signed_out?: string; deleted?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, signed_out, deleted } = await searchParams;
   const errorMessage = error ? ERROR_MESSAGES[error] : undefined;
+  // signOutEverywhere / deleteOwnAccount redirect here with these flags.
+  const noticeMessage = deleted
+    ? "Your account has been deleted. Sorry to see you go."
+    : signed_out
+      ? "You've been signed out on all your devices."
+      : undefined;
 
   return (
     <div className="auth-screen">
@@ -32,6 +38,14 @@ export default async function LoginPage({
           <p className="auth-sub">Sign in to your production workspace.</p>
         </div>
         {errorMessage && <div className="auth-error">{errorMessage}</div>}
+        {noticeMessage && (
+          <div
+            className="card card-pad"
+            style={{ fontSize: 13, color: "var(--ink-2)", textAlign: "center" }}
+          >
+            {noticeMessage}
+          </div>
+        )}
         <LoginForm />
         <OAuthButtons />
         <p className="auth-foot">

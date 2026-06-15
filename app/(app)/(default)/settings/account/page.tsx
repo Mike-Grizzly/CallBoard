@@ -5,7 +5,9 @@ import { eq } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
 import { Icon } from "@/components/ui/icon";
 import { AccountProfileForm } from "./account-profile-form";
+import { ChangeEmailForm } from "./change-email-form";
 import { ChangePasswordForm } from "./change-password-form";
+import { AccountDangerZone } from "./account-danger-zone";
 
 export default async function AccountSettingsPage() {
   const user = await requireCurrentUser();
@@ -51,9 +53,17 @@ export default async function AccountSettingsPage() {
           lastName: profile.lastName,
           phone: profile.phone ?? "",
           pronouns: profile.pronouns ?? "",
-          email: profile.email,
         }}
       />
+
+      <div style={{ marginTop: 12 }}>
+        <div className="h-eyebrow">Account</div>
+        <h2 className="h-section">Email address</h2>
+        <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+          Used to sign in and receive notifications.
+        </p>
+      </div>
+      <ChangeEmailForm currentEmail={profile.email} />
 
       <div style={{ marginTop: 12 }}>
         <div className="h-eyebrow">Security</div>
@@ -63,6 +73,14 @@ export default async function AccountSettingsPage() {
         </p>
       </div>
       <ChangePasswordForm />
+
+      <div style={{ marginTop: 12 }}>
+        <div className="h-eyebrow" style={{ color: "var(--c-clay)" }}>
+          Danger zone
+        </div>
+        <h2 className="h-section">Sessions &amp; account</h2>
+      </div>
+      <AccountDangerZone email={profile.email} />
     </div>
   );
 }

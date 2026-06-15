@@ -12,12 +12,49 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
   Production wizard from `production_types`) and for product insight. Follow-up:
   either wire them into a default-seeding path or an analytics surface, or revisit
   whether collecting them is worth it. Until then they are write-only.
-- **`db:push` not run in this session** (sandbox had no `DATABASE_URL`). The three
-  new columns must be pushed before `createWorkspace` can insert them, or org
-  creation will error in any environment whose DB predates this change.
+- **Schema applied live (2026-06-15).** The three columns (`annual_shows`,
+  `team_size`, `production_types`) were added directly to the `CallBoard` Supabase
+  project via `apply_migration` (`add_onboarding_survey_columns_to_organizations`),
+  not `npm run db:push` — this project applies schema changes through Supabase
+  directly since development is no longer local. No further DB step is needed.
 - Wizard is **`tsc`/`eslint`-clean but not browser-verified** — the multi-step flow,
   logo-after-create upload, and best-effort invite warnings haven't been exercised
   against a live Supabase/Storage backend.
+
+---
+
+## Desktop-width overflow pass needs on-device verification (added 2026-06-15)
+
+- The "right side off-screen on 4:3/16:10 MacBooks" beta item was fixed **by code
+  inspection only** (no browser/screenshot in the sandbox). Changes: a `.page`
+  horizontal-overflow guard promoted to all widths, `minmax(0,1fr)` on the
+  calendar/day/new-production two-column grids, and a horizontal-scroll wrapper
+  on the People table (see `current-status.md` 2026-06-15 desktop pass).
+- **Verify at ~1280px** (and 1440px) on a deploy: walk Dashboard, Productions,
+  People, Documents, Calendar, the Script tool, Blocking, Reports, Settings, and
+  the new-production / new-workspace wizards — confirm no horizontal page scroll
+  and nothing important clipped at the right edge.
+- **Known risk to check specifically:** `.page { overflow-x: hidden }` clips
+  (rather than scrolls) any *inline* popover/dropdown that extends past the right
+  edge. If one is cut off, fix that component (portal to body or flip its
+  placement) rather than loosening the page guard.
+- If a particular screen still overflows, grab a screenshot at that width so the
+  offending component can be fixed precisely instead of guessed at.
+
+---
+
+## Lint baseline drift in a fresh `npm install` (added 2026-06-15)
+
+- Running `npm run lint` in a freshly-`npm install`ed sandbox reports **44
+  problems (12 errors, 32 warnings)** on `main` *before any local edits* (e.g.
+  `react/no-unescaped-entities` on existing apostrophes, `react-hooks/set-state-in-effect`).
+  Since PRs keep merging to `main`, CI is evidently green — so CI must resolve
+  different (lockfile-pinned) plugin versions than a plain `npm install` pulls,
+  or gates on `next build` rather than `eslint`. The 2026-06-15 invite/sign-in
+  edits were verified to add **zero** net problems (baseline 44 == with-edits 44).
+- Follow-up: confirm what the CI lint step actually runs and whether the lockfile
+  needs refreshing so local `npm install` matches CI. Until then, judge local
+  lint by the *delta* a change introduces, not the absolute count.
 
 ---
 
@@ -470,6 +507,23 @@ default in place today.
   list now flags `invited` status, but the public reset screen still can't tell
   a user "you were invited, accept the invite instead" without leaking account
   existence. Acceptable for now; revisit if it confuses testers.
+  - **Partly addressed 2026-06-15:** the signup form now guides an invited user
+    who hits "account already exists" toward the invite email / password reset,
+    and existing-account invitees now get an in-app + email notification (see
+    `feature-specs/02-auth.md` → "Invite / sign-in clarity"). The core
+    anti-enumeration limitation above is unchanged.
+  - **Hardened further 2026-06-15:** expired/used invite & recovery links now
+    route to `/forgot-password?expired=1` (a self-service "get a new link" that
+    also sets a first password) instead of a useless login error, and failed
+    logins surface the same recovery link. Two **user-owned config** follow-ups
+    remain: (1) **extend Supabase's email-link (OTP) expiry** so invites don't
+    lapse before people check mail — tension with the security advisor's
+    short-expiry preference, but the new recovery path makes exact TTL
+    non-critical; (2) **verify Resend SMTP deliverability** (invites are sent by
+    Supabase Auth, not our Resend API — a silent SMTP/domain issue would make
+    invites simply never arrive, which looks identical to "sign-in is broken").
+    Optional future: passwordless `signInWithOtp` on /login for near
+    failure-proof joining.
 - **Latent risk:** do NOT add profile↔login reconciliation by email outside the
   admin invite flow without requiring verified email ownership — that would turn
   pre-seeded roles into an account-takeover vector. Current linking is by auth

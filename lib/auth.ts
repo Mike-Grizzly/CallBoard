@@ -193,6 +193,19 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       .where(eq(profiles.id, authUser.id));
   }
 
+  // Reconcile the profile email with the verified auth email. A user can change
+  // their account email (Settings → Account); Supabase only flips auth.users
+  // once they confirm the emailed link, with no callback into our DB, so we
+  // sync here on the next request. Keyed on auth UID (never an email lookup),
+  // so this can't adopt another profile.
+  if (authUser.email && existing[0].email !== authUser.email) {
+    await db
+      .update(profiles)
+      .set({ email: authUser.email })
+      .where(eq(profiles.id, authUser.id));
+    existing[0].email = authUser.email;
+  }
+
   const membership = await resolveActiveMembership(
     authUser.id,
     existing[0].selectedOrganizationId,
