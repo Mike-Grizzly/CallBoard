@@ -143,6 +143,47 @@ export async function sendScriptParseReady(input: {
   }
 }
 
+/**
+ * Notify an existing account that they've been added to a workspace via a team
+ * invite — so they discover it in-app (and via push) instead of being expected
+ * to "sign up" for an org they were silently added to.
+ */
+export async function sendOrgInviteNotification(input: {
+  userId: string;
+  organizationId: string;
+  organizationName: string;
+  invitedByName: string;
+}): Promise<void> {
+  try {
+    const title = `${input.invitedByName} added you to ${input.organizationName}`;
+    const body = `You now have access to ${input.organizationName}'s productions on Proscene.`;
+    const link = "/productions";
+    const prefs = await getPreferencesForUsers([input.userId]);
+
+    if (prefs[input.userId]?.inApp ?? true) {
+      await db.insert(notifications).values({
+        recipientId: input.userId,
+        organizationId: input.organizationId,
+        type: "org_invite",
+        title,
+        body,
+        link,
+      });
+    }
+
+    if (prefs[input.userId]?.push) {
+      await sendPushToUsers([input.userId], {
+        title,
+        body,
+        url: link,
+        tag: `org-invite-${input.organizationId}`,
+      });
+    }
+  } catch (err) {
+    console.error("Failed to send org-invite notification:", err);
+  }
+}
+
 async function sendAnnouncementEmails(
   recipients: AnnouncementAudienceMember[],
   input: FanoutInput,

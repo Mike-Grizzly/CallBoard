@@ -11,10 +11,18 @@ import {
   organizationMemberships,
   organizations,
   profiles,
+  calls,
 } from "@/db/schema";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import {
+  DATE_RE,
+  MAX_GENERATED_CALLS,
+  WEEKDAY_INDEX,
+  datesInRange,
+  weekdayOf,
+} from "@/features/call-templates/recurring";
 import {
   validateProductionForm,
   slugify,
@@ -127,6 +135,7 @@ export type FullProductionResult = {
     assigned: number;
     invited: number;
     skipped: { email: string; reason: string }[];
+    scheduledCalls: number;
   };
 };
 
@@ -239,9 +248,48 @@ export async function createProductionFull(
       `${user.firstName} ${user.lastName}`.trim() || user.email,
   });
 
+  // Seed the calendar with the wizard's default rehearsal pattern (unless the
+  // user opted out): one blank "Rehearsal" call on each selected weekday from
+  // the first rehearsal through opening night. They're ordinary editable calls,
+  // so the schedule can be adjusted afterward like any other.
+  let scheduledCalls = 0;
+  if (input.autofillCalendar !== false) {
+    const startDate =
+      input.firstRehearsal && DATE_RE.test(input.firstRehearsal)
+        ? input.firstRehearsal
+        : null;
+    const endRaw = (input.opening || input.closing || "").trim();
+    const endDate = DATE_RE.test(endRaw) ? endRaw : null;
+    const weekdayNums = new Set(
+      Object.entries(rehearsalDays)
+        .filter(([, on]) => on)
+        .map(([day]) => WEEKDAY_INDEX[day])
+        .filter((n): n is number => n != null),
+    );
+    if (startDate && endDate && endDate >= startDate && weekdayNums.size > 0) {
+      const dates = datesInRange(startDate, endDate)
+        .filter((d) => weekdayNums.has(weekdayOf(d)))
+        .slice(0, MAX_GENERATED_CALLS);
+      if (dates.length > 0) {
+        await db.insert(calls).values(
+          dates.map((callDate) => ({
+            productionId,
+            createdBy: user.id,
+            callDate,
+            callTime: (input.rehearsalStart ?? "").trim() || null,
+            endTime: (input.rehearsalEnd ?? "").trim() || null,
+            focus: "Rehearsal",
+          })),
+        );
+        scheduledCalls = dates.length;
+      }
+    }
+  }
+
   revalidatePath("/", "layout");
   revalidatePath("/productions");
   revalidatePath("/people");
+  revalidatePath("/calendar");
 
   return {
     slug,
@@ -252,6 +300,7 @@ export async function createProductionFull(
       assigned: teamResult.assigned,
       invited: teamResult.invited,
       skipped: teamResult.skipped,
+      scheduledCalls,
     },
   };
 }

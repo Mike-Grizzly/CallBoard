@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { Icon } from "@/components/ui/icon";
 import {
   type CalEvent,
@@ -36,9 +36,20 @@ export function DayView({
     (_, i) => DAY_START_HOUR + i,
   );
   const isToday = sameYMD(cursor, today);
+  // On narrow screens the day-detail panel becomes an off-canvas drawer.
+  const [sideOpen, setSideOpen] = useState(false);
 
   return (
-    <div className="day">
+    <div className="day" data-side-open={sideOpen ? "1" : "0"}>
+      <button
+        type="button"
+        className="btn ghost btn-icon day-side-toggle"
+        onClick={() => setSideOpen(true)}
+        title="Show day details"
+        aria-label="Show day details"
+      >
+        <Icon name="Clipboard" className="ico" />
+      </button>
       <div className="day-track">
         <div className="week-gutter">
           {hours.map((h) => (
@@ -118,6 +129,14 @@ export function DayView({
           )}
         </div>
       </aside>
+
+      {sideOpen && (
+        <div
+          className="cal-scrim cal-side-scrim"
+          onClick={() => setSideOpen(false)}
+          aria-hidden
+        />
+      )}
     </div>
   );
 }

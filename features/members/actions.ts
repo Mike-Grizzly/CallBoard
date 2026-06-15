@@ -22,6 +22,7 @@ import type { Role } from "@/types/roles";
 import { ROLES } from "@/types/roles";
 import { isValidEmail } from "./validation";
 import { MEMBER_STATUSES, type MemberStatus } from "./constants";
+import { sendOrgInviteNotification } from "@/features/notifications/announce";
 
 export type MemberActionResult = {
   error?: string;
@@ -798,6 +799,15 @@ export async function inviteMembers(
             role: person.role,
           });
           await applyAssignments(userId, person.assignments, currentUser.organizationId);
+          // Existing accounts are added silently to the org, so notify them
+          // in-app (+ push) that they now have access — they aren't going
+          // through the email/signup flow.
+          await sendOrgInviteNotification({
+            userId,
+            organizationId: currentUser.organizationId,
+            organizationName,
+            invitedByName,
+          });
           results.push({
             email,
             name,

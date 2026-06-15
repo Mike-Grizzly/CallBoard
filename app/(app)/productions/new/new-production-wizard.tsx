@@ -89,6 +89,7 @@ type WizardData = {
   rehearsalDays: Record<string, boolean>;
   rehearsalStart: string;
   rehearsalEnd: string;
+  autofillCalendar: boolean;
   depts: Record<string, boolean>;
   roles: RoleRow[];
   team: TeamRow[];
@@ -118,6 +119,7 @@ type LaunchSummary = {
   assigned: number;
   invited: number;
   skipped: FullProductionResultSkip[];
+  scheduledCalls: number;
 };
 
 export default function NewProductionWizard({
@@ -143,6 +145,7 @@ export default function NewProductionWizard({
     rehearsalDays: { Mon: true, Tue: true, Wed: true, Thu: true, Fri: true, Sat: true, Sun: false },
     rehearsalStart: "7:00 PM",
     rehearsalEnd: "10:30 PM",
+    autofillCalendar: true,
     depts: {
       director: true, stage: true, music: true, costumes: true, props: true,
       set: true, lighting: true, sound: true, choreo: false, intimacy: false,
@@ -334,6 +337,7 @@ export default function NewProductionWizard({
       rehearsalDays: data.rehearsalDays,
       rehearsalStart: data.rehearsalStart,
       rehearsalEnd: data.rehearsalEnd,
+      autofillCalendar: data.autofillCalendar,
       depts: data.depts,
       roles: data.roles.map((r) => ({ name: r.name, actor: r.actor, type: r.type })),
       team,
@@ -879,6 +883,31 @@ function StepCalendar({ data, set }: { data: WizardData; set: (p: Partial<Wizard
       <div className="hint" style={{ marginTop: 8 }}>
         Used to pre-fill call times when creating reports — overridden per day.
       </div>
+      <label
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 10,
+          marginTop: 16,
+          cursor: "pointer",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={data.autofillCalendar}
+          onChange={(e) => set({ autofillCalendar: e.target.checked })}
+          style={{ marginTop: 3, flexShrink: 0 }}
+        />
+        <span>
+          <span style={{ fontWeight: 600 }}>Add these rehearsals to my calendar</span>
+          <span className="hint" style={{ display: "block", marginTop: 2 }}>
+            We&apos;ll drop a blank rehearsal on every selected day from your
+            first rehearsal through opening night. They&apos;re ordinary calls
+            you can edit or delete anytime — turn this off to fill the calendar
+            in yourself.
+          </span>
+        </span>
+      </label>
     </>
   );
 }
@@ -1609,6 +1638,12 @@ function LaunchScreen({
               <b>{summary.departments}</b>
               <span>Departments</span>
             </div>
+            {summary.scheduledCalls > 0 && (
+              <div className="item">
+                <b>{summary.scheduledCalls}</b>
+                <span>Rehearsals scheduled</span>
+              </div>
+            )}
           </div>
           <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
             {overlay ? (

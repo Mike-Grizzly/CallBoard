@@ -1998,3 +1998,19 @@ WARN) — a dashboard toggle, deferred to the user.
 **Reason.** Founder-driven brand direction; transparency for new users (the open-beta band); and accuracy (the marketing UI mockups were based on early models — the Script demo was rebuilt to match the real PDF-cue-sheet tool).
 
 **Impact.** Marketing-only/chrome-only; no schema, permissions, or server actions touched. Not browser-verified in-session (incomplete `node_modules`); relies on CI / a Vercel preview. The marketing product demos other than Script were audited as faithful and left as-is; a visual verification pass on a preview is the open follow-up.
+
+---
+
+## 2026-06-13 — App-wide responsive baseline: `minmax(0,1fr)`, no-sideways-scroll, collapsible panels
+
+**Decision.** Adopt three durable conventions for responsiveness across the app (branch `claude/narrow-screen-overflow`):
+
+1. **Grid tracks use `minmax(0, 1fr)`, never bare `1fr`.** A bare `1fr` track refuses to shrink below its content's min size and blows the grid wider than the viewport. `minmax(0, 1fr)` is identical except it may shrink, so it only ever prevents overflow. Likewise, flex children that hold text get `min-width: 0`.
+2. **The app shell never scrolls sideways** — `overflow-x: clip` on `.app`. Regions that are legitimately wide (the PDF viewer, data tables) own their own scroll containers; anything else that overflows is clipped, not allowed to push the page.
+3. **Side panels collapse to off-canvas drawers on narrow screens** rather than being hidden or permanently crowding the main content. Pattern: a `data-side-open` attribute on the layout container toggles a `transform: translateX()` drawer + a scrim (reuse `.cal-scrim`; add a `min-width` safety rule to drop a stray scrim on resize), surfaced by a toggle button that is `display:none` on desktop. The script viewer reuses its existing floating-button + bottom-sheet for the same purpose on the tablet band.
+
+**Tabs WRAP, they don't scroll.** The production header tab strip wraps to multiple rows when it doesn't fit, so every section stays visible in one view (the horizontal-scroll approach was tried first and rejected as unintuitive).
+
+**Reason.** The app was responsive for phones only (single `max-width: 720px` breakpoint); the 720–1300px band (4:3 laptops, split-screen, tablets) broke because fixed/`1fr` elements couldn't shrink. These conventions fix the root causes generically instead of per-screen.
+
+**Impact.** Touches `globals.css` broadly plus `calendar-client.tsx`, `day-view.tsx`, `script-viewer.tsx`. Safe by construction (`minmax`/`clip` can't regress a layout that already fit). Notes' two-pane was left as-is (already had good phone behavior). Container queries were deliberately *not* added speculatively — only if a specific component misbehaves. Partially browser-verified on the preview; not yet merged.

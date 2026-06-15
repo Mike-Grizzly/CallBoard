@@ -122,6 +122,8 @@ export type FullProductionInput = {
   rehearsalDays: Record<string, boolean>;
   rehearsalStart: string;
   rehearsalEnd: string;
+  /** When true (default), seed the calendar with the rehearsal pattern. */
+  autofillCalendar?: boolean;
   depts: Record<string, boolean>;
   roles: WizardRoleInput[];
   team: WizardTeamMemberInput[];

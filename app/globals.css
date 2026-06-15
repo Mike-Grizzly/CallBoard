@@ -244,9 +244,15 @@ select {
 /* ─── App layout ─────────────────────────────────────────────────────── */
 .app {
   display: grid;
-  grid-template-columns: var(--rail-w) 1fr;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
   min-height: 100vh;
   width: 100%;
+  /* Invariant: the app shell never scrolls sideways. Content regions that are
+     legitimately wide (PDF viewer, data tables) own their own scroll; anything
+     else that overflows is clipped here rather than pushing the whole page.
+     `clip` (not `scroll`/`auto`) so no horizontal scrollbar is ever created
+     and the vertical axis stays in normal flow. */
+  overflow-x: clip;
 }
 
 /* ─── Left rail ──────────────────────────────────────────────────────── */
@@ -622,6 +628,9 @@ body[data-theme="dusk"] .brand-badge.is-dark {
   justify-content: space-between;
   gap: 24px;
   padding-bottom: 14px;
+  /* Wrap the action cluster below the title on narrow screens instead of
+     pushing it off the right edge. No effect when it all fits on one line. */
+  flex-wrap: wrap;
 }
 .show-title {
   font-family: var(--font-display);
@@ -681,6 +690,7 @@ body[data-theme="dusk"] .brand-badge.is-dark {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .btn {
@@ -750,12 +760,19 @@ body[data-theme="dusk"] .brand-badge.is-dark {
   align-items: center;
   gap: 2px;
   margin-bottom: -1px;
+  /* Wrap onto multiple rows when the tabs don't all fit, so every section
+     stays visible in one view (nothing hidden behind a scroll) on narrow /
+     4:3 screens. Phones keep the compact horizontal scroller (media query
+     below overrides this). */
+  flex-wrap: wrap;
 }
 .tab {
   appearance: none;
   background: none;
   border: 0;
   padding: 10px 14px 12px;
+  flex-shrink: 0;
+  white-space: nowrap;
   font-size: 13.5px;
   font-weight: 500;
   color: var(--ink-3);
@@ -1558,7 +1575,7 @@ textarea.field {
 }
 @media (max-width: 720px) {
   .today-hero-content { padding: 20px 20px 18px; }
-  .today-stats { grid-template-columns: repeat(2, 1fr); gap: 14px 0; }
+  .today-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 0; }
   .today-stat { padding: 0 14px; }
   .today-stat:nth-child(3) { border-left: 0; }
 }
@@ -2519,7 +2536,7 @@ div.mention:hover {
   .right-now-grid,
   .prod-cards,
   .pin-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 680px) {
@@ -2630,7 +2647,7 @@ div.mention:hover {
 
 .cal {
   display: grid;
-  grid-template-columns: 248px 1fr;
+  grid-template-columns: 248px minmax(0, 1fr);
   gap: 18px;
   height: 100%;
   min-height: 0;
@@ -2644,6 +2661,11 @@ div.mention:hover {
   padding-right: 6px;
   overflow-y: auto;
   max-height: calc(100vh - 60px);
+}
+/* The sidebar toggle only exists on narrow screens, where the sidebar becomes
+   an off-canvas drawer (see the max-width: 980px block). */
+.cal-side-toggle {
+  display: none;
 }
 .cal-side-h {
   font-size: 11px;
@@ -2747,7 +2769,7 @@ div.mention:hover {
 }
 .mini-month-wk {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   font-size: 10px;
   color: var(--ink-4);
   text-align: center;
@@ -2756,7 +2778,7 @@ div.mention:hover {
 }
 .mini-month-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1px;
 }
 .mini-day {
@@ -3094,7 +3116,7 @@ div.mention:hover {
 }
 .month-head {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   border-bottom: 1px solid var(--border);
 }
 .month-h-cell {
@@ -3114,8 +3136,8 @@ div.mention:hover {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: repeat(6, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr));
   border-top: 1px solid var(--border);
   margin-top: -1px;
 }
@@ -3231,9 +3253,22 @@ div.mention:hover {
 /* ─── Day view ────────────────────────────────────────────────────── */
 .day {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: minmax(0, 1fr) 280px;
   height: 100%;
   min-height: 0;
+  position: relative;
+}
+/* Day-detail drawer toggle — only present on narrow screens (see the
+   max-width: 980px block, where .day-side becomes an off-canvas drawer). */
+.day-side-toggle {
+  display: none;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
 }
 .day-track {
   display: grid;
@@ -3394,7 +3429,7 @@ div.mention:hover {
   border-radius: var(--radius-s);
   padding: 10px 14px;
   display: grid;
-  grid-template-columns: 4px 76px 1fr 180px;
+  grid-template-columns: 4px 76px minmax(0, 1fr) 180px;
   gap: 14px;
   align-items: center;
   text-align: left;
@@ -3712,19 +3747,66 @@ button.month-cell {
   .cal {
     grid-template-columns: 1fr;
   }
+  /* Sidebar leaves the grid (calendar gets full width) and becomes an
+     off-canvas drawer slid in by the toolbar toggle. */
   .cal-side {
-    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 86vw;
+    max-height: none;
+    padding: 18px;
+    background: var(--bg-elev);
+    border-right: 1px solid var(--border);
+    box-shadow: var(--shadow-3);
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease-out;
+  }
+  .cal[data-side-open="1"] .cal-side {
+    transform: translateX(0);
+  }
+  .cal-side-toggle {
+    display: inline-flex;
   }
   .day {
     grid-template-columns: 1fr;
   }
+  /* Day-detail panel becomes a right off-canvas drawer (timeline gets full
+     width); the toggle button slides it in. */
   .day-side {
-    display: none;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 300px;
+    max-width: 86vw;
+    background: var(--bg-elev);
+    border-left: 1px solid var(--border);
+    box-shadow: var(--shadow-3);
+    z-index: 100;
+    transform: translateX(100%);
+    transition: transform 0.22s ease-out;
+  }
+  .day[data-side-open="1"] .day-side {
+    transform: translateX(0);
+  }
+  .day-side-toggle {
+    display: inline-flex;
   }
   .agenda-item {
-    grid-template-columns: 4px 70px 1fr;
+    grid-template-columns: 4px 70px minmax(0, 1fr);
   }
   .agenda-loc {
+    display: none;
+  }
+}
+@media (min-width: 981px) {
+  /* If the drawer was left open when the viewport grew past the breakpoint,
+     the sidebar reverts to its pinned grid position — drop the stray scrim. */
+  .cal-side-scrim {
     display: none;
   }
 }
@@ -4142,7 +4224,7 @@ button.month-cell {
 
 .pp-stats {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 22px;
 }
@@ -5014,7 +5096,7 @@ select.pp-field {
 }
 .pp-map-row {
   display: grid;
-  grid-template-columns: 110px 1fr 1fr;
+  grid-template-columns: 110px minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
   align-items: center;
 }
@@ -5158,7 +5240,7 @@ select.pp-field {
 
 @media (max-width: 1100px) {
   .pp-stats {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 @media (max-width: 720px) {
@@ -5166,7 +5248,7 @@ select.pp-field {
     font-size: 28px;
   }
   .pp-stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .pp-form-grid {
     grid-template-columns: 1fr;
@@ -5202,6 +5284,32 @@ select.pp-field {
    grid`. */
 .sv-mobile-bookmarks-btn {
   display: none;
+}
+
+/* Tablet / narrow-desktop (above phone, below full desktop): don't pin the
+   248px panel beside the PDF — it squeezes the page on 4:3 / split-screen
+   widths. Collapse it and surface bookmarks + page notes through the same
+   floating button + sheet used on phones. */
+@media (min-width: 721px) and (max-width: 1100px) {
+  .sv-side {
+    display: none;
+  }
+  .sv-mobile-bookmarks-btn {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    right: 18px;
+    bottom: 22px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--bg);
+    border: 0;
+    box-shadow: 0 8px 24px -4px rgba(40, 20, 10, 0.28);
+    z-index: 45;
+    cursor: pointer;
+  }
 }
 
 /* Workspace notes feed — `app/(app)/(default)/notes` */
@@ -6779,7 +6887,7 @@ select.pp-field {
 /* Layout */
 .np-root .body {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px minmax(0, 1fr);
   flex: 1;
   min-height: 0;
 }
@@ -7108,7 +7216,7 @@ select.pp-field {
 /* Department toggle cards */
 .np-root .dept-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 .np-root .dept-card {
@@ -7430,7 +7538,7 @@ select.pp-field {
 /* Date band */
 .np-root .date-band {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   padding: 16px;
   background: var(--bg-sunken);
@@ -8764,7 +8872,7 @@ textarea.cform-field {
   min-height: 0;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   padding: 8px 14px calc(20px + env(safe-area-inset-bottom, 0px));
 }
@@ -9364,7 +9472,7 @@ textarea.cform-field {
 /* Your shows */
 .dd-shows {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 .dd-show {
@@ -9837,7 +9945,7 @@ textarea.cform-field {
     grid-column: 1 / -1;
   }
   .dd-shows {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
