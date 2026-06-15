@@ -12,9 +12,11 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
   Production wizard from `production_types`) and for product insight. Follow-up:
   either wire them into a default-seeding path or an analytics surface, or revisit
   whether collecting them is worth it. Until then they are write-only.
-- **`db:push` not run in this session** (sandbox had no `DATABASE_URL`). The three
-  new columns must be pushed before `createWorkspace` can insert them, or org
-  creation will error in any environment whose DB predates this change.
+- **Schema applied live (2026-06-15).** The three columns (`annual_shows`,
+  `team_size`, `production_types`) were added directly to the `CallBoard` Supabase
+  project via `apply_migration` (`add_onboarding_survey_columns_to_organizations`),
+  not `npm run db:push` — this project applies schema changes through Supabase
+  directly since development is no longer local. No further DB step is needed.
 - Wizard is **`tsc`/`eslint`-clean but not browser-verified** — the multi-step flow,
   logo-after-create upload, and best-effort invite warnings haven't been exercised
   against a live Supabase/Storage backend.
