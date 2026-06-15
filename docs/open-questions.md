@@ -492,6 +492,18 @@ default in place today.
     and existing-account invitees now get an in-app + email notification (see
     `feature-specs/02-auth.md` → "Invite / sign-in clarity"). The core
     anti-enumeration limitation above is unchanged.
+  - **Hardened further 2026-06-15:** expired/used invite & recovery links now
+    route to `/forgot-password?expired=1` (a self-service "get a new link" that
+    also sets a first password) instead of a useless login error, and failed
+    logins surface the same recovery link. Two **user-owned config** follow-ups
+    remain: (1) **extend Supabase's email-link (OTP) expiry** so invites don't
+    lapse before people check mail — tension with the security advisor's
+    short-expiry preference, but the new recovery path makes exact TTL
+    non-critical; (2) **verify Resend SMTP deliverability** (invites are sent by
+    Supabase Auth, not our Resend API — a silent SMTP/domain issue would make
+    invites simply never arrive, which looks identical to "sign-in is broken").
+    Optional future: passwordless `signInWithOtp` on /login for near
+    failure-proof joining.
 - **Latent risk:** do NOT add profile↔login reconciliation by email outside the
   admin invite flow without requiring verified email ownership — that would turn
   pre-seeded roles into an account-takeover vector. Current linking is by auth

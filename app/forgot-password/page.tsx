@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { ForgotPasswordForm } from "./forgot-password-form";
 
-export default function ForgotPasswordPage() {
+export default async function ForgotPasswordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ expired?: string }>;
+}) {
+  const { expired } = await searchParams;
+  const isExpired = expired === "1";
+
   return (
     <div className="auth-screen">
       <div className="auth-card-wrap">
@@ -15,10 +22,13 @@ export default function ForgotPasswordPage() {
               Pro<em>scene</em>
             </span>
           </div>
-          <h1 className="auth-title">Reset your password</h1>
+          <h1 className="auth-title">
+            {isExpired ? "Get a new link" : "Reset your password"}
+          </h1>
           <p className="auth-sub">
-            Enter your email and we&apos;ll send you a link to reset your
-            password.
+            {isExpired
+              ? "That link has expired or was already used. Enter your email and we'll send a fresh one — it works whether you're resetting a password or setting one up for the first time after an invite."
+              : "Enter your email and we'll send you a link to reset your password. Were you invited? This also sets your first password."}
           </p>
         </div>
         <ForgotPasswordForm />
