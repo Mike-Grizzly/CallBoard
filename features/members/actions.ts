@@ -18,6 +18,7 @@ import {
 } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { sendOrgInviteNotification } from "@/features/notifications/announce";
 import type { Role } from "@/types/roles";
 import { ROLES } from "@/types/roles";
 import { isValidEmail } from "./validation";
@@ -798,6 +799,16 @@ export async function inviteMembers(
             role: person.role,
           });
           await applyAssignments(userId, person.assignments, currentUser.organizationId);
+          // They already have an account, so there's no Supabase invite email
+          // with a set-password link — let them know they were added (in-app +
+          // email, respecting their prefs). Best-effort.
+          await sendOrgInviteNotification({
+            userId,
+            email,
+            organizationId: currentUser.organizationId,
+            organizationName,
+            invitedByName,
+          });
           results.push({
             email,
             name,

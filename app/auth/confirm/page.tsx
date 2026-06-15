@@ -66,7 +66,10 @@ export default async function ConfirmPage({
       token_hash: tokenHash as string,
     });
     if (error) {
-      redirect("/login?error=auth_callback");
+      // Invite/recovery/signup links expire and are single-use — send the user
+      // somewhere they can request a fresh one (and set a password if they were
+      // invited) instead of a login screen they may have no password for.
+      redirect("/forgot-password?expired=1");
     }
     redirect(next);
   }
