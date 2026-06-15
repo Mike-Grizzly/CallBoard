@@ -23,6 +23,26 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
+## Desktop-width overflow pass needs on-device verification (added 2026-06-15)
+
+- The "right side off-screen on 4:3/16:10 MacBooks" beta item was fixed **by code
+  inspection only** (no browser/screenshot in the sandbox). Changes: a `.page`
+  horizontal-overflow guard promoted to all widths, `minmax(0,1fr)` on the
+  calendar/day/new-production two-column grids, and a horizontal-scroll wrapper
+  on the People table (see `current-status.md` 2026-06-15 desktop pass).
+- **Verify at ~1280px** (and 1440px) on a deploy: walk Dashboard, Productions,
+  People, Documents, Calendar, the Script tool, Blocking, Reports, Settings, and
+  the new-production / new-workspace wizards — confirm no horizontal page scroll
+  and nothing important clipped at the right edge.
+- **Known risk to check specifically:** `.page { overflow-x: hidden }` clips
+  (rather than scrolls) any *inline* popover/dropdown that extends past the right
+  edge. If one is cut off, fix that component (portal to body or flip its
+  placement) rather than loosening the page guard.
+- If a particular screen still overflows, grab a screenshot at that width so the
+  offending component can be fixed precisely instead of guessed at.
+
+---
+
 ## Lint baseline drift in a fresh `npm install` (added 2026-06-15)
 
 - Running `npm run lint` in a freshly-`npm install`ed sandbox reports **44

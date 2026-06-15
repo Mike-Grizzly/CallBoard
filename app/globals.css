@@ -799,8 +799,21 @@ body[data-theme="dusk"] .brand-badge.is-dark {
    stack top-to-bottom inside it. */
 .page {
   flex: 1;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
+  /* Desktop horizontal-overflow guard. A 16:10 / squarer laptop (a 13"
+     MacBook at ~1280–1440px) is narrower than the 16:9 monitors the app was
+     built on, so an intrinsically-wide child (a fixed grid track, a many-column
+     table, a long unbroken string) used to push the whole page sideways and run
+     the right edge off-screen. min-width:0 lets flex/grid children shrink,
+     overflow-wrap breaks long strings, and overflow-x:hidden is the backstop —
+     intentional content scrollers (tables, the script/blocking tools) live in
+     their own containers and scroll internally, so nothing legitimate is
+     clipped. Mirrors the ≤720px guard, now active at every width. */
+  overflow-x: hidden;
+  overflow-wrap: break-word;
+  max-width: 100%;
   padding: 24px var(--pad-x);
   display: flex;
   flex-direction: column;
@@ -2630,7 +2643,7 @@ div.mention:hover {
 
 .cal {
   display: grid;
-  grid-template-columns: 248px 1fr;
+  grid-template-columns: 248px minmax(0, 1fr);
   gap: 18px;
   height: 100%;
   min-height: 0;
@@ -3231,7 +3244,7 @@ div.mention:hover {
 /* ─── Day view ────────────────────────────────────────────────────── */
 .day {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: minmax(0, 1fr) 280px;
   height: 100%;
   min-height: 0;
 }
@@ -3931,7 +3944,11 @@ button.month-cell {
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: 10px;
-  overflow: hidden;
+  /* Many-column directory table: scroll horizontally inside the card on a
+     narrow desktop (13" MacBook) rather than being clipped by the page guard
+     or pushing the layout sideways. */
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .pp-table {
   width: 100%;
@@ -6779,7 +6796,7 @@ select.pp-field {
 /* Layout */
 .np-root .body {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px minmax(0, 1fr);
   flex: 1;
   min-height: 0;
 }
