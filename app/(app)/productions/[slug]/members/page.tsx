@@ -3,7 +3,12 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getProductionBySlug, getProductionRoles } from "@/features/productions/queries";
+import {
+  getProductionBySlug,
+  getProductionRoles,
+  getProductionDepartments,
+} from "@/features/productions/queries";
+import { buildTeamBuckets } from "@/features/productions/wizard-constants";
 import {
   getProductionMembers,
   getPeopleDirectory,
@@ -28,12 +33,14 @@ export default async function ProductionMembersPage({
     notFound();
   }
 
-  const [people, members, characters] = await Promise.all([
+  const [people, members, characters, departments] = await Promise.all([
     getPeopleDirectory(user.organizationId),
     getProductionMembers(production.id),
     getProductionRoles(production.id),
+    getProductionDepartments(production.id),
   ]);
 
+  const teamBuckets = buildTeamBuckets(departments);
   const canInvite = can(user.role, "settings:manage");
 
   return (
@@ -58,6 +65,7 @@ export default async function ProductionMembersPage({
         people={people}
         characters={characters}
         members={members}
+        teamBuckets={teamBuckets}
         currentUserId={user.id}
         canInvite={canInvite}
       />

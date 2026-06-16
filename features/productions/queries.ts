@@ -4,6 +4,7 @@ import {
   productions,
   productionMemberships,
   productionRoles,
+  productionDepartments,
   organizationMemberships,
   profiles,
 } from "@/db/schema";
@@ -195,6 +196,20 @@ export async function getProductionRoles(productionId: string) {
 export type ProductionRoleRow = Awaited<
   ReturnType<typeof getProductionRoles>
 >[number];
+
+/**
+ * The department keys enabled for a production in the setup wizard (rows in
+ * `production_departments`). Drives the Cast & Crew board's team buckets.
+ */
+export async function getProductionDepartments(
+  productionId: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ key: productionDepartments.key })
+    .from(productionDepartments)
+    .where(eq(productionDepartments.productionId, productionId));
+  return rows.map((r) => r.key);
+}
 
 /**
  * Org members formatted for the wizard's actor autocomplete — anyone already

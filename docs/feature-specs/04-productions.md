@@ -101,15 +101,19 @@ table" (`cast-list.tsx` + `production-member-manager.tsx`, both removed) with on
   (drop → `assignRoleToMember(roleId, userId)`, which swaps/moves + grants access;
   `×` → `unassignRole`), plus a **large multi-occupant Ensemble bucket** below the
   slots (role `cast` + position `"Ensemble"`).
-- **Right bottom — Production team:** **multi-occupant buckets** modeled as a
-  `(role, position)` pair (`TEAM_BUCKETS` in `cast-crew-board.tsx`): Director,
-  Stage Manager, Choreographer, **Lighting Designer**, **Sound Designer**,
-  Producer, Crew. The designer buckets reuse role `crew` + a position label held in
-  `characterName`; generic buckets carry no position. Assignment goes through the
-  new `assignTeamMember({ productionId, userId, role, position })` action (it
-  overwrites `characterName` and clears any character slot — a team drop is a MOVE);
-  the chip `×` calls `removeProductionMember`. See decision-log 2026-06-16
-  (follow-up) for the `characterName`-as-position model.
+- **Right bottom — Production team:** **multi-occupant buckets derived per
+  production from the setup wizard's department selections** (`production_departments`
+  → `buildTeamBuckets` in `wizard-constants.ts`, passed from `page.tsx`). Each enabled
+  department becomes a bucket: Director / Stage Management / Casting-Producing /
+  Choreography map onto distinct app roles; the rest (Music, Costumes, Props, Set,
+  Lighting, Sound, Intimacy, Dramaturgy) are role `crew` distinguished by a short
+  position label held in `characterName`. A generic **Crew** catch-all is always
+  appended. Quick-add productions (no departments on file) fall back to Director /
+  Stage Management / Casting + Crew. Assignment goes through the
+  `assignTeamMember({ productionId, userId, role, position })` action (it overwrites
+  `characterName` and clears any character slot — a team drop is a MOVE); the chip
+  `×` calls `removeProductionMember`. See decision-log 2026-06-16 (follow-up) for the
+  `characterName`-as-position model and the department-derived buckets.
 - **Drag to move:** roster cards, **filled character slots, and team/ensemble chips**
   are all drag sources, so a person can be dragged directly from one role to another
   without going back to the roster.

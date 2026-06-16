@@ -21,30 +21,15 @@ import {
 } from "@/features/members/actions";
 import type { DirectoryPerson, ProductionMember } from "@/features/members/queries";
 import type { ProductionRoleRow } from "@/features/productions/queries";
+import type { ProductionTeamBucket } from "@/features/productions/wizard-constants";
 import { PersonDrawer } from "@/app/(app)/(default)/people/person-drawer";
 
 // A team bucket is a (role, position) pair. `position` is an optional label
 // stored in `production_memberships.characterName`, letting the board show
-// finer positions than the coarse role enum (e.g. Lighting / Sound Designer)
-// while still mapping to a real role for access. Generic buckets (Director,
-// Crew, …) carry no position.
-type Bucket = {
-  id: string;
-  label: string;
-  role: Role;
-  position: string | null;
-  sub: string;
-};
-
-const TEAM_BUCKETS: Bucket[] = [
-  { id: "director", label: "Director", role: "director", position: null, sub: "Leads the show" },
-  { id: "stage_manager", label: "Stage Manager", role: "stage_manager", position: null, sub: "Runs rehearsals" },
-  { id: "choreographer", label: "Choreographer", role: "choreographer", position: null, sub: "Movement" },
-  { id: "lighting_designer", label: "Lighting Designer", role: "crew", position: "Lighting Designer", sub: "Lighting" },
-  { id: "sound_designer", label: "Sound Designer", role: "crew", position: "Sound Designer", sub: "Sound" },
-  { id: "producer", label: "Producer", role: "producer", position: null, sub: "Produces the show" },
-  { id: "crew", label: "Crew", role: "crew", position: null, sub: "Backstage" },
-];
+// finer positions than the coarse role enum while still mapping to a real role
+// for access. The team buckets themselves are derived per-production from the
+// setup wizard's department selections (see `buildTeamBuckets`).
+type Bucket = ProductionTeamBucket;
 
 // The big multi-occupant ensemble bucket lives in the Cast section. Stored as
 // cast members tagged with the "Ensemble" position.
@@ -96,6 +81,7 @@ export function CastCrewBoard({
   people,
   characters,
   members,
+  teamBuckets,
   currentUserId,
   canInvite,
 }: {
@@ -104,6 +90,7 @@ export function CastCrewBoard({
   people: DirectoryPerson[];
   characters: ProductionRoleRow[];
   members: ProductionMember[];
+  teamBuckets: Bucket[];
   currentUserId: string;
   canInvite: boolean;
 }) {
@@ -543,7 +530,7 @@ export function CastCrewBoard({
               </span>
             </div>
             <div className="ax-team">
-              {TEAM_BUCKETS.map((bucket) => (
+              {teamBuckets.map((bucket) => (
                 <BucketZone
                   key={bucket.id}
                   bucket={bucket}
@@ -592,6 +579,7 @@ export function CastCrewBoard({
           sheet={sheet}
           characters={characters}
           members={members}
+          teamBuckets={teamBuckets}
           people={people}
           assignedIds={assignedIds}
           canInvite={canInvite}
@@ -727,6 +715,7 @@ function AssignSheet({
   sheet,
   characters,
   members,
+  teamBuckets,
   people,
   assignedIds,
   canInvite,
@@ -741,6 +730,7 @@ function AssignSheet({
   sheet: Sheet;
   characters: ProductionRoleRow[];
   members: ProductionMember[];
+  teamBuckets: Bucket[];
   people: DirectoryPerson[];
   assignedIds: Set<string>;
   canInvite: boolean;
@@ -843,7 +833,7 @@ function AssignSheet({
               </button>
 
               <div className="cc-sheet-sec">Production team</div>
-              {TEAM_BUCKETS.map((bucket) => {
+              {teamBuckets.map((bucket) => {
                 const inBucket = members.some(
                   (m) =>
                     m.userId === sheet.userId &&

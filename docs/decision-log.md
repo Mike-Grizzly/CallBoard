@@ -2099,3 +2099,34 @@ crew/ensemble, so the People directory will render e.g. "Crew · Lighting Design
 That reads sensibly, but if a richer, validated set of production positions is ever
 needed (or designers should be a distinct role with their own permissions), that is
 a proper schema + permissions change to scope separately. Logged in open-questions.
+
+---
+
+## 2026-06-16 (follow-up 2) — Cast & Crew team buckets are derived from `production_departments`
+
+**Context:** User asked whether the setup wizard's department step feeds anything,
+and suggested using it to generate the board's team buckets per production.
+
+**Finding:** The wizard writes `production_departments` (one row per enabled dept
+key) in `createProductionFull`, but **nothing read those rows** — they were
+write-only. The rehearsal report's department sections are a **separate, hard-coded**
+list (`features/reports/constants.ts#DEPARTMENTS`: Scenery, Props, Costumes,
+Hair/Makeup, Lighting, Sound, Sound FX, Music, Choreography, Video, Crew, Other)
+stored as fixed columns on `rehearsal_reports`, shown on every report regardless of
+the production's chosen departments. So the wizard's department choice was NOT linked
+to reports (contrary to the aspirational comment on the `production_departments`
+schema). See open-questions for the still-unlinked reports gap.
+
+**Decision:** The Cast & Crew board's production-team buckets are now built per
+production from its enabled departments via `buildTeamBuckets(deptKeys)`
+(`wizard-constants.ts`), replacing the hard-coded bucket list. Department → bucket
+mapping: director/stage/casting/choreo map onto the director/stage_manager/producer/
+choreographer roles (no position); music/costumes/props/set/lighting/sound/intimacy/
+dramaturgy are role `crew` + a short position label in `characterName`. A generic
+Crew catch-all is always appended; productions with no departments (quick-add) fall
+back to Director/Stage/Casting + Crew.
+
+**Impact:** This gives the previously write-only `production_departments` data its
+first real consumer, and the board now reflects each show's actual shape. It does
+**not** change the rehearsal report sections (still the fixed list) — wiring reports
+to `production_departments` is a separate follow-up logged in open-questions.

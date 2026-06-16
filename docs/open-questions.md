@@ -800,13 +800,25 @@ browser-verified** (no display in the sandbox). Open items:
   (drop = swap). This follows the real schema (many-per-role) and existing
   behavior. If single-occupant leadership is actually wanted, it needs a new
   app-level rule (no schema today enforces it). See decision-log 2026-06-16.
-- **Positions overloaded onto `characterName` (2026-06-16 follow-up).** Lighting
-  Designer / Sound Designer (role `crew`) and Ensemble (role `cast`) are stored as a
-  position label in `production_memberships.characterName`, so the People directory
-  shows e.g. "Crew · Lighting Designer". If a validated/configurable set of positions
-  — or designers as a distinct permissioned role — is wanted, that's a schema +
-  permissions change. The bucket set is currently hard-coded in `cast-crew-board.tsx`
-  (`TEAM_BUCKETS` / `ENSEMBLE_BUCKET`); per-production configuration is a follow-up.
+- **Positions overloaded onto `characterName` (2026-06-16 follow-up).** Crew-based
+  department buckets (Lighting, Sound, Music, …, role `crew`) and Ensemble (role
+  `cast`) are stored as a position label in `production_memberships.characterName`,
+  so the People directory shows e.g. "Crew · Lighting". If a validated set of
+  positions — or designers as a distinct permissioned role — is wanted, that's a
+  schema + permissions change.
+- **Board team buckets are now department-derived (resolved 2026-06-16 follow-up 2).**
+  Buckets are built per production from `production_departments` via
+  `buildTeamBuckets`. The Ensemble bucket and the dept→role mapping (`DEPT_BUCKET`)
+  are still code constants; fully user-editable positions remain a follow-up.
+- **Rehearsal reports are NOT linked to `production_departments` (gap found
+  2026-06-16).** A report shows the fixed `features/reports/constants.ts#DEPARTMENTS`
+  sections (Scenery/Props/Costumes/Hair-Makeup/Lighting/Sound/Sound FX/Music/Choreo/
+  Video/Crew/Other) on every production, ignoring which departments the show actually
+  enabled in the wizard. The user expected the wizard's department choice to drive the
+  report sections. Wiring reports (and the document folders / notification channels the
+  schema comment also promises) to `production_departments` is a real, separate
+  follow-up. Note the two department vocabularies differ slightly (wizard `ALL_DEPTS`
+  vs report `DEPARTMENTS`) and would need reconciling.
 - **Drag-and-drop is native HTML5 only** (per dev-rules: no new libs without
   approval). The accessible/mobile path is tap-to-assign. If a keyboard-drag or a
   DnD library is wanted, that's a follow-up; both interaction paths must be kept.
