@@ -1572,6 +1572,7 @@ export function BlockingCanvas({
 
       {/* ─── Left panel: Scenes & Off-stage Cast ────────────── */}
       <div
+        data-tour="blocking-scenes"
         className="bk-side-left"
         style={{
           display: "flex",
@@ -1838,6 +1839,7 @@ export function BlockingCanvas({
 
       {/* ─── Center: Canvas ─────────────────────────────────── */}
       <div
+        data-tour="blocking-stage"
         className="bk-center"
         style={{
           display: "flex",
@@ -2517,6 +2519,7 @@ export function BlockingCanvas({
 
       {/* ─── Right panel: Set Pieces & Beat Comments ─────────── */}
       <div
+        data-tour="blocking-tools"
         className="bk-side-right"
         style={{
           height: "100%",

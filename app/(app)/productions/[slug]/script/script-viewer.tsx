@@ -1320,6 +1320,7 @@ export function ScriptViewer({
     >
       {/* ── Tool sidebar ── */}
       <div
+        data-tour="script-tools"
         className="sv-tools"
         style={{
           width: 52,
@@ -1671,6 +1672,7 @@ export function ScriptViewer({
 
         {/* Page navigation + save status */}
         <div
+          data-tour="script-pagenav"
           className="sv-pagenav"
           style={{
             display: "flex",
@@ -1940,6 +1942,7 @@ export function ScriptViewer({
             while the cue sheet shows, rather than unmounted and re-rendered. */}
         <div
           ref={workspaceRef}
+          data-tour="script-page"
           className="sv-workspace"
           onMouseDown={handleWorkspaceMouseDown}
           style={{
@@ -2357,6 +2360,7 @@ export function ScriptViewer({
 
       {/* ── Right panel column ── */}
       <div
+        data-tour="script-side"
         className="sv-side"
         style={{
           width: 248,

@@ -112,7 +112,63 @@ const PRODUCTION_HUB_TOUR: TourDefinition = {
     {
       anchor: "hub-actions",
       title: "Quick actions",
-      body: "The most common things you'll do on this show — like filing a report or opening the cast & crew list — are right up here.",
+      body: "The most common things you'll do on this show — like filing a report or opening the cast & crew list — are right up here. The Take a tour button replays this guide anytime.",
+      placement: "bottom",
+    },
+  ],
+};
+
+const BLOCKING_TOUR: TourDefinition = {
+  key: "blocking",
+  label: "Blocking tool",
+  steps: [
+    {
+      anchor: "blocking-scenes",
+      title: "Scenes & cast",
+      body: "Pick the scene you're blocking from this list. Actors who aren't on stage for the current beat wait down here in the off-stage area.",
+      placement: "right",
+    },
+    {
+      anchor: "blocking-stage",
+      title: "The stage",
+      body: "Drag each actor to where they stand. A saved arrangement is a “beat” — step through beats to build the scene's movement moment by moment.",
+      placement: "top",
+    },
+    {
+      anchor: "blocking-tools",
+      title: "Set pieces, notes & comments",
+      body: "Drop furniture and set pieces onto the stage, jot blocking notes for the current beat, and leave comments your team can reply to.",
+      placement: "left",
+    },
+  ],
+};
+
+const SCRIPT_TOUR: TourDefinition = {
+  key: "script",
+  label: "Script tool",
+  steps: [
+    {
+      anchor: "script-tools",
+      title: "Your toolbox",
+      body: "Select, highlight (by drawing or selecting text), drop light/sound cues, add sticky notes, and bookmark scenes — each tool is in this rail.",
+      placement: "right",
+    },
+    {
+      anchor: "script-page",
+      title: "Mark up the page",
+      body: "Your script renders here. With a tool active, mark directly on the page — everything you add is private to your own copy.",
+      placement: "left",
+    },
+    {
+      anchor: "script-side",
+      title: "Bookmarks & cue sheet",
+      body: "Jump to any scene or song from your bookmarks, and review every cue in the cue sheet — which exports to CSV for the booth.",
+      placement: "left",
+    },
+    {
+      anchor: "script-pagenav",
+      title: "Navigate & zoom",
+      body: "Move between pages here, and zoom to fit the whole page or in close on the detail you're marking.",
       placement: "bottom",
     },
   ],
@@ -122,6 +178,8 @@ const TOURS: TourDefinition[] = [
   DASHBOARD_TOUR,
   PRODUCTIONS_TOUR,
   PRODUCTION_HUB_TOUR,
+  BLOCKING_TOUR,
+  SCRIPT_TOUR,
 ];
 
 /** All tours that can be replayed from Settings, in display order. */
@@ -143,15 +201,18 @@ export const INTRO_KEY = "intro";
 /**
  * Picks the tour for a given pathname, or null if the screen has none.
  * `/productions` (the list) and `/productions/<slug>` (a show hub) are
- * distinct tours; `/productions/new` (the wizard) has none.
+ * distinct tours; the blocking and script tools — sub-routes of a hub — get
+ * their own; `/productions/new` (the wizard) has none.
  */
 export function resolveTour(pathname: string): TourDefinition | null {
   if (pathname === "/dashboard") return DASHBOARD_TOUR;
   if (pathname === "/productions") return PRODUCTIONS_TOUR;
-  if (
-    pathname.startsWith("/productions/") &&
-    pathname !== "/productions/new"
-  ) {
+  if (pathname === "/productions/new") return null;
+  if (pathname.startsWith("/productions/")) {
+    if (/^\/productions\/[^/]+\/blocking(\/|$)/.test(pathname))
+      return BLOCKING_TOUR;
+    if (/^\/productions\/[^/]+\/script(\/|$)/.test(pathname))
+      return SCRIPT_TOUR;
     return PRODUCTION_HUB_TOUR;
   }
   return null;

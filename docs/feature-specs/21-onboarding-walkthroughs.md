@@ -31,15 +31,29 @@ new teammates.
 - **Keyboard:** Esc skips, →/Enter advances, ← goes back. Clicking the dimmed
   area advances.
 
-## Screens covered (first pass)
+## Screens covered
 
 | Tour key | Screen | Anchors |
 |---|---|---|
 | `dashboard` | `/dashboard` | greeting, status chips, today/focal hero, sidebar productions, settings link |
 | `productions` | `/productions` | heading, "new production", production cards |
 | `production-hub` | `/productions/[slug]` | show title/status, section tabs, quick actions |
+| `blocking` | `/productions/[slug]/blocking` | scenes & off-stage cast, the stage, set pieces/notes/comments |
+| `script` | `/productions/[slug]/script` | tool rail, the page, bookmarks/cue sheet, page nav & zoom |
 
-(`/productions/new` — the wizard — intentionally has no tour.)
+(`/productions/new` — the wizard — intentionally has no tour.) `resolveTour`
+maps the blocking/script sub-routes to their own tours before falling back to
+the hub tour.
+
+## On-demand launcher
+
+A **"Take a tour"** button (`components/tour/start-tour-button.tsx`,
+question-mark icon) sits in the production-hub topbar. Because the hub layout
+wraps the overview, blocking, and script pages, that one button is present on
+all three and starts whichever tour matches the current path — even if it was
+already seen. It dispatches a `proscene:start-tour` window event the controller
+listens for; a `runId` bump remounts the tour fresh at step 1. This is the
+answer to "I already dismissed it and want it back."
 
 ## Implementation
 

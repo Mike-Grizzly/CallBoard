@@ -27,7 +27,25 @@ export function TourController({ seen }: { seen: string[] }) {
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
 
+  const [runId, setRunId] = useState(0);
+
   const def = resolveTour(pathname);
+
+  // On-demand launch from a "Take a tour" button (components/tour/
+  // start-tour-button). Resolves the tour for the current screen and starts it
+  // fresh, even if already seen. Reads the live pathname so the listener (bound
+  // once) never goes stale.
+  useEffect(() => {
+    function onStart() {
+      const d = resolveTour(window.location.pathname);
+      if (!d) return;
+      setShowWelcome(false);
+      setRunId((n) => n + 1);
+      setActiveKey(d.key);
+    }
+    window.addEventListener("proscene:start-tour", onStart);
+    return () => window.removeEventListener("proscene:start-tour", onStart);
+  }, []);
 
   useEffect(() => {
     setShowWelcome(false);
@@ -89,5 +107,13 @@ export function TourController({ seen }: { seen: string[] }) {
 
   if (!def || activeKey !== def.key) return null;
 
-  return <CoachTour steps={def.steps} onClose={handleClose} />;
+  // runId in the key forces a fresh remount (back to step 1) on each manual
+  // re-launch, even when the same tour is already active.
+  return (
+    <CoachTour
+      key={`${def.key}-${runId}`}
+      steps={def.steps}
+      onClose={handleClose}
+    />
+  );
 }

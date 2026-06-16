@@ -16,6 +16,7 @@ import { getVideoCountByProduction } from "@/features/videos/queries";
 import { getAnnouncementCountByProduction } from "@/features/announcements/queries";
 import { TrashDrawer } from "./trash-drawer";
 import { ProductionTabsNav, type ProductionTab } from "./production-tabs";
+import { StartTourButton } from "@/components/tour/start-tour-button";
 
 const STATUS_COPY: Record<
   string,
@@ -232,6 +233,7 @@ export default async function ProductionLayout({
           </div>
 
           <div className="topbar-actions" data-tour="hub-actions">
+            <StartTourButton className="btn ghost btn-icon" iconOnly />
             <button
               type="button"
               className="btn ghost btn-icon"
