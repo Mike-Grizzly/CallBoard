@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { applyThemePref, readThemePref, THEME_PREFS } from "@/lib/theme";
 
@@ -46,8 +46,24 @@ export function FocusShell({
   const router = useRouter();
   const exitTo = `/productions/${slug}/${mode === "blocking" ? "blocking" : "script"}`;
 
+  // Exit transition: play the reverse animation, then navigate. `exitingRef`
+  // guards against double-firing (e.g. Esc + click). Reduced-motion users skip
+  // straight to navigation.
+  const [exiting, setExiting] = useState(false);
+  const exitingRef = useRef(false);
+
   const exit = useCallback(() => {
-    router.push(exitTo);
+    if (exitingRef.current) return;
+    exitingRef.current = true;
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) {
+      router.push(exitTo);
+      return;
+    }
+    setExiting(true);
+    window.setTimeout(() => router.push(exitTo), 180);
   }, [router, exitTo]);
 
   // Esc exits focus — but never while the user is typing in a field.
@@ -81,7 +97,10 @@ export function FocusShell({
   };
 
   return (
-    <div className="fx-body" data-mode={mode}>
+    <div
+      className={`fx-body fx-enter${exiting ? " fx-exiting" : ""}`}
+      data-mode={mode}
+    >
       <header className="fx-top">
         <div className="fx-brand">
           <span className="mark">
