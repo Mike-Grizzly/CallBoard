@@ -75,13 +75,18 @@ const LEGACY_MAP: Record<string, string> = {
   lighting: "lighting",
   sound: "sound",
 };
-const LEGACY_NONREPORT = new Set([
-  "director",
-  "stage",
-  "casting",
-  "intimacy",
-  "dramaturgy",
-]);
+// Legacy/leadership wizard keys that are NOT report departments: they surface
+// as the always-on leadership board buckets (Director / Stage Manager /
+// Producer) instead. Everything else the wizard offers (incl. Intimacy/Fight,
+// Dramaturgy) becomes a real department — a board bucket + a report section.
+const LEGACY_NONREPORT = new Set(["director", "stage", "casting"]);
+
+// Nicer labels for wizard departments that have no catalog entry (they resolve
+// as custom-style departments, notes stored in rehearsal_reports.dept_notes).
+const WIZARD_EXTRA_LABELS: Record<string, string> = {
+  intimacy: "Intimacy / Fight",
+  dramaturgy: "Dramaturgy",
+};
 
 export function humanizeDeptKey(key: string): string {
   return key
@@ -196,18 +201,35 @@ export function buildTeamBuckets(
   return buckets;
 }
 
-/** Map enabled wizard department keys → rows to seed `production_departments`. */
+/**
+ * Map enabled wizard department keys → rows to seed `production_departments`.
+ * Leadership keys (director/stage/casting) are skipped — they're always-on
+ * board buckets, not departments. Catalog-mappable keys use their canonical key
+ * + label; anything else (Intimacy/Fight, Dramaturgy) is kept as a custom-style
+ * department so its toggle still produces a board bucket + report section.
+ */
 export function wizardDeptRows(
   enabledKeys: string[],
 ): { key: string; label: string; sortOrder: number }[] {
   const seen = new Set<string>();
   const rows: { key: string; label: string; sortOrder: number }[] = [];
   for (const key of enabledKeys) {
+    if (LEGACY_NONREPORT.has(key)) continue;
     const catKey = CATALOG_BY_KEY.has(key) ? key : LEGACY_MAP[key];
-    if (!catKey || seen.has(catKey)) continue;
-    seen.add(catKey);
-    const cat = CATALOG_BY_KEY.get(catKey)!;
-    rows.push({ key: catKey, label: cat.label, sortOrder: rows.length });
+    if (catKey) {
+      if (seen.has(catKey)) continue;
+      seen.add(catKey);
+      const cat = CATALOG_BY_KEY.get(catKey)!;
+      rows.push({ key: catKey, label: cat.label, sortOrder: rows.length });
+    } else {
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push({
+        key,
+        label: WIZARD_EXTRA_LABELS[key] ?? humanizeDeptKey(key),
+        sortOrder: rows.length,
+      });
+    }
   }
   return rows;
 }
