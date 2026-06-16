@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import type { TourStep } from "@/features/tours/steps";
 
@@ -36,12 +42,23 @@ export function CoachTour({
   steps: TourStep[];
   onClose: (completed: boolean) => void;
 }) {
-  const [mounted, setMounted] = useState(false);
   const [visibleSteps, setVisibleSteps] = useState<TourStep[] | null>(null);
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [cardH, setCardH] = useState(0);
 
-  useEffect(() => setMounted(true), []);
+  // Measure the card's real height so we can keep it fully on-screen (a tall
+  // card near the bottom edge — e.g. the last step pointing at the settings
+  // link in the bottom-left — would otherwise hang off the viewport). Re-runs
+  // when the step or the anchor rect changes; the threshold check stops it
+  // from looping on its own state update.
+  useLayoutEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const h = el.getBoundingClientRect().height;
+    setCardH((prev) => (Math.abs(prev - h) > 1 ? h : prev));
+  }, [rect, index]);
 
   // Resolve which steps actually have anchors on this screen for this user.
   useEffect(() => {
@@ -101,7 +118,7 @@ export function CoachTour({
     return () => window.removeEventListener("keydown", onKey);
   }, [next, back, onClose]);
 
-  if (!mounted || !step || !rect) return null;
+  if (typeof document === "undefined" || !step || !rect) return null;
 
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -114,38 +131,44 @@ export function CoachTour({
   };
 
   // Decide tooltip side: honour the step's preference unless it would clip,
-  // then fall back to whichever side has room (below → above → right → left).
+  // then fall back to whichever side has room. Uses the measured card height
+  // so the "does it fit below/above" check is accurate.
+  const margin = 12;
+  const needed = cardH + margin + VIEWPORT_PAD;
   const spaceBelow = vh - (rect.top + rect.height);
   const spaceAbove = rect.top;
   let placement = step.placement ?? "bottom";
-  if (placement === "bottom" && spaceBelow < 180 && spaceAbove > spaceBelow)
+  if (placement === "bottom" && spaceBelow < needed && spaceAbove > spaceBelow)
     placement = "top";
-  if (placement === "top" && spaceAbove < 180 && spaceBelow > spaceAbove)
+  if (placement === "top" && spaceAbove < needed && spaceBelow > spaceAbove)
     placement = "bottom";
 
   let cardTop: number;
   let cardLeft: number;
   if (placement === "top") {
-    cardTop = hole.top - 12;
+    cardTop = hole.top - margin - cardH;
     cardLeft = rect.left + rect.width / 2 - CARD_WIDTH / 2;
   } else if (placement === "left") {
     cardTop = rect.top;
-    cardLeft = hole.left - CARD_WIDTH - 12;
+    cardLeft = hole.left - CARD_WIDTH - margin;
   } else if (placement === "right") {
     cardTop = rect.top;
-    cardLeft = hole.left + hole.width + 12;
+    cardLeft = hole.left + hole.width + margin;
   } else {
-    cardTop = hole.top + hole.height + 12;
+    cardTop = hole.top + hole.height + margin;
     cardLeft = rect.left + rect.width / 2 - CARD_WIDTH / 2;
   }
 
-  // Clamp inside the viewport. For top placement the card grows upward, so
-  // translateY(-100%) is applied via the style below.
+  // Clamp fully inside the viewport using the real card height, so the card is
+  // never pushed partly off the bottom/right and stays clickable.
   cardLeft = Math.max(
     VIEWPORT_PAD,
     Math.min(cardLeft, vw - CARD_WIDTH - VIEWPORT_PAD),
   );
-  cardTop = Math.max(VIEWPORT_PAD, Math.min(cardTop, vh - VIEWPORT_PAD));
+  cardTop = Math.max(
+    VIEWPORT_PAD,
+    Math.min(cardTop, Math.max(VIEWPORT_PAD, vh - cardH - VIEWPORT_PAD)),
+  );
 
   return createPortal(
     <div className="tour-root" role="dialog" aria-modal="true" aria-label={step.title}>
@@ -173,13 +196,9 @@ export function CoachTour({
 
       {/* Tooltip card */}
       <div
+        ref={cardRef}
         className="tour-card card"
-        style={{
-          top: cardTop,
-          left: cardLeft,
-          width: CARD_WIDTH,
-          transform: placement === "top" ? "translateY(-100%)" : undefined,
-        }}
+        style={{ top: cardTop, left: cardLeft, width: CARD_WIDTH }}
       >
         <div className="tour-step-count">
           Step {index + 1} of {total}

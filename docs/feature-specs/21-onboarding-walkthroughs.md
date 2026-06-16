@@ -11,10 +11,17 @@ new teammates.
 
 ## Behaviour
 
+- **First-login welcome modal.** The very first dashboard visit shows a small
+  "Want a quick tour?" prompt with two choices: "Show me around" (starts the
+  dashboard tour and lets subsequent screens auto-tour) or "I'll explore on my
+  own" (marks everything seen so nothing auto-pops — still replayable). Gated on
+  the `intro` key in `tours_seen`; bypassed by `?tour=1` replays.
 - **Spotlight coachmarks** — the screen dims, one real UI element is highlighted
   with a ring, and a tooltip card explains it (Back / Next / Skip + step count).
-- **Auto-start once per screen.** A tour runs the first time its screen is
-  reached and never again, unless replayed.
+  The card is measured and clamped fully inside the viewport, so a tall card on
+  the last step (e.g. the bottom-left settings link) is never pushed off-screen.
+- **Auto-start once per screen.** After the intro choice, a tour runs the first
+  time its screen is reached and never again, unless replayed.
 - **Replay from Settings → Walkthroughs.** "Replay all walkthroughs" clears the
   seen state and reopens the dashboard tour; per-screen links force a single
   tour via `?tour=1`.
@@ -48,8 +55,14 @@ new teammates.
   box-shadow dim + ring; tooltip placement with viewport clamping; tracks the
   anchor on scroll/resize; drops steps whose anchor is absent).
 - **`components/tour/tour-controller.tsx`** — pathname-aware orchestration:
-  auto-start when unseen, force-replay on `?tour=1` (param stripped after),
-  persist on close. Mounted once in `app/(app)/layout.tsx`.
+  shows the welcome modal on the first dashboard visit, auto-starts a tour when
+  unseen, force-replays on `?tour=1` (param stripped after), persists on close.
+  Mounted once in `app/(app)/layout.tsx`.
+- **`components/tour/welcome-modal.tsx`** — the first-login "Want a tour?"
+  choice modal (reuses `.confirm-backdrop`/`.confirm-modal`).
+- **Intro/replay actions:** `dismissAllTours()` (the "I'll explore" choice marks
+  intro + all tour keys seen); `resetAllTours()` clears the screen-tour keys but
+  keeps `intro` seen so the welcome modal doesn't reappear on a manual replay.
 - **`app/(app)/(default)/settings/tour-replay.tsx`** — the Settings card.
 - **CSS:** `.tour-*` block in `app/globals.css` (z-index 1400–1402, above the
   confirm dialog).

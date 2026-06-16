@@ -2,31 +2,35 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { resolveTour } from "@/features/tours/steps";
-import { markTourSeen } from "@/features/tours/actions";
+import { resolveTour, INTRO_KEY, ALL_TOUR_KEYS } from "@/features/tours/steps";
+import { markTourSeen, dismissAllTours } from "@/features/tours/actions";
 import { CoachTour } from "./coach-tour";
+import { WelcomeModal } from "./welcome-modal";
 
 /**
- * Decides which coachmark tour (if any) to run for the current screen.
+ * Decides which onboarding UI (if any) to run for the current screen.
  *
- * - Auto-starts a tour the first time a user reaches a screen whose tour key
- *   isn't in their `tours_seen`.
- * - Force-replays when the URL carries `?tour=1` (the "Replay" links in
- *   Settings point here), regardless of seen state; the param is stripped
- *   afterwards so a reload doesn't restart it.
- * - On finish/skip it records the key as seen (server) and locally, so it
- *   won't auto-start again this session or next.
+ * - First dashboard visit (intro key unseen): shows the "Want a tour?" welcome
+ *   modal. "Show me around" starts the dashboard tour; "I'll explore" marks
+ *   everything seen so nothing auto-pops.
+ * - After that, a screen's tour auto-starts the first time it's reached and its
+ *   key isn't in `tours_seen`.
+ * - `?tour=1` force-replays the current screen's tour (the Settings "Replay"
+ *   links), bypassing the welcome modal; the param is stripped afterwards.
+ * - On finish/skip the key is recorded as seen (server + local).
  *
- * Mounted once in the (app) layout; it's a no-op on screens without a tour.
+ * Mounted once in the (app) layout; a no-op on screens without a tour.
  */
 export function TourController({ seen }: { seen: string[] }) {
   const pathname = usePathname();
   const [seenLocal, setSeenLocal] = useState<string[]>(seen);
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   const def = resolveTour(pathname);
 
   useEffect(() => {
+    setShowWelcome(false);
     if (!def) {
       setActiveKey(null);
       return;
@@ -39,15 +43,19 @@ export function TourController({ seen }: { seen: string[] }) {
       setActiveKey(def.key);
       return;
     }
+    // First-ever visit: greet on the dashboard and let the user choose before
+    // any tour auto-runs.
+    if (pathname === "/dashboard" && !seenLocal.includes(INTRO_KEY)) {
+      setShowWelcome(true);
+      return;
+    }
     if (!seenLocal.includes(def.key)) {
       setActiveKey(def.key);
     }
-    // seenLocal intentionally omitted: marking-seen shouldn't re-run the
-    // start check (it would just confirm "already seen"); pathname drives it.
+    // seenLocal intentionally omitted: marking-seen shouldn't re-run the start
+    // check (it would just confirm "already seen"); pathname drives it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, def?.key]);
-
-  if (!def || activeKey !== def.key) return null;
 
   function handleClose() {
     if (def) {
@@ -58,6 +66,28 @@ export function TourController({ seen }: { seen: string[] }) {
     }
     setActiveKey(null);
   }
+
+  function acceptTour() {
+    setSeenLocal((prev) =>
+      prev.includes(INTRO_KEY) ? prev : [...prev, INTRO_KEY],
+    );
+    void markTourSeen(INTRO_KEY).catch(() => {});
+    setShowWelcome(false);
+    if (def) setActiveKey(def.key);
+  }
+
+  function declineTour() {
+    // Everything seen — no tour auto-pops anywhere (still replayable later).
+    setSeenLocal((prev) => [...new Set([...prev, INTRO_KEY, ...ALL_TOUR_KEYS])]);
+    void dismissAllTours().catch(() => {});
+    setShowWelcome(false);
+  }
+
+  if (showWelcome) {
+    return <WelcomeModal onAccept={acceptTour} onDecline={declineTour} />;
+  }
+
+  if (!def || activeKey !== def.key) return null;
 
   return <CoachTour steps={def.steps} onClose={handleClose} />;
 }

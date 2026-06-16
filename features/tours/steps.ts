@@ -130,6 +130,16 @@ export const REPLAYABLE_TOURS = TOURS.map((t) => ({
   label: t.label,
 }));
 
+/** Every screen-tour key. */
+export const ALL_TOUR_KEYS = TOURS.map((t) => t.key);
+
+/**
+ * Marker key for the one-time "Want a quick tour?" welcome prompt shown on the
+ * first dashboard visit. Stored alongside the screen-tour keys in
+ * `tours_seen`, but it gates the choice modal rather than a tour.
+ */
+export const INTRO_KEY = "intro";
+
 /**
  * Picks the tour for a given pathname, or null if the screen has none.
  * `/productions` (the list) and `/productions/<slug>` (a show hub) are

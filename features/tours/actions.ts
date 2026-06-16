@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
+import { ALL_TOUR_KEYS, INTRO_KEY } from "./steps";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -27,16 +28,30 @@ export async function markTourSeen(key: string): Promise<void> {
 }
 
 /**
- * Clears every seen-tour flag for the current user, so all first-run
- * walkthroughs surface again as they revisit each screen. Backs the
- * "Replay walkthroughs" control in Settings.
+ * Clears the screen-tour flags so every first-run walkthrough surfaces again
+ * as the user revisits each screen. Backs the "Replay walkthroughs" control in
+ * Settings. The intro key is kept marked-seen so the one-time "Want a tour?"
+ * welcome modal does NOT reappear on a deliberate replay.
  */
 export async function resetAllTours(): Promise<void> {
   const user = await requireCurrentUser();
   await db
     .update(profiles)
-    .set({ toursSeen: [], updatedAt: new Date() })
+    .set({ toursSeen: [INTRO_KEY], updatedAt: new Date() })
     .where(eq(profiles.id, user.id));
   revalidatePath("/dashboard");
   revalidatePath("/productions");
+}
+
+/**
+ * Marks the intro AND every screen tour as seen in one shot — the
+ * "I'll explore on my own" choice from the first-login welcome modal, so no
+ * tour auto-pops anywhere. They can still replay from Settings.
+ */
+export async function dismissAllTours(): Promise<void> {
+  const user = await requireCurrentUser();
+  await db
+    .update(profiles)
+    .set({ toursSeen: [INTRO_KEY, ...ALL_TOUR_KEYS], updatedAt: new Date() })
+    .where(eq(profiles.id, user.id));
 }
