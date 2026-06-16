@@ -764,20 +764,32 @@ export function ScriptViewer({
     if (!labelDrag) return;
     const dragId = labelDrag.id;
     const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+    // In margin mode the card lives in the gutter past the page's right edge, so
+    // x is allowed beyond 1 (up to the gutter's outer edge) instead of snapping
+    // to the page edge.
+    const maxX = focusMargin
+      ? (canvasSize.w + focusGutter) / Math.max(1, canvasSize.w)
+      : 1;
+    const clampX = (n: number) => Math.max(0, Math.min(maxX, n));
     function onMove(e: MouseEvent) {
       const start = labelDragStartRef.current;
       if (start && Math.abs(e.clientX - start.x) + Math.abs(e.clientY - start.y) > 3) {
         labelMovedRef.current = true;
       }
       const n = normFromClient(e.clientX, e.clientY);
-      const pos = { x: clamp01(n.x), y: clamp01(n.y) };
+      const pos = { x: clampX(n.x), y: clamp01(n.y) };
       draggingPosRef.current = pos;
       setDraggingLabel({ id: dragId, ...pos });
     }
     function onUp() {
       const pos = draggingPosRef.current;
       if (labelMovedRef.current && pos) {
-        updateAnnotation(dragId, { labelPos: pos } as Partial<Annotation>);
+        // Margin drags persist to a separate field so they don't disturb the
+        // normal editor's in-page auto-placement.
+        updateAnnotation(
+          dragId,
+          (focusMargin ? { marginLabelPos: pos } : { labelPos: pos }) as Partial<Annotation>,
+        );
       } else {
         setSelectedId((cur) => (cur === dragId ? null : dragId));
       }
@@ -1242,8 +1254,14 @@ export function ScriptViewer({
           .filter(
             (a): a is Extract<Annotation, { type: "cue" }> => a.type === "cue",
           )
-          // In margin mode every cue stacks in the single right-hand gutter.
-          .map((c) => (focusMargin ? { ...c, leaderSide: "right" as const } : c)),
+          // In margin mode every cue stacks in the single right-hand gutter, and
+          // a gutter-dragged card (marginLabelPos) opts out of auto-stacking —
+          // surfaced here as `labelPos` so stackCueLabels excludes it.
+          .map((c) =>
+            focusMargin
+              ? { ...c, leaderSide: "right" as const, labelPos: c.marginLabelPos }
+              : c,
+          ),
         canvasSize.h,
         cueScale,
         focusMargin, // single-column gutter stacking in margin mode
@@ -2080,7 +2098,12 @@ export function ScriptViewer({
                 // While a label is being dragged, render it at the live spot.
                 const shown =
                   draggingLabel?.id === ann.id && ann.type === "cue"
-                    ? { ...ann, labelPos: { x: draggingLabel.x, y: draggingLabel.y } }
+                    ? {
+                        ...ann,
+                        ...(focusMargin
+                          ? { marginLabelPos: { x: draggingLabel.x, y: draggingLabel.y } }
+                          : { labelPos: { x: draggingLabel.x, y: draggingLabel.y } }),
+                      }
                     : ann;
                 return (
                   <AnnotationShape
@@ -3168,13 +3191,14 @@ function drawAnnotationOnCanvas(
     ctx.arc(labelX, labelY, serif, 0, Math.PI * 2);
     ctx.fillStyle = cc;
     ctx.fill();
+    const ts = ann.cueTextScale ?? 1;
     ctx.fillStyle = cc;
     ctx.textAlign = isLeft ? "left" : "right";
-    ctx.font = `bold ${13 * s}px system-ui, sans-serif`;
+    ctx.font = `bold ${13 * s * ts}px system-ui, sans-serif`;
     ctx.fillText(ann.cueNumber, isLeft ? labelX + 6 * s : labelX - 6 * s, labelY - 4 * s);
     if (ann.cueDescription) {
-      ctx.font = `${9 * s}px system-ui, sans-serif`;
-      ctx.fillText(ann.cueDescription, isLeft ? labelX + 6 * s : labelX - 6 * s, labelY + 12 * s);
+      ctx.font = `${9 * s * ts}px system-ui, sans-serif`;
+      ctx.fillText(ann.cueDescription, isLeft ? labelX + 6 * s : labelX - 6 * s, labelY + 12 * s * ts);
     }
   }
 
@@ -3330,30 +3354,35 @@ function AnnotationShape({
         ? MARGIN_OFFSET
         : canvasW - MARGIN_OFFSET;
     // A dragged label sits at its stored position; otherwise it's auto-stacked.
-    // In the gutter we keep a single aligned column (no 2nd-column fan-out) so
-    // cards line up and each leader reads cleanly to its own card.
-    const labelX = annotation.labelPos
-      ? annotation.labelPos.x * canvasW
+    // Margin mode uses its own placement field (marginLabelPos) so it never
+    // collides with the normal editor's labelPos. In the gutter we keep a single
+    // aligned column (no 2nd-column fan-out) so cards line up and each leader
+    // reads cleanly to its own card.
+    const placed = focusMargin ? annotation.marginLabelPos : annotation.labelPos;
+    const labelX = placed
+      ? placed.x * canvasW
       : focusMargin
         ? baseX
         : isLeft
           ? baseX + lane * CUE_LANE_GAP * s
           : baseX - lane * CUE_LANE_GAP * s;
-    const labelY = annotation.labelPos
-      ? annotation.labelPos.y * canvasH
+    const labelY = placed
+      ? placed.y * canvasH
       : (cueLabel?.y ?? bottomY);
     const textAnchor = isLeft ? "start" : "end";
     const cc = annotation.color ?? CUE_STROKE;
     const serif = 3 * s;
     const draggable = !!onLabelPointerDown;
+    // Per-cue label text scale (number + description), default 1.
+    const ts = annotation.cueTextScale ?? 1;
     // Gutter card geometry (margin mode only): a neutral, readable card whose
     // width fits the longer of the cue number / description rather than filling
     // the whole gutter. A thin colored bar on the left carries the cue color.
     const ACCENT_W = 3 * s;
     const padL = 9 * s;
     const padR = 11 * s;
-    const numTextW = (annotation.cueNumber?.length ?? 0) * 8.2 * s;
-    const descTextW = (annotation.cueDescription?.length ?? 0) * 5.0 * s;
+    const numTextW = (annotation.cueNumber?.length ?? 0) * 8.2 * s * ts;
+    const descTextW = (annotation.cueDescription?.length ?? 0) * 5.0 * s * ts;
     const contentW = Math.max(numTextW, descTextW);
     const cardX = labelX;
     const availW = canvasW + gutter - cardX - 6 * s;
@@ -3361,7 +3390,7 @@ function AnnotationShape({
       Math.max(54 * s, ACCENT_W + padL + contentW + padR),
       Math.max(60 * s, availW),
     );
-    const cardH = (annotation.cueDescription ? 30 : 21) * s;
+    const cardH = (annotation.cueDescription ? 30 : 21) * s * ts;
     const cardY = labelY - cardH / 2;
     const textX = cardX + ACCENT_W + padL;
     // The vertical jog happens off the page, just before the card. Stagger it
@@ -3462,9 +3491,9 @@ function AnnotationShape({
               />
               <text
                 x={textX}
-                y={annotation.cueDescription ? labelY - 3 * s : labelY + 4 * s}
+                y={annotation.cueDescription ? labelY - 3 * s * ts : labelY + 4 * s * ts}
                 textAnchor="start"
-                fontSize={12.5 * s}
+                fontSize={12.5 * s * ts}
                 fill={cc}
                 fontWeight="700"
                 fontFamily="system-ui, sans-serif"
@@ -3474,9 +3503,9 @@ function AnnotationShape({
               {annotation.cueDescription && (
                 <text
                   x={textX}
-                  y={labelY + 10 * s}
+                  y={labelY + 10 * s * ts}
                   textAnchor="start"
-                  fontSize={9 * s}
+                  fontSize={9 * s * ts}
                   fill="var(--ink-2)"
                   fontFamily="system-ui, sans-serif"
                 >
@@ -3501,7 +3530,7 @@ function AnnotationShape({
                 x={isLeft ? labelX + 6 * s : labelX - 6 * s}
                 y={labelY - 4 * s}
                 textAnchor={textAnchor}
-                fontSize={13 * s}
+                fontSize={13 * s * ts}
                 fill={cc}
                 fontWeight="700"
                 fontFamily="system-ui, sans-serif"
@@ -3511,9 +3540,9 @@ function AnnotationShape({
               {annotation.cueDescription && (
                 <text
                   x={isLeft ? labelX + 6 * s : labelX - 6 * s}
-                  y={labelY + 12 * s}
+                  y={labelY + 12 * s * ts}
                   textAnchor={textAnchor}
-                  fontSize={9 * s}
+                  fontSize={9 * s * ts}
                   fill={cc}
                   fontFamily="system-ui, sans-serif"
                 >
@@ -4040,12 +4069,40 @@ function PanelAnnotationItem({
                   );
                 })}
               </div>
-              {annotation.labelPos && (
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  marginTop: 5,
+                  fontSize: 11,
+                  color: "var(--ink-3)",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span style={{ flexShrink: 0 }}>Text size</span>
+                <input
+                  type="range"
+                  min={0.7}
+                  max={1.8}
+                  step={0.1}
+                  value={annotation.cueTextScale ?? 1}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onChange={(e) =>
+                    onEdit({ cueTextScale: Number(e.target.value) } as Partial<Annotation>)
+                  }
+                  style={{ flex: 1, accentColor: "var(--accent)" }}
+                />
+              </label>
+              {(annotation.labelPos || annotation.marginLabelPos) && (
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() =>
-                    onEdit({ labelPos: undefined } as Partial<Annotation>)
+                    onEdit({
+                      labelPos: undefined,
+                      marginLabelPos: undefined,
+                    } as Partial<Annotation>)
                   }
                   style={{
                     marginTop: 4,

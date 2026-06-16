@@ -63,6 +63,13 @@ export type CueAnnotation = {
   // dot). When set, the label sits here instead of being auto-stacked; the
   // orthogonal leader follows it. Cleared to return the cue to auto-placement.
   labelPos?: { x: number; y: number };
+  // Independent label placement for the Focus View margin gutter. Dragging a
+  // card in margin mode writes here instead of `labelPos`, so it never disturbs
+  // the in-page (normal editor) auto-placement. Normalized to the page width
+  // (x can exceed 1 — the gutter sits past the page's right edge).
+  marginLabelPos?: { x: number; y: number };
+  // Multiplier for the cue number/description label text size (default 1).
+  cueTextScale?: number;
 };
 
 /**
