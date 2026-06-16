@@ -1,0 +1,428 @@
+/* ============================================================
+   focus-view.css — Focus View for Script & Blocking.
+   A distraction-free, full-viewport editor mode for the
+   Proscene script and blocking tools. Built on proscene.css
+   tokens so it belongs to the live product.
+   Layout: slim top bar · left tool rail · center canvas · right panel.
+   ============================================================ */
+
+/* The focus view replaces the whole app chrome (rail/topbar/tabs are
+   intentionally gone — that's the point). It owns the full viewport. */
+body.fx-body {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-sunken);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+.fx-body *, .fx-body *::before, .fx-body *::after { box-sizing: border-box; }
+.fx-body svg { flex-shrink: 0; }
+
+/* ── Top bar ─────────────────────────────────────────────────────────── */
+.fx-top {
+  flex: 0 0 auto;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px 0 14px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  z-index: 30;
+}
+.fx-brand { display: flex; align-items: center; gap: 9px; }
+.fx-brand .mark { width: 26px; height: 26px; display: grid; place-items: center; }
+.fx-brand .mark svg { width: 26px; height: 26px; }
+.fx-brand .mark .brand-badge.is-dark { display: none; }
+body[data-theme="dark"] .fx-brand .mark .brand-badge.is-light,
+body[data-theme="dusk"] .fx-brand .mark .brand-badge.is-light { display: none; }
+body[data-theme="dark"] .fx-brand .mark .brand-badge.is-dark,
+body[data-theme="dusk"] .fx-brand .mark .brand-badge.is-dark { display: block; }
+.fx-brand .focuslab {
+  font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-4); border-left: 1px solid var(--border); padding-left: 10px;
+}
+
+/* Show switcher pill */
+.fx-gig {
+  display: flex; align-items: center; gap: 10px; margin-left: 2px;
+  background: var(--bg-muted); border: 1px solid var(--border);
+  border-radius: 999px; padding: 4px 12px 4px 5px; cursor: pointer;
+  transition: border-color .12s;
+}
+.fx-gig:hover { border-color: var(--border-strong); }
+.fx-gig .poster {
+  width: 30px; height: 30px; border-radius: 7px; flex: 0 0 auto;
+  background: linear-gradient(135deg, var(--c-dusk), var(--c-plum));
+  color: #fff; display: grid; place-items: center; font-weight: 600; font-size: 13px;
+}
+.fx-gig .meta { line-height: 1.2; }
+.fx-gig .meta .show { font-size: 13px; font-weight: 500; color: var(--ink); }
+.fx-gig .meta .show em { font-style: italic; }
+.fx-gig .meta .org { font-size: 11px; color: var(--ink-4); }
+
+.fx-spring { flex: 1 1 auto; }
+
+/* Script / Blocking segmented control */
+.fx-modeswitch {
+  display: flex; background: var(--bg-sunken);
+  border: 1px solid var(--border); border-radius: 999px; padding: 3px;
+}
+.fx-modeswitch button {
+  appearance: none; border: 0; background: transparent; font: inherit;
+  font-size: 13px; font-weight: 500; color: var(--ink-3);
+  padding: 6px 16px; border-radius: 999px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px; transition: color .12s;
+}
+.fx-modeswitch button .ico { width: 15px; height: 15px; }
+.fx-modeswitch button:hover { color: var(--ink); }
+.fx-modeswitch button[data-on="1"] {
+  background: var(--bg-elev); color: var(--ink); box-shadow: var(--shadow-1);
+}
+
+/* small inline toggle (margin view) */
+.fx-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 500; color: var(--ink-2); cursor: pointer; user-select: none; }
+.fx-sw { width: 34px; height: 20px; border-radius: 999px; background: var(--border-strong); position: relative; transition: background .14s; flex: 0 0 auto; }
+.fx-sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: var(--shadow-1); transition: left .14s; }
+.fx-toggle[data-on="1"] .fx-sw { background: var(--c-sage); }
+.fx-toggle[data-on="1"] .fx-sw::after { left: 16px; }
+
+.fx-divider { width: 1px; height: 26px; background: var(--border); }
+
+.fx-iconbtn {
+  width: 32px; height: 32px; border-radius: var(--radius-s); border: 0; background: transparent;
+  color: var(--ink-3); cursor: pointer; display: grid; place-items: center;
+}
+.fx-iconbtn:hover { background: var(--bg-muted); color: var(--ink); }
+.fx-iconbtn .ico { width: 17px; height: 17px; }
+
+.fx-exit { gap: 7px; }
+.fx-exit kbd {
+  font-family: var(--font-mono); font-size: 10px; background: var(--bg-sunken);
+  border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; color: var(--ink-3);
+}
+
+/* ── Stage (rail + canvas + panel) ───────────────────────────────────── */
+.fx-stage { flex: 1 1 auto; display: flex; min-height: 0; position: relative; }
+
+/* Left tool rail */
+.fx-rail {
+  width: 56px; flex: 0 0 auto; background: var(--bg-elev);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 0;
+}
+.fx-tool {
+  width: 40px; height: 40px; border-radius: 9px; border: 1px solid transparent;
+  background: transparent; color: var(--ink-2); cursor: pointer;
+  display: grid; place-items: center; position: relative;
+}
+.fx-tool svg { width: 19px; height: 19px; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.fx-tool:hover { background: var(--bg-muted); color: var(--ink); }
+.fx-tool[data-on="1"] {
+  background: var(--accent-soft); color: var(--accent-ink);
+  border-color: color-mix(in oklch, var(--accent) 22%, transparent);
+}
+.fx-tool .lab {
+  position: absolute; left: 50px; white-space: nowrap; background: var(--ink); color: var(--bg);
+  font-size: 11px; font-weight: 500; padding: 4px 8px; border-radius: 6px; box-shadow: var(--shadow-2);
+  opacity: 0; pointer-events: none; transform: translateX(-4px); transition: .12s; z-index: 40;
+}
+.fx-tool .lab kbd { font-family: var(--font-mono); opacity: .6; margin-left: 6px; }
+.fx-tool:hover .lab { opacity: 1; transform: translateX(0); }
+.fx-rail-div { width: 26px; height: 1px; background: var(--border); margin: 5px 0; }
+
+/* color swatches (script) */
+.fx-swatches { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 2px 0; }
+.fx-swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+.fx-swatch[data-on="1"] { border-color: var(--ink); }
+
+/* active-layer chip at foot of rail */
+.fx-rail-active {
+  margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  font-size: 8.5px; font-weight: 700; letter-spacing: .04em; color: var(--ink-4); text-align: center; padding-bottom: 2px;
+}
+.fx-rail-active .dot { width: 18px; height: 18px; border-radius: 6px; background: var(--c-amber); box-shadow: 0 0 0 3px var(--c-amber-soft); }
+
+/* mode-specific tool visibility */
+.fx-tool[data-modes], .fx-swatches[data-modes], .fx-rail-div[data-modes] { display: none; }
+body[data-mode="script"]   [data-modes~="script"]   { display: grid; }
+body[data-mode="blocking"] [data-modes~="blocking"] { display: grid; }
+body[data-mode="script"]   .fx-swatches[data-modes~="script"] { display: flex; }
+body[data-mode="script"]   .fx-rail-div[data-modes~="script"],
+body[data-mode="blocking"] .fx-rail-div[data-modes~="blocking"] { display: block; }
+
+/* ── Canvas ──────────────────────────────────────────────────────────── */
+.fx-canvas { flex: 1 1 auto; min-width: 0; position: relative; display: flex; }
+
+/* thumbnail rail (script) */
+.fx-thumbs {
+  width: 116px; flex: 0 0 auto; background: var(--bg-elev); border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 12px 0; display: flex; flex-direction: column; gap: 10px; align-items: center;
+}
+.fx-thumb { width: 84px; cursor: pointer; }
+.fx-thumb-page {
+  aspect-ratio: 8.5/11; background: #fff; border: 2px solid transparent; border-radius: 4px;
+  box-shadow: var(--shadow-1); display: flex; flex-direction: column; gap: 3px; padding: 8px 7px;
+}
+.fx-thumb[data-on="1"] .fx-thumb-page { border-color: var(--accent); }
+.fx-thumb-page span { height: 3px; background: oklch(0.9 0.008 75); border-radius: 1px; }
+.fx-thumb-page span.hl { background: var(--c-amber); opacity: .8; }
+.fx-thumb-num { text-align: center; font-size: 10px; color: var(--ink-4); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.fx-thumb[data-on="1"] .fx-thumb-num { color: var(--ink); font-weight: 600; }
+body[data-mode="blocking"] .fx-thumbs { display: none; }
+body.fx-thumbs-off .fx-thumbs { display: none; }
+
+/* ── Script workspace ────────────────────────────────────────────────── */
+.fx-script {
+  flex: 1 1 auto; min-width: 0; overflow: auto; background: var(--bg-sunken);
+  display: flex; justify-content: safe center; padding: 32px 28px 96px;
+}
+body[data-mode="blocking"] .fx-script { display: none; }
+
+/* Sheet = page (620) + gutter (40) + margin (264). When margin view is off,
+   the gutter collapses so the page re-centers. The workspace scrolls when a
+   narrow viewport can't show the full width. */
+.fx-sheet-wrap { position: relative; flex: 0 0 auto; }
+.fx-sheet { position: relative; width: 924px; flex: 0 0 auto; transform-origin: top left; }
+body.fx-margin-off .fx-sheet { width: 620px; }
+.fx-page {
+  width: 620px; background: oklch(0.992 0.008 85); border: 1px solid var(--border);
+  border-radius: 4px; box-shadow: var(--shadow-2); padding: 54px 60px 64px;
+  font-family: var(--serif); color: #241f1a; position: relative; z-index: 2;
+}
+.fx-page .pno { position: absolute; top: 16px; right: 20px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); }
+.fx-scene-h { font-family: var(--font-ui); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: #8a7d6e; font-weight: 600; text-align: center; margin: 0 0 22px; }
+.fx-char { text-align: center; font-weight: 700; letter-spacing: .07em; margin: 18px 0 2px; font-size: 13px; font-family: var(--font-ui); color: #3a322a; }
+.fx-line { text-align: center; max-width: 80%; margin: 2px auto 0; font-size: 15.5px; line-height: 1.7; }
+.fx-sd { font-style: italic; color: #8a7d6e; font-size: 13.5px; margin: 12px auto; text-align: center; max-width: 78%; }
+
+/* highlight layers — toggled via body classes from the Layers panel */
+.fx-hl { background: color-mix(in oklch, var(--c-amber) 42%, transparent); border-radius: 2px; padding: 0 1px; }
+.fx-hl.userhl { background: color-mix(in oklch, var(--c-teal) 32%, transparent); }
+.fx-hl.aihl { background: color-mix(in oklch, var(--c-plum) 26%, transparent); }
+.fx-anchor { outline: 1.5px solid var(--c-clay); outline-offset: 1px; border-radius: 2px; padding: 0 1px; cursor: pointer; }
+body.fx-hide-hl   .fx-hl:not(.userhl):not(.aihl) { background: transparent; padding: 0; }
+body.fx-hide-note .fx-anchor.note { outline-color: transparent; }
+body.fx-hide-note .fx-mcard.note { display: none; }
+body.fx-hide-cue  .fx-anchor.cue { outline-color: transparent; }
+body.fx-hide-cue  .fx-mcard:not(.note) { display: none; }
+body.fx-hide-ai   .fx-hl.aihl { background: transparent; }
+.fx-watermark { position: absolute; left: 0; right: 0; bottom: 28px; text-align: center; font-family: var(--font-ui); font-size: 10px; letter-spacing: .04em; color: oklch(0.72 0.01 60 / .5); }
+
+/* margin gutter cards + leader lines */
+.fx-margin { position: absolute; top: 0; left: 660px; width: 264px; z-index: 2; }
+body.fx-margin-off .fx-margin,
+body.fx-margin-off .fx-leaders { display: none; }
+.fx-mcard {
+  position: absolute; left: 0; width: 252px; background: var(--bg-elev);
+  border: 1px solid var(--border); border-left: 3px solid var(--c-clay);
+  border-radius: 8px; padding: 9px 11px; box-shadow: var(--shadow-2); cursor: grab;
+  font-family: var(--font-ui); transition: box-shadow .12s, border-color .12s;
+}
+.fx-mcard:hover { box-shadow: var(--shadow-2), 0 0 0 2px color-mix(in oklch, var(--c-clay) 22%, transparent); }
+.fx-mcard.dragging { box-shadow: var(--shadow-3); z-index: 6; }
+.fx-mcard.note { border-left-color: var(--c-dusk); }
+.fx-mcard .top { display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600; color: var(--ink); }
+.fx-mcard .badge { font-size: 9px; font-weight: 700; letter-spacing: .04em; padding: 2px 6px; border-radius: 999px; color: #fff; background: var(--c-clay); }
+.fx-mcard.note .badge { background: var(--c-dusk); }
+.fx-mcard .who { margin-left: auto; font-size: 10px; color: var(--ink-4); font-weight: 500; }
+.fx-mcard .body { font-size: 12px; color: var(--ink-2); margin-top: 5px; line-height: 1.45; }
+
+.fx-leaders { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: visible; }
+.fx-leaders path { stroke: var(--ink-4); stroke-width: 1.3; fill: none; opacity: .6; }
+.fx-leaders circle { fill: var(--c-clay); }
+.fx-leaders circle.note { fill: var(--c-dusk); }
+
+/* ── Cue sheet view (reuses live .sv-cuesheet component) ── */
+.fx-cues { flex: 1 1 auto; min-width: 0; display: none; flex-direction: column; padding: 20px 22px; overflow: hidden; background: var(--bg-sunken); }
+body[data-mode="script"].fx-view-cues .fx-script { display: none; }
+body[data-mode="script"].fx-view-cues .fx-cues { display: flex; }
+body.fx-view-cues .fx-thumbs { display: none; }
+body.fx-view-cues .fx-floatbar { display: none; }
+.fx-cues .sv-cuesheet { background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 0 0; }
+.fx-cues .sv-cuesheet-head { padding: 14px 18px; }
+.fx-cues .sv-cuesheet-scroll { padding: 0 8px 10px; }
+
+/* view switch (Script ⇄ Cue sheet) — same look as mode switch */
+.fx-viewswitch button { padding: 6px 13px; font-size: 12.5px; }
+.fx-viewswitch button .ico { width: 14px; height: 14px; }
+body.fx-view-cues #fx-margin-toggle { display: none; }
+body.fx-view-cues .fx-divider.fx-margin-div { display: none; }
+
+/* floating page+zoom bar (shared) */
+.fx-floatbar {
+  position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 5px; background: var(--bg-elev);
+  border: 1px solid var(--border); border-radius: 999px; padding: 6px 8px;
+  box-shadow: var(--shadow-2); z-index: 15;
+}
+.fx-floatbar button { width: 30px; height: 30px; border-radius: 50%; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; display: grid; place-items: center; }
+.fx-floatbar button:hover { background: var(--bg-muted); color: var(--ink); }
+.fx-floatbar button svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.fx-floatbar .count { font-size: 12px; font-weight: 500; color: var(--ink-2); padding: 0 8px; min-width: 58px; text-align: center; font-variant-numeric: tabular-nums; }
+.fx-floatbar .zsep { width: 1px; height: 18px; background: var(--border); margin: 0 3px; }
+body[data-mode="blocking"] .fx-floatbar { display: none; }
+
+/* ── Blocking stage ──────────────────────────────────────────────────── */
+.fx-blocking { flex: 1 1 auto; min-width: 0; display: none; flex-direction: column; padding: 16px 18px 18px; gap: 12px; }
+body[data-mode="blocking"] .fx-blocking { display: flex; }
+.fx-bk-main { flex: 1 1 auto; min-height: 0; display: flex; gap: 12px; }
+
+/* undo / redo segmented pair */
+.fx-bk-undo { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius-s); overflow: hidden; }
+.fx-bk-undo button { width: 32px; height: 30px; border: 0; background: var(--bg-elev); color: var(--ink-2); cursor: pointer; display: grid; place-items: center; }
+.fx-bk-undo button + button { border-left: 1px solid var(--border); }
+.fx-bk-undo button:hover:not(:disabled) { background: var(--bg-muted); color: var(--ink); }
+.fx-bk-undo button:disabled { color: var(--ink-5, var(--ink-4)); opacity: .45; cursor: default; }
+.fx-bk-undo button svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+/* scenery & cast library dock */
+.fx-lib { width: 188px; flex: 0 0 auto; background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; min-height: 0; }
+.fx-lib-head { padding: 12px 13px 9px; display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.fx-lib-head svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 1.8; fill: none; }
+.fx-lib-search { margin: 0 11px 8px; }
+.fx-lib-search input { width: 100%; height: 30px; font-size: 12.5px; }
+.fx-lib-scroll { flex: 1 1 auto; overflow-y: auto; padding: 2px 11px 12px; }
+.fx-lib-group { font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-4); margin: 12px 2px 7px; }
+.fx-lib-group:first-child { margin-top: 2px; }
+.fx-lib-cast { display: flex; flex-direction: column; gap: 3px; }
+.fx-lib-cast .fx-lib-item { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 7px; }
+.fx-lib-cast .fx-lib-item .fx-av { width: 24px; height: 24px; font-size: 10px; }
+.fx-lib-cast .fx-lib-item .nm { font-size: 12.5px; font-weight: 500; color: var(--ink-2); }
+.fx-lib-cast .fx-lib-item .role { font-size: 10.5px; color: var(--ink-4); margin-left: auto; }
+.fx-lib-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.fx-lib-grid .fx-lib-item { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 4px 7px; border-radius: 8px; text-align: center; }
+.fx-lib-grid .fx-lib-item svg { width: 24px; height: 24px; stroke: var(--ink-2); stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.fx-lib-grid .fx-lib-item .nm { font-size: 10.5px; color: var(--ink-3); line-height: 1.2; }
+.fx-lib-item { border: 1px solid transparent; cursor: grab; user-select: none; touch-action: none; transition: background .1s, border-color .1s; }
+.fx-lib-item:hover { background: var(--bg-muted); border-color: var(--border); }
+.fx-lib-item:active { cursor: grabbing; }
+.fx-lib-grid .fx-lib-item:hover svg { stroke: var(--accent); }
+.fx-lib-add { width: 100%; margin-top: 10px; height: 32px; font-size: 12px; gap: 5px; }
+
+/* floating drag ghost spawned from the library */
+.fx-lib-ghost { position: fixed; z-index: 200; pointer-events: none; transform: translate(-50%, -50%); opacity: .92; }
+.fx-lib-ghost .fx-token-dot { box-shadow: 0 6px 20px rgba(0,0,0,.45); }
+.fx-bk-stage.drop-armed { outline: 2px dashed color-mix(in oklch, var(--accent) 60%, transparent); outline-offset: -4px; }
+.fx-bk-bar { display: flex; align-items: center; gap: 10px; }
+.fx-bk-bar .ttl { font-size: 14px; font-weight: 600; color: var(--ink); }
+.fx-bk-bar .sub { font-size: 12.5px; color: var(--ink-3); }
+.fx-bk-tools { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.fx-bk-tools .btn { height: 30px; padding: 0 11px; font-size: 12.5px; }
+
+.fx-bk-stage {
+  flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden;
+  background: rgb(22, 23, 27); border-radius: var(--radius); border: 1px solid var(--border);
+}
+.fx-bk-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px); background-size: 7.5% 9%; }
+.fx-bk-edge { position: absolute; left: 6%; right: 6%; top: 7%; bottom: 9%; border: 1px dashed rgba(255,255,255,.16); border-radius: 5px; }
+.fx-bk-lab { position: absolute; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.32); font-weight: 600; pointer-events: none; }
+.fx-token { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: grab; touch-action: none; }
+.fx-token.dragging { z-index: 10; cursor: grabbing; }
+.fx-token-dot { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 600; font-size: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.45); border: 2px solid rgba(255,255,255,.32); }
+.fx-token.dragging .fx-token-dot { box-shadow: 0 6px 20px rgba(0,0,0,.55); border-color: #fff; }
+.fx-token-lab { font-size: 11px; color: rgba(255,255,255,.9); background: rgba(0,0,0,.5); padding: 1px 7px; border-radius: 4px; white-space: nowrap; }
+.fx-setpiece { position: absolute; transform: translate(-50%, -50%); background: rgba(120,90,60,.5); border: 1px solid rgba(255,255,255,.28); border-radius: 5px; color: rgba(255,255,255,.9); font-size: 11px; padding: 16px 26px; cursor: grab; touch-action: none; }
+
+/* ── Right panel ─────────────────────────────────────────────────────── */
+.fx-panel { width: 300px; flex: 0 0 auto; background: var(--bg-elev); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+.fx-ptabs { display: flex; padding: 8px 10px 0; gap: 2px; border-bottom: 1px solid var(--border); }
+.fx-ptab { flex: 1; appearance: none; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--ink-3); padding: 9px 4px 11px; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
+.fx-ptab:hover { color: var(--ink); }
+.fx-ptab[data-on="1"] { color: var(--ink); border-bottom-color: var(--accent); }
+.fx-pbody { overflow-y: auto; padding: 14px 12px; flex: 1 1 auto; }
+.fx-ppane { display: none; }
+.fx-ppane[data-on="1"] { display: block; }
+
+.fx-phead { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-4); margin: 2px 4px 8px; display: flex; align-items: center; }
+.fx-phead:not(:first-child) { margin-top: 18px; }
+.fx-phead .add { margin-left: auto; color: var(--ink-3); cursor: pointer; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; }
+.fx-phead .add:hover { background: var(--bg-muted); color: var(--ink); }
+
+/* layer row */
+.fx-layer { display: flex; align-items: center; gap: 9px; padding: 9px 8px; border-radius: 8px; cursor: pointer; }
+.fx-layer:hover { background: var(--bg-muted); }
+.fx-layer[data-active="1"] { background: var(--accent-soft); }
+.fx-layer .eye { color: var(--ink-3); width: 18px; height: 18px; flex: 0 0 auto; cursor: pointer; }
+.fx-layer .eye svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.fx-layer[data-vis="0"] { opacity: .5; }
+.fx-layer .swatch { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
+.fx-layer .name { flex: 1 1 auto; font-weight: 500; font-size: 13px; color: var(--ink); }
+.fx-layer .cnt { font-size: 11px; color: var(--ink-4); font-weight: 500; font-variant-numeric: tabular-nums; }
+.fx-layer .more { color: var(--ink-4); width: 16px; height: 16px; }
+.fx-layer[data-active="1"] .name::after { content: "active"; font-size: 9px; font-weight: 700; letter-spacing: .04em; color: var(--accent-ink); margin-left: 7px; text-transform: uppercase; }
+.fx-beta { font-size: 9px; font-weight: 700; color: var(--c-plum); background: var(--c-plum-soft); padding: 2px 6px; border-radius: 999px; margin-left: 6px; }
+
+/* character highlight select */
+.fx-field { margin: 16px 4px 2px; }
+.fx-field label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+.fx-select { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; background: var(--bg-muted); cursor: pointer; font-weight: 500; font-size: 13px; }
+.fx-select .s { width: 12px; height: 12px; border-radius: 3px; background: var(--c-amber); margin-right: 8px; display: inline-block; vertical-align: -1px; }
+.fx-select svg { width: 16px; height: 16px; stroke: var(--ink-3); stroke-width: 1.8; fill: none; }
+
+/* divider between panel sections + scenes/songs lists */
+.fx-pdivide { height: 1px; background: var(--border); margin: 18px 4px; }
+.fx-bmlist { display: flex; flex-direction: column; gap: 1px; margin-top: 8px; }
+.fx-bmlist[hidden] { display: none; }
+.sv-bm-tabs { margin-top: 2px; }
+
+/* bookmark / scene item */
+.fx-bm { display: flex; align-items: center; gap: 8px; width: 100%; appearance: none; border: 0; background: none; text-align: left; padding: 8px 9px; border-radius: 8px; font: inherit; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+.fx-bm:hover { background: var(--bg-muted); }
+.fx-bm[data-on="1"] { background: var(--bg-sunken); color: var(--ink); font-weight: 500; }
+.fx-bm .pg { margin-left: auto; font-size: 11px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.fx-bm .bdot { width: 7px; height: 7px; border-radius: 50%; background: var(--c-amber); flex: 0 0 auto; }
+
+/* scene/beat tree (blocking) */
+.fx-scene { padding: 8px 10px; border-radius: 7px; cursor: pointer; border: 1px solid transparent; }
+.fx-scene[data-on="1"] { background: var(--bg-sunken); border-color: var(--border); }
+.fx-scene .t { font-size: 13px; color: var(--ink-2); font-weight: 500; }
+.fx-scene[data-on="1"] .t { color: var(--ink); }
+.fx-scene .m { font-size: 11.5px; color: var(--ink-4); margin-top: 2px; }
+.fx-beat { display: flex; align-items: center; gap: 5px; padding: 6px 10px 6px 22px; border-radius: 6px; font-size: 12.5px; cursor: pointer; color: var(--ink-3); }
+.fx-beat:hover { background: var(--bg-muted); }
+.fx-beat[data-on="1"] { background: var(--accent-soft); color: var(--accent-ink); font-weight: 500; }
+.fx-beat svg { width: 11px; height: 11px; opacity: .5; stroke: currentColor; stroke-width: 2; fill: none; }
+
+.fx-notecard { background: var(--bg-muted); border: 1px solid var(--border); border-radius: var(--radius-s); padding: 11px 12px; font-size: 13px; color: var(--ink-2); line-height: 1.55; }
+.fx-comment { display: flex; gap: 8px; }
+.fx-comment .av { width: 24px; height: 24px; font-size: 10px; flex: 0 0 auto; }
+.fx-comment .cmeta { font-size: 12px; color: var(--ink); }
+.fx-comment .cmeta .when { color: var(--ink-4); font-weight: 400; }
+.fx-comment .ctext { font-size: 12.5px; color: var(--ink-2); margin-top: 1px; line-height: 1.5; }
+.fx-commentbox { display: flex; gap: 6px; margin-top: 12px; }
+.fx-commentbox input { flex: 1; font-size: 12.5px; height: 32px; }
+
+/* small avatar helper inside panel */
+.fx-av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 500; font-size: 11px; flex: 0 0 auto; }
+
+/* ── Shortcuts popover ───────────────────────────────────────────────── */
+.fx-shortcuts {
+  position: absolute; right: 14px; bottom: 14px; width: 280px; background: var(--bg-elev);
+  border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-3);
+  padding: 14px 16px; z-index: 50; display: none;
+}
+.fx-shortcuts[data-open="1"] { display: block; }
+.fx-shortcuts h4 { margin: 0 0 10px; font-size: 13px; font-weight: 600; }
+.fx-shortcuts dl { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 7px 12px; }
+.fx-shortcuts dt { font-size: 12.5px; color: var(--ink-2); }
+.fx-shortcuts dd { margin: 0; }
+.fx-shortcuts kbd { font-family: var(--font-mono); font-size: 10.5px; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; color: var(--ink-2); }
+
+/* toast */
+.fx-toast { position: fixed; bottom: 78px; left: 50%; transform: translateX(-50%); z-index: 120; background: var(--ink); color: var(--bg); font-size: 13px; font-weight: 500; padding: 9px 16px; border-radius: 999px; box-shadow: var(--shadow-3); opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; }
+.fx-toast[data-show="1"] { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+/* intro note banner */
+.fx-note { flex: 0 0 auto; background: var(--c-amber-soft); color: var(--ink-2); border-bottom: 1px solid var(--border); padding: 6px 16px; font-size: 12px; text-align: center; }
+.fx-note b { color: var(--accent-ink); }
+.fx-note button { appearance: none; border: 0; background: none; color: var(--ink-4); cursor: pointer; font: inherit; margin-left: 8px; text-decoration: underline; }
+
+@media (max-width: 920px) {
+  .fx-gig .meta { display: none; }
+  .fx-panel { width: 260px; }
+}

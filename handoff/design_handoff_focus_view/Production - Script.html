@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Proscene — Production · Your Script</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="proscene.css" />
+<link rel="stylesheet" href="ref-chrome.css" />
+<style>
+  .sv-root { display: flex; gap: 12px; height: 100%; min-height: 0; }
+  /* Left annotation tool rail */
+  .sv-toolrail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 6px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius); flex-shrink: 0; }
+  .sv-tool { width: 30px; height: 30px; border-radius: 7px; border: 0; background: none; color: var(--ink-3); cursor: pointer; display: grid; place-items: center; }
+  .sv-tool:hover { background: var(--bg-muted); color: var(--ink); }
+  .sv-tool[data-active="1"] { background: var(--accent-soft); color: var(--accent-ink); }
+  .sv-tool-div { width: 22px; height: 1px; background: var(--border); margin: 2px 0; }
+  .sv-swatches { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+  .sv-swatch { width: 20px; height: 20px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+  .sv-swatch[data-on="1"] { border-color: var(--ink); }
+  /* Thumbnails */
+  .sv-thumbs { width: 120px; flex-shrink: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px; }
+  .sv-thumb { border-radius: 4px; overflow: hidden; border: 2px solid transparent; cursor: pointer; }
+  .sv-thumb[data-active="1"] { border-color: var(--accent); }
+  .sv-thumb-page { aspect-ratio: 8.5/11; background: #fff; box-shadow: var(--shadow-1); display: flex; flex-direction: column; gap: 3px; padding: 8px 6px; }
+  .sv-thumb-page span { height: 3px; background: #e6e6e6; border-radius: 1px; }
+  .sv-thumb-num { text-align: center; font-size: 10px; color: var(--ink-4); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  /* Canvas */
+  .sv-canvas { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+  .sv-pagenav { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .sv-workspace { background: var(--bg-sunken); border-radius: 8px; padding: 28px 32px; overflow: auto; position: relative; flex: 1; min-height: 0; display: flex; justify-content: center; }
+  .sv-page { width: 100%; max-width: 640px; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.14); border-radius: 2px; padding: 52px 60px; color: #1a1a1a; font-size: 14px; line-height: 1.75; height: max-content; }
+  .sv-page .scene-h { font-weight: 700; letter-spacing: .04em; text-transform: uppercase; font-size: 12.5px; color: #555; margin-bottom: 18px; }
+  .sv-page .stage-dir { font-style: italic; color: #555; margin: 12px 0; }
+  .sv-page .char { text-align: center; font-weight: 700; letter-spacing: .06em; margin-top: 16px; }
+  .sv-page .line { text-align: center; max-width: 72%; margin: 2px auto 0; }
+  .sv-page mark { background: #fff4b8; padding: 0 2px; border-radius: 2px; }
+  .sv-anno-badge { display: inline-block; vertical-align: super; font-size: 9px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 3px; padding: 0 4px; margin-left: 4px; }
+  /* Bookmarks panel */
+  .sv-bookmarks { width: 224px; flex-shrink: 0; background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; min-height: 0; padding: 10px; gap: 10px; }
+  .sv-bm-list { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+  .sv-bm-item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: var(--radius-s); font-size: 13px; color: var(--ink-2); cursor: pointer; border: 0; background: none; text-align: left; width: 100%; }
+  .sv-bm-item:hover { background: var(--bg-muted); }
+  .sv-bm-item[data-active="1"] { background: var(--bg-sunken); color: var(--ink); font-weight: 500; }
+  .sv-bm-item .pg { margin-left: auto; font-size: 11px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+  .sv-zoomgroup { display: flex; align-items: center; gap: 0; border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+  .sv-zoomgroup .btn { border-radius: 0; }
+</style>
+</head>
+<body data-rail-prod="pirates" data-prod-tab="script" data-ref-tag="Production · Your Script · live source">
+<div class="app">
+  <main class="main">
+    <div class="page" style="display:flex; flex-direction:column;">
+      <div class="sv-root">
+
+        <!-- Annotation tool rail -->
+        <div class="sv-toolrail">
+          <button class="sv-tool" data-active="1" title="Pointer / pan"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="m13 13 6 6"/></svg></button>
+          <button class="sv-tool" title="Highlight box"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></button>
+          <button class="sv-tool" title="Highlight text"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg></button>
+          <button class="sv-tool" title="Cue"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></button>
+          <button class="sv-tool" title="Note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5z"/><path d="M15 3v6h6"/></svg></button>
+          <div class="sv-tool-div"></div>
+          <div class="sv-swatches">
+            <button class="sv-swatch" data-on="1" style="background:#e0a106;" title="Amber"></button>
+            <button class="sv-swatch" style="background:#2a6fdb;" title="Blue"></button>
+            <button class="sv-swatch" style="background:#1f8a5b;" title="Green"></button>
+            <button class="sv-swatch" style="background:#d9534f;" title="Red"></button>
+          </div>
+        </div>
+
+        <!-- Thumbnails -->
+        <div class="sv-thumbs">
+          <div class="sv-thumb"><div class="sv-thumb-page"><span style="width:60%"></span><span style="width:90%"></span><span style="width:80%"></span><span style="width:50%"></span></div><div class="sv-thumb-num">7</div></div>
+          <div class="sv-thumb" data-active="1"><div class="sv-thumb-page"><span style="width:50%"></span><span style="width:85%"></span><span style="width:70%"></span><span style="width:90%"></span><span style="width:40%"></span></div><div class="sv-thumb-num">8</div></div>
+          <div class="sv-thumb"><div class="sv-thumb-page"><span style="width:70%"></span><span style="width:60%"></span><span style="width:88%"></span></div><div class="sv-thumb-num">9</div></div>
+          <div class="sv-thumb"><div class="sv-thumb-page"><span style="width:80%"></span><span style="width:55%"></span><span style="width:75%"></span><span style="width:65%"></span></div><div class="sv-thumb-num">10</div></div>
+        </div>
+
+        <!-- Canvas -->
+        <div class="sv-canvas">
+          <!-- Page-nav toolbar (1:1) -->
+          <div class="sv-pagenav">
+            <div style="display:flex; align-items:center; gap:4px;">
+              <button class="btn ghost btn-icon" style="width:30px; height:30px;" title="Previous page"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+              <div style="display:flex; align-items:center; gap:3px; font-size:13px; color:var(--ink-3);">
+                <input aria-label="Go to page" value="8" style="width:34px; text-align:center; font-size:13px; padding:3px 2px; border:1px solid var(--border); border-radius:5px; background:var(--bg); color:var(--ink); outline:none;" />
+                <span>/ 64</span>
+              </div>
+              <button class="btn ghost btn-icon" style="width:30px; height:30px;" title="Next page"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+            </div>
+
+            <!-- Zoom controls -->
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button class="btn ghost btn-icon" title="Fit whole page" style="width:28px; height:28px; color:var(--accent); background:var(--accent-soft);"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+              <div class="sv-zoomgroup">
+                <button class="btn ghost btn-icon" title="Zoom out" style="width:28px; height:28px; border-right:1px solid var(--border);"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M8 11h6"/></svg></button>
+                <span style="font-size:12px; color:var(--ink-3); min-width:38px; text-align:center; padding:0 4px;">Fit</span>
+                <button class="btn ghost btn-icon" title="Zoom in" style="width:28px; height:28px; border-left:1px solid var(--border);"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></svg></button>
+              </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:8px;">
+              <a href="#" class="btn ghost" style="font-size:12px; height:28px; gap:5px; text-decoration:none;"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg><span>AI setup</span></a>
+              <button class="btn ghost" data-toggle-bm style="font-size:12px; height:28px; gap:5px;"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Bookmark</span></button>
+              <a href="Production - Focus View.html" class="btn ghost" style="font-size:12px; height:28px; gap:5px; text-decoration:none;" title="Open full-screen focus view"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg><span>Focus view</span></a>
+              <button class="btn ghost" style="font-size:12px; height:28px; gap:5px;"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span>Download PDF</span></button>
+              <button class="btn ghost" data-view-toggle style="font-size:12px; height:28px; gap:5px;"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h.01M3 18h.01M3 6h.01M8 12h13M8 18h13M8 6h13"/></svg><span data-view-label>Cue sheet</span></button>
+            </div>
+          </div>
+
+          <!-- Script workspace (PDF) -->
+          <div class="sv-view sv-workspace" data-view="script">
+            <div class="sv-page">
+              <div class="scene-h">Act I — Scene 2 · A rocky seashore on the coast of Cornwall</div>
+              <p class="stage-dir">FREDERIC is discovered seated in a despondent attitude at the entrance of the cave. RUTH appears at the mouth of the cave.</p>
+              <div class="char">FREDERIC</div>
+              <p class="line">Oh, take me back! I cannot, will not, stay where pirates rule the day.</p>
+              <div class="char">RUTH</div>
+              <p class="line">And do you think that I am not your friend? <span class="sv-anno-badge">SM</span></p>
+              <p class="stage-dir">A troop of girls enters, led by EDITH, KATE and ISABEL.</p>
+              <div class="char">MABEL</div>
+              <p class="line"><mark>Poor wandering one! Though thou hast surely strayed,</mark> take heart of grace, thy steps retrace.</p>
+              <div class="char">FREDERIC</div>
+              <p class="line">Ah, must I leave thee here, in endless night to dream?</p>
+            </div>
+          </div>
+
+          <!-- Cue sheet view -->
+          <div class="sv-view sv-cuesheet" data-view="cues" style="display:none;">
+            <div class="sv-cuesheet-head">
+              <div><div class="sv-cuesheet-title">Cue sheet</div><div class="sv-cuesheet-sub">The Pirates of Penzance · 22 cues</div></div>
+              <button class="btn ghost"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span>Export CSV</span></button>
+            </div>
+            <div class="sv-cuesheet-scroll">
+              <table class="sv-cuesheet-table">
+                <thead><tr><th>Cue</th><th>Pg</th><th>Line</th><th>Notes</th><th></th></tr></thead>
+                <tbody>
+                  <tr class="sv-cuesheet-section"><td colspan="5"><span class="sv-cuesheet-section-label">Act I</span></td></tr>
+                  <tr class="sv-cuesheet-row"><td><span class="sv-cuesheet-cue"><span class="sv-cuesheet-dot" style="background:#e0a106"></span>LX 1</span></td><td><button class="sv-cuesheet-page">3</button></td><td><span class="sv-cuesheet-line">"House to half"</span></td><td><input class="sv-cuesheet-input" value="Warn before downbeat" /></td><td><button class="sv-cuesheet-del"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></td></tr>
+                  <tr class="sv-cuesheet-row"><td><span class="sv-cuesheet-cue"><span class="sv-cuesheet-dot" style="background:#e0a106"></span>LX 2</span></td><td><button class="sv-cuesheet-page">3</button></td><td><span class="sv-cuesheet-line">"Lights up — sunrise"</span></td><td><input class="sv-cuesheet-input" placeholder="—" /></td><td><button class="sv-cuesheet-del"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></td></tr>
+                  <tr class="sv-cuesheet-row"><td><span class="sv-cuesheet-cue"><span class="sv-cuesheet-dot" style="background:#2a6fdb"></span>SD 1</span></td><td><button class="sv-cuesheet-page">5</button></td><td><span class="sv-cuesheet-line">"Thunder roll"</span></td><td><input class="sv-cuesheet-input" value="Hold under dialogue" /></td><td><button class="sv-cuesheet-del"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></td></tr>
+                  <tr class="sv-cuesheet-section"><td colspan="5"><span class="sv-cuesheet-section-label">Act II</span></td></tr>
+                  <tr class="sv-cuesheet-row"><td><span class="sv-cuesheet-cue"><span class="sv-cuesheet-dot" style="background:#e0a106"></span>LX 12</span></td><td><button class="sv-cuesheet-page">22</button></td><td><span class="sv-cuesheet-line">"Moonlight — chapel"</span></td><td><input class="sv-cuesheet-input" value="Slow 8-count fade" /></td><td><button class="sv-cuesheet-del"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></td></tr>
+                  <tr class="sv-cuesheet-row"><td><span class="sv-cuesheet-cue"><span class="sv-cuesheet-dot" style="background:var(--accent)"></span>LX 18</span></td><td><button class="sv-cuesheet-page">27</button></td><td><span class="sv-cuesheet-line">"Finale build to full"</span></td><td><input class="sv-cuesheet-input" value="Top of paradox song" /></td><td><button class="sv-cuesheet-del"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bookmarks panel -->
+        <aside class="sv-bookmarks">
+          <div class="sv-bm-tabs">
+            <button class="sv-bm-tab active" data-active="1">Scenes <span class="sv-bm-tab-count">9</span></button>
+            <button class="sv-bm-tab" data-active="0">Songs <span class="sv-bm-tab-count">14</span></button>
+          </div>
+          <div class="sv-bm-list">
+            <button class="sv-bm-item">Act I — Opening<span class="pg">1</span></button>
+            <button class="sv-bm-item">Sc. 1 · The pirate ship<span class="pg">3</span></button>
+            <button class="sv-bm-item" data-active="1">Sc. 2 · Frederic &amp; the maidens<span class="pg">8</span></button>
+            <button class="sv-bm-item">Sc. 3 · Mabel's entrance<span class="pg">12</span></button>
+            <button class="sv-bm-item">Act I Finale<span class="pg">18</span></button>
+            <button class="sv-bm-item">Act II — A ruined chapel<span class="pg">22</span></button>
+            <button class="sv-bm-item">Sc. 1 · The policemen<span class="pg">24</span></button>
+            <button class="sv-bm-item">Sc. 2 · The paradox<span class="pg">27</span></button>
+            <button class="sv-bm-item">Act II Finale<span class="pg">31</span></button>
+          </div>
+        </aside>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="shell.js"></script>
+<script>
+  // Cue sheet toggle (one button swaps Script ⇄ Cue sheet, like the app)
+  (function () {
+    var btn = document.querySelector('[data-view-toggle]');
+    var label = document.querySelector('[data-view-label]');
+    var mode = 'script';
+    btn.addEventListener('click', function () {
+      mode = mode === 'script' ? 'cues' : 'script';
+      document.querySelectorAll('.sv-view').forEach(function (p) { p.style.display = (p.getAttribute('data-view') === mode ? '' : 'none'); });
+      label.textContent = mode === 'cues' ? 'Script' : 'Cue sheet';
+      btn.className = mode === 'cues' ? 'btn' : 'btn ghost';
+    });
+  })();
+  document.querySelectorAll('.sv-bm-tab').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.sv-bm-tab').forEach(function (x) { x.setAttribute('data-active', x === b ? '1' : '0'); x.classList.toggle('active', x === b); });
+    });
+  });
+  document.querySelectorAll('.sv-tool').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.sv-tool').forEach(function (x) { x.setAttribute('data-active', x === b ? '1' : '0'); });
+    });
+  });
+</script>
+</body>
+</html>
