@@ -27,6 +27,7 @@ import {
   type QuickProductionInput,
 } from "./wizard-constants";
 import { isValidProductionColor } from "./constants";
+import { wizardDeptRows } from "./departments";
 import { createDefaultFolders } from "@/features/documents/actions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isValidEmail } from "@/features/members/validation";
@@ -198,12 +199,14 @@ export async function createProductionFull(
 
   const productionId = newProduction.id;
 
-  // Departments — one row per enabled, known department key.
+  // Departments — map the wizard's selections onto the canonical catalog
+  // (with labels + order) so they drive the board buckets and report sections.
   const enabledDepts = DEPT_KEYS.filter((key) => input.depts?.[key]);
-  if (enabledDepts.length > 0) {
-    await db.insert(productionDepartments).values(
-      enabledDepts.map((key) => ({ productionId, key })),
-    );
+  const deptRows = wizardDeptRows(enabledDepts);
+  if (deptRows.length > 0) {
+    await db
+      .insert(productionDepartments)
+      .values(deptRows.map((r) => ({ productionId, ...r })));
   }
 
   // Character / role list — only rows with a name.

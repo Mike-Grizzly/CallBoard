@@ -7,6 +7,17 @@ Rehearsal report creation, daily personal log per production, "import from log" 
 As a stage manager or director, I can keep a daily log of running notes, then create a rehearsal report (optionally importing from my log). I can attach files to reports. All team members can view reports.
 
 ## Status: IMPLEMENTED
+- **Department sections are now per-production (2026-06-16).** The form, both detail
+  views (desktop + mobile), and both email renderers iterate the production's
+  resolved departments (`features/productions/departments.ts`,
+  `getResolvedDepartments`) instead of the fixed 12. The 12 STANDARD departments keep
+  their existing `dept_*` columns; CUSTOM departments store notes in
+  `rehearsal_reports.dept_notes` (jsonb, key → HTML); `reportDeptHtml` reads
+  column-or-jsonb so old reports render unchanged. The form submits standard depts via
+  their `dept_*` fields and customs via `deptnote_<key>`; `updateReport` MERGES custom
+  notes so removing a department from the production never wipes a past report. Manage
+  which departments appear in a production's Settings tab (`04-productions.md`). See
+  decision-log 2026-06-16 (follow-up 3).
 - **Known issue:** TipTap bullet points do not render correctly due to Tailwind prose CSS reset. Deferred to UX polish.
 
 ## Data model

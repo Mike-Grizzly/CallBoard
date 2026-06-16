@@ -2130,3 +2130,43 @@ back to Director/Stage/Casting + Crew.
 first real consumer, and the board now reflects each show's actual shape. It does
 **not** change the rehearsal report sections (still the fixed list) — wiring reports
 to `production_departments` is a separate follow-up logged in open-questions.
+
+---
+
+## 2026-06-16 (follow-up 3) — Unified production-department model: dynamic report sections + custom departments
+
+**Decision:** `features/productions/departments.ts` is the single source of truth
+for production departments, shared by rehearsal reports, the Cast & Crew board,
+the setup wizard, and the new production Settings tab. A production's departments
+live in `production_departments` (now `key` + `label` + `sort_order`). The 12
+STANDARD departments map 1:1 onto the existing `rehearsal_reports` dept columns;
+CUSTOM departments (user-named) store their per-report notes in a new
+`rehearsal_reports.dept_notes jsonb` map. Reports, both detail views, and both
+email renderers iterate the production's resolved departments instead of the fixed
+12-item list.
+
+**Storage choice (hybrid + read-time fallback, NO data migration):** Only additive
+columns were added (`production_departments.label`/`sort_order`,
+`rehearsal_reports.dept_notes`). Standard departments keep writing/reading their
+existing columns; `reportDeptHtml` falls back column→jsonb so every existing report
+keeps rendering unchanged. This was chosen over a child table + backfill to avoid a
+risky data migration on the app's most-developed feature. Migration
+`add_department_labels_and_report_dept_notes` applied live to project
+`avqgfzrcwegebtbvmcwo`; columns verified present.
+
+**Why:** The user wanted reports to show only a production's relevant departments
+(the wizard's department choice was previously write-only — see follow-up 2) AND to
+add/remove/rename/reorder departments, including custom names, after the wizard.
+
+**Mapping rules:** standard catalog keys (scenery/props/costumes/hair_makeup/
+lighting/sound/sound_effects/music/choreography/video/crew/other) ↔ report columns.
+Legacy wizard keys normalize (set→scenery, choreo→choreography, …); team-area keys
+with no report section (director/stage/casting/intimacy/dramaturgy) are dropped from
+the department list (leadership is always-on on the board instead). A production with
+no departments on file falls back to the full standard catalog (preserves the prior
+"show all 12" behavior). Custom keys are `custom_<slug>`; board bucket = crew + the
+label as position.
+
+**Impact / not changed:** The schedule-change *category* dropdown in
+`subtab-editors.tsx` still uses the full standard catalog (it's a color tag, not a
+report section) — left as-is. Settings is manage-gated (`productions:manage`).

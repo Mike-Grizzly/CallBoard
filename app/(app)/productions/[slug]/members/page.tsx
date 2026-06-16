@@ -6,9 +6,9 @@ import { can } from "@/lib/permissions";
 import {
   getProductionBySlug,
   getProductionRoles,
-  getProductionDepartments,
+  getResolvedDepartments,
 } from "@/features/productions/queries";
-import { buildTeamBuckets } from "@/features/productions/wizard-constants";
+import { buildTeamBuckets } from "@/features/productions/departments";
 import {
   getProductionMembers,
   getPeopleDirectory,
@@ -37,7 +37,7 @@ export default async function ProductionMembersPage({
     getPeopleDirectory(user.organizationId),
     getProductionMembers(production.id),
     getProductionRoles(production.id),
-    getProductionDepartments(production.id),
+    getResolvedDepartments(production.id),
   ]);
 
   const teamBuckets = buildTeamBuckets(departments);

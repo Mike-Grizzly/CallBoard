@@ -810,15 +810,30 @@ browser-verified** (no display in the sandbox). Open items:
   Buckets are built per production from `production_departments` via
   `buildTeamBuckets`. The Ensemble bucket and the dept→role mapping (`DEPT_BUCKET`)
   are still code constants; fully user-editable positions remain a follow-up.
-- **Rehearsal reports are NOT linked to `production_departments` (gap found
-  2026-06-16).** A report shows the fixed `features/reports/constants.ts#DEPARTMENTS`
-  sections (Scenery/Props/Costumes/Hair-Makeup/Lighting/Sound/Sound FX/Music/Choreo/
-  Video/Crew/Other) on every production, ignoring which departments the show actually
-  enabled in the wizard. The user expected the wizard's department choice to drive the
-  report sections. Wiring reports (and the document folders / notification channels the
-  schema comment also promises) to `production_departments` is a real, separate
-  follow-up. Note the two department vocabularies differ slightly (wizard `ALL_DEPTS`
-  vs report `DEPARTMENTS`) and would need reconciling.
+- **Rehearsal reports ARE now linked to `production_departments` (resolved
+  2026-06-16 follow-up 3).** Reports, both detail views, and both email renderers
+  iterate the production's resolved departments; a Settings tab manages them
+  (add/remove/rename/reorder + custom names). Remaining threads:
+  - **Document folders / notification channels** are still NOT department-driven
+    (the schema comment promised these too) — separate follow-up.
+  - **Default = full standard catalog** when a production has no departments on file.
+    Productions that never touched the wizard therefore still show all 12 report
+    sections until trimmed in Settings. Intended (no data hidden), but means the
+    feature is opt-in per existing production.
+  - **Legacy wizard depts `intimacy` / `dramaturgy`** have no report column and are
+    dropped from the department list on resolve (they were never report sections).
+    If a production enabled them, they won't appear until re-added as customs.
+  - **Custom-department notes live in `rehearsal_reports.dept_notes` (jsonb).** If a
+    custom department is renamed, its key (derived from the original label) is kept so
+    existing notes stay attached; renaming does not re-key. Deleting a custom
+    department from Settings does not delete past reports' notes (preserved in jsonb),
+    but they stop showing until the department is re-added with the same key.
+  - **The schedule-change category dropdown** (`subtab-editors.tsx`) still lists the
+    full standard catalog rather than the production's departments — it's a color tag,
+    not a report section, so left as-is; revisit if it should match.
+  - Still **not browser-verified** — needs a live pass: create/edit/distribute a
+    report after trimming + adding a custom department; confirm the email + both
+    detail views; confirm the board buckets update.
 - **Drag-and-drop is native HTML5 only** (per dev-rules: no new libs without
   approval). The accessible/mobile path is tap-to-assign. If a keyboard-drag or a
   DnD library is wanted, that's a follow-up; both interaction paths must be kept.

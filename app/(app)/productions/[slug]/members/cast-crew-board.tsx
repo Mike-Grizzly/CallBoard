@@ -21,7 +21,7 @@ import {
 } from "@/features/members/actions";
 import type { DirectoryPerson, ProductionMember } from "@/features/members/queries";
 import type { ProductionRoleRow } from "@/features/productions/queries";
-import type { ProductionTeamBucket } from "@/features/productions/wizard-constants";
+import type { ProductionTeamBucket } from "@/features/productions/departments";
 import { PersonDrawer } from "@/app/(app)/(default)/people/person-drawer";
 
 // A team bucket is a (role, position) pair. `position` is an optional label

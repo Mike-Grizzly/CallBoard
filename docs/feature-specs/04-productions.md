@@ -101,19 +101,37 @@ table" (`cast-list.tsx` + `production-member-manager.tsx`, both removed) with on
   (drop → `assignRoleToMember(roleId, userId)`, which swaps/moves + grants access;
   `×` → `unassignRole`), plus a **large multi-occupant Ensemble bucket** below the
   slots (role `cast` + position `"Ensemble"`).
-- **Right bottom — Production team:** **multi-occupant buckets derived per
-  production from the setup wizard's department selections** (`production_departments`
-  → `buildTeamBuckets` in `wizard-constants.ts`, passed from `page.tsx`). Each enabled
-  department becomes a bucket: Director / Stage Management / Casting-Producing /
-  Choreography map onto distinct app roles; the rest (Music, Costumes, Props, Set,
-  Lighting, Sound, Intimacy, Dramaturgy) are role `crew` distinguished by a short
-  position label held in `characterName`. A generic **Crew** catch-all is always
-  appended. Quick-add productions (no departments on file) fall back to Director /
-  Stage Management / Casting + Crew. Assignment goes through the
-  `assignTeamMember({ productionId, userId, role, position })` action (it overwrites
-  `characterName` and clears any character slot — a team drop is a MOVE); the chip
-  `×` calls `removeProductionMember`. See decision-log 2026-06-16 (follow-up) for the
-  `characterName`-as-position model and the department-derived buckets.
+- **Right bottom — Production team:** **always-on leadership buckets** (Director /
+  Stage Manager / Producer) **plus one bucket per production department**, built by
+  `buildTeamBuckets` in `features/productions/departments.ts` from the resolved
+  department list. Choreography maps to the `choreographer` role; the other
+  departments are role `crew` distinguished by a short position label held in
+  `characterName`; a generic **Crew** catch-all is appended when no department
+  supplies one. Assignment goes through `assignTeamMember({ productionId, userId,
+  role, position })` (it overwrites `characterName` and clears any character slot — a
+  team drop is a MOVE); the chip `×` calls `removeProductionMember`. See decision-log
+  2026-06-16 (follow-ups 2 & 3) for the `characterName`-as-position model and the
+  department-derived buckets.
+
+## Production departments & Settings tab (2026-06-16)
+`features/productions/departments.ts` is the single source of truth for a
+production's departments (a catalog of 12 standard departments aligned 1:1 with the
+rehearsal-report columns, each with a board-bucket mapping, + user-added custom
+departments). A production's departments are stored in `production_departments`
+(`key` + `label` + `sort_order`); `resolveDepartments(rows)` turns them into ordered
+display departments (normalizing legacy wizard keys, falling back to the full catalog
+when none are set). They drive **both** the Cast & Crew board team buckets **and** the
+rehearsal-report sections (see `05-reports.md`).
+
+- **Settings tab** — `/productions/[slug]/settings` (manage-gated; added to the
+  production tab strip). `DepartmentSettings` lets you toggle standard departments,
+  add custom names, rename, reorder, and remove → `saveProductionDepartments`
+  (`department-actions.ts`, rewrites the whole set in a transaction).
+- **Wizard** seeds `production_departments` from the department step via
+  `wizardDeptRows` (maps wizard keys → canonical, with labels + order).
+- **Manual test:** open Settings → add a custom department + remove a standard one →
+  Save → confirm the board team buckets and a new rehearsal report's sections both
+  reflect the change; rename a department and confirm it persists.
 - **Drag to move:** roster cards, **filled character slots, and team/ensemble chips**
   are all drag sources, so a person can be dragged directly from one role to another
   without going back to the roster.

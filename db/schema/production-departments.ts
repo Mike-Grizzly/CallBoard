@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, integer, timestamp } from "drizzle-orm/pg-core";
 import { productions } from "./productions";
 
 /**
@@ -18,6 +18,11 @@ export const productionDepartments = pgTable("production_departments", {
     .notNull()
     .references(() => productions.id, { onDelete: "cascade" }),
   key: text("key").notNull(),
+  // Display label — lets a department be renamed and supports custom
+  // departments added after the wizard. Empty falls back to the catalog label.
+  label: text("label").notNull().default(""),
+  // Display order on the board + report.
+  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
