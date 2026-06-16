@@ -1,7 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getProductionBySlug } from "@/features/productions/queries";
+import {
+  getProductionBySlug,
+  getResolvedDepartments,
+} from "@/features/productions/queries";
 import { getProductionMembers } from "@/features/members/queries";
 import { ReportForm } from "../_components/report-form";
 
@@ -23,7 +26,10 @@ export default async function NewReportPage({
     notFound();
   }
 
-  const members = await getProductionMembers(production.id);
+  const [members, departments] = await Promise.all([
+    getProductionMembers(production.id),
+    getResolvedDepartments(production.id),
+  ]);
 
   const mentionMembers = members.map((m) => ({
     id: m.userId,
@@ -39,6 +45,7 @@ export default async function NewReportPage({
       productionId={production.id}
       productionTitle={production.title}
       slug={slug}
+      departments={departments}
       members={mentionMembers}
     />
   );

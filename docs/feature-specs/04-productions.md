@@ -23,11 +23,12 @@ As an admin, I can create productions and assign team members. As a member, I se
 - `app/(app)/productions/production-list.tsx` — production cards with lock icon for non-assigned
 - `app/(app)/productions/new/create-production-form.tsx` — title, dates, status form
 - `app/(app)/productions/[slug]/production-tabs.tsx` — client tab navigation (Overview, Reports, Documents, Daily Log)
-- `app/(app)/productions/[slug]/members/production-member-manager.tsx` — checkbox multi-select, role dropdown, bulk assign
+- `app/(app)/productions/[slug]/members/cast-crew-board.tsx` — the drag-to-assign **Cast & Crew board** (see section below). Replaced the old `cast-list.tsx` + `production-member-manager.tsx` (both removed) by unifying character casting and team assignment into one two-zone board.
 
 ## Server actions
 - `createProduction(formData)` in `features/productions/actions.ts` — validates, creates production with generated slug; requires `productions:manage`
 - `assignProductionMember(formData)` in `features/members/actions.ts` — bulk assign users to production with role; requires `productions:manage`; upsert pattern (update role if already assigned)
+- `assignTeamMember({ productionId, userId, role, position })` in `features/members/actions.ts` — Cast & Crew board team/ensemble assignment; upserts the membership with role + `characterName=position`, clears any character slot (move semantics); requires `productions:manage`
 - `removeProductionMember(formData)` in `features/members/actions.ts` — remove from production; requires `productions:manage`
 
 ## Queries
@@ -86,6 +87,90 @@ Behavior:
 Schema added (additive, applied to the `CallBoard` Supabase project + Drizzle schema):
 - `productions`: `venue`, `season`, `first_rehearsal_date`, `tech_start_date`, `rehearsal_days` (jsonb), `rehearsal_start`, `rehearsal_end`
 - `production_departments` (one row per enabled dept key), `production_roles` (cast list: name/actor/type/sort_order). Uniqueness enforced in app code, not via composite constraints. RLS enabled to match the rest of the schema.
+
+## Cast & Crew board — drag-to-assign (2026-06-16)
+Rebuild of `/productions/[slug]/members` from the `handoff/cast-crew-drag-assign`
+design. Replaces the old stacked "cast list + bulk-assign card + current-team
+table" (`cast-list.tsx` + `production-member-manager.tsx`, both removed) with one
+**two-zone board** (`cast-crew-board.tsx`, a `"use client"` component):
+
+- **Left — Company roster:** every org member (`getPeopleDirectory`), searchable
+  + chip-filterable (All / Unassigned / Cast / Creative / Crew). Each card is a
+  native HTML5 **drag source** on desktop; assigned people are dimmed with a tick.
+- **Right top — Cast:** one **single-occupant slot** per `production_roles` row
+  (drop → `assignRoleToMember(roleId, userId)`, which swaps/moves + grants access;
+  `×` → `unassignRole`), plus a **large multi-occupant Ensemble bucket** below the
+  slots (role `cast` + position `"Ensemble"`).
+- **Right bottom — Production team:** **always-on leadership buckets** (Director /
+  Stage Manager / Producer) **plus one bucket per production department**, built by
+  `buildTeamBuckets` in `features/productions/departments.ts` from the resolved
+  department list. Choreography maps to the `choreographer` role; the other
+  departments are role `crew` distinguished by a short position label held in
+  `characterName`; a generic **Crew** catch-all is appended when no department
+  supplies one. Assignment goes through `assignTeamMember({ productionId, userId,
+  role, position })` (it overwrites `characterName` and clears any character slot — a
+  team drop is a MOVE); the chip `×` calls `removeProductionMember`. See decision-log
+  2026-06-16 (follow-ups 2 & 3) for the `characterName`-as-position model and the
+  department-derived buckets.
+
+## Production departments & Settings tab (2026-06-16)
+`features/productions/departments.ts` is the single source of truth for a
+production's departments (a catalog of 12 standard departments aligned 1:1 with the
+rehearsal-report columns, each with a board-bucket mapping, + user-added custom
+departments). A production's departments are stored in `production_departments`
+(`key` + `label` + `sort_order`); `resolveDepartments(rows)` turns them into ordered
+display departments (normalizing legacy wizard keys, falling back to the full catalog
+when none are set). They drive **both** the Cast & Crew board team buckets **and** the
+rehearsal-report sections (see `05-reports.md`).
+
+- **Settings tab** — `/productions/[slug]/settings` (manage-gated; added to the
+  production tab strip). `DepartmentSettings` lets you toggle standard departments,
+  add custom names, rename, reorder, and remove → `saveProductionDepartments`
+  (`department-actions.ts`, rewrites the whole set in a transaction).
+- **Wizard** seeds `production_departments` from the department step via
+  `wizardDeptRows` (maps wizard keys → canonical, with labels + order).
+- **Manual test:** open Settings → add a custom department + remove a standard one →
+  Save → confirm the board team buckets and a new rehearsal report's sections both
+  reflect the change; rename a department and confirm it persists.
+- **Drag to move:** roster cards, **filled character slots, and team/ensemble chips**
+  are all drag sources, so a person can be dragged directly from one role to another
+  without going back to the roster.
+- **Consistent avatar color:** a person's avatar uses their stable org-role color
+  (`ROLE_META[person.role].c`, via `colorOf`) everywhere — roster, slots, chips,
+  sheet — so it never changes as they move between board roles.
+- **Person drawer:** reuses the People directory's `PersonDrawer` verbatim (per the
+  handoff's "do not fork a second drawer"). Opened by clicking any roster card,
+  filled slot, or team chip.
+- **Touch / ≤859px:** drag is replaced by **tap-to-assign**. A Casting board ⇄
+  Company toggle, a `+` on each person (→ role bottom-sheet), and tapping an empty
+  slot/bucket (→ people bottom-sheet, unassigned first). The sheet is a new
+  `.cc-sheet` surface; the inline "Invite & cast" path (admin-only, reuses
+  `inviteAndAssignRole`) lives in the cast-a-character sheet so that capability
+  from the old cast-list isn't lost.
+- **Feedback:** a live `Cast n/total` + `Team n` progress readout and a toast
+  (`.ax-toast`, red on error) on every mutation.
+
+No new libraries, no schema change. All mutations reuse existing server actions
+and `router.refresh()` (no divergent optimistic state). CSS ported into
+`globals.css` (`.ax-*` + `.cc-sheet*`). `tsc` + `eslint` clean; `next build`
+compiles + typechecks (page-data step needs live `DATABASE_URL`, unrelated).
+**Not browser-verified** — no display in the sandbox.
+
+### Manual test checklist (cast & crew board)
+- [ ] Desktop: drag a company member onto an empty character slot → they're cast, slot fills, toast confirms, roster card dims
+- [ ] Dragging an already-cast person to a different character moves them (old slot clears)
+- [ ] `×` on a filled slot uncasts (person keeps production access; only the character clears)
+- [ ] Drag a person into a team role bucket → they appear as a chip; chip `×` removes them from the production
+- [ ] Lighting Designer and Sound Designer buckets exist under Production team and accept drops (stored as crew + position)
+- [ ] Ensemble bucket under the character slots accepts many people
+- [ ] **Drag-to-move:** a name already in a slot/chip can be dragged straight to another role (e.g. Stage Manager → Lighting Designer) without returning to the roster; the old placement clears
+- [ ] An avatar keeps the **same color** for a person across the roster, slots, and chips (no color change on each new role)
+- [ ] Clicking a roster card / filled slot / team chip opens the reused PersonDrawer
+- [ ] Search + each filter chip (Unassigned/Cast/Creative/Crew) narrow the roster correctly
+- [ ] ≤859px: board/company toggle works; `+` on a person opens the role sheet; tapping an empty slot/bucket opens the people sheet
+- [ ] Admin-only "Invite & cast" in the cast-a-character sheet provisions + casts a new person
+- [ ] A non-admin with `productions:manage` (producer) can assign but the drawer's org-management actions surface a permission error rather than silently succeeding
+- [ ] Light/dark/dusk/cool themes render (tokens inherit; the `.drop` highlight uses `--accent`)
 
 ## Manual test checklist (new builder)
 - [ ] "+" on `/productions` opens the Full setup / Quick add menu (manage roles only)

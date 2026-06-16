@@ -14,7 +14,7 @@ import {
   deleteReportAttachment,
 } from "@/features/reports/attachments";
 import { uploadFileToSignedUrl } from "@/lib/storage-upload";
-import { DEPARTMENTS } from "@/features/reports/constants";
+import type { ResolvedDepartment } from "@/features/productions/departments";
 import type { ReportDetail } from "@/features/reports/queries";
 import { RichTextEditor } from "@/components/ui/rich-text-editor-lazy";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
@@ -63,6 +63,7 @@ export function ReportForm({
   productionTitle,
   slug,
   initial,
+  departments,
   existingAttachments = [],
   members,
 }: {
@@ -71,6 +72,7 @@ export function ReportForm({
   productionTitle: string;
   slug: string;
   initial?: ReportDetail;
+  departments: ResolvedDepartment[];
   existingAttachments?: ExistingAttachment[];
   members?: MentionMember[];
 }) {
@@ -185,13 +187,16 @@ export function ReportForm({
   );
   const [deptNotes, setDeptNotes] = useState<Record<string, string>>(() => {
     const m: Record<string, string> = {};
-    for (const d of DEPARTMENTS) {
-      m[d.key] = ((initial?.[d.key] as string | null) ?? "") || "";
+    for (const d of departments) {
+      const v = d.columnKey
+        ? (initial?.[d.columnKey as keyof ReportDetail] as string | null)
+        : initial?.deptNotes?.[d.key];
+      m[d.key] = (v ?? "") || "";
     }
     return m;
   });
   const [editingDept, setEditingDept] = useState<string | null>(null);
-  const editingDeptDef = DEPARTMENTS.find((d) => d.key === editingDept) ?? null;
+  const editingDeptDef = departments.find((d) => d.key === editingDept) ?? null;
   const [breaks, setBreaks] = useState<Break[]>(initial?.breaks ?? []);
   const [scenesWorked, setScenesWorked] = useState<SceneWorked[]>(
     initial?.scenesWorked ?? [],
@@ -489,7 +494,7 @@ export function ReportForm({
         <div style={{ padding: 20 }}>
           <div style={{ display: activeTab === "notes" ? "block" : "none" }}>
             <div className="grid grid-2" style={{ gap: 14 }}>
-              {DEPARTMENTS.map((d) => {
+              {departments.map((d) => {
                 const html = deptNotes[d.key];
                 const empty = !html || !html.replace(/<[^>]+>/g, "").trim();
                 return (

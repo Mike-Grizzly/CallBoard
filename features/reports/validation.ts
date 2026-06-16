@@ -37,6 +37,8 @@ export type ReportFormData = {
   lineNotes: LineNote[];
   injuries: Injury[];
   departments: Record<string, string | null>;
+  /** Custom-department notes (key → HTML), from `deptnote_<key>` fields. */
+  customDeptNotes: Record<string, string | null>;
 };
 
 function nullableText(formData: FormData, name: string): string | null {
@@ -155,6 +157,15 @@ export function validateReportForm(formData: FormData): {
     departments[dept.key] = nullableText(formData, dept.field);
   }
 
+  // Custom-department notes arrive as `deptnote_<key>` fields.
+  const customDeptNotes: Record<string, string | null> = {};
+  for (const [name, value] of formData.entries()) {
+    if (name.startsWith("deptnote_") && typeof value === "string") {
+      const trimmed = value.trim();
+      customDeptNotes[name.slice("deptnote_".length)] = trimmed ? trimmed : null;
+    }
+  }
+
   return {
     data: {
       reportDate,
@@ -189,6 +200,7 @@ export function validateReportForm(formData: FormData): {
       lineNotes: parseJsonArray<LineNote>(formData, "line_notes_json", isLineNote),
       injuries: parseJsonArray<Injury>(formData, "injuries_json", isInjury),
       departments,
+      customDeptNotes,
     },
   };
 }

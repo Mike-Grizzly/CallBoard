@@ -1,7 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getProductionBySlug } from "@/features/productions/queries";
+import {
+  getProductionBySlug,
+  getResolvedDepartments,
+} from "@/features/productions/queries";
 import { getProductionMembers } from "@/features/members/queries";
 import { getReportById } from "@/features/reports/queries";
 import { getReportAttachments } from "@/features/reports/attachments";
@@ -25,10 +28,11 @@ export default async function EditReportPage({
     notFound();
   }
 
-  const [report, members, attachmentRows] = await Promise.all([
+  const [report, members, attachmentRows, departments] = await Promise.all([
     getReportById(reportId),
     getProductionMembers(production.id),
     getReportAttachments(reportId),
+    getResolvedDepartments(production.id),
   ]);
 
   if (!report || report.productionId !== production.id) {
@@ -57,6 +61,7 @@ export default async function EditReportPage({
       productionTitle={production.title}
       slug={slug}
       initial={report}
+      departments={departments}
       existingAttachments={existingAttachments}
       members={mentionMembers}
     />

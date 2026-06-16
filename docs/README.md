@@ -46,4 +46,5 @@ These docs **must** be updated whenever:
 | `decision-log.md` | Record of durable project decisions |
 | `admin-playbook.md` | Owner ops: comp/grandfather an org, recover an admin, extend a trial, lifetime deals, discounts (SQL + Stripe) |
 | `open-questions.md` | Unresolved questions, risks, and concerns |
+| `design-handoffs.md` | Standard for design drop-offs: `handoff/<feature>/` folders, status markers, how sessions process them |
 | `feature-specs/` | Per-feature specifications (one file per vertical slice) |

@@ -5,7 +5,10 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getReportById } from "./queries";
 import { getReportAttachments } from "./attachments";
-import { getProductionBySlug } from "@/features/productions/queries";
+import {
+  getProductionBySlug,
+  getResolvedDepartments,
+} from "@/features/productions/queries";
 import { formatReportAsHtml, type EmailAttachmentMeta } from "./email-html";
 import { formatReportAsEmail } from "./email-format";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -87,9 +90,10 @@ export async function sendReport(
     totalBytes += row.fileSize;
   }
 
+  const departments = await getResolvedDepartments(report.productionId);
   const subject = `${production.title} — ${reportLabel}`;
-  const html = formatReportAsHtml(report, production.title, authorName, includedMeta);
-  const text = formatReportAsEmail(report, production.title, authorName, includedMeta);
+  const html = formatReportAsHtml(report, production.title, authorName, includedMeta, departments);
+  const text = formatReportAsEmail(report, production.title, authorName, includedMeta, departments);
 
   const { error } = await resend.emails.send({
     from: FROM,

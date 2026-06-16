@@ -172,6 +172,14 @@ export default async function ProductionLayout({
     icon: "BookOpen",
   });
 
+  if (canManage) {
+    tabs.push({
+      label: "Settings",
+      href: `/productions/${slug}/settings`,
+      icon: "Settings",
+    });
+  }
+
   return (
     <>
       <header className="topbar">

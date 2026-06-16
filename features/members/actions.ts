@@ -570,6 +570,79 @@ export async function inviteAndAssignRole(input: {
   return {};
 }
 
+/**
+ * Assign a person to a production TEAM bucket on the Cast & Crew board. A bucket
+ * is a (role, position) pair — `position` is an optional label held in
+ * `characterName` so the board can show finer positions (e.g. "Lighting
+ * Designer", "Sound Designer") than the coarse role enum, and "Ensemble"
+ * (role `cast`, position "Ensemble") for the big ensemble bucket. Unlike the
+ * bulk `assignProductionMember`, this always overwrites `characterName` (so a
+ * move into a no-position bucket clears a stale label) and clears any character
+ * slot the person held — dragging onto a team bucket is a MOVE, not an addition.
+ */
+export async function assignTeamMember(input: {
+  productionId: string;
+  userId: string;
+  role: Role;
+  position: string | null;
+}): Promise<MemberActionResult> {
+  const currentUser = await requireCurrentUser();
+  if (!can(currentUser.role, "productions:manage")) {
+    return { error: "You don't have permission to manage productions." };
+  }
+  if (!ROLES.includes(input.role)) return { error: "Invalid role." };
+  if (!(await userCanAccessProduction(currentUser, input.productionId))) {
+    return { error: "You don't have access to this production." };
+  }
+  if (!(await userInOrg(input.userId, currentUser.organizationId))) {
+    return { error: "That person isn't in your organization." };
+  }
+
+  const position = input.position?.trim() || null;
+
+  await db.transaction(async (tx) => {
+    // Leaving any character slot — a team/ensemble assignment is a move.
+    await tx
+      .update(productionRoles)
+      .set({ assignedUserId: null, actor: null })
+      .where(
+        and(
+          eq(productionRoles.productionId, input.productionId),
+          eq(productionRoles.assignedUserId, input.userId),
+        ),
+      );
+
+    const [existing] = await tx
+      .select({ id: productionMemberships.id })
+      .from(productionMemberships)
+      .where(
+        and(
+          eq(productionMemberships.userId, input.userId),
+          eq(productionMemberships.productionId, input.productionId),
+        ),
+      )
+      .limit(1);
+
+    if (existing) {
+      await tx
+        .update(productionMemberships)
+        .set({ role: input.role, characterName: position })
+        .where(eq(productionMemberships.id, existing.id));
+    } else {
+      await tx.insert(productionMemberships).values({
+        userId: input.userId,
+        productionId: input.productionId,
+        role: input.role,
+        characterName: position,
+      });
+    }
+  });
+
+  revalidatePath("/productions");
+  revalidatePath("/people");
+  return {};
+}
+
 // ─── People directory: invite & manage org members ────────────────────
 
 export type ProductionAssignmentInput = {

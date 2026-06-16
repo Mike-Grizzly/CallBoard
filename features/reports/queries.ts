@@ -141,6 +141,7 @@ export async function getReportById(reportId: string) {
       deptVideo: rehearsalReports.deptVideo,
       deptCrew: rehearsalReports.deptCrew,
       deptOther: rehearsalReports.deptOther,
+      deptNotes: rehearsalReports.deptNotes,
       distributedAt: rehearsalReports.distributedAt,
       createdAt: rehearsalReports.createdAt,
       updatedAt: rehearsalReports.updatedAt,

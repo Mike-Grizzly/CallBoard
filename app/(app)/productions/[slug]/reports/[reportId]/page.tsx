@@ -5,13 +5,16 @@ import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { MentionText } from "@/components/ui/mention-text";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getProductionBySlug } from "@/features/productions/queries";
+import {
+  getProductionBySlug,
+  getResolvedDepartments,
+} from "@/features/productions/queries";
+import { reportDeptHtml } from "@/features/productions/departments";
 import {
   getProductionMembership,
   getProductionMembers,
 } from "@/features/members/queries";
 import { getReportById } from "@/features/reports/queries";
-import { DEPARTMENTS } from "@/features/reports/constants";
 import {
   getReportAttachments,
   getAttachmentUrl,
@@ -106,11 +109,13 @@ export default async function ReportDetailPage({
     notFound();
   }
 
-  const [attachments, productionMembers, isPinned] = await Promise.all([
-    getReportAttachments(reportId),
-    getProductionMembers(production.id),
-    getIsPinned(user.id, "report", reportId),
-  ]);
+  const [attachments, productionMembers, isPinned, departments] =
+    await Promise.all([
+      getReportAttachments(reportId),
+      getProductionMembers(production.id),
+      getIsPinned(user.id, "report", reportId),
+      getResolvedDepartments(production.id),
+    ]);
   const canUpload = can(user.role, "reports:create");
   const canEdit = can(user.role, "reports:create");
 
@@ -136,10 +141,9 @@ export default async function ReportDetailPage({
     report.nextRehearsalLocation ||
     report.nextRehearsalNotes;
 
-  const filedNotes = DEPARTMENTS.filter((d) => {
-    const v = report[d.key] as string | null;
-    return v && v.replace(/<[^>]+>/g, "").trim();
-  }).length;
+  const filedNotes = departments.filter((d) =>
+    reportDeptHtml(d, report).replace(/<[^>]+>/g, "").trim(),
+  ).length;
 
   const statusPill =
     report.status === "distributed"
@@ -150,6 +154,7 @@ export default async function ReportDetailPage({
     <div className="page-narrow anim-in" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <MobileReportDetail
         report={report}
+        departments={departments}
         productionTitle={production.title}
         authorName={authorName}
         reportNumLabel={reportNumLabel}
@@ -369,8 +374,8 @@ export default async function ReportDetailPage({
         panels={{
           notes: (
             <div className="grid grid-2" style={{ gap: 14 }}>
-              {DEPARTMENTS.map((d) => {
-                const value = (report[d.key] as string | null) ?? "";
+              {departments.map((d) => {
+                const value = reportDeptHtml(d, report);
                 const empty = !value.replace(/<[^>]+>/g, "").trim();
                 return (
                   <div
