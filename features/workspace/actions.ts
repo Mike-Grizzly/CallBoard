@@ -7,7 +7,7 @@ import {
   organizations,
   profiles,
 } from "@/db/schema";
-import { and, eq, isNull, ne } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
 import { createOrganization } from "@/lib/organization";
 import { can } from "@/lib/permissions";
@@ -81,6 +81,36 @@ export async function createWorkspace(
   }
   if (trimmed.length > MAX_NAME_LENGTH) {
     return { error: `Keep it under ${MAX_NAME_LENGTH} characters.` };
+  }
+
+  // Prevent trial farming: if this user is already an admin of any org that
+  // has ever started a trial (trial_started_at is set on first production
+  // create), block creating another free workspace. They'd need to subscribe
+  // on an existing workspace before spinning up a new one.
+  const trialOrg = await db
+    .select({ id: organizationMemberships.organizationId })
+    .from(organizationMemberships)
+    .innerJoin(
+      organizations,
+      and(
+        eq(organizations.id, organizationMemberships.organizationId),
+        isNull(organizations.deletedAt),
+        isNotNull(organizations.trialStartedAt),
+      ),
+    )
+    .where(
+      and(
+        eq(organizationMemberships.userId, user.id),
+        eq(organizationMemberships.role, "admin"),
+      ),
+    )
+    .limit(1);
+
+  if (trialOrg.length > 0) {
+    return {
+      error:
+        "You've already used a free trial on another workspace. Subscribe there before creating a new one.",
+    };
   }
 
   const org = await createOrganization(trimmed, {
