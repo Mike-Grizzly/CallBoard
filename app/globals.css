@@ -12669,3 +12669,116 @@ textarea.cform-field {
 /* Cast & Crew — ensemble (big multi-occupant cast bucket) */
 .ax-ensemble-row { margin-top: 12px; }
 .ax-bucket-big { min-height: 88px; align-items: flex-start; align-content: flex-start; }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Focus View — full-screen shell (Feature 21 · handoff/design_handoff_focus_view)
+   Phase 1: top bar + embedded tool. Rail/canvas/panel/margin land in later
+   phases. Scoped to `.fx-*`; the live Script/Blocking tools are untouched.
+   ════════════════════════════════════════════════════════════════════════ */
+.fx-body {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.fx-body *,
+.fx-body *::before,
+.fx-body *::after { box-sizing: border-box; }
+.fx-body svg { flex-shrink: 0; }
+
+/* Top bar */
+.fx-top {
+  flex: 0 0 auto;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px 0 14px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  z-index: 30;
+}
+.fx-brand { display: flex; align-items: center; gap: 9px; }
+.fx-brand .mark { width: 26px; height: 26px; display: grid; place-items: center; }
+.fx-brand .mark svg { width: 26px; height: 26px; }
+.fx-brand .mark .brand-badge.is-dark { display: none; }
+body[data-theme="dark"] .fx-brand .mark .brand-badge.is-light,
+body[data-theme="dusk"] .fx-brand .mark .brand-badge.is-light { display: none; }
+body[data-theme="dark"] .fx-brand .mark .brand-badge.is-dark,
+body[data-theme="dusk"] .fx-brand .mark .brand-badge.is-dark { display: block; }
+.fx-brand .focuslab {
+  font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-4); border-left: 1px solid var(--border); padding-left: 10px;
+}
+
+/* Show pill (display-only in Phase 1) */
+.fx-gig {
+  display: flex; align-items: center; gap: 10px; margin-left: 2px;
+  background: var(--bg-muted); border: 1px solid var(--border);
+  border-radius: 999px; padding: 4px 12px 4px 5px;
+  max-width: 280px;
+}
+.fx-gig .poster {
+  width: 30px; height: 30px; border-radius: 7px; flex: 0 0 auto;
+  background: linear-gradient(135deg, var(--c-dusk), var(--c-plum));
+  color: #fff; display: grid; place-items: center; font-weight: 600; font-size: 13px;
+}
+.fx-gig .meta { line-height: 1.2; min-width: 0; }
+.fx-gig .meta .show {
+  font-size: 13px; font-weight: 500; color: var(--ink);
+  display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fx-gig .meta .show em { font-style: italic; }
+.fx-gig .meta .org {
+  font-size: 11px; color: var(--ink-4);
+  display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.fx-spring { flex: 1 1 auto; }
+
+/* Script / Blocking segmented control */
+.fx-modeswitch {
+  display: flex; background: var(--bg-sunken);
+  border: 1px solid var(--border); border-radius: 999px; padding: 3px;
+}
+.fx-modeswitch button {
+  appearance: none; border: 0; background: transparent; font: inherit;
+  font-size: 13px; font-weight: 500; color: var(--ink-3);
+  padding: 6px 16px; border-radius: 999px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px; transition: color .12s;
+}
+.fx-modeswitch button .ico { width: 15px; height: 15px; }
+.fx-modeswitch button:hover { color: var(--ink); }
+.fx-modeswitch button[data-on="1"] {
+  background: var(--bg-elev); color: var(--ink); box-shadow: var(--shadow-1);
+}
+
+.fx-divider { width: 1px; height: 26px; background: var(--border); flex: 0 0 auto; }
+
+.fx-iconbtn {
+  width: 32px; height: 32px; border-radius: var(--radius-s); border: 0; background: transparent;
+  color: var(--ink-3); cursor: pointer; display: grid; place-items: center;
+}
+.fx-iconbtn:hover { background: var(--bg-muted); color: var(--ink); }
+.fx-iconbtn .ico { width: 17px; height: 17px; }
+
+.fx-exit { gap: 7px; }
+.fx-exit kbd {
+  font-family: var(--font-mono); font-size: 10px; background: var(--bg-sunken);
+  border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; color: var(--ink-3);
+}
+
+/* Stage = the embedded tool fills the rest of the viewport */
+.fx-stage { flex: 1 1 auto; display: block; min-height: 0; overflow: hidden; }
+.fx-stage .script-viewer-shell { margin: 0 auto; }
+
+/* Empty / coming-soon message */
+.fx-soon {
+  height: 100%; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 8px; color: var(--ink-3); font-size: 14px; text-align: center;
+}
+.fx-soon a { color: var(--accent-ink); font-weight: 500; }
+
+/* Entry button in the production toolbar (self-hides off script/blocking) */
+.fx-entry .ico { width: 14px; height: 14px; }
