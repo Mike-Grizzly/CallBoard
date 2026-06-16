@@ -12523,3 +12523,87 @@ textarea.cform-field {
     justify-content: center;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   Coachmark walkthrough (components/tour/*)
+   Spotlight tour: a dim layer with a cut-out ring over the anchored
+   element plus a tooltip card. Sits above the confirm dialog (1300).
+   ════════════════════════════════════════════════════════════════ */
+.tour-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 1401;
+  cursor: pointer;
+}
+.tour-spot {
+  position: fixed;
+  z-index: 1400;
+  border-radius: var(--radius);
+  border: 2px solid var(--accent);
+  box-shadow:
+    0 0 0 9999px color-mix(in oklch, var(--ink) 58%, transparent),
+    0 0 0 4px color-mix(in oklch, var(--accent) 35%, transparent);
+  pointer-events: none;
+  transition:
+    top 0.25s ease,
+    left 0.25s ease,
+    width 0.25s ease,
+    height 0.25s ease;
+}
+.tour-card {
+  position: fixed;
+  z-index: 1402;
+  padding: 16px 16px 14px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow:
+    0 40px 100px -24px rgba(40, 15, 5, 0.42),
+    0 12px 32px -10px rgba(40, 15, 5, 0.28);
+  animation: ac-pop 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+.tour-step-count {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.tour-card-title {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.tour-card-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.tour-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+.tour-card-nav {
+  display: flex;
+  gap: 8px;
+}
+.tour-skip {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12.5px;
+  color: var(--ink-4);
+  cursor: pointer;
+}
+.tour-skip:hover {
+  color: var(--ink-2);
+  text-decoration: underline;
+}

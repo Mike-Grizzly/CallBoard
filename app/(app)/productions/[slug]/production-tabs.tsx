@@ -56,7 +56,7 @@ export function ProductionTabsNav({ tabs }: { tabs: ProductionTab[] }) {
   }, [pathname]);
 
   return (
-    <nav className="tabs" aria-label="Production sections">
+    <nav className="tabs" aria-label="Production sections" data-tour="hub-tabs">
       {tabs.map((tab) => {
         const Icon = ICONS[tab.icon] ?? FileText;
         const isOverview = tab.href === overviewHref;

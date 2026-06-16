@@ -5,6 +5,7 @@ import { can } from "@/lib/permissions";
 import { getUserMemberships } from "@/features/workspace/queries";
 import { getSignedLogoUrl } from "@/lib/workspace-logo";
 import { WorkspaceSwitcher } from "./workspace-switcher";
+import { TourReplay } from "./tour-replay";
 import {
   ThemeControl,
   ThemeStatusNote,
@@ -109,6 +110,8 @@ export default async function SettingsPage() {
         <ThemeControl variant="segmented" initialPref={themePref} />
         <ThemeStatusNote initialPref={themePref} />
       </div>
+
+      <TourReplay />
 
       <ul className="more-list" role="list">
         <li>

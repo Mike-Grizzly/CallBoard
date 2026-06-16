@@ -23,6 +23,7 @@ export type CurrentUser = {
   organizationId: string;
   organizationName: string;
   organizationLogoUrl: string | null;
+  toursSeen: string[];
 };
 
 function fallbackOrgName(firstName: string, lastName: string, email: string) {
@@ -181,6 +182,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       organizationId: org.id,
       organizationName: org.name,
       organizationLogoUrl: org.logoUrl ?? null,
+      toursSeen: [],
     };
   }
 
@@ -243,6 +245,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       organizationId: org.id,
       organizationName: org.name,
       organizationLogoUrl: org.logoUrl ?? null,
+      toursSeen: existing[0].toursSeen ?? [],
     };
   }
 
@@ -266,6 +269,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     organizationId: membership.organizationId,
     organizationName: membership.organizationName,
     organizationLogoUrl: membership.organizationLogoUrl ?? null,
+    toursSeen: existing[0].toursSeen ?? [],
   };
 });
 

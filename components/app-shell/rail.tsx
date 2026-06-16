@@ -91,7 +91,7 @@ export async function Rail() {
       </div>
 
       {can(role, "productions:view") && (
-        <div className="rail-section">
+        <div className="rail-section" data-tour="rail-productions">
           <div className="rail-section-h">
             <span>Productions</span>
             {can(role, "productions:manage") && (
@@ -167,7 +167,12 @@ export async function Rail() {
               </span>
             </div>
             <ThemeControl variant="icon" initialPref={themePref} />
-            <Link href="/settings" title="Settings" aria-label="Settings">
+            <Link
+              href="/settings"
+              title="Settings"
+              aria-label="Settings"
+              data-tour="rail-settings"
+            >
               <Icon name="Settings" className="ico" aria-hidden />
             </Link>
             <LogoutButton />

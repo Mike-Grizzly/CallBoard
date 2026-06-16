@@ -37,22 +37,28 @@ export default async function ProductionsPage() {
     <div className="page">
       <div className="page-narrow anim-in">
         <div className="row-between" style={{ marginBottom: 20, alignItems: "flex-start" }}>
-          <div>
+          <div data-tour="prod-heading">
             <div className="h-eyebrow">Workspace</div>
             <h1 className="h-section">Productions</h1>
             <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
               Every show your organization is producing.
             </p>
           </div>
-          {canManage && <NewProductionTrigger orgUsers={orgUsers} />}
+          {canManage && (
+            <div data-tour="prod-new">
+              <NewProductionTrigger orgUsers={orgUsers} />
+            </div>
+          )}
         </div>
 
-        <ProductionList
-          productions={productionsList}
-          accessibleIds={assignedIds}
-          canManage={canManage}
-          canDelete={canDelete}
-        />
+        <div data-tour="prod-list">
+          <ProductionList
+            productions={productionsList}
+            accessibleIds={assignedIds}
+            canManage={canManage}
+            canDelete={canDelete}
+          />
+        </div>
 
         {canManage && <ArchivedSection productions={archivedList} />}
         {canDelete && <DeletedSection productions={deletedList} />}

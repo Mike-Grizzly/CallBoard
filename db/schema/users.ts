@@ -13,6 +13,11 @@ export const profiles = pgTable("profiles", {
   // (people who already signed up) stay correct after the migration; the
   // invite flow sets "invited" explicitly.
   status: text("status").notNull().default("active"),
+  // Keys of the in-app coachmark walkthroughs this user has finished or
+  // dismissed (e.g. "dashboard", "productions", "production-hub"). A tour
+  // auto-starts only when its key is absent; the "Replay walkthroughs"
+  // control in Settings clears this back to empty.
+  toursSeen: text("tours_seen").array().notNull().default([]),
   // Which org this user is currently viewing. Nullable: when null,
   // `getCurrentUser` falls back to the user's first active membership. Set
   // by the org switcher; ON DELETE SET NULL so deleting an org doesn't

@@ -530,7 +530,7 @@ export default async function DashboardPage() {
           ════════════════════════════════════════════════════════════════ */}
       <div className="dd-wrap dashboard-desktop-only">
         {/* Greeting band + status chips */}
-        <header className="dd-greet">
+        <header className="dd-greet" data-tour="dash-greeting">
           <div>
             <div className="dd-greet-meta">
               <span className="dd-greet-eyebrow">
@@ -557,7 +557,7 @@ export default async function DashboardPage() {
               </p>
             )}
           </div>
-          <div className="dd-chips">
+          <div className="dd-chips" data-tour="dash-chips">
             <div className="dd-chip" data-tone="accent">
               <div className="dd-chip-ico">
                 <Hash size={15} aria-hidden />
@@ -594,7 +594,7 @@ export default async function DashboardPage() {
 
         {/* Hero row: focal call + today timeline */}
         {(focalProps || todaysCalls.length > 0) && (
-          <section className="dd-hero-row">
+          <section className="dd-hero-row" data-tour="dash-hero">
             {focalProps ? (
               <FocalCall {...focalProps} />
             ) : (

@@ -182,7 +182,7 @@ export default async function ProductionLayout({
         </div>
 
         <div className="topbar-row">
-          <div>
+          <div data-tour="hub-title">
             <h1 className="show-title">
               <ShowTitle title={production.title} />
             </h1>
@@ -231,7 +231,7 @@ export default async function ProductionLayout({
             </div>
           </div>
 
-          <div className="topbar-actions">
+          <div className="topbar-actions" data-tour="hub-actions">
             <button
               type="button"
               className="btn ghost btn-icon"
