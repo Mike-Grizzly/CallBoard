@@ -2655,7 +2655,7 @@ const CUE_LABEL_DESC_DOWN = 18; // description sits this far below it
 const CUE_LABEL_PAD = 12; // clear whitespace kept between stacked labels
 const CUE_LANE_GAP = 34; // horizontal offset of the 2nd column toward the text
 
-type CueLabelPos = { y: number; lane: number };
+type CueLabelPos = { y: number; lane: number; order: number };
 
 function stackCueLabels(
   cues: {
@@ -2707,6 +2707,7 @@ function stackCueLabels(
     const bottom = [-Infinity, -Infinity]; // bottom of last label per column
     const run = [0, 0]; // labels stacked in the current pile, per column
     let lastY = -Infinity; // previous label's y — keeps numbers in order
+    let order = 0; // position within the side group (for staggering gutter jogs)
     for (const item of group) {
       // A column's pile ends once this cue's line clears its last label.
       if (item.y >= bottom[0] + GAP) run[0] = 0;
@@ -2732,7 +2733,7 @@ function stackCueLabels(
           y = lane === 0 ? y0 : y1;
         }
       }
-      out.set(item.id, { y, lane });
+      out.set(item.id, { y, lane, order: order++ });
       run[lane] = y <= item.y + 0.5 ? 1 : run[lane] + 1;
       bottom[lane] = y + (item.hasDesc ? DESC_DOWN : 0);
       lastY = y;
@@ -3363,6 +3364,11 @@ function AnnotationShape({
     const cardH = (annotation.cueDescription ? 30 : 21) * s;
     const cardY = labelY - cardH / 2;
     const textX = cardX + ACCENT_W + padL;
+    // The vertical jog happens off the page, just before the card. Stagger it
+    // per cue (by stacking order) across a small zone so neighbouring jogs don't
+    // share a column — keeps the on-page run a single clean horizontal.
+    const railIndex = (cueLabel?.order ?? 0) % 4;
+    const railX = cardX - (12 + railIndex * 8) * s;
 
     const isPipe = annotation.marker === "pipe";
 
@@ -3398,15 +3404,16 @@ function AnnotationShape({
           />
         )}
         {/* Orthogonal leader. On-page (normal): horizontal out to the margin
-            then a right-angle drop. Margin mode: drop vertically at the anchor
-            first, then run horizontally into the card — so each line ends on its
-            own card and stacked leaders never share a vertical run. */}
+            then a right-angle drop. Margin mode: a single horizontal straight
+            off the cue's line and off the page edge, then a 90° jog in the gutter
+            (absorbing the stack/drag offset), then a short horizontal into the
+            card — so nothing runs vertically across the script text. */}
         <polyline
           points={
             focusMargin
               ? labelY === bottomY
                 ? `${lineStartX},${bottomY} ${cardX},${bottomY}`
-                : `${lineStartX},${bottomY} ${lineStartX},${labelY} ${cardX},${labelY}`
+                : `${lineStartX},${bottomY} ${railX},${bottomY} ${railX},${labelY} ${cardX},${labelY}`
               : labelY === bottomY
                 ? `${lineStartX},${bottomY} ${labelX},${bottomY}`
                 : `${lineStartX},${bottomY} ${labelX},${bottomY} ${labelX},${labelY}`
