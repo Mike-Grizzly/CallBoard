@@ -13,8 +13,8 @@ import type {
   Bookmark,
   PageOverrides,
 } from "@/features/scripts/constants";
-import { ScriptViewer } from "@/app/(app)/productions/[slug]/script/script-viewer";
 import { FocusShell } from "./focus-shell";
+import { FocusScriptHost } from "./focus-script-host";
 
 type CurrentUserLike = {
   firstName: string | null;
@@ -108,18 +108,19 @@ export default async function FocusPage({
   const hasStalePages = annotationRow?.hasStalePages ?? false;
 
   return (
-    <FocusShell {...shellProps} mode="script">
-      <ScriptViewer
-        script={script}
-        productionId={production.id}
-        pdfUrl={pdfUrl}
-        initialAnnotations={annotations}
-        initialBookmarks={bookmarks}
-        initialPageOverrides={pageOverrides}
-        initialHasStalePages={hasStalePages}
-        slug={slug}
-        canManage={can(user.role, "documents:upload")}
-      />
-    </FocusShell>
+    <FocusScriptHost
+      shell={shellProps}
+      script={{
+        script,
+        productionId: production.id,
+        pdfUrl,
+        initialAnnotations: annotations,
+        initialBookmarks: bookmarks,
+        initialPageOverrides: pageOverrides,
+        initialHasStalePages: hasStalePages,
+        slug,
+        canManage: can(user.role, "documents:upload"),
+      }}
+    />
   );
 }

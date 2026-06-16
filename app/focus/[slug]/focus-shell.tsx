@@ -13,6 +13,10 @@ type Props = {
   posterInitial: string;
   userInitials: string;
   mode: Mode;
+  /** Margin-view toggle state + handler. When `onToggleMargin` is provided the
+   *  "Margin view" switch is shown (script mode only). */
+  marginView?: boolean;
+  onToggleMargin?: () => void;
   children: ReactNode;
 };
 
@@ -41,6 +45,8 @@ export function FocusShell({
   posterInitial,
   userInitials,
   mode,
+  marginView,
+  onToggleMargin,
   children,
 }: Props) {
   const router = useRouter();
@@ -193,6 +199,23 @@ export function FocusShell({
         </div>
 
         <span className="fx-spring" />
+
+        {onToggleMargin && mode === "script" && (
+          <>
+            <button
+              type="button"
+              className="fx-toggle"
+              data-on={marginView ? "1" : undefined}
+              aria-pressed={!!marginView}
+              onClick={onToggleMargin}
+              title="Push cues into the margin gutter"
+            >
+              <span>Margin view</span>
+              <span className="fx-sw" aria-hidden />
+            </button>
+            <span className="fx-divider" />
+          </>
+        )}
 
         <button type="button" className="fx-iconbtn" title="Theme" onClick={cycleTheme} aria-label="Cycle theme">
           <svg className="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

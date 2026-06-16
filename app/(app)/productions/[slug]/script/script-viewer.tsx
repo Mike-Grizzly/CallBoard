@@ -114,6 +114,10 @@ interface Props {
   initialHasStalePages: boolean;
   slug: string;
   canManage: boolean;
+  /** Focus View margin mode: route cue labels into a right-hand gutter as boxed
+   *  cards with orthogonal leaders. Default false = the normal tool, unchanged.
+   *  Only the Focus View passes this. */
+  focusMargin?: boolean;
 }
 
 type PendingAnnotation =
@@ -130,6 +134,7 @@ export function ScriptViewer({
   initialHasStalePages,
   slug,
   canManage,
+  focusMargin = false,
 }: Props) {
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
@@ -1233,14 +1238,22 @@ export function ScriptViewer({
   const cueLabels = useMemo(
     () =>
       stackCueLabels(
-        pageAnnotations.filter(
-          (a): a is Extract<Annotation, { type: "cue" }> => a.type === "cue",
-        ),
+        pageAnnotations
+          .filter(
+            (a): a is Extract<Annotation, { type: "cue" }> => a.type === "cue",
+          )
+          // In margin mode every cue stacks in the single right-hand gutter.
+          .map((c) => (focusMargin ? { ...c, leaderSide: "right" as const } : c)),
         canvasSize.h,
         cueScale,
       ),
-    [pageAnnotations, canvasSize.h, cueScale],
+    [pageAnnotations, canvasSize.h, cueScale, focusMargin],
   );
+
+  // Width (render px) of the focus-view cue gutter; 0 when not in margin mode.
+  const focusGutter = focusMargin
+    ? Math.max(260, Math.round(canvasSize.w * 0.22))
+    : 0;
 
   // ── SVG cursor style ───────────────────────────────────────────────────────
 
@@ -2007,7 +2020,7 @@ export function ScriptViewer({
             width: "fit-content",
             margin: "0 auto",
             borderRadius: 3,
-            overflow: "hidden",
+            overflow: focusMargin ? "visible" : "hidden",
             boxShadow: "0 4px 32px rgba(0,0,0,.28), 0 1px 4px rgba(0,0,0,.12)",
             opacity: pdfLoaded ? 1 : 0.4,
             transition: "opacity .2s",
@@ -2037,12 +2050,17 @@ export function ScriptViewer({
           {canvasSize.w > 0 && (
             <svg
               ref={svgRef}
-              viewBox={`0 0 ${canvasSize.w} ${canvasSize.h}`}
+              viewBox={`0 0 ${canvasSize.w + focusGutter} ${canvasSize.h}`}
+              preserveAspectRatio="xMinYMin meet"
               style={{
                 position: "absolute",
-                inset: 0,
-                width: "100%",
+                top: 0,
+                left: 0,
+                width: focusMargin
+                  ? `${((canvasSize.w + focusGutter) / canvasSize.w) * 100}%`
+                  : "100%",
                 height: "100%",
+                overflow: "visible",
                 cursor: svgCursor,
                 pointerEvents: svgPointerEvents,
               }}
@@ -2075,6 +2093,8 @@ export function ScriptViewer({
                     }
                     cueLabel={shown.type === "cue" ? cueLabels.get(ann.id) : undefined}
                     cueScale={cueScale}
+                    focusMargin={focusMargin}
+                    gutter={focusGutter}
                     onLabelPointerDown={
                       canManage && !isPhone && ann.type === "cue"
                         ? (e) => startLabelDrag(ann.id, e)
@@ -3166,6 +3186,8 @@ function AnnotationShape({
   onClick,
   cueLabel,
   cueScale = 1,
+  focusMargin = false,
+  gutter = 0,
   onLabelPointerDown,
 }: {
   annotation: Annotation;
@@ -3175,6 +3197,10 @@ function AnnotationShape({
   onClick: () => void;
   cueLabel?: CueLabelPos;
   cueScale?: number;
+  /** Focus margin mode: render the cue label as a boxed card in the right gutter. */
+  focusMargin?: boolean;
+  /** Width (render px) of the focus gutter, used to size the card. */
+  gutter?: number;
   /** When provided, the cue label is a drag handle (mousedown starts a drag). */
   onLabelPointerDown?: (e: React.MouseEvent) => void;
 }) {
@@ -3287,24 +3313,35 @@ function AnnotationShape({
   if (annotation.type === "cue") {
     const s = cueScale;
     const bottomY = ry + rh;
-    const isLeft = annotation.leaderSide === "left";
+    const isLeft = focusMargin ? false : annotation.leaderSide === "left";
     const lineStartX = isLeft ? rx : rx + rw;
     const MARGIN_OFFSET = 14 * s;
     const lane = cueLabel?.lane ?? 0;
-    const baseX = isLeft ? MARGIN_OFFSET : canvasW - MARGIN_OFFSET;
+    // Margin mode parks labels just past the page's right edge, in the gutter;
+    // otherwise they hug the page's left/right edge as before.
+    const baseX = focusMargin
+      ? canvasW + 18 * s
+      : isLeft
+        ? MARGIN_OFFSET
+        : canvasW - MARGIN_OFFSET;
     // A dragged label sits at its stored position; otherwise it's auto-stacked.
     const labelX = annotation.labelPos
       ? annotation.labelPos.x * canvasW
       : isLeft
         ? baseX + lane * CUE_LANE_GAP * s
-        : baseX - lane * CUE_LANE_GAP * s;
+        : baseX - (focusMargin ? -1 : 1) * lane * CUE_LANE_GAP * s;
     const labelY = annotation.labelPos
       ? annotation.labelPos.y * canvasH
       : (cueLabel?.y ?? bottomY);
-    const textAnchor = isLeft ? "start" : "end";
+    const textAnchor = isLeft || focusMargin ? "start" : "end";
     const cc = annotation.color ?? CUE_STROKE;
     const serif = 3 * s;
     const draggable = !!onLabelPointerDown;
+    // Gutter card geometry (margin mode only).
+    const cardX = labelX - 10 * s;
+    const cardW = Math.max(96 * s, canvasW + gutter - 10 * s - cardX);
+    const cardH = (annotation.cueDescription ? 34 : 24) * s;
+    const cardY = labelY - 17 * s;
 
     const isPipe = annotation.marker === "pipe";
 
@@ -3365,19 +3402,36 @@ function AnnotationShape({
           onClick={draggable ? (e) => e.stopPropagation() : undefined}
           style={draggable ? { cursor: "move" } : undefined}
         >
+          {/* Margin mode: a boxed card behind the label, in the gutter. */}
+          {focusMargin && (
+            <rect
+              x={cardX}
+              y={cardY}
+              width={cardW}
+              height={cardH}
+              rx={5 * s}
+              ry={5 * s}
+              style={{
+                fill: "var(--bg-elev)",
+                stroke: cc,
+                strokeWidth: 1 * s,
+                strokeOpacity: 0.6,
+              }}
+            />
+          )}
           {/* Invisible hit target so the label is easy to grab */}
           {draggable && (
             <rect
-              x={isLeft ? labelX - 4 * s : labelX - 44 * s}
+              x={focusMargin ? cardX : isLeft ? labelX - 4 * s : labelX - 44 * s}
               y={labelY - 16 * s}
-              width={48 * s}
+              width={focusMargin ? cardW : 48 * s}
               height={annotation.cueDescription ? 32 * s : 22 * s}
               fill="transparent"
             />
           )}
           <circle cx={labelX} cy={labelY} r={serif} fill={cc} />
           <text
-            x={isLeft ? labelX + 6 * s : labelX - 6 * s}
+            x={isLeft || focusMargin ? labelX + 6 * s : labelX - 6 * s}
             y={labelY - 4 * s}
             textAnchor={textAnchor}
             fontSize={13 * s}
@@ -3389,7 +3443,7 @@ function AnnotationShape({
           </text>
           {annotation.cueDescription && (
             <text
-              x={isLeft ? labelX + 6 * s : labelX - 6 * s}
+              x={isLeft || focusMargin ? labelX + 6 * s : labelX - 6 * s}
               y={labelY + 12 * s}
               textAnchor={textAnchor}
               fontSize={9 * s}
