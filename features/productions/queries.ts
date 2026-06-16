@@ -4,11 +4,13 @@ import {
   productions,
   productionMemberships,
   productionRoles,
+  productionDepartments,
   organizationMemberships,
   profiles,
 } from "@/db/schema";
 import { and, asc, eq, desc, isNull, isNotNull } from "drizzle-orm";
 import { can } from "@/lib/permissions";
+import { resolveDepartments, type ResolvedDepartment } from "./departments";
 import type { Role } from "@/types/roles";
 import type { WizardOrgUser } from "./wizard-constants";
 
@@ -195,6 +197,32 @@ export async function getProductionRoles(productionId: string) {
 export type ProductionRoleRow = Awaited<
   ReturnType<typeof getProductionRoles>
 >[number];
+
+/**
+ * The departments configured for a production (rows in `production_departments`).
+ * Pass through `resolveDepartments` (features/productions/departments) to get
+ * display-ready, ordered departments. Drives the Cast & Crew board's team
+ * buckets, the rehearsal-report sections, and the production Settings tab.
+ */
+export async function getProductionDepartmentRows(
+  productionId: string,
+): Promise<{ key: string; label: string; sortOrder: number }[]> {
+  return db
+    .select({
+      key: productionDepartments.key,
+      label: productionDepartments.label,
+      sortOrder: productionDepartments.sortOrder,
+    })
+    .from(productionDepartments)
+    .where(eq(productionDepartments.productionId, productionId));
+}
+
+/** A production's departments, resolved + ordered for display. */
+export async function getResolvedDepartments(
+  productionId: string,
+): Promise<ResolvedDepartment[]> {
+  return resolveDepartments(await getProductionDepartmentRows(productionId));
+}
 
 /**
  * Org members formatted for the wizard's actor autocomplete — anyone already

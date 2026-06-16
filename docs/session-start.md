@@ -16,6 +16,10 @@ Before editing any files, complete these steps:
 
 2. **Read relevant code areas** for the requested task (routes, features, schema, lib files)
 
+   - **Scan `handoff/*/` for design drop-offs** not marked `**Status:** Implemented`.
+     Summarize any you find, but do NOT start implementing one unless asked. See
+     `/docs/design-handoffs.md`.
+
 3. **Summarize your understanding** before editing:
    - Current architecture relevant to the task
    - Current status of the feature area

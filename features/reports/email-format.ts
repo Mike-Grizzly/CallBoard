@@ -1,4 +1,7 @@
-import { DEPARTMENTS } from "./constants";
+import {
+  reportDeptHtml,
+  type ResolvedDepartment,
+} from "@/features/productions/departments";
 import type { ReportDetail } from "./queries";
 import type { EmailAttachmentMeta } from "./email-html";
 
@@ -37,6 +40,7 @@ export function formatReportAsEmail(
   productionTitle: string,
   authorName: string,
   attachments: EmailAttachmentMeta[] = [],
+  departments: ResolvedDepartment[] = [],
 ): string {
   const lines: string[] = [];
 
@@ -129,11 +133,9 @@ export function formatReportAsEmail(
   // Department notes
   lines.push("");
   lines.push(...header("Department Notes"));
-  for (const dept of DEPARTMENTS) {
-    const value = report[dept.key] as string | null;
-    lines.push(
-      `${dept.label}: ${value && value.trim() ? value.trim() : "None"}`,
-    );
+  for (const dept of departments) {
+    const value = reportDeptHtml(dept, report);
+    lines.push(`${dept.label}: ${value.trim() ? value.trim() : "None"}`);
   }
 
   // Next rehearsal

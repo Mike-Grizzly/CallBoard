@@ -1,4 +1,7 @@
-import { DEPARTMENTS } from "./constants";
+import {
+  reportDeptHtml,
+  type ResolvedDepartment,
+} from "@/features/productions/departments";
 import type { ReportDetail } from "./queries";
 
 export type EmailAttachmentMeta = {
@@ -62,6 +65,7 @@ export function formatReportAsHtml(
   productionTitle: string,
   authorName: string,
   attachments: EmailAttachmentMeta[] = [],
+  departments: ResolvedDepartment[] = [],
 ): string {
   const reportLabel = report.reportNumber
     ? `Rehearsal Report #${report.reportNumber}`
@@ -82,9 +86,9 @@ export function formatReportAsHtml(
   const showAttendance = attendanceTotal > 0 || report.attendanceNotes.length > 0;
 
   // Department notes (stacked layout)
-  const deptBlocks = DEPARTMENTS.map((dept) =>
-    deptBlock(dept.label, report[dept.key] as string | null),
-  ).join("");
+  const deptBlocks = departments
+    .map((dept) => deptBlock(dept.label, reportDeptHtml(dept, report)))
+    .join("");
 
   // Breaks
   const breaks = report.breaks ?? [];

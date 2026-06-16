@@ -21,6 +21,7 @@ import {
   type ContextMentionSource,
 } from "@/features/mentions/write";
 import { getOrganizationMembers } from "@/features/members/queries";
+import { humanizeDeptKey } from "@/features/productions/departments";
 import { DEPARTMENTS } from "./constants";
 
 /**
@@ -36,6 +37,9 @@ function reportMentionSources(d: ReportFormData): ContextMentionSource[] {
     const html = d.departments[dept.key];
     if (html) sources.push({ html, label: dept.label });
   }
+  for (const [key, html] of Object.entries(d.customDeptNotes)) {
+    if (html) sources.push({ html, label: humanizeDeptKey(key) });
+  }
   const sched = d.scheduleChanges.flatMap((s) => [s.what, s.c ?? ""]).join("\n");
   if (sched.includes("@{"))
     sources.push({ text: sched, label: "Schedule changes" });
@@ -48,6 +52,15 @@ function reportMentionSources(d: ReportFormData): ContextMentionSource[] {
   if (injuries.includes("@{"))
     sources.push({ text: injuries, label: "Injuries" });
   return sources;
+}
+
+/** Drop null/empty custom-department notes into a clean jsonb map. */
+function cleanDeptNotes(
+  map: Record<string, string | null>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(map)) if (v) out[k] = v;
+  return out;
 }
 
 export type ReportActionResult = {
@@ -153,6 +166,7 @@ export async function createReport(
       deptVideo: data!.departments.deptVideo,
       deptCrew: data!.departments.deptCrew,
       deptOther: data!.departments.deptOther,
+      deptNotes: cleanDeptNotes(data!.customDeptNotes),
       attendancePresent: data!.attendancePresent,
       attendanceAbsent: data!.attendanceAbsent,
       attendanceLate: data!.attendanceLate,
@@ -209,6 +223,7 @@ export async function updateReport(
       productionId: rehearsalReports.productionId,
       status: rehearsalReports.status,
       distributedAt: rehearsalReports.distributedAt,
+      deptNotes: rehearsalReports.deptNotes,
     })
     .from(rehearsalReports)
     .where(eq(rehearsalReports.id, reportId))
@@ -252,6 +267,15 @@ export async function updateReport(
       ? new Date()
       : existing[0].distributedAt;
 
+  // Merge custom-dept notes onto the existing map: submitted keys overwrite (or
+  // clear when emptied), keys not in the form are preserved — so removing a
+  // department from the production never wipes a past report's notes.
+  const mergedDeptNotes: Record<string, string> = { ...(existing[0].deptNotes ?? {}) };
+  for (const [k, v] of Object.entries(data!.customDeptNotes)) {
+    if (v) mergedDeptNotes[k] = v;
+    else delete mergedDeptNotes[k];
+  }
+
   await db
     .update(rehearsalReports)
     .set({
@@ -278,6 +302,7 @@ export async function updateReport(
       deptVideo: data!.departments.deptVideo,
       deptCrew: data!.departments.deptCrew,
       deptOther: data!.departments.deptOther,
+      deptNotes: mergedDeptNotes,
       attendancePresent: data!.attendancePresent,
       attendanceAbsent: data!.attendanceAbsent,
       attendanceLate: data!.attendanceLate,

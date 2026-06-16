@@ -6,13 +6,14 @@ import { can } from "@/lib/permissions";
 import {
   getProductionBySlug,
   getProductionRoles,
+  getResolvedDepartments,
 } from "@/features/productions/queries";
+import { buildTeamBuckets } from "@/features/productions/departments";
 import {
   getProductionMembers,
-  getOrganizationMembers,
+  getPeopleDirectory,
 } from "@/features/members/queries";
-import { ProductionMemberManager } from "./production-member-manager";
-import { CastList } from "./cast-list";
+import { CastCrewBoard } from "./cast-crew-board";
 
 export default async function ProductionMembersPage({
   params,
@@ -32,48 +33,42 @@ export default async function ProductionMembersPage({
     notFound();
   }
 
-  const [productionMembers, orgMembers, roles] = await Promise.all([
+  const [people, members, characters, departments] = await Promise.all([
+    getPeopleDirectory(user.organizationId),
     getProductionMembers(production.id),
-    getOrganizationMembers(user.organizationId),
     getProductionRoles(production.id),
+    getResolvedDepartments(production.id),
   ]);
 
-  const assignedUserIds = new Set(productionMembers.map((m) => m.userId));
-  const availableMembers = orgMembers.filter(
-    (m) => !assignedUserIds.has(m.userId),
-  );
+  const teamBuckets = buildTeamBuckets(departments);
   const canInvite = can(user.role, "settings:manage");
 
   return (
-    <div className="page-narrow anim-in">
+    <div className="page anim-in">
       <Link href={`/productions/${slug}`} className="pp-back">
         <Icon name="ChevronLeft" size={14} />
         <span>Back to {production.title}</span>
       </Link>
 
-      <div style={{ margin: "10px 0 22px" }}>
+      <div style={{ margin: "10px 0 18px" }}>
         <div className="h-eyebrow">Production</div>
         <h1 className="h-section">Cast &amp; crew</h1>
         <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-          Assign organization members to this production and set each
-          person&apos;s role.
+          Drag people from the company onto a character or a team role. Assigning
+          someone grants them access to this production.
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-        <CastList
-          roles={roles}
-          orgMembers={orgMembers}
-          canInvite={canInvite}
-          scriptHref={`/productions/${slug}/script/ai`}
-        />
-
-        <ProductionMemberManager
-          productionId={production.id}
-          currentMembers={productionMembers}
-          availableMembers={availableMembers}
-        />
-      </div>
+      <CastCrewBoard
+        productionId={production.id}
+        productionTitle={production.title}
+        people={people}
+        characters={characters}
+        members={members}
+        teamBuckets={teamBuckets}
+        currentUserId={user.id}
+        canInvite={canInvite}
+      />
     </div>
   );
 }

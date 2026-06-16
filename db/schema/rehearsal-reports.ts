@@ -60,6 +60,9 @@ export const rehearsalReports = pgTable("rehearsal_reports", {
   deptVideo: text("dept_video"),
   deptCrew: text("dept_crew"),
   deptOther: text("dept_other"),
+  // Per-report notes for CUSTOM departments (key → HTML). The 12 standard
+  // departments above keep their own columns; this only holds user-added ones.
+  deptNotes: jsonb("dept_notes").$type<Record<string, string>>().notNull().default({}),
   distributedAt: timestamp("distributed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

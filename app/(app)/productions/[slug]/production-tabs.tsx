@@ -12,6 +12,7 @@ import {
   Megaphone,
   PenLine,
   Phone,
+  Settings,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -26,6 +27,7 @@ const ICONS: Record<string, LucideIcon> = {
   Users,
   Bell,
   Clapperboard,
+  Settings,
 };
 
 export type ProductionTab = {

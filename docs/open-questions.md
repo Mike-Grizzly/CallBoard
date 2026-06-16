@@ -786,3 +786,61 @@ acceptable for beta.
   on `/` and `/features` were rebuilt (Script) / audited (the rest) against the real
   components for accuracy, but none were rendered in-session. Eyeball them on a preview
   deploy and flag any styling drift for a precise fix.
+
+---
+
+## Cast & Crew board — deviations & follow-ups (added 2026-06-16)
+
+The drag-to-assign board (`/productions/[slug]/members`, `cast-crew-board.tsx`,
+rebuilt from `handoff/cast-crew-drag-assign`) is **implemented but not
+browser-verified** (no display in the sandbox). Open items:
+
+- **Team buckets are multi-occupant for every role**, including Director / Stage
+  Manager, whereas the prototype treated leadership roles as single-occupant
+  (drop = swap). This follows the real schema (many-per-role) and existing
+  behavior. If single-occupant leadership is actually wanted, it needs a new
+  app-level rule (no schema today enforces it). See decision-log 2026-06-16.
+- **Positions overloaded onto `characterName` (2026-06-16 follow-up).** Crew-based
+  department buckets (Lighting, Sound, Music, …, role `crew`) and Ensemble (role
+  `cast`) are stored as a position label in `production_memberships.characterName`,
+  so the People directory shows e.g. "Crew · Lighting". If a validated set of
+  positions — or designers as a distinct permissioned role — is wanted, that's a
+  schema + permissions change.
+- **Board team buckets are now department-derived (resolved 2026-06-16 follow-up 2).**
+  Buckets are built per production from `production_departments` via
+  `buildTeamBuckets`. The Ensemble bucket and the dept→role mapping (`DEPT_BUCKET`)
+  are still code constants; fully user-editable positions remain a follow-up.
+- **Rehearsal reports ARE now linked to `production_departments` (resolved
+  2026-06-16 follow-up 3).** Reports, both detail views, and both email renderers
+  iterate the production's resolved departments; a Settings tab manages them
+  (add/remove/rename/reorder + custom names). Remaining threads:
+  - **Document folders / notification channels** are still NOT department-driven
+    (the schema comment promised these too) — separate follow-up.
+  - **Default = full standard catalog** when a production has no departments on file.
+    Productions that never touched the wizard therefore still show all 12 report
+    sections until trimmed in Settings. Intended (no data hidden), but means the
+    feature is opt-in per existing production.
+  - **Legacy wizard depts `intimacy` / `dramaturgy`** have no report column and are
+    dropped from the department list on resolve (they were never report sections).
+    If a production enabled them, they won't appear until re-added as customs.
+  - **Custom-department notes live in `rehearsal_reports.dept_notes` (jsonb).** If a
+    custom department is renamed, its key (derived from the original label) is kept so
+    existing notes stay attached; renaming does not re-key. Deleting a custom
+    department from Settings does not delete past reports' notes (preserved in jsonb),
+    but they stop showing until the department is re-added with the same key.
+  - **The schedule-change category dropdown** (`subtab-editors.tsx`) still lists the
+    full standard catalog rather than the production's departments — it's a color tag,
+    not a report section, so left as-is; revisit if it should match.
+  - Still **not browser-verified** — needs a live pass: create/edit/distribute a
+    report after trimming + adding a custom department; confirm the email + both
+    detail views; confirm the board buckets update.
+- **Drag-and-drop is native HTML5 only** (per dev-rules: no new libs without
+  approval). The accessible/mobile path is tap-to-assign. If a keyboard-drag or a
+  DnD library is wanted, that's a follow-up; both interaction paths must be kept.
+- **A `cast` member with no character** appears in the roster (with an
+  "Unassigned"/role label) but in neither zone of the board until cast or given a
+  team role. This matches the prototype but may warrant a "cast, no character yet"
+  affordance later.
+- **Needs a real eyeball** on: the desktop two-column drag feel, the ≤859px
+  board⇄company toggle + bottom sheets, and the four themes (the `.drop` highlight
+  uses `--accent`).

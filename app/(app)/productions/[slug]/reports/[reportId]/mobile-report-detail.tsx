@@ -1,7 +1,10 @@
 import { Icon } from "@/components/ui/icon";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { MentionText } from "@/components/ui/mention-text";
-import { DEPARTMENTS } from "@/features/reports/constants";
+import {
+  reportDeptHtml,
+  type ResolvedDepartment,
+} from "@/features/productions/departments";
 import type { ReportDetail } from "@/features/reports/queries";
 import type { ProductionMember } from "@/features/members/queries";
 import { PinButton } from "@/features/pins/pin-button";
@@ -44,6 +47,7 @@ function hasText(html: string | null | undefined): boolean {
  */
 export function MobileReportDetail({
   report,
+  departments,
   productionTitle,
   authorName,
   reportNumLabel,
@@ -57,6 +61,7 @@ export function MobileReportDetail({
   autoOpenEmail = false,
 }: {
   report: ReportDetail;
+  departments: ResolvedDepartment[];
   productionTitle: string;
   authorName: string;
   reportNumLabel: string | null;
@@ -207,8 +212,8 @@ export function MobileReportDetail({
       <section className="rd-section">
         <h3 className="rd-section-h">Department notes</h3>
         <div className="rd-stack">
-          {DEPARTMENTS.map((d) => {
-            const value = (report[d.key] as string | null) ?? "";
+          {departments.map((d) => {
+            const value = reportDeptHtml(d, report);
             const empty = !hasText(value);
             return (
               <div key={d.key} className="rd-dept">

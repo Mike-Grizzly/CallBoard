@@ -2035,3 +2035,138 @@ WARN) — a dashboard toggle, deferred to the user.
 **Reason:** These are standard account-settings expectations; the email-reconciliation-by-UID keeps the safe "never link profiles by email" invariant (see the 2026-06-03 orphan-profiles note). The time-zone decision follows dev-rules: flag a feature that conflicts with the data model instead of building it.
 
 **Impact:** `features/account/actions.ts` (+`changeEmail`/`signOutEverywhere`/`deleteOwnAccount`), `lib/auth.ts` (email reconciliation), new `app/(app)/(default)/settings/account/{change-email-form,account-danger-zone}.tsx`, edited account `page.tsx` + `account-profile-form.tsx`, login page notices. No schema change. Not browser-verified.
+
+---
+
+## 2026-06-16 — Cast & Crew team buckets map to the role enum, not invented departments
+
+**Decision:** The drag-to-assign Cast & Crew board (`/productions/[slug]/members`,
+rebuilt from `handoff/cast-crew-drag-assign`) models its "Production team" buckets
+as the existing production **role enum** (`producer, director, choreographer,
+stage_manager, crew` — i.e. `ROLES` minus `admin` and `cast`), each a
+multi-occupant bucket. The handoff prototype's mock buckets ("Music Director",
+"Wardrobe", "Deck Crew") were **not** reproduced as literal departments.
+
+**Reason:** The app has no data model for named sub-departments — production team
+membership is a single `production_memberships.role` per person from a fixed enum.
+The handoff README's own data-mapping table points `CC_TEAM` at "production team
+roles + multi flag (production-member-manager)", confirming the role enum is the
+intended source; the specific bucket names were mock data. Inventing departments
+would mean speculative schema expansion, which `dev-rules.md` forbids.
+
+**Impact:**
+- All team buckets are multi-occupant (the schema already allows many per role),
+  whereas the prototype showed Director/Stage Manager as single-occupant. This is a
+  deliberate deviation logged in `open-questions.md`.
+- A person has one production role; casting them in a character keeps their existing
+  team role and just sets the character (so a director who also acts shows in both
+  the Director bucket and a character slot — consistent with `assignRoleToMember`).
+- If a real "department / sub-role" concept is wanted later (Wardrobe, Deck Crew,
+  Music Director as distinct from the role enum), that is a schema + permissions
+  change to scope separately.
+
+---
+
+## 2026-06-16 (follow-up) — Team positions & Ensemble stored as a position label in `characterName`
+
+**Context:** User feedback on the Cast & Crew board asked for **Lighting Designer**
+and **Sound Designer** buckets in the production team, and a large **Ensemble**
+bucket in the cast section. The role enum has neither designer roles nor a way to
+mark ensemble; the prior entry deliberately avoided inventing departments.
+
+**Decision:** Model board buckets as a **(role, position)** pair, where `position`
+is an optional label stored in the existing `production_memberships.characterName`
+column. Generic buckets (Director, Stage Manager, Choreographer, Producer, Crew)
+carry no position. Finer positions reuse a base role + a label:
+- **Lighting Designer / Sound Designer** = role `crew` + position `"Lighting Designer"` / `"Sound Designer"`.
+- **Ensemble** = role `cast` + position `"Ensemble"` (rendered as the big bucket under the character slots).
+
+A new server action `assignTeamMember({ productionId, userId, role, position })`
+(in `features/members/actions.ts`) upserts the membership with role + characterName,
+**always** overwriting characterName (so moving into a no-position bucket clears a
+stale label) and **clearing any character slot** the person held (dragging onto a
+team/ensemble bucket is a MOVE). `assignProductionMember` is left untouched for the
+People directory's assign-modal.
+
+**Reason:** No schema change (the Supabase migration path is awkward in this
+environment, and `characterName` is already free text and unused for non-cast
+roles). Buckets stay mutually exclusive because the generic Crew bucket matches
+`role=crew AND characterName IS NULL`, while the designer buckets match a specific
+label.
+
+**Tradeoff / impact:** `characterName` is now overloaded as a position label for
+crew/ensemble, so the People directory will render e.g. "Crew · Lighting Designer".
+That reads sensibly, but if a richer, validated set of production positions is ever
+needed (or designers should be a distinct role with their own permissions), that is
+a proper schema + permissions change to scope separately. Logged in open-questions.
+
+---
+
+## 2026-06-16 (follow-up 2) — Cast & Crew team buckets are derived from `production_departments`
+
+**Context:** User asked whether the setup wizard's department step feeds anything,
+and suggested using it to generate the board's team buckets per production.
+
+**Finding:** The wizard writes `production_departments` (one row per enabled dept
+key) in `createProductionFull`, but **nothing read those rows** — they were
+write-only. The rehearsal report's department sections are a **separate, hard-coded**
+list (`features/reports/constants.ts#DEPARTMENTS`: Scenery, Props, Costumes,
+Hair/Makeup, Lighting, Sound, Sound FX, Music, Choreography, Video, Crew, Other)
+stored as fixed columns on `rehearsal_reports`, shown on every report regardless of
+the production's chosen departments. So the wizard's department choice was NOT linked
+to reports (contrary to the aspirational comment on the `production_departments`
+schema). See open-questions for the still-unlinked reports gap.
+
+**Decision:** The Cast & Crew board's production-team buckets are now built per
+production from its enabled departments via `buildTeamBuckets(deptKeys)`
+(`wizard-constants.ts`), replacing the hard-coded bucket list. Department → bucket
+mapping: director/stage/casting/choreo map onto the director/stage_manager/producer/
+choreographer roles (no position); music/costumes/props/set/lighting/sound/intimacy/
+dramaturgy are role `crew` + a short position label in `characterName`. A generic
+Crew catch-all is always appended; productions with no departments (quick-add) fall
+back to Director/Stage/Casting + Crew.
+
+**Impact:** This gives the previously write-only `production_departments` data its
+first real consumer, and the board now reflects each show's actual shape. It does
+**not** change the rehearsal report sections (still the fixed list) — wiring reports
+to `production_departments` is a separate follow-up logged in open-questions.
+
+---
+
+## 2026-06-16 (follow-up 3) — Unified production-department model: dynamic report sections + custom departments
+
+**Decision:** `features/productions/departments.ts` is the single source of truth
+for production departments, shared by rehearsal reports, the Cast & Crew board,
+the setup wizard, and the new production Settings tab. A production's departments
+live in `production_departments` (now `key` + `label` + `sort_order`). The 12
+STANDARD departments map 1:1 onto the existing `rehearsal_reports` dept columns;
+CUSTOM departments (user-named) store their per-report notes in a new
+`rehearsal_reports.dept_notes jsonb` map. Reports, both detail views, and both
+email renderers iterate the production's resolved departments instead of the fixed
+12-item list.
+
+**Storage choice (hybrid + read-time fallback, NO data migration):** Only additive
+columns were added (`production_departments.label`/`sort_order`,
+`rehearsal_reports.dept_notes`). Standard departments keep writing/reading their
+existing columns; `reportDeptHtml` falls back column→jsonb so every existing report
+keeps rendering unchanged. This was chosen over a child table + backfill to avoid a
+risky data migration on the app's most-developed feature. Migration
+`add_department_labels_and_report_dept_notes` applied live to project
+`avqgfzrcwegebtbvmcwo`; columns verified present.
+
+**Why:** The user wanted reports to show only a production's relevant departments
+(the wizard's department choice was previously write-only — see follow-up 2) AND to
+add/remove/rename/reorder departments, including custom names, after the wizard.
+
+**Mapping rules:** standard catalog keys (scenery/props/costumes/hair_makeup/
+lighting/sound/sound_effects/music/choreography/video/crew/other) ↔ report columns.
+Legacy wizard keys normalize (set→scenery, choreo→choreography, …); team-area keys
+with no report section (director/stage/casting/intimacy/dramaturgy) are dropped from
+the department list (leadership is always-on on the board instead). A production with
+no departments on file falls back to the full standard catalog (preserves the prior
+"show all 12" behavior). Custom keys are `custom_<slug>`; board bucket = crew + the
+label as position.
+
+**Impact / not changed:** The schedule-change *category* dropdown in
+`subtab-editors.tsx` still uses the full standard catalog (it's a color tag, not a
+report section) — left as-is. Settings is manage-gated (`productions:manage`).
