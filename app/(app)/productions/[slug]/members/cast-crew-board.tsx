@@ -11,31 +11,49 @@ import {
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { ROLE_META } from "@/features/members/constants";
-import { ROLES, type Role } from "@/types/roles";
+import { type Role } from "@/types/roles";
 import {
   assignRoleToMember,
   unassignRole,
   inviteAndAssignRole,
-  assignProductionMember,
+  assignTeamMember,
   removeProductionMember,
 } from "@/features/members/actions";
 import type { DirectoryPerson, ProductionMember } from "@/features/members/queries";
 import type { ProductionRoleRow } from "@/features/productions/queries";
 import { PersonDrawer } from "@/app/(app)/(default)/people/person-drawer";
 
-// Team buckets are the production role enum minus admin (org-only) and cast
-// (which lives in the character slots above). Each bucket holds many — the
-// schema allows multiple people per role.
-const TEAM_ROLES: Role[] = ROLES.filter(
-  (r) => r !== "admin" && r !== "cast",
-);
+// A team bucket is a (role, position) pair. `position` is an optional label
+// stored in `production_memberships.characterName`, letting the board show
+// finer positions than the coarse role enum (e.g. Lighting / Sound Designer)
+// while still mapping to a real role for access. Generic buckets (Director,
+// Crew, …) carry no position.
+type Bucket = {
+  id: string;
+  label: string;
+  role: Role;
+  position: string | null;
+  sub: string;
+};
 
-const TEAM_ROLE_SUB: Record<string, string> = {
-  producer: "Produces the show",
-  director: "Leads the show",
-  choreographer: "Movement",
-  stage_manager: "Runs rehearsals",
-  crew: "Backstage",
+const TEAM_BUCKETS: Bucket[] = [
+  { id: "director", label: "Director", role: "director", position: null, sub: "Leads the show" },
+  { id: "stage_manager", label: "Stage Manager", role: "stage_manager", position: null, sub: "Runs rehearsals" },
+  { id: "choreographer", label: "Choreographer", role: "choreographer", position: null, sub: "Movement" },
+  { id: "lighting_designer", label: "Lighting Designer", role: "crew", position: "Lighting Designer", sub: "Lighting" },
+  { id: "sound_designer", label: "Sound Designer", role: "crew", position: "Sound Designer", sub: "Sound" },
+  { id: "producer", label: "Producer", role: "producer", position: null, sub: "Produces the show" },
+  { id: "crew", label: "Crew", role: "crew", position: null, sub: "Backstage" },
+];
+
+// The big multi-occupant ensemble bucket lives in the Cast section. Stored as
+// cast members tagged with the "Ensemble" position.
+const ENSEMBLE_BUCKET: Bucket = {
+  id: "ensemble",
+  label: "Ensemble",
+  role: "cast",
+  position: "Ensemble",
+  sub: "The company ensemble",
 };
 
 type RosterFilter = "all" | "unassigned" | "cast" | "creative" | "crew";
@@ -70,7 +88,7 @@ function useIsTouch() {
 type Sheet =
   | { mode: "assignPerson"; userId: string; title: string }
   | { mode: "pickSlot"; roleId: string; title: string }
-  | { mode: "pickBucket"; role: Role; title: string };
+  | { mode: "pickBucket"; bucket: Bucket; title: string };
 
 export function CastCrewBoard({
   productionId,
@@ -109,6 +127,15 @@ export function CastCrewBoard({
     return m;
   }, [people]);
 
+  // A person's avatar color is their stable org-role color — the same value the
+  // People directory + drawer use — so it never changes as they move between
+  // board roles.
+  function colorOf(userId: string | null | undefined): string {
+    if (!userId) return "sand";
+    const p = peopleById.get(userId);
+    return p ? ROLE_META[p.role].c : "sand";
+  }
+
   const assignedIds = useMemo(
     () => new Set(members.map((m) => m.userId)),
     [members],
@@ -132,22 +159,29 @@ export function CastCrewBoard({
     });
   }
 
+  function nameOf(userId: string) {
+    const p = peopleById.get(userId);
+    return p ? displayName(p) : "Someone";
+  }
+
   function assignToSlot(userId: string, roleId: string) {
     const ch = characters.find((c) => c.id === roleId);
     run(
       () => assignRoleToMember(roleId, userId),
-      `${displayName(peopleById.get(userId) ?? { firstName: null, lastName: null, email: "Someone" })} cast as ${ch?.name ?? "character"}`,
+      `${nameOf(userId)} cast as ${ch?.name ?? "character"}`,
     );
   }
 
-  function assignToBucket(userId: string, role: Role) {
-    const fd = new FormData();
-    fd.set("production_id", productionId);
-    fd.set("role", role);
-    fd.set("user_ids", JSON.stringify([userId]));
+  function assignToBucket(userId: string, bucket: Bucket) {
     run(
-      () => assignProductionMember(undefined, fd),
-      `${displayName(peopleById.get(userId) ?? { firstName: null, lastName: null, email: "Someone" })} added as ${ROLE_META[role].label}`,
+      () =>
+        assignTeamMember({
+          productionId,
+          userId,
+          role: bucket.role,
+          position: bucket.position,
+        }),
+      `${nameOf(userId)} added as ${bucket.label}`,
     );
   }
 
@@ -161,7 +195,7 @@ export function CastCrewBoard({
     run(() => removeProductionMember(undefined, fd), `Removed ${name}.`);
   }
 
-  // ── drag & drop (desktop) ──
+  // ── drag & drop (desktop) — sources are roster cards, filled slots, chips ──
   function onDragStart(e: React.DragEvent, userId: string) {
     dragId.current = userId;
     e.dataTransfer.effectAllowed = "move";
@@ -189,21 +223,31 @@ export function CastCrewBoard({
     if (dragId.current) assignToSlot(dragId.current, roleId);
     setDropKey(null);
   }
-  function onDropBucket(e: React.DragEvent, role: Role) {
+  function onDropBucket(e: React.DragEvent, bucket: Bucket) {
     e.preventDefault();
-    if (dragId.current) assignToBucket(dragId.current, role);
+    if (dragId.current) assignToBucket(dragId.current, bucket);
     setDropKey(null);
   }
 
-  // ── labels ──
+  // ── data helpers ──
+  function bucketMembers(b: Bucket): ProductionMember[] {
+    return members.filter(
+      (m) =>
+        m.role === b.role &&
+        (b.position ? m.characterName === b.position : !m.characterName),
+    );
+  }
+
   function assignmentLabel(userId: string): string | null {
     const slot = characters.find((c) => c.assignedUserId === userId);
     if (slot) return `Cast · ${slot.name}`;
-    const team = members.find((m) => m.userId === userId && m.role !== "cast");
-    if (team) return ROLE_META[team.role as Role]?.label ?? team.role;
-    const cast = members.find((m) => m.userId === userId);
-    if (cast) return cast.characterName ? `Cast · ${cast.characterName}` : "Cast";
-    return null;
+    const m = members.find((x) => x.userId === userId);
+    if (!m) return null;
+    if (m.role === "cast") {
+      return m.characterName ? `Cast · ${m.characterName}` : "Cast";
+    }
+    const roleLabel = ROLE_META[m.role as Role]?.label ?? m.role;
+    return m.characterName ? `${roleLabel} · ${m.characterName}` : roleLabel;
   }
 
   // ── filtered roster ──
@@ -227,19 +271,23 @@ export function CastCrewBoard({
   });
 
   const castCount = characters.filter((c) => c.assignedUserId).length;
+  const ensembleMembers = bucketMembers(ENSEMBLE_BUCKET);
   const teamCount = members.filter((m) => m.role !== "cast").length;
 
   // ── sheet openers ──
   function openAssignSheet(userId: string) {
-    const p = peopleById.get(userId);
-    setSheet({ mode: "assignPerson", userId, title: `Assign ${p ? displayName(p) : "person"}` });
+    setSheet({
+      mode: "assignPerson",
+      userId,
+      title: `Assign ${nameOf(userId)}`,
+    });
   }
   function openSlotSheet(roleId: string) {
     const ch = characters.find((c) => c.id === roleId);
     setSheet({ mode: "pickSlot", roleId, title: `Cast ${ch?.name ?? "character"}` });
   }
-  function openBucketSheet(role: Role) {
-    setSheet({ mode: "pickBucket", role, title: `Add to ${ROLE_META[role].label}` });
+  function openBucketSheet(bucket: Bucket) {
+    setSheet({ mode: "pickBucket", bucket, title: `Add to ${bucket.label}` });
   }
 
   const drawerPerson = drawerUserId ? peopleById.get(drawerUserId) ?? null : null;
@@ -323,7 +371,7 @@ export function CastCrewBoard({
                       }
                     }}
                   >
-                    <span className="pp-av ax-av-sm" data-c={ROLE_META[p.role].c}>
+                    <span className="pp-av ax-av-sm" data-c={colorOf(p.userId)}>
                       {initials(p)}
                     </span>
                     <div className="who">
@@ -357,7 +405,8 @@ export function CastCrewBoard({
             <div>
               <h2>{productionTitle}</h2>
               <div className="sub">
-                Cast your characters and build the production team.
+                Cast your characters and build the production team. Drag a name
+                between roles to move them.
               </div>
             </div>
             <div className="ax-progress">
@@ -374,7 +423,7 @@ export function CastCrewBoard({
             </div>
           </div>
 
-          {/* Characters */}
+          {/* Cast: named characters + the ensemble bucket */}
           <div className="ax-card">
             <div className="ax-card-h">
               <h3>Cast — characters</h3>
@@ -390,9 +439,6 @@ export function CastCrewBoard({
             ) : (
               <div className="ax-roles">
                 {characters.map((ch) => {
-                  const person = ch.assignedUserId
-                    ? peopleById.get(ch.assignedUserId) ?? null
-                    : null;
                   const key = `slot:${ch.id}`;
                   const filled = !!ch.assignedUserId;
                   return (
@@ -410,36 +456,34 @@ export function CastCrewBoard({
                           if (!filled && isTouch) openSlotSheet(ch.id);
                         }}
                       >
-                        {filled ? (
+                        {filled && ch.assignedUserId ? (
                           <>
                             <div
                               className="filled"
-                              onClick={() =>
-                                ch.assignedUserId &&
-                                setDrawerUserId(ch.assignedUserId)
+                              draggable={!isTouch}
+                              onDragStart={(e) =>
+                                onDragStart(e, ch.assignedUserId!)
                               }
+                              onDragEnd={onDragEnd}
+                              onClick={() => setDrawerUserId(ch.assignedUserId)}
                             >
                               <span
                                 className="pp-av ax-av-sm"
-                                data-c={person ? ROLE_META[person.role].c : "sand"}
+                                data-c={colorOf(ch.assignedUserId)}
                               >
-                                {person
-                                  ? initials(person)
-                                  : initials({
-                                      firstName: ch.assignedFirstName,
-                                      lastName: ch.assignedLastName,
-                                      email: ch.assignedEmail ?? "?",
-                                    })}
+                                {initials({
+                                  firstName: ch.assignedFirstName,
+                                  lastName: ch.assignedLastName,
+                                  email: ch.assignedEmail ?? "?",
+                                })}
                               </span>
                               <div className="who">
                                 <b>
-                                  {person
-                                    ? displayName(person)
-                                    : displayName({
-                                        firstName: ch.assignedFirstName,
-                                        lastName: ch.assignedLastName,
-                                        email: ch.assignedEmail ?? "",
-                                      })}
+                                  {displayName({
+                                    firstName: ch.assignedFirstName,
+                                    lastName: ch.assignedLastName,
+                                    email: ch.assignedEmail ?? "",
+                                  })}
                                 </b>
                                 <span>Cast</span>
                               </div>
@@ -467,9 +511,30 @@ export function CastCrewBoard({
                 })}
               </div>
             )}
+
+            {/* Ensemble — the big multi-occupant cast bucket */}
+            <BucketZone
+              bucket={ENSEMBLE_BUCKET}
+              members={ensembleMembers}
+              big
+              dropKey={dropKey}
+              pending={pending}
+              isTouch={isTouch}
+              colorOf={colorOf}
+              displayName={displayName}
+              initials={initials}
+              onZoneOver={onZoneOver}
+              onZoneLeave={onZoneLeave}
+              onDropBucket={onDropBucket}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onOpenSheet={openBucketSheet}
+              onChip={(userId) => setDrawerUserId(userId)}
+              onRemove={removeFromBucket}
+            />
           </div>
 
-          {/* Team */}
+          {/* Production team */}
           <div className="ax-card">
             <div className="ax-card-h">
               <h3>Production team</h3>
@@ -478,68 +543,27 @@ export function CastCrewBoard({
               </span>
             </div>
             <div className="ax-team">
-              {TEAM_ROLES.map((role) => {
-                const bucketMembers = members.filter((m) => m.role === role);
-                const key = `bucket:${role}`;
-                return (
-                  <div key={role} className="ax-bucket-row">
-                    <div className="ax-bucket-label">
-                      {ROLE_META[role].label}
-                      <span>{TEAM_ROLE_SUB[role] ?? "Team"} · multiple</span>
-                    </div>
-                    <div
-                      className={`ax-bucket${dropKey === key ? " drop" : ""}`}
-                      data-filled={bucketMembers.length ? "1" : "0"}
-                      onDragOver={(e) => onZoneOver(e, key)}
-                      onDragLeave={(e) => onZoneLeave(e, key)}
-                      onDrop={(e) => onDropBucket(e, role)}
-                      onClick={(e: MouseEvent) => {
-                        if (
-                          isTouch &&
-                          !(e.target as HTMLElement).closest(".ax-pchip")
-                        ) {
-                          openBucketSheet(role);
-                        }
-                      }}
-                    >
-                      {bucketMembers.length ? (
-                        bucketMembers.map((m) => (
-                          <span
-                            key={m.id}
-                            className="ax-pchip"
-                            onClick={() => setDrawerUserId(m.userId)}
-                          >
-                            <span
-                              className="pp-av ax-av-xs"
-                              data-c={ROLE_META[role].c}
-                            >
-                              {initials(m)}
-                            </span>
-                            {displayName(m)}
-                            <button
-                              type="button"
-                              className="ax-pchip-x"
-                              title="Remove"
-                              disabled={pending}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeFromBucket(m.id, displayName(m));
-                              }}
-                            >
-                              <Icon name="X" size={12} />
-                            </button>
-                          </span>
-                        ))
-                      ) : (
-                        <span className="hint">
-                          <span className="d-hint">Drag people here</span>
-                          <span className="m-hint">Tap to add</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+              {TEAM_BUCKETS.map((bucket) => (
+                <BucketZone
+                  key={bucket.id}
+                  bucket={bucket}
+                  members={bucketMembers(bucket)}
+                  dropKey={dropKey}
+                  pending={pending}
+                  isTouch={isTouch}
+                  colorOf={colorOf}
+                  displayName={displayName}
+                  initials={initials}
+                  onZoneOver={onZoneOver}
+                  onZoneLeave={onZoneLeave}
+                  onDropBucket={onDropBucket}
+                  onDragStart={onDragStart}
+                  onDragEnd={onDragEnd}
+                  onOpenSheet={openBucketSheet}
+                  onChip={(userId) => setDrawerUserId(userId)}
+                  onRemove={removeFromBucket}
+                />
+              ))}
             </div>
           </div>
         </section>
@@ -572,14 +596,15 @@ export function CastCrewBoard({
           assignedIds={assignedIds}
           canInvite={canInvite}
           pending={pending}
+          colorOf={colorOf}
           assignmentLabel={assignmentLabel}
           onClose={() => setSheet(null)}
           onSlot={(userId, roleId) => {
             assignToSlot(userId, roleId);
             setSheet(null);
           }}
-          onBucket={(userId, role) => {
-            assignToBucket(userId, role);
+          onBucket={(userId, bucket) => {
+            assignToBucket(userId, bucket);
             setSheet(null);
           }}
           onInvite={(roleId, firstName, lastName, email) => {
@@ -601,6 +626,103 @@ export function CastCrewBoard({
   );
 }
 
+function BucketZone({
+  bucket,
+  members,
+  big,
+  dropKey,
+  pending,
+  isTouch,
+  colorOf,
+  displayName,
+  initials,
+  onZoneOver,
+  onZoneLeave,
+  onDropBucket,
+  onDragStart,
+  onDragEnd,
+  onOpenSheet,
+  onChip,
+  onRemove,
+}: {
+  bucket: Bucket;
+  members: ProductionMember[];
+  big?: boolean;
+  dropKey: string | null;
+  pending: boolean;
+  isTouch: boolean;
+  colorOf: (userId: string) => string;
+  displayName: (p: { firstName: string | null; lastName: string | null; email: string }) => string;
+  initials: (p: { firstName: string | null; lastName: string | null; email: string }) => string;
+  onZoneOver: (e: React.DragEvent, key: string) => void;
+  onZoneLeave: (e: React.DragEvent, key: string) => void;
+  onDropBucket: (e: React.DragEvent, bucket: Bucket) => void;
+  onDragStart: (e: React.DragEvent, userId: string) => void;
+  onDragEnd: () => void;
+  onOpenSheet: (bucket: Bucket) => void;
+  onChip: (userId: string) => void;
+  onRemove: (membershipId: string, name: string) => void;
+}) {
+  const key = `bucket:${bucket.id}`;
+  return (
+    <div className={`ax-bucket-row${big ? " ax-ensemble-row" : ""}`}>
+      <div className="ax-bucket-label">
+        {bucket.label}
+        <span>
+          {bucket.sub} · {members.length || (big ? "many" : "multiple")}
+        </span>
+      </div>
+      <div
+        className={`ax-bucket${big ? " ax-bucket-big" : ""}${dropKey === key ? " drop" : ""}`}
+        data-filled={members.length ? "1" : "0"}
+        onDragOver={(e) => onZoneOver(e, key)}
+        onDragLeave={(e) => onZoneLeave(e, key)}
+        onDrop={(e) => onDropBucket(e, bucket)}
+        onClick={(e: MouseEvent) => {
+          if (isTouch && !(e.target as HTMLElement).closest(".ax-pchip")) {
+            onOpenSheet(bucket);
+          }
+        }}
+      >
+        {members.length ? (
+          members.map((m) => (
+            <span
+              key={m.id}
+              className="ax-pchip"
+              draggable={!isTouch}
+              onDragStart={(e) => onDragStart(e, m.userId)}
+              onDragEnd={onDragEnd}
+              onClick={() => onChip(m.userId)}
+            >
+              <span className="pp-av ax-av-xs" data-c={colorOf(m.userId)}>
+                {initials(m)}
+              </span>
+              {displayName(m)}
+              <button
+                type="button"
+                className="ax-pchip-x"
+                title="Remove"
+                disabled={pending}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove(m.id, displayName(m));
+                }}
+              >
+                <Icon name="X" size={12} />
+              </button>
+            </span>
+          ))
+        ) : (
+          <span className="hint">
+            <span className="d-hint">Drag people here</span>
+            <span className="m-hint">Tap to add</span>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AssignSheet({
   sheet,
   characters,
@@ -609,6 +731,7 @@ function AssignSheet({
   assignedIds,
   canInvite,
   pending,
+  colorOf,
   assignmentLabel,
   onClose,
   onSlot,
@@ -622,10 +745,11 @@ function AssignSheet({
   assignedIds: Set<string>;
   canInvite: boolean;
   pending: boolean;
+  colorOf: (userId: string) => string;
   assignmentLabel: (userId: string) => string | null;
   onClose: () => void;
   onSlot: (userId: string, roleId: string) => void;
-  onBucket: (userId: string, role: Role) => void;
+  onBucket: (userId: string, bucket: Bucket) => void;
   onInvite: (
     roleId: string,
     firstName: string,
@@ -700,22 +824,45 @@ function AssignSheet({
                     </button>
                   ))
               )}
+              <button
+                type="button"
+                className="cc-sheet-opt"
+                disabled={pending}
+                onClick={() => onBucket(sheet.userId, ENSEMBLE_BUCKET)}
+              >
+                <div className="who">
+                  <b>{ENSEMBLE_BUCKET.label}</b>
+                  <span>{ENSEMBLE_BUCKET.sub}</span>
+                </div>
+                {members.some(
+                  (m) =>
+                    m.userId === sheet.userId &&
+                    m.role === ENSEMBLE_BUCKET.role &&
+                    m.characterName === ENSEMBLE_BUCKET.position,
+                ) && <span className="meta">current</span>}
+              </button>
+
               <div className="cc-sheet-sec">Production team</div>
-              {TEAM_ROLES.map((role) => {
+              {TEAM_BUCKETS.map((bucket) => {
                 const inBucket = members.some(
-                  (m) => m.userId === sheet.userId && m.role === role,
+                  (m) =>
+                    m.userId === sheet.userId &&
+                    m.role === bucket.role &&
+                    (bucket.position
+                      ? m.characterName === bucket.position
+                      : !m.characterName),
                 );
                 return (
                   <button
-                    key={role}
+                    key={bucket.id}
                     type="button"
                     className="cc-sheet-opt"
                     disabled={pending}
-                    onClick={() => onBucket(sheet.userId, role)}
+                    onClick={() => onBucket(sheet.userId, bucket)}
                   >
                     <div className="who">
-                      <b>{ROLE_META[role].label}</b>
-                      <span>{TEAM_ROLE_SUB[role] ?? "Team"}</span>
+                      <b>{bucket.label}</b>
+                      <span>{bucket.sub}</span>
                     </div>
                     {inBucket && <span className="meta">current</span>}
                   </button>
@@ -780,10 +927,10 @@ function AssignSheet({
                   onClick={() =>
                     sheet.mode === "pickSlot"
                       ? onSlot(p.userId, sheet.roleId)
-                      : onBucket(p.userId, sheet.role)
+                      : onBucket(p.userId, sheet.bucket)
                   }
                 >
-                  <span className="pp-av ax-av-sm" data-c={ROLE_META[p.role].c}>
+                  <span className="pp-av ax-av-sm" data-c={colorOf(p.userId)}>
                     {initials(p)}
                   </span>
                   <div className="who">

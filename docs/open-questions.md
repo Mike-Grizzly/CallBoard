@@ -800,8 +800,13 @@ browser-verified** (no display in the sandbox). Open items:
   (drop = swap). This follows the real schema (many-per-role) and existing
   behavior. If single-occupant leadership is actually wanted, it needs a new
   app-level rule (no schema today enforces it). See decision-log 2026-06-16.
-- **No real "department" buckets** (Wardrobe / Deck Crew / Music Director from the
-  mock) — these would need a schema + permissions change. Flagged for the user.
+- **Positions overloaded onto `characterName` (2026-06-16 follow-up).** Lighting
+  Designer / Sound Designer (role `crew`) and Ensemble (role `cast`) are stored as a
+  position label in `production_memberships.characterName`, so the People directory
+  shows e.g. "Crew · Lighting Designer". If a validated/configurable set of positions
+  — or designers as a distinct permissioned role — is wanted, that's a schema +
+  permissions change. The bucket set is currently hard-coded in `cast-crew-board.tsx`
+  (`TEAM_BUCKETS` / `ENSEMBLE_BUCKET`); per-production configuration is a follow-up.
 - **Drag-and-drop is native HTML5 only** (per dev-rules: no new libs without
   approval). The accessible/mobile path is tap-to-assign. If a keyboard-drag or a
   DnD library is wanted, that's a follow-up; both interaction paths must be kept.

@@ -12665,3 +12665,7 @@ textarea.cform-field {
   .ax-slot .empty .m-hint, .ax-bucket .hint .m-hint { display: inline; }
   .ax-board-head h2 { font-size: 19px; }
 }
+
+/* Cast & Crew — ensemble (big multi-occupant cast bucket) */
+.ax-ensemble-row { margin-top: 12px; }
+.ax-bucket-big { min-height: 88px; align-items: flex-start; align-content: flex-start; }

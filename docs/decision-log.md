@@ -2064,3 +2064,38 @@ would mean speculative schema expansion, which `dev-rules.md` forbids.
 - If a real "department / sub-role" concept is wanted later (Wardrobe, Deck Crew,
   Music Director as distinct from the role enum), that is a schema + permissions
   change to scope separately.
+
+---
+
+## 2026-06-16 (follow-up) — Team positions & Ensemble stored as a position label in `characterName`
+
+**Context:** User feedback on the Cast & Crew board asked for **Lighting Designer**
+and **Sound Designer** buckets in the production team, and a large **Ensemble**
+bucket in the cast section. The role enum has neither designer roles nor a way to
+mark ensemble; the prior entry deliberately avoided inventing departments.
+
+**Decision:** Model board buckets as a **(role, position)** pair, where `position`
+is an optional label stored in the existing `production_memberships.characterName`
+column. Generic buckets (Director, Stage Manager, Choreographer, Producer, Crew)
+carry no position. Finer positions reuse a base role + a label:
+- **Lighting Designer / Sound Designer** = role `crew` + position `"Lighting Designer"` / `"Sound Designer"`.
+- **Ensemble** = role `cast` + position `"Ensemble"` (rendered as the big bucket under the character slots).
+
+A new server action `assignTeamMember({ productionId, userId, role, position })`
+(in `features/members/actions.ts`) upserts the membership with role + characterName,
+**always** overwriting characterName (so moving into a no-position bucket clears a
+stale label) and **clearing any character slot** the person held (dragging onto a
+team/ensemble bucket is a MOVE). `assignProductionMember` is left untouched for the
+People directory's assign-modal.
+
+**Reason:** No schema change (the Supabase migration path is awkward in this
+environment, and `characterName` is already free text and unused for non-cast
+roles). Buckets stay mutually exclusive because the generic Crew bucket matches
+`role=crew AND characterName IS NULL`, while the designer buckets match a specific
+label.
+
+**Tradeoff / impact:** `characterName` is now overloaded as a position label for
+crew/ensemble, so the People directory will render e.g. "Crew · Lighting Designer".
+That reads sensibly, but if a richer, validated set of production positions is ever
+needed (or designers should be a distinct role with their own permissions), that is
+a proper schema + permissions change to scope separately. Logged in open-questions.

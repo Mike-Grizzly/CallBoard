@@ -28,6 +28,7 @@ As an admin, I can create productions and assign team members. As a member, I se
 ## Server actions
 - `createProduction(formData)` in `features/productions/actions.ts` — validates, creates production with generated slug; requires `productions:manage`
 - `assignProductionMember(formData)` in `features/members/actions.ts` — bulk assign users to production with role; requires `productions:manage`; upsert pattern (update role if already assigned)
+- `assignTeamMember({ productionId, userId, role, position })` in `features/members/actions.ts` — Cast & Crew board team/ensemble assignment; upserts the membership with role + `characterName=position`, clears any character slot (move semantics); requires `productions:manage`
 - `removeProductionMember(formData)` in `features/members/actions.ts` — remove from production; requires `productions:manage`
 
 ## Queries
@@ -96,16 +97,25 @@ table" (`cast-list.tsx` + `production-member-manager.tsx`, both removed) with on
 - **Left — Company roster:** every org member (`getPeopleDirectory`), searchable
   + chip-filterable (All / Unassigned / Cast / Creative / Crew). Each card is a
   native HTML5 **drag source** on desktop; assigned people are dimmed with a tick.
-- **Right top — Characters:** one **single-occupant slot** per `production_roles`
-  row. Dropping a person calls `assignRoleToMember(roleId, userId)` (which already
-  swaps/moves: an actor only holds one character, and casting grants production
-  access). The `×` calls `unassignRole(roleId)`.
-- **Right bottom — Production team:** one **multi-occupant bucket** per production
-  role (`producer, director, choreographer, stage_manager, crew` — the role enum
-  minus `admin` and `cast`). Dropping a person calls `assignProductionMember`;
-  the chip `×` calls `removeProductionMember`. **The buckets are the real role
-  enum, NOT the prototype's invented departments** (Wardrobe / Deck Crew / Music
-  Director) — see decision-log 2026-06-16.
+- **Right top — Cast:** one **single-occupant slot** per `production_roles` row
+  (drop → `assignRoleToMember(roleId, userId)`, which swaps/moves + grants access;
+  `×` → `unassignRole`), plus a **large multi-occupant Ensemble bucket** below the
+  slots (role `cast` + position `"Ensemble"`).
+- **Right bottom — Production team:** **multi-occupant buckets** modeled as a
+  `(role, position)` pair (`TEAM_BUCKETS` in `cast-crew-board.tsx`): Director,
+  Stage Manager, Choreographer, **Lighting Designer**, **Sound Designer**,
+  Producer, Crew. The designer buckets reuse role `crew` + a position label held in
+  `characterName`; generic buckets carry no position. Assignment goes through the
+  new `assignTeamMember({ productionId, userId, role, position })` action (it
+  overwrites `characterName` and clears any character slot — a team drop is a MOVE);
+  the chip `×` calls `removeProductionMember`. See decision-log 2026-06-16
+  (follow-up) for the `characterName`-as-position model.
+- **Drag to move:** roster cards, **filled character slots, and team/ensemble chips**
+  are all drag sources, so a person can be dragged directly from one role to another
+  without going back to the roster.
+- **Consistent avatar color:** a person's avatar uses their stable org-role color
+  (`ROLE_META[person.role].c`, via `colorOf`) everywhere — roster, slots, chips,
+  sheet — so it never changes as they move between board roles.
 - **Person drawer:** reuses the People directory's `PersonDrawer` verbatim (per the
   handoff's "do not fork a second drawer"). Opened by clicking any roster card,
   filled slot, or team chip.
@@ -129,6 +139,10 @@ compiles + typechecks (page-data step needs live `DATABASE_URL`, unrelated).
 - [ ] Dragging an already-cast person to a different character moves them (old slot clears)
 - [ ] `×` on a filled slot uncasts (person keeps production access; only the character clears)
 - [ ] Drag a person into a team role bucket → they appear as a chip; chip `×` removes them from the production
+- [ ] Lighting Designer and Sound Designer buckets exist under Production team and accept drops (stored as crew + position)
+- [ ] Ensemble bucket under the character slots accepts many people
+- [ ] **Drag-to-move:** a name already in a slot/chip can be dragged straight to another role (e.g. Stage Manager → Lighting Designer) without returning to the roster; the old placement clears
+- [ ] An avatar keeps the **same color** for a person across the roster, slots, and chips (no color change on each new role)
 - [ ] Clicking a roster card / filled slot / team chip opens the reused PersonDrawer
 - [ ] Search + each filter chip (Unassigned/Cast/Creative/Crew) narrow the roster correctly
 - [ ] ≤859px: board/company toggle works; `+` on a person opens the role sheet; tapping an empty slot/bucket opens the people sheet
