@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Proscene — Production · Blocking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="proscene.css" />
+<link rel="stylesheet" href="ref-chrome.css" />
+<style>
+  .bk-root { margin: -24px calc(-1 * var(--pad-x)); height: calc(100vh - 132px); display: grid; grid-template-columns: 220px 1fr 240px; overflow: hidden; }
+  .bk-side-left { display: flex; flex-direction: column; height: 100%; overflow: hidden; border-right: 1px solid var(--border); padding: 14px 12px; gap: 12px; }
+  .bk-scene { padding: 8px 10px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
+  .bk-scene[data-active="1"] { background: var(--bg-elev); box-shadow: var(--shadow-1); border-color: var(--border-strong); }
+  .bk-scene .t { font-size: 13px; color: var(--ink-2); }
+  .bk-scene[data-active="1"] .t { color: var(--ink); font-weight: 500; }
+  .bk-beat { display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; color: var(--ink-3); margin-left: 12px; }
+  .bk-beat[data-active="1"] { background: var(--accent-soft); color: var(--accent-ink); font-weight: 500; }
+  .bk-offstage-tile { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: grab; }
+  .bk-offstage-tile:hover { background: var(--bg-muted); }
+  .bk-center { display: flex; flex-direction: column; padding: 14px 16px; gap: 10px; min-width: 0; height: 100%; }
+  .bk-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; background: rgb(23,23,23); border-radius: var(--radius); border: 1px solid var(--border); }
+  .bk-stage-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px); background-size: 9% 11%; }
+  .bk-stage-edge { position: absolute; left: 6%; right: 6%; top: 8%; bottom: 10%; border: 1px dashed rgba(255,255,255,.14); border-radius: 4px; }
+  .bk-stage-label { position: absolute; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.3); font-weight: 600; }
+  .bk-token { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: grab; }
+  .bk-token-dot { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 600; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,.4); border: 2px solid rgba(255,255,255,.3); }
+  .bk-actor-label { font-size: 11px; color: rgba(255,255,255,.85); background: rgba(0,0,0,.45); padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+  .bk-setpiece { position: absolute; transform: translate(-50%, -50%); background: rgba(120,90,60,.5); border: 1px solid rgba(255,255,255,.25); border-radius: 4px; color: rgba(255,255,255,.85); font-size: 11px; padding: 14px 22px; cursor: grab; }
+  .bk-side-right { border-left: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow-y: auto; padding: 14px 12px; gap: 16px; }
+  .bk-layer-group { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .bk-toolbtn { height: 28px; padding: 0 10px; font-size: 12px; }
+</style>
+</head>
+<body data-rail-prod="pirates" data-prod-tab="blocking" data-ref-tag="Production · Blocking · live source">
+<div class="app">
+  <main class="main">
+    <div class="page" style="overflow:hidden;">
+      <div class="bk-root">
+
+        <!-- Left: scenes & off-stage cast -->
+        <div class="bk-side-left">
+          <div style="display:flex; flex-direction:column;">
+            <div class="h-eyebrow" style="margin-bottom: 8px;">Scenes</div>
+            <div class="scroll" style="display:flex; flex-direction:column; gap:2px; max-height:280px; overflow-y:auto;">
+              <div>
+                <div class="bk-scene"><div class="t truncate">The pirate ship</div><div class="muted" style="font-size:11.5px; margin-top:2px;">Act 1 · Sc 1</div></div>
+                <div style="margin-left:12px; margin-top:2px; display:flex; flex-direction:column; gap:1px;">
+                  <div class="bk-beat"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.5"><path d="m9 18 6-6-6-6"/></svg>Beat 1 — Opening</div>
+                </div>
+              </div>
+              <div>
+                <div class="bk-scene" data-active="1"><div class="t truncate">Frederic &amp; the maidens</div><div class="muted" style="font-size:11.5px; margin-top:2px;">Act 1 · Sc 2</div></div>
+                <div style="margin-left:12px; margin-top:2px; display:flex; flex-direction:column; gap:1px;">
+                  <div class="bk-beat"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.5"><path d="m9 18 6-6-6-6"/></svg>Beat 1 — Entrance</div>
+                  <div class="bk-beat" data-active="1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.5"><path d="m9 18 6-6-6-6"/></svg>Beat 2 — "Poor wand'ring one"</div>
+                  <div class="bk-beat"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.5"><path d="m9 18 6-6-6-6"/></svg>Beat 3 — Duet</div>
+                </div>
+              </div>
+              <div>
+                <div class="bk-scene"><div class="t truncate">Mabel's entrance</div><div class="muted" style="font-size:11.5px; margin-top:2px;">Act 1 · Sc 3</div></div>
+              </div>
+            </div>
+            <button class="btn ghost" style="margin-top:6px; height:28px; padding:0 10px; font-size:12px; justify-content:flex-start; width:100%;"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5v14"/></svg>Add scene</button>
+          </div>
+
+          <div style="flex:1; min-height:0; display:flex; flex-direction:column;">
+            <div class="h-eyebrow" style="margin-bottom: 8px;">Off-stage cast</div>
+            <div style="display:flex; flex-direction:column; gap:2px; overflow-y:auto;">
+              <div class="bk-offstage-tile"><div class="avatar" style="background:var(--c-plum); width:26px; height:26px; font-size:11px;">RB</div><div class="truncate" style="font-size:12.5px;">Pirate King</div></div>
+              <div class="bk-offstage-tile"><div class="avatar" style="background:var(--c-amber); width:26px; height:26px; font-size:11px;">PD</div><div class="truncate" style="font-size:12.5px;">Maj.-Gen.</div></div>
+              <div class="bk-offstage-tile"><div class="avatar" style="background:var(--c-sand); width:26px; height:26px; font-size:11px;">TN</div><div class="truncate" style="font-size:12.5px;">Sergeant</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center: toolbar + stage -->
+        <div class="bk-center">
+          <div class="row-between">
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:15px; font-weight:600; letter-spacing:-0.01em; color:var(--ink);">Stage Blocking</div>
+              <div class="muted truncate" style="font-size:12.5px; margin-top:2px;">Frederic &amp; the maidens · Beat 2 — drag actors to set positions</div>
+            </div>
+            <div class="row" style="display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end;">
+              <button class="btn ghost bk-toolbtn"><span>SL/SR</span></button>
+              <button class="btn ghost bk-toolbtn"><span>US/DS</span></button>
+              <div style="display:flex; align-items:center; gap:4px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.84Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/></svg>
+                <div class="bk-layer-group">
+                  <button class="btn ghost bk-toolbtn" style="border-radius:0; border-right:1px solid var(--border);">Set Pieces</button>
+                  <button class="btn ghost bk-toolbtn" style="border-radius:0; background:var(--bg-sunken);">Actors</button>
+                </div>
+              </div>
+              <button class="btn ghost bk-toolbtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg><span>Movement</span></button>
+              <button class="btn ghost bk-toolbtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Draw Arrow</span></button>
+              <button class="btn ghost bk-toolbtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg><span>Undo</span></button>
+              <button class="btn primary bk-toolbtn" style="gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M14.31 8 20.05 17.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16 3.95 6.06M14.31 16H2.83M16.62 12l-5.74 9.94"/></svg><span>Capture Beat</span></button>
+              <button class="btn ghost bk-toolbtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span>Export</span></button>
+              <button class="btn ghost bk-toolbtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Stage Setup</span></button>
+              <a href="Production - Focus View.html?mode=blocking" class="btn ghost bk-toolbtn" style="text-decoration:none;" title="Open full-screen focus view"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg><span>Focus</span></a>
+            </div>
+          </div>
+
+          <!-- Stage canvas -->
+          <div class="bk-stage">
+            <div class="bk-stage-grid"></div>
+            <div class="bk-stage-edge"></div>
+            <div class="bk-stage-label" style="top:3%; left:50%; transform:translateX(-50%);">Upstage</div>
+            <div class="bk-stage-label" style="bottom:3%; left:50%; transform:translateX(-50%);">Downstage · Audience</div>
+            <div class="bk-stage-label" style="left:1.5%; top:50%; transform:translateY(-50%) rotate(-90deg);">SR</div>
+            <div class="bk-stage-label" style="right:1.5%; top:50%; transform:translateY(-50%) rotate(90deg);">SL</div>
+
+            <!-- movement arrow -->
+            <svg style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none;">
+              <defs><marker id="bkarrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--accent)"/></marker></defs>
+              <line x1="38%" y1="62%" x2="56%" y2="44%" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#bkarrow)" opacity="0.8" />
+            </svg>
+
+            <!-- set piece -->
+            <div class="bk-setpiece" style="left:24%; top:34%;">Rock</div>
+
+            <!-- actor tokens -->
+            <div class="bk-token" style="left:38%; top:62%;"><div class="bk-token-dot" style="background:var(--c-clay);">FH</div><div class="bk-actor-label">Frederic</div></div>
+            <div class="bk-token" style="left:56%; top:44%;"><div class="bk-token-dot" style="background:var(--c-sage);">MO</div><div class="bk-actor-label">Mabel</div></div>
+            <div class="bk-token" style="left:70%; top:60%;"><div class="bk-token-dot" style="background:var(--c-dusk);">SK</div><div class="bk-actor-label">Ruth</div></div>
+            <div class="bk-token" style="left:62%; top:72%;"><div class="bk-token-dot" style="background:var(--c-plum);">EW</div><div class="bk-actor-label">Edith</div></div>
+            <div class="bk-token" style="left:46%; top:78%;"><div class="bk-token-dot" style="background:var(--c-teal, var(--c-dusk));">KA</div><div class="bk-actor-label">Kate</div></div>
+          </div>
+        </div>
+
+        <!-- Right: beat notes + comments -->
+        <div class="bk-side-right">
+          <div>
+            <div class="h-eyebrow" style="margin-bottom: 8px;">Beat notes</div>
+            <div class="card" style="padding:10px 12px; font-size:13px; color:var(--ink-2); line-height:1.55; min-height:90px;">
+              Maidens fan out in a loose arc DS. Frederic crosses to Mabel on the musical pickup; Ruth holds USR, watching. Hold the picture through the held note.
+            </div>
+          </div>
+          <div>
+            <div class="h-eyebrow" style="margin-bottom: 8px;">Comments</div>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; gap:8px;"><div class="avatar" style="background:var(--c-plum); width:24px; height:24px; font-size:10px; flex-shrink:0;">EV</div><div><div style="font-size:12px;"><b style="font-weight:600;">Eleanor Voss</b> <span class="muted">· 1d</span></div><div style="font-size:12.5px; color:var(--ink-2); margin-top:1px;">Let's widen the arc — give Mabel more space to land the high note.</div></div></div>
+              <div style="display:flex; gap:8px;"><div class="avatar" style="background:var(--accent); width:24px; height:24px; font-size:10px; flex-shrink:0;">MR</div><div><div style="font-size:12px;"><b style="font-weight:600;">Mike Rivera</b> <span class="muted">· 22h</span></div><div style="font-size:12.5px; color:var(--ink-2); margin-top:1px;">Updated — spike marks added for the new arc.</div></div></div>
+            </div>
+            <div style="display:flex; gap:6px; margin-top:10px;"><input class="field" placeholder="Add a comment…" style="font-size:12.5px;" /><button class="btn primary btn-icon"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4Z"/></svg></button></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+<script src="shell.js"></script>
+</body>
+</html>

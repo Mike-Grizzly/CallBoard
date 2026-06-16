@@ -1,0 +1,95 @@
+/* ref-chrome.css — reference-only chrome (not part of the app):
+   theme switcher, corner tag, and viewport-height fixes so the rail
+   stays put and the page scrolls. */
+html, body { height: 100%; }
+.app { height: 100vh; }
+.rail { overflow-y: auto; }
+.main { overflow: hidden; }
+
+/* Safety fallback: any .ico SVG not sized by a more specific contextual rule
+   (.btn .ico, .rail-item .ico, etc.) defaults to 16px instead of filling its
+   box. Contextual rules still win on specificity. */
+.ico { width: 16px; height: 16px; }
+
+/* Documents folder rail (the real component uses inline styles; these mirror
+   them so the reference markup stays readable). */
+.docs-folder { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; font-size: 13px; border: none; text-align: left; width: 100%; background: transparent; color: var(--ink-3); font-weight: 400; cursor: pointer; }
+.docs-folder:hover { background: var(--bg-elev); }
+.docs-folder[data-active="1"] { background: var(--bg-elev); box-shadow: var(--shadow-1); color: var(--ink); font-weight: 500; }
+.docs-folder .ico { color: var(--ink-4); flex-shrink: 0; }
+.docs-folder-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.docs-folder-count { font-size: 11.5px; color: var(--ink-4); }
+.docs-row:hover { background: var(--bg-muted); }
+/* Native file input button, styled to match the app's file: utility classes. */
+input[type="file"].docs-file::file-selector-button { margin-right: 8px; border-radius: 6px; border: 0; background: var(--bg-muted); padding: 6px 12px; font-size: 13px; font-weight: 500; color: var(--ink); cursor: pointer; }
+
+/* The app's entrance animation (.anim-in) starts at opacity:0 and relies on
+   the keyframe advancing. In a static, non-activated preview the animation
+   can stall at its first frame, leaving content invisible. Neutralize all
+   entrance/loop animations so every screen and dialog shows reliably. */
+*, *::before, *::after {
+  animation-duration: 0.001s !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+}
+.anim-in { opacity: 1 !important; transform: none !important; }
+.pp-drawer, .ref-drawer-panel, .ref-modal, .pp-modal { opacity: 1 !important; transform: none !important; }
+
+.theme-switch {
+  position: fixed; bottom: 16px; right: 16px; z-index: 100;
+  display: flex; gap: 4px; padding: 5px;
+  background: var(--bg-elev); border: 1px solid var(--border-strong);
+  border-radius: 999px; box-shadow: var(--shadow-2);
+}
+.theme-switch button {
+  appearance: none; border: 0; background: none; cursor: pointer;
+  font-size: 11.5px; font-weight: 600; color: var(--ink-3);
+  padding: 6px 12px; border-radius: 999px; transition: all 0.12s; font-family: var(--font-ui);
+}
+.theme-switch button[data-on="1"] { background: var(--accent); color: white; }
+.theme-switch button:not([data-on="1"]):hover { background: var(--bg-muted); color: var(--ink); }
+
+.ref-tag {
+  position: fixed; bottom: 18px; left: 16px; z-index: 100;
+  font-size: 10.5px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-4); background: color-mix(in oklch, var(--bg-elev) 80%, transparent);
+  padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border);
+  backdrop-filter: blur(6px); pointer-events: none;
+}
+
+/* Reusable modal / drawer scrim for showcasing the app's dialogs in the
+   reference. Hidden until opened (click a [data-modal-open] trigger). */
+.ref-scrim {
+  position: fixed; inset: 0; z-index: 200;
+  background: color-mix(in oklch, var(--ink) 45%, transparent);
+  backdrop-filter: blur(2px);
+  display: none; align-items: center; justify-content: center; padding: 24px;
+}
+.ref-scrim[data-open="1"] { display: flex; }
+.ref-scrim.drawer { justify-content: flex-end; padding: 0; align-items: stretch; }
+.ref-scrim.sheet { align-items: flex-end; }
+@keyframes ref-fade { from { opacity: 0; } to { opacity: 1; } }
+.ref-modal {
+  background: var(--bg-elev); border: 1px solid var(--border);
+  border-radius: var(--radius-l); box-shadow: var(--shadow-3);
+  width: 100%; max-width: 560px; max-height: calc(100vh - 48px);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.ref-drawer-panel {
+  background: var(--bg-elev); border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-3); width: 100%; max-width: 440px; height: 100vh;
+  overflow-y: auto; display: flex; flex-direction: column;
+}
+@keyframes ref-slide { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.ref-modal-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 18px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.ref-modal-head h3 { margin: 0; font-family: var(--font-display); font-size: 18px; font-weight: 500; letter-spacing: -0.01em; }
+.ref-modal-head p { margin: 3px 0 0; font-size: 13px; color: var(--ink-3); }
+.ref-modal-x { width: 30px; height: 30px; border-radius: 7px; border: 0; background: none; color: var(--ink-3); cursor: pointer; display: grid; place-items: center; flex-shrink: 0; }
+.ref-modal-x:hover { background: var(--bg-muted); color: var(--ink); }
+.ref-modal-body { padding: 20px; overflow-y: auto; }
+.ref-modal-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--border); flex-shrink: 0; }
+/* Small hint chip the reference adds to a trigger so users know it opens a modal. */
+.ref-open-hint { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent-ink); background: var(--accent-soft); padding: 2px 6px; border-radius: 999px; margin-left: 6px; }
