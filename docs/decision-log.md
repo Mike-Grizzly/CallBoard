@@ -2035,3 +2035,32 @@ WARN) — a dashboard toggle, deferred to the user.
 **Reason:** These are standard account-settings expectations; the email-reconciliation-by-UID keeps the safe "never link profiles by email" invariant (see the 2026-06-03 orphan-profiles note). The time-zone decision follows dev-rules: flag a feature that conflicts with the data model instead of building it.
 
 **Impact:** `features/account/actions.ts` (+`changeEmail`/`signOutEverywhere`/`deleteOwnAccount`), `lib/auth.ts` (email reconciliation), new `app/(app)/(default)/settings/account/{change-email-form,account-danger-zone}.tsx`, edited account `page.tsx` + `account-profile-form.tsx`, login page notices. No schema change. Not browser-verified.
+
+---
+
+## 2026-06-16 — Cast & Crew team buckets map to the role enum, not invented departments
+
+**Decision:** The drag-to-assign Cast & Crew board (`/productions/[slug]/members`,
+rebuilt from `handoff/cast-crew-drag-assign`) models its "Production team" buckets
+as the existing production **role enum** (`producer, director, choreographer,
+stage_manager, crew` — i.e. `ROLES` minus `admin` and `cast`), each a
+multi-occupant bucket. The handoff prototype's mock buckets ("Music Director",
+"Wardrobe", "Deck Crew") were **not** reproduced as literal departments.
+
+**Reason:** The app has no data model for named sub-departments — production team
+membership is a single `production_memberships.role` per person from a fixed enum.
+The handoff README's own data-mapping table points `CC_TEAM` at "production team
+roles + multi flag (production-member-manager)", confirming the role enum is the
+intended source; the specific bucket names were mock data. Inventing departments
+would mean speculative schema expansion, which `dev-rules.md` forbids.
+
+**Impact:**
+- All team buckets are multi-occupant (the schema already allows many per role),
+  whereas the prototype showed Director/Stage Manager as single-occupant. This is a
+  deliberate deviation logged in `open-questions.md`.
+- A person has one production role; casting them in a character keeps their existing
+  team role and just sets the character (so a director who also acts shows in both
+  the Director bucket and a character slot — consistent with `assignRoleToMember`).
+- If a real "department / sub-role" concept is wanted later (Wardrobe, Deck Crew,
+  Music Director as distinct from the role enum), that is a schema + permissions
+  change to scope separately.

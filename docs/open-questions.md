@@ -786,3 +786,29 @@ acceptable for beta.
   on `/` and `/features` were rebuilt (Script) / audited (the rest) against the real
   components for accuracy, but none were rendered in-session. Eyeball them on a preview
   deploy and flag any styling drift for a precise fix.
+
+---
+
+## Cast & Crew board — deviations & follow-ups (added 2026-06-16)
+
+The drag-to-assign board (`/productions/[slug]/members`, `cast-crew-board.tsx`,
+rebuilt from `handoff/cast-crew-drag-assign`) is **implemented but not
+browser-verified** (no display in the sandbox). Open items:
+
+- **Team buckets are multi-occupant for every role**, including Director / Stage
+  Manager, whereas the prototype treated leadership roles as single-occupant
+  (drop = swap). This follows the real schema (many-per-role) and existing
+  behavior. If single-occupant leadership is actually wanted, it needs a new
+  app-level rule (no schema today enforces it). See decision-log 2026-06-16.
+- **No real "department" buckets** (Wardrobe / Deck Crew / Music Director from the
+  mock) — these would need a schema + permissions change. Flagged for the user.
+- **Drag-and-drop is native HTML5 only** (per dev-rules: no new libs without
+  approval). The accessible/mobile path is tap-to-assign. If a keyboard-drag or a
+  DnD library is wanted, that's a follow-up; both interaction paths must be kept.
+- **A `cast` member with no character** appears in the roster (with an
+  "Unassigned"/role label) but in neither zone of the board until cast or given a
+  team role. This matches the prototype but may warrant a "cast, no character yet"
+  affordance later.
+- **Needs a real eyeball** on: the desktop two-column drag feel, the ≤859px
+  board⇄company toggle + bottom sheets, and the four themes (the `.drop` highlight
+  uses `--accent`).
