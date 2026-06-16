@@ -2060,7 +2060,7 @@ export function ScriptViewer({
                   ? `${((canvasSize.w + focusGutter) / canvasSize.w) * 100}%`
                   : "100%",
                 height: "100%",
-                overflow: "visible",
+                ...(focusMargin ? { overflow: "visible" as const } : {}),
                 cursor: svgCursor,
                 pointerEvents: svgPointerEvents,
               }}
