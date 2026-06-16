@@ -1,5 +1,7 @@
 # Handoff — Cast & Crew: drag-to-assign casting board
 
+**Status:** Implemented — 2026-06 (live as the Cast & Crew board at `app/(app)/productions/[slug]/members/`)
+
 A redesign of the production **Cast & Crew** tab. Replaces the stacked
 "cast list + bulk-assign card + current-team table" with a single **two-zone
 casting board**: drag people from the Company roster onto character slots and

@@ -26,6 +26,23 @@ For **feature work or multi-file changes**: read these docs first:
 
 Summarize your understanding and planned file changes before editing.
 
+## Design handoffs — how designs enter the codebase
+
+Designs live in two places, both **read-only reference** — never edit the design
+files to match the code; recreate the design in real code using this codebase's
+components, tokens, and patterns. Full standard: `/docs/design-handoffs.md`.
+
+- `design-reference/` — the global whole-app UI mockup (ported tab-by-tab).
+- `handoff/<feature-name>/` — per-feature design drop-offs (one folder each;
+  the owner commits these straight to `main`). Each README's first line is a
+  `**Status:**` marker.
+
+On startup or when design work is requested, **scan `handoff/*/` for folders not
+marked `Implemented`, summarize them, but do NOT start building one unless the
+owner explicitly asks.** When asked: branch off `main`, recreate against existing
+patterns, test, set the handoff's `**Status:** Implemented — <date>`, and do the
+docs closeout.
+
 ## Critical patterns — do not break these
 
 1. **Server actions** return typed results with optional `error` field, check `can(role, capability)`, call `revalidatePath()`
