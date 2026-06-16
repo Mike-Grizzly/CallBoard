@@ -1246,6 +1246,7 @@ export function ScriptViewer({
           .map((c) => (focusMargin ? { ...c, leaderSide: "right" as const } : c)),
         canvasSize.h,
         cueScale,
+        focusMargin, // single-column gutter stacking in margin mode
       ),
     [pageAnnotations, canvasSize.h, cueScale, focusMargin],
   );
@@ -2667,6 +2668,9 @@ function stackCueLabels(
   }[],
   canvasH: number,
   scale = 1,
+  // Single-column mode (the focus gutter): never fan into a 2nd column — every
+  // label stacks vertically with full spacing so cards line up and don't overlap.
+  singleColumn = false,
 ): Map<string, CueLabelPos> {
   // Offsets are in screen px; scale them so stacks stay proportional to the
   // page (and the text) at any zoom — see `cueScale`.
@@ -2675,7 +2679,7 @@ function stackCueLabels(
   const GAP = NUMBER_UP + CUE_LABEL_PAD * scale;
   // Up to this many labels stack vertically in one column before the next one
   // that can't seat at its line overflows into the second column.
-  const MAX_STACK = 2;
+  const MAX_STACK = singleColumn ? Infinity : 2;
   const out = new Map<string, CueLabelPos>();
   for (const side of ["left", "right"] as const) {
     const group = cues
@@ -3317,31 +3321,48 @@ function AnnotationShape({
     const lineStartX = isLeft ? rx : rx + rw;
     const MARGIN_OFFSET = 14 * s;
     const lane = cueLabel?.lane ?? 0;
-    // Margin mode parks labels just past the page's right edge, in the gutter;
-    // otherwise they hug the page's left/right edge as before.
+    // Margin mode parks labels well into the right gutter; otherwise they hug
+    // the page's left/right edge as before.
     const baseX = focusMargin
-      ? canvasW + 18 * s
+      ? canvasW + 48 * s
       : isLeft
         ? MARGIN_OFFSET
         : canvasW - MARGIN_OFFSET;
     // A dragged label sits at its stored position; otherwise it's auto-stacked.
+    // In the gutter we keep a single aligned column (no 2nd-column fan-out) so
+    // cards line up and each leader reads cleanly to its own card.
     const labelX = annotation.labelPos
       ? annotation.labelPos.x * canvasW
-      : isLeft
-        ? baseX + lane * CUE_LANE_GAP * s
-        : baseX - (focusMargin ? -1 : 1) * lane * CUE_LANE_GAP * s;
+      : focusMargin
+        ? baseX
+        : isLeft
+          ? baseX + lane * CUE_LANE_GAP * s
+          : baseX - lane * CUE_LANE_GAP * s;
     const labelY = annotation.labelPos
       ? annotation.labelPos.y * canvasH
       : (cueLabel?.y ?? bottomY);
-    const textAnchor = isLeft || focusMargin ? "start" : "end";
+    const textAnchor = isLeft ? "start" : "end";
     const cc = annotation.color ?? CUE_STROKE;
     const serif = 3 * s;
     const draggable = !!onLabelPointerDown;
-    // Gutter card geometry (margin mode only).
-    const cardX = labelX - 10 * s;
-    const cardW = Math.max(96 * s, canvasW + gutter - 10 * s - cardX);
-    const cardH = (annotation.cueDescription ? 34 : 24) * s;
-    const cardY = labelY - 17 * s;
+    // Gutter card geometry (margin mode only): a neutral, readable card whose
+    // width fits the longer of the cue number / description rather than filling
+    // the whole gutter. A thin colored bar on the left carries the cue color.
+    const ACCENT_W = 3 * s;
+    const padL = 9 * s;
+    const padR = 11 * s;
+    const numTextW = (annotation.cueNumber?.length ?? 0) * 8.2 * s;
+    const descTextW = (annotation.cueDescription?.length ?? 0) * 5.0 * s;
+    const contentW = Math.max(numTextW, descTextW);
+    const cardX = labelX;
+    const availW = canvasW + gutter - cardX - 6 * s;
+    const cardW = Math.min(
+      Math.max(54 * s, ACCENT_W + padL + contentW + padR),
+      Math.max(60 * s, availW),
+    );
+    const cardH = (annotation.cueDescription ? 30 : 21) * s;
+    const cardY = labelY - cardH / 2;
+    const textX = cardX + ACCENT_W + padL;
 
     const isPipe = annotation.marker === "pipe";
 
@@ -3376,17 +3397,24 @@ function AnnotationShape({
             strokeWidth={(selected ? 2 : 1.5) * s}
           />
         )}
-        {/* Orthogonal leader: horizontal out to the margin, then a right-angle
-            drop to the (possibly stacked) label — never diagonal. */}
+        {/* Orthogonal leader. On-page (normal): horizontal out to the margin
+            then a right-angle drop. Margin mode: drop vertically at the anchor
+            first, then run horizontally into the card — so each line ends on its
+            own card and stacked leaders never share a vertical run. */}
         <polyline
           points={
-            labelY === bottomY
-              ? `${lineStartX},${bottomY} ${labelX},${bottomY}`
-              : `${lineStartX},${bottomY} ${labelX},${bottomY} ${labelX},${labelY}`
+            focusMargin
+              ? labelY === bottomY
+                ? `${lineStartX},${bottomY} ${cardX},${bottomY}`
+                : `${lineStartX},${bottomY} ${lineStartX},${labelY} ${cardX},${labelY}`
+              : labelY === bottomY
+                ? `${lineStartX},${bottomY} ${labelX},${bottomY}`
+                : `${lineStartX},${bottomY} ${labelX},${bottomY} ${labelX},${labelY}`
           }
           fill="none"
           stroke={cc}
           strokeWidth={1 * s}
+          strokeOpacity={focusMargin ? 0.7 : 1}
         />
         {/* Label: end dot + number (+ description). Draggable when editable —
             grab it to place it manually; the leader follows. */}
@@ -3402,56 +3430,90 @@ function AnnotationShape({
           onClick={draggable ? (e) => e.stopPropagation() : undefined}
           style={draggable ? { cursor: "move" } : undefined}
         >
-          {/* Margin mode: a boxed card behind the label, in the gutter. */}
-          {focusMargin && (
-            <rect
-              x={cardX}
-              y={cardY}
-              width={cardW}
-              height={cardH}
-              rx={5 * s}
-              ry={5 * s}
-              style={{
-                fill: "var(--bg-elev)",
-                stroke: cc,
-                strokeWidth: 1 * s,
-                strokeOpacity: 0.6,
-              }}
-            />
-          )}
-          {/* Invisible hit target so the label is easy to grab */}
-          {draggable && (
-            <rect
-              x={focusMargin ? cardX : isLeft ? labelX - 4 * s : labelX - 44 * s}
-              y={labelY - 16 * s}
-              width={focusMargin ? cardW : 48 * s}
-              height={annotation.cueDescription ? 32 * s : 22 * s}
-              fill="transparent"
-            />
-          )}
-          <circle cx={labelX} cy={labelY} r={serif} fill={cc} />
-          <text
-            x={isLeft || focusMargin ? labelX + 6 * s : labelX - 6 * s}
-            y={labelY - 4 * s}
-            textAnchor={textAnchor}
-            fontSize={13 * s}
-            fill={cc}
-            fontWeight="700"
-            fontFamily="system-ui, sans-serif"
-          >
-            {annotation.cueNumber}
-          </text>
-          {annotation.cueDescription && (
-            <text
-              x={isLeft || focusMargin ? labelX + 6 * s : labelX - 6 * s}
-              y={labelY + 12 * s}
-              textAnchor={textAnchor}
-              fontSize={9 * s}
-              fill={cc}
-              fontFamily="system-ui, sans-serif"
-            >
-              {annotation.cueDescription}
-            </text>
+          {focusMargin ? (
+            <>
+              {/* Neutral card + colored left accent bar (readable in any theme) */}
+              <rect
+                x={cardX}
+                y={cardY}
+                width={cardW}
+                height={cardH}
+                rx={5 * s}
+                ry={5 * s}
+                style={{
+                  fill: "var(--bg-elev)",
+                  stroke: selected ? cc : "var(--border-strong)",
+                  strokeWidth: (selected ? 1.5 : 1) * s,
+                }}
+              />
+              <rect
+                x={cardX}
+                y={cardY}
+                width={ACCENT_W}
+                height={cardH}
+                fill={cc}
+              />
+              <text
+                x={textX}
+                y={annotation.cueDescription ? labelY - 3 * s : labelY + 4 * s}
+                textAnchor="start"
+                fontSize={12.5 * s}
+                fill={cc}
+                fontWeight="700"
+                fontFamily="system-ui, sans-serif"
+              >
+                {annotation.cueNumber}
+              </text>
+              {annotation.cueDescription && (
+                <text
+                  x={textX}
+                  y={labelY + 10 * s}
+                  textAnchor="start"
+                  fontSize={9 * s}
+                  fill="var(--ink-2)"
+                  fontFamily="system-ui, sans-serif"
+                >
+                  {annotation.cueDescription}
+                </text>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Invisible hit target so the label is easy to grab */}
+              {draggable && (
+                <rect
+                  x={isLeft ? labelX - 4 * s : labelX - 44 * s}
+                  y={labelY - 16 * s}
+                  width={48 * s}
+                  height={annotation.cueDescription ? 32 * s : 22 * s}
+                  fill="transparent"
+                />
+              )}
+              <circle cx={labelX} cy={labelY} r={serif} fill={cc} />
+              <text
+                x={isLeft ? labelX + 6 * s : labelX - 6 * s}
+                y={labelY - 4 * s}
+                textAnchor={textAnchor}
+                fontSize={13 * s}
+                fill={cc}
+                fontWeight="700"
+                fontFamily="system-ui, sans-serif"
+              >
+                {annotation.cueNumber}
+              </text>
+              {annotation.cueDescription && (
+                <text
+                  x={isLeft ? labelX + 6 * s : labelX - 6 * s}
+                  y={labelY + 12 * s}
+                  textAnchor={textAnchor}
+                  fontSize={9 * s}
+                  fill={cc}
+                  fontFamily="system-ui, sans-serif"
+                >
+                  {annotation.cueDescription}
+                </text>
+              )}
+            </>
           )}
         </g>
       </g>
