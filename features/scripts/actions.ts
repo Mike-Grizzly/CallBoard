@@ -12,9 +12,13 @@ import {
   productionMemberships,
   productions,
 } from "@/db/schema";
-import { and, desc, eq, gte, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
+import {
+  requireCurrentUser,
+  userCanAccessProduction,
+  isDesignerOnly,
+} from "@/lib/auth";
 import { assertCanMutate } from "@/features/billing/guard";
 import { can } from "@/lib/permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -22,6 +26,8 @@ import {
   PARSE_ROLE_TYPES,
   PARSE_LIMIT_PER_PRODUCTION,
   PARSE_WINDOW_DAYS,
+  DESIGNER_PARSE_LIMIT_PER_PRODUCTION,
+  DESIGNER_PARSE_LIMIT_PER_USER,
   type Bookmark,
   type ScriptParseResult,
 } from "./constants";
@@ -291,11 +297,36 @@ export async function startScriptParse(
   }
   // Count only parses that actually ran (failed-before-the-model rows are free
   // and shouldn't burn quota).
+  const designer = isDesignerOnly(user);
+  const perProductionLimit = designer
+    ? DESIGNER_PARSE_LIMIT_PER_PRODUCTION
+    : PARSE_LIMIT_PER_PRODUCTION;
   const used = recent.filter((r) => r.status !== "failed").length;
-  if (used >= PARSE_LIMIT_PER_PRODUCTION) {
+  if (used >= perProductionLimit) {
     return {
-      error: `You've reached the limit of ${PARSE_LIMIT_PER_PRODUCTION} AI analyses for this production in ${PARSE_WINDOW_DAYS} days.`,
+      error: designer
+        ? `Your plan includes ${DESIGNER_PARSE_LIMIT_PER_PRODUCTION} AI analysis per project. You've used it for this show.`
+        : `You've reached the limit of ${PARSE_LIMIT_PER_PRODUCTION} AI analyses for this production in ${PARSE_WINDOW_DAYS} days.`,
     };
+  }
+
+  // Designers also have an account-wide cap across all their projects.
+  if (designer) {
+    const acrossProjects = await db
+      .select({ id: scriptParses.id })
+      .from(scriptParses)
+      .where(
+        and(
+          eq(scriptParses.requestedBy, user.id),
+          gte(scriptParses.createdAt, since),
+          ne(scriptParses.status, "failed"),
+        ),
+      );
+    if (acrossProjects.length >= DESIGNER_PARSE_LIMIT_PER_USER) {
+      return {
+        error: `Your plan includes ${DESIGNER_PARSE_LIMIT_PER_USER} AI analyses per ${PARSE_WINDOW_DAYS} days across your projects. You've reached it — try again later.`,
+      };
+    }
   }
 
   const [parse] = await db
@@ -362,10 +393,33 @@ export async function reparseWithNotes(
   if (hasLiveProcessing(recent)) {
     return { error: "An analysis is already running for this production — give it a minute." };
   }
-  if (recent.filter((r) => r.status !== "failed").length >= PARSE_LIMIT_PER_PRODUCTION) {
+  const designer = isDesignerOnly(user);
+  const perProductionLimit = designer
+    ? DESIGNER_PARSE_LIMIT_PER_PRODUCTION
+    : PARSE_LIMIT_PER_PRODUCTION;
+  if (recent.filter((r) => r.status !== "failed").length >= perProductionLimit) {
     return {
-      error: `You've reached the limit of ${PARSE_LIMIT_PER_PRODUCTION} AI analyses for this production in ${PARSE_WINDOW_DAYS} days.`,
+      error: designer
+        ? `Your plan includes ${DESIGNER_PARSE_LIMIT_PER_PRODUCTION} AI analysis per project. You've used it for this show.`
+        : `You've reached the limit of ${PARSE_LIMIT_PER_PRODUCTION} AI analyses for this production in ${PARSE_WINDOW_DAYS} days.`,
     };
+  }
+  if (designer) {
+    const acrossProjects = await db
+      .select({ id: scriptParses.id })
+      .from(scriptParses)
+      .where(
+        and(
+          eq(scriptParses.requestedBy, user.id),
+          gte(scriptParses.createdAt, since),
+          ne(scriptParses.status, "failed"),
+        ),
+      );
+    if (acrossProjects.length >= DESIGNER_PARSE_LIMIT_PER_USER) {
+      return {
+        error: `Your plan includes ${DESIGNER_PARSE_LIMIT_PER_USER} AI analyses per ${PARSE_WINDOW_DAYS} days across your projects. You've reached it — try again later.`,
+      };
+    }
   }
 
   const [row] = await db

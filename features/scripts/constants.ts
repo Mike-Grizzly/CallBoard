@@ -142,6 +142,12 @@ export type Bookmark = {
 export const PARSE_LIMIT_PER_PRODUCTION = 5;
 export const PARSE_WINDOW_DAYS = 30;
 
+// Designer-package subscribers pay a much lower price, so AI parsing is tighter:
+// one analysis per project, and at most two across all their projects per window
+// (keeps a healthy overhead on AI cost). Same rolling PARSE_WINDOW_DAYS window.
+export const DESIGNER_PARSE_LIMIT_PER_PRODUCTION = 1;
+export const DESIGNER_PARSE_LIMIT_PER_USER = 2;
+
 // ----- AI script analysis (the model's proposal, pre-review) -----
 
 /** Character/role types the analyser may assign. Mirrors the wizard's set. */

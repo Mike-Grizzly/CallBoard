@@ -195,9 +195,16 @@ export function AiReviewClient({
           result={parse.result as ScriptParseResult}
           slug={slug}
           inFocus={inFocus}
-          onApplied={() =>
-            setParse((p) => (p ? { ...p, status: "applied" } : p))
-          }
+          onApplied={() => {
+            // Designers (in focus) don't manage cast/scenes — once the parse is
+            // applied, drop them straight back into the script editor instead of
+            // the "assign actors" success screen.
+            if (inFocus) {
+              router.push(`/focus/${slug}?mode=script`);
+            } else {
+              setParse((p) => (p ? { ...p, status: "applied" } : p));
+            }
+          }}
           onDiscarded={() => router.push(docsHref)}
           onReanalyze={(newId) =>
             setParse((p) =>
