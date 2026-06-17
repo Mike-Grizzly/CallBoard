@@ -1,8 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import { applyThemePref, readThemePref, THEME_PREFS } from "@/lib/theme";
+import { quickCreateProduction } from "@/features/productions/actions";
 
 type Mode = "script" | "blocking";
 
@@ -20,6 +28,10 @@ type Props = {
   /** Designer-package subscriber: Focus is their whole app — no exit, and the
    *  show pill becomes a project switcher. */
   designerOnly?: boolean;
+  /** Shown in the pill instead of the org name for designer subscribers. */
+  userName?: string;
+  /** Whether to offer "New production" in the switcher (productions:manage). */
+  canCreateProjects?: boolean;
   /** Productions the user can switch between from the show pill. */
   projects?: { slug: string; title: string }[];
   children: ReactNode;
@@ -53,14 +65,39 @@ export function FocusShell({
   marginView,
   onToggleMargin,
   designerOnly = false,
+  userName,
+  canCreateProjects = false,
   projects = [],
   children,
 }: Props) {
   const router = useRouter();
   const exitTo = `/productions/${slug}/${mode === "blocking" ? "blocking" : "script"}`;
   const [projectsOpen, setProjectsOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [createErr, setCreateErr] = useState<string | null>(null);
+  const [createPending, startCreate] = useTransition();
   const gigRef = useRef<HTMLDivElement>(null);
-  const switchable = projects.length > 1;
+  // Designers always get the switcher (their only navigation + a way to add
+  // shows); full users get it once they have more than one production.
+  const switchable = projects.length > 1 || designerOnly;
+
+  function createProject() {
+    const title = newTitle.trim();
+    if (!title) return;
+    setCreateErr(null);
+    startCreate(async () => {
+      const res = await quickCreateProduction({ title, opening: "" });
+      if (res.error || !res.slug) {
+        setCreateErr(res.error ?? "Could not create the production.");
+        return;
+      }
+      setProjectsOpen(false);
+      setCreating(false);
+      setNewTitle("");
+      router.push(`/focus/${res.slug}?mode=script`);
+    });
+  }
 
   // Close the project switcher on outside-click.
   useEffect(() => {
@@ -213,7 +250,9 @@ export function FocusShell({
               <span className="show">
                 <ShowTitle title={showTitle} />
               </span>
-              <span className="org">{orgName}</span>
+              <span className="org">
+                {designerOnly && userName ? userName : orgName}
+              </span>
             </span>
             {switchable && (
               <svg className="fx-gig-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -241,6 +280,41 @@ export function FocusShell({
                   {p.title}
                 </button>
               ))}
+              {canCreateProjects &&
+                (creating ? (
+                  <div className="fx-newproject">
+                    <input
+                      autoFocus
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") createProject();
+                        if (e.key === "Escape") {
+                          setCreating(false);
+                          setNewTitle("");
+                        }
+                      }}
+                      placeholder="New show name"
+                    />
+                    <button
+                      type="button"
+                      className="btn primary"
+                      onClick={createProject}
+                      disabled={createPending || !newTitle.trim()}
+                    >
+                      {createPending ? "…" : "Create"}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="fx-project fx-project-add"
+                    onClick={() => setCreating(true)}
+                  >
+                    + New production
+                  </button>
+                ))}
+              {createErr && <div className="fx-newproject-err">{createErr}</div>}
             </div>
           )}
         </div>

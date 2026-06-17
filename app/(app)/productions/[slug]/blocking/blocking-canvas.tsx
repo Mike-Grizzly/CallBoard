@@ -2063,7 +2063,13 @@ export function BlockingCanvas({
             </button>
             {canEdit && (
               <button
-                onClick={() => router.push(`/productions/${production.slug}/blocking/setup`)}
+                onClick={() =>
+                  router.push(
+                    embedded
+                      ? `/focus/${production.slug}?mode=blocking&view=setup`
+                      : `/productions/${production.slug}/blocking/setup`,
+                  )
+                }
                 className="btn ghost"
                 style={{ height: 28, padding: "0 10px", fontSize: 12 }}
               >

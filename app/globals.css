@@ -12899,3 +12899,18 @@ body[data-theme="dusk"] .fx-brand .mark .brand-badge.is-dark { display: block; }
 /* Focus View: embedded AI script-setup review */
 .fx-ai { height: 100%; overflow: auto; padding: 22px 24px 56px; }
 .fx-ai > .anim-in { margin: 0 auto; }
+
+/* Focus setup: ground-plan uploader */
+.fx-setup-upload { margin: 0 0 16px; }
+.fx-docupload { display: flex; align-items: center; gap: 10px; }
+.fx-docupload-err { font-size: 12px; color: var(--c-clay); }
+
+/* Focus project switcher: New production */
+.fx-project-add { color: var(--accent-ink); font-weight: 500; border-top: 1px solid var(--border); border-radius: 0; margin-top: 4px; }
+.fx-newproject { display: flex; gap: 6px; padding: 6px 5px 2px; border-top: 1px solid var(--border); margin-top: 4px; }
+.fx-newproject input {
+  flex: 1; min-width: 0; font: inherit; font-size: 13px; padding: 6px 8px;
+  border: 1px solid var(--border); border-radius: 7px; background: var(--bg-sunken); color: var(--ink);
+}
+.fx-newproject .btn.primary { flex: 0 0 auto; }
+.fx-newproject-err { font-size: 11px; color: var(--c-clay); padding: 4px 6px 2px; }

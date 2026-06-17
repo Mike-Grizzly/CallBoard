@@ -45,6 +45,7 @@ import { AiReviewClient } from "@/app/(app)/productions/[slug]/script/ai/ai-revi
 import { FocusShell } from "./focus-shell";
 import { FocusScriptHost } from "./focus-script-host";
 import { FocusScriptUpload } from "./focus-script-upload";
+import { FocusDocUpload } from "./focus-doc-upload";
 
 type CurrentUserLike = {
   firstName: string | null;
@@ -100,6 +101,10 @@ export default async function FocusPage({
     posterInitial: production.title.trim().charAt(0).toUpperCase() || "•",
     userInitials: userInitials(user),
     designerOnly: isDesignerOnly(user),
+    userName:
+      [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
+      user.email,
+    canCreateProjects: can(user.role, "productions:manage"),
     projects: visible.map((p) => ({ slug: p.slug, title: p.title })),
   };
 
@@ -125,9 +130,9 @@ export default async function FocusPage({
       getCustomSetPieces(production.id),
     ]);
 
-    // No stage config yet: editors (incl. Creative) set one up right here in
-    // focus; viewers fall through to the empty canvas.
-    if (!stageConfig && can(user.role, "blocking:edit")) {
+    // No stage config yet, or the user opened Stage Setup to (re)configure:
+    // editors set it up right here in focus. Viewers fall through to the canvas.
+    if ((view === "setup" || !stageConfig) && can(user.role, "blocking:edit")) {
       const allDocuments = await getDocumentsByProduction(production.id);
       const pdfDocuments = allDocuments.filter(
         (d) => d.contentType === "application/pdf",
@@ -138,14 +143,21 @@ export default async function FocusPage({
             <div className="fx-setup-inner">
               <h1>Stage setup</h1>
               <p>
-                Select a ground plan and define the stage dimensions for{" "}
-                {production.title}.
+                Upload a ground plan PDF (or pick one you&apos;ve added), then
+                define the stage dimensions for {production.title}.
               </p>
+              <div className="fx-setup-upload">
+                <FocusDocUpload
+                  productionId={production.id}
+                  documentType="ground_plan"
+                  label="Upload ground plan PDF"
+                />
+              </div>
               <SetupWizard
                 productionId={production.id}
                 productionSlug={slug}
                 pdfDocuments={pdfDocuments}
-                existingConfig={null}
+                existingConfig={stageConfig}
                 returnTo={`/focus/${slug}?mode=blocking`}
               />
             </div>

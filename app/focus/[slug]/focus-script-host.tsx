@@ -17,6 +17,8 @@ type ShellProps = {
   posterInitial: string;
   userInitials: string;
   designerOnly?: boolean;
+  userName?: string;
+  canCreateProjects?: boolean;
   projects?: { slug: string; title: string }[];
 };
 
