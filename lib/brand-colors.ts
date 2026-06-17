@@ -8,6 +8,10 @@
 //
 // Text-on-color (--on-accent etc.) is computed from WCAG relative luminance so
 // labels on filled surfaces are always black or white, never illegible.
+//
+// Injection strategy: inline `style` attribute on a wrapper element. CSS custom
+// properties set via inline style always win over stylesheet-defined values —
+// no cascade order dependency, no specificity battle with body[data-theme] rules.
 
 function isValidHex(hex: string | null | undefined): hex is string {
   return typeof hex === "string" && /^#[0-9a-fA-F]{6}$/.test(hex);
@@ -32,83 +36,40 @@ export function contrastText(hex: string): "#000000" | "#ffffff" {
 }
 
 /**
- * Builds a `<style>` tag body that overrides brand CSS variables for every
- * theme variant. Returns null when no valid colors are supplied.
+ * Returns a plain object of CSS custom property overrides to spread onto a
+ * wrapper element's `style` prop. Inline CSS custom properties always win over
+ * any stylesheet rule regardless of specificity or source order — this is the
+ * most reliable way to override theme variables set by body[data-theme].
  *
- * Targeting `body[data-theme]` wins the specificity battle against the
- * per-theme `:root` and `body[data-theme="x"]` rules in globals.css because
- * this `<style>` is injected later in the document.
+ * Returns null when no valid colors are supplied.
  */
-export function buildBrandStyles(
+export function buildBrandStyle(
   primary?: string | null,
   secondary?: string | null,
   highlight?: string | null,
-): string | null {
-  if (!isValidHex(primary) && !isValidHex(secondary) && !isValidHex(highlight)) {
-    return null;
-  }
-
-  // Light-mode variable overrides
-  const light: string[] = [];
-  // Dark/dusk get slightly more opaque soft variants so they're visible on
-  // dark backgrounds.
-  const dark: string[] = [];
+): Record<string, string> | null {
+  const vars: Record<string, string> = {};
 
   if (isValidHex(primary)) {
     const onAccent = contrastText(primary);
-    const lightSoft = hexToRgba(primary, 0.12);
-    const darkSoft = hexToRgba(primary, 0.22);
-    light.push(
-      `--accent:${primary}`,
-      `--accent-soft:${lightSoft}`,
-      `--accent-ink:${primary}`,
-      `--accent-strong:${primary}`,
-      `--on-accent:${onAccent}`,
-    );
-    dark.push(
-      `--accent:${primary}`,
-      `--accent-soft:${darkSoft}`,
-      `--accent-ink:${primary}`,
-      `--accent-strong:${primary}`,
-      `--on-accent:${onAccent}`,
-    );
+    vars["--accent"] = primary;
+    vars["--accent-soft"] = hexToRgba(primary, 0.14);
+    vars["--accent-ink"] = primary;
+    vars["--accent-strong"] = primary;
+    vars["--on-accent"] = onAccent;
   }
 
   if (isValidHex(secondary)) {
-    const onSecondary = contrastText(secondary);
-    light.push(
-      `--c-sage:${secondary}`,
-      `--c-sage-soft:${hexToRgba(secondary, 0.15)}`,
-      `--on-secondary:${onSecondary}`,
-    );
-    dark.push(
-      `--c-sage:${secondary}`,
-      `--c-sage-soft:${hexToRgba(secondary, 0.22)}`,
-      `--on-secondary:${onSecondary}`,
-    );
+    vars["--c-sage"] = secondary;
+    vars["--c-sage-soft"] = hexToRgba(secondary, 0.15);
+    vars["--on-secondary"] = contrastText(secondary);
   }
 
   if (isValidHex(highlight)) {
-    const onHighlight = contrastText(highlight);
-    light.push(
-      `--c-amber:${highlight}`,
-      `--c-amber-soft:${hexToRgba(highlight, 0.15)}`,
-      `--on-highlight:${onHighlight}`,
-    );
-    dark.push(
-      `--c-amber:${highlight}`,
-      `--c-amber-soft:${hexToRgba(highlight, 0.22)}`,
-      `--on-highlight:${onHighlight}`,
-    );
+    vars["--c-amber"] = highlight;
+    vars["--c-amber-soft"] = hexToRgba(highlight, 0.15);
+    vars["--on-highlight"] = contrastText(highlight);
   }
 
-  const lightBlock = light.map((v) => `  ${v};`).join("\n");
-  const darkBlock = dark.map((v) => `  ${v};`).join("\n");
-
-  // body[data-theme] covers all explicit theme variants.
-  // body:not([data-theme]) covers the brief moment before the theme script runs.
-  return [
-    `body[data-theme], body:not([data-theme]) {\n${lightBlock}\n}`,
-    `body[data-theme="dark"], body[data-theme="dusk"] {\n${darkBlock}\n}`,
-  ].join("\n");
+  return Object.keys(vars).length > 0 ? vars : null;
 }
