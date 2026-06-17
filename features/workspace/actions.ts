@@ -83,10 +83,10 @@ export async function createWorkspace(
     return { error: `Keep it under ${MAX_NAME_LENGTH} characters.` };
   }
 
-  // Prevent trial farming: if this user is already an admin of any org that
-  // has ever started a trial (trial_started_at is set on first production
-  // create), block creating another free workspace. They'd need to subscribe
-  // on an existing workspace before spinning up a new one.
+  // Prevent trial farming: block creating a new org if this user already
+  // admins a free, non-grandfathered org that has started a trial. Paid orgs
+  // (any plan other than 'free') don't count — a subscribed user creating a
+  // second workspace is legitimate, not farming.
   const trialOrg = await db
     .select({ id: organizationMemberships.organizationId })
     .from(organizationMemberships)
@@ -96,6 +96,8 @@ export async function createWorkspace(
         eq(organizations.id, organizationMemberships.organizationId),
         isNull(organizations.deletedAt),
         isNotNull(organizations.trialStartedAt),
+        eq(organizations.plan, "free"),
+        eq(organizations.grandfathered, false),
       ),
     )
     .where(
