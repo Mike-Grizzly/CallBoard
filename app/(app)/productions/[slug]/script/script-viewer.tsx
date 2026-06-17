@@ -1036,20 +1036,30 @@ export function ScriptViewer({
     const by = rect.y * canvasSize.h;
     const bw = rect.width * canvasSize.w;
     const bh = rect.height * canvasSize.h;
-    const items: { top: number; left: number; text: string }[] = [];
+    // Capture at WORD granularity: a text-layer span often holds a whole line,
+    // so split it into words and keep only those whose x-extent overlaps the
+    // box. This records the highlighted phrase rather than the whole line.
+    const items: { top: number; x: number; text: string }[] = [];
     for (const el of Array.from(layer.children) as HTMLElement[]) {
       const t = el.offsetTop;
       const l = el.offsetLeft;
       const w = el.offsetWidth;
       const h = el.offsetHeight;
-      const vOverlap = t + h > by && t < by + bh;
-      const hOverlap = l + w > bx && l < bx + bw;
-      if (vOverlap && hOverlap && el.textContent?.trim()) {
-        items.push({ top: t, left: l, text: el.textContent });
+      const text = el.textContent ?? "";
+      if (!(t + h > by && t < by + bh) || !text.trim()) continue;
+      const n = text.length || 1;
+      let idx = 0;
+      for (const part of text.split(/(\s+)/)) {
+        if (part.trim()) {
+          const wx = l + (idx / n) * w; // approx word start x
+          const wEnd = l + ((idx + part.length) / n) * w; // approx word end x
+          if (wEnd > bx && wx < bx + bw) items.push({ top: t, x: wx, text: part });
+        }
+        idx += part.length;
       }
     }
     items.sort((a, b) =>
-      Math.abs(a.top - b.top) > 6 ? a.top - b.top : a.left - b.left,
+      Math.abs(a.top - b.top) > 6 ? a.top - b.top : a.x - b.x,
     );
     return items
       .map((i) => i.text)
@@ -2755,12 +2765,20 @@ function stackCueLabels(
         hasDesc: c.cueDescription.trim().length > 0,
         cueNumber: c.cueNumber,
       }))
-      // Whole margin ordered by cue number (numeric-aware: "2" < "10").
+      // Margin gutter (single column) orders cards by their anchor's position
+      // on the page, so leaders run top-to-bottom in step with the marks and
+      // don't cross. The on-page columns order by cue number (numeric-aware).
       .sort((a, b) =>
-        a.cueNumber.localeCompare(b.cueNumber, undefined, {
-          numeric: true,
-          sensitivity: "base",
-        }),
+        singleColumn
+          ? a.y - b.y ||
+            a.cueNumber.localeCompare(b.cueNumber, undefined, {
+              numeric: true,
+              sensitivity: "base",
+            })
+          : a.cueNumber.localeCompare(b.cueNumber, undefined, {
+              numeric: true,
+              sensitivity: "base",
+            }),
       );
     // Greedy, in number order: keep each label at its line in the first column;
     // when the first column is mid-pile and can't seat it there, stack it
@@ -3437,11 +3455,10 @@ function AnnotationShape({
     const cardH = (annotation.cueDescription ? 30 : 21) * s * ts;
     const cardY = labelY - cardH / 2;
     const textX = cardX + ACCENT_W + padL;
-    // The vertical jog happens off the page, just before the card. Stagger it
-    // per cue (by stacking order) across a small zone so neighbouring jogs don't
-    // share a column — keeps the on-page run a single clean horizontal.
-    const railIndex = (cueLabel?.order ?? 0) % 4;
-    const railX = cardX - (12 + railIndex * 8) * s;
+    // The vertical jog happens off the page, on a single shared rail just before
+    // the cards. Because cards are ordered by anchor position (above), leaders
+    // descend in step and form a tidy vertical bus rather than crossing lines.
+    const railX = cardX - 14 * s;
 
     const isPipe = annotation.marker === "pipe";
 
