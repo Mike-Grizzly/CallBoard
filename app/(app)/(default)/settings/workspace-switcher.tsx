@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { switchOrganization } from "@/features/workspace/actions";
@@ -64,12 +63,6 @@ export function WorkspaceSwitcher({
           </div>
         </>
       )}
-
-      <div style={{ marginTop: hasMultiple ? 10 : 0 }}>
-        <Link href="/workspaces/new" className="btn">
-          <Icon name="Plus" size={14} aria-hidden /> Create workspace
-        </Link>
-      </div>
 
       {error && (
         <div style={{ color: "var(--c-clay)", fontSize: 13, marginTop: 6 }}>

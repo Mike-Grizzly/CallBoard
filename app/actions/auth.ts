@@ -102,7 +102,7 @@ export async function login(
     return { error: error.message };
   }
 
-  redirect("/dashboard");
+  redirect("/setup");
 }
 
 export async function signup(
@@ -246,7 +246,7 @@ export async function updatePassword(
     return { error: error.message };
   }
 
-  redirect("/dashboard");
+  redirect("/setup");
 }
 
 export async function logout(): Promise<void> {
