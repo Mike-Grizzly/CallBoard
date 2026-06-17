@@ -53,6 +53,8 @@ export const organizations = pgTable("organizations", {
   // features/workspace/constants.ts; used to tailor defaults and for product
   // insight, not for any access decision.
   brandColor: text("brand_color"),
+  brandColorSecondary: text("brand_color_secondary"),
+  brandColorHighlight: text("brand_color_highlight"),
   avgAudienceSize: text("avg_audience_size"),
   annualShows: text("annual_shows"),
   teamSize: text("team_size"),

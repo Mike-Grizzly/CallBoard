@@ -408,6 +408,8 @@ export async function switchOrganization(
 
 export type OnboardingInput = {
   brandColor?: string | null;
+  brandColorSecondary?: string | null;
+  brandColorHighlight?: string | null;
   avgAudienceSize?: string | null;
   annualShows?: string | null;
   teamSize?: string | null;
@@ -423,6 +425,8 @@ export async function completeOnboarding(
     .update(organizations)
     .set({
       brandColor: input.brandColor ?? null,
+      brandColorSecondary: input.brandColorSecondary ?? null,
+      brandColorHighlight: input.brandColorHighlight ?? null,
       avgAudienceSize: input.avgAudienceSize ?? null,
       annualShows: input.annualShows ?? null,
       teamSize: input.teamSize ?? null,
