@@ -38,12 +38,6 @@
      override this with a deeper red. Light/cool keep it identical to --accent,
      so light mode is visually unchanged. */
   --accent-strong: var(--accent);
-  /* Text color to use ON TOP of the accent color — auto-set to black or white
-     by the brand-color injection when custom colors are applied. Default white
-     works for the default crimson accent. */
-  --on-accent: white;
-  --on-secondary: white;
-  --on-highlight: black;
 
   /* Status / categorical pills */
   --c-sage: oklch(0.7 0.07 145);
@@ -727,7 +721,7 @@ body[data-theme="dusk"] .brand-badge.is-dark {
 }
 .btn.primary {
   background: var(--accent-strong);
-  color: var(--on-accent);
+  color: white;
   border-color: var(--accent-strong);
 }
 .btn.primary:hover {

@@ -9,11 +9,9 @@ import {
 } from "@/features/workspace/actions";
 import { inviteMembers } from "@/features/members/actions";
 import { uploadFileToSignedUrl } from "@/lib/storage-upload";
-import { contrastText } from "@/lib/brand-colors";
 import {
   ANNUAL_SHOWS_OPTIONS,
   AUDIENCE_SIZE_OPTIONS,
-  BRAND_COLOR_PRESETS,
   PRODUCTION_TYPE_OPTIONS,
   TEAM_SIZE_OPTIONS,
 } from "@/features/workspace/constants";
@@ -41,118 +39,6 @@ function newInviteRow(): InviteRow {
   };
 }
 
-function ColorPicker({
-  label,
-  hint,
-  value,
-  onChange,
-}: {
-  label: string;
-  hint: string;
-  value: string | null;
-  onChange: (hex: string | null) => void;
-}) {
-  const [custom, setCustom] = useState("");
-  const resolvedCustom = custom.match(/^#[0-9a-fA-F]{6}$/) ? custom : null;
-
-  const handleSwatch = (color: string) => {
-    setCustom("");
-    onChange(value === color ? null : color);
-  };
-
-  const handleCustom = (raw: string) => {
-    setCustom(raw);
-    onChange(raw.match(/^#[0-9a-fA-F]{6}$/) ? raw : null);
-  };
-
-  const active = value ?? resolvedCustom;
-
-  return (
-    <div className="field-group">
-      <label className="label">{label}</label>
-      <div className="hint" style={{ marginBottom: 10 }}>{hint}</div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-        {BRAND_COLOR_PRESETS.map((color) => {
-          const selected = value === color;
-          return (
-            <button
-              key={color}
-              type="button"
-              aria-label={color}
-              aria-pressed={selected}
-              onClick={() => handleSwatch(color)}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                background: color,
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                flexShrink: 0,
-                boxShadow: selected
-                  ? `0 0 0 2px var(--bg), 0 0 0 4px ${color}`
-                  : "0 0 0 1px rgba(0,0,0,0.12)",
-                transition: "box-shadow 0.12s",
-              }}
-            />
-          );
-        })}
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {active && (
-          <div
-            style={{
-              width: 20,
-              height: 20,
-              borderRadius: "50%",
-              background: active,
-              border: "1px solid var(--border)",
-              flexShrink: 0,
-            }}
-          />
-        )}
-        <input
-          className="field"
-          placeholder="Custom #HEX"
-          maxLength={7}
-          value={custom}
-          onChange={(e) => handleCustom(e.target.value)}
-          style={{ maxWidth: 140 }}
-        />
-        {active && (
-          <button
-            type="button"
-            className="btn ghost sm"
-            onClick={() => { setCustom(""); onChange(null); }}
-          >
-            Clear
-          </button>
-        )}
-      </div>
-      {active && (
-        <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            style={{
-              background: active,
-              color: contrastText(active),
-              borderRadius: 6,
-              padding: "4px 10px",
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            Aa preview
-          </div>
-          <span className="hint" style={{ margin: 0 }}>
-            {contrastText(active) === "#000000" ? "Black" : "White"} text on this color.
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function SetupForm({ orgName }: { orgName: string }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -164,11 +50,6 @@ export function SetupForm({ orgName }: { orgName: string }) {
     [logoFile],
   );
   const logoInputRef = useRef<HTMLInputElement>(null);
-
-  // Brand colors
-  const [brandColor, setBrandColor] = useState<string | null>(null);
-  const [brandColorSecondary, setBrandColorSecondary] = useState<string | null>(null);
-  const [brandColorHighlight, setBrandColorHighlight] = useState<string | null>(null);
 
   // Survey
   const [avgAudienceSize, setAvgAudienceSize] = useState<string | null>(null);
@@ -219,7 +100,7 @@ export function SetupForm({ orgName }: { orgName: string }) {
     const result = await completeOnboarding(
       skip
         ? {}
-        : { brandColor, brandColorSecondary, brandColorHighlight, avgAudienceSize, annualShows, teamSize, productionTypes },
+        : { avgAudienceSize, annualShows, teamSize, productionTypes },
     );
 
     if (result.error) {
@@ -318,22 +199,6 @@ export function SetupForm({ orgName }: { orgName: string }) {
               </div>
               <div className="hint">SVG, PNG, or JPG. Square works best. Up to 2MB.</div>
               <input ref={logoInputRef} type="file" accept={LOGO_ACCEPT} onChange={onPickLogo} style={{ display: "none" }} />
-            </div>
-          </section>
-
-          {/* Brand colors */}
-          <section style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid var(--border)" }}>
-            <h2 className="page-title" style={{ fontSize: 18, marginBottom: 4 }}>Brand colors</h2>
-            <p className="page-sub" style={{ marginBottom: 20, marginTop: 4 }}>
-              Personalize your workspace. Text on these colors is automatically
-              set to black or white for readability.
-            </p>
-            <ColorPicker label="Primary" hint="Buttons, active states, and links." value={brandColor} onChange={setBrandColor} />
-            <div style={{ marginTop: 20 }}>
-              <ColorPicker label="Secondary" hint="Status indicators and active show highlights." value={brandColorSecondary} onChange={setBrandColorSecondary} />
-            </div>
-            <div style={{ marginTop: 20 }}>
-              <ColorPicker label="Highlight" hint="Pinned items, announcements, and callouts." value={brandColorHighlight} onChange={setBrandColorHighlight} />
             </div>
           </section>
 

@@ -31,16 +31,3 @@ export const AUDIENCE_SIZE_OPTIONS = [
   "200–500",
   "500+",
 ] as const;
-
-export const BRAND_COLOR_PRESETS = [
-  "#E05A3A", // Clay / warm red
-  "#D4885A", // Amber
-  "#4A7C6F", // Sage
-  "#5C6BC0", // Dusk / indigo
-  "#8E44AD", // Plum
-  "#2E7D9B", // Teal
-  "#C0392B", // Crimson
-  "#E67E22", // Orange
-  "#1A7A4A", // Forest
-  "#34495E", // Slate
-] as const;

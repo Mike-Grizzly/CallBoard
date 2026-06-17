@@ -11,7 +11,6 @@ import { getOrganizationMembers } from "@/features/members/queries";
 import { getWorkspaceOverview } from "@/features/workspace/queries";
 import { RenameWorkspaceForm } from "./rename-workspace-form";
 import { WorkspaceLogoUploader } from "./logo-uploader";
-import { BrandColorsForm } from "./brand-colors-form";
 import {
   TransferOwnershipForm,
   type TransferCandidate,
@@ -31,12 +30,7 @@ export default async function WorkspaceSettingsPage() {
   const [members, orgRow] = await Promise.all([
     getOrganizationMembers(user.organizationId),
     db
-      .select({
-        logoUrl: organizations.logoUrl,
-        brandColor: organizations.brandColor,
-        brandColorSecondary: organizations.brandColorSecondary,
-        brandColorHighlight: organizations.brandColorHighlight,
-      })
+      .select({ logoUrl: organizations.logoUrl })
       .from(organizations)
       .where(eq(organizations.id, user.organizationId))
       .limit(1),
@@ -79,12 +73,6 @@ export default async function WorkspaceSettingsPage() {
       <RenameWorkspaceForm currentName={overview.name} />
 
       <WorkspaceLogoUploader currentLogoUrl={logoUrl} />
-
-      <BrandColorsForm
-        currentPrimary={orgRow[0]?.brandColor ?? null}
-        currentSecondary={orgRow[0]?.brandColorSecondary ?? null}
-        currentHighlight={orgRow[0]?.brandColorHighlight ?? null}
-      />
 
       <div className="card card-pad">
         <h3 style={{ fontSize: 14, margin: 0, fontWeight: 600 }}>

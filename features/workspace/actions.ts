@@ -406,41 +406,7 @@ export async function switchOrganization(
   return { success: true };
 }
 
-export type BrandColorsInput = {
-  primary: string | null;
-  secondary: string | null;
-  highlight: string | null;
-};
-
-const HEX_RE = /^#[0-9a-fA-F]{6}$/;
-
-export async function saveBrandColors(
-  input: BrandColorsInput,
-): Promise<WorkspaceActionResult> {
-  const user = await requireCurrentUser();
-
-  if (!can(user.role, "settings:manage")) {
-    return { error: "Only admins can change brand colors." };
-  }
-
-  // Validate: each value must be a valid 6-digit hex or null.
-  const primary = input.primary && HEX_RE.test(input.primary) ? input.primary : null;
-  const secondary = input.secondary && HEX_RE.test(input.secondary) ? input.secondary : null;
-  const highlight = input.highlight && HEX_RE.test(input.highlight) ? input.highlight : null;
-
-  await db
-    .update(organizations)
-    .set({ brandColor: primary, brandColorSecondary: secondary, brandColorHighlight: highlight, updatedAt: new Date() })
-    .where(eq(organizations.id, user.organizationId));
-
-  revalidatePath("/", "layout");
-  return { success: true };
-}
-
 export type OnboardingInput = {
-  brandColor?: string | null;
-  brandColorSecondary?: string | null;
-  brandColorHighlight?: string | null;
   avgAudienceSize?: string | null;
   annualShows?: string | null;
   teamSize?: string | null;
@@ -455,9 +421,6 @@ export async function completeOnboarding(
   await db
     .update(organizations)
     .set({
-      brandColor: input.brandColor ?? null,
-      brandColorSecondary: input.brandColorSecondary ?? null,
-      brandColorHighlight: input.brandColorHighlight ?? null,
       avgAudienceSize: input.avgAudienceSize ?? null,
       annualShows: input.annualShows ?? null,
       teamSize: input.teamSize ?? null,
