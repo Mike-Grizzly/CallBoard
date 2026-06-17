@@ -13,6 +13,11 @@ export const profiles = pgTable("profiles", {
   // (people who already signed up) stay correct after the migration; the
   // invite flow sets "invited" explicitly.
   status: text("status").notNull().default("active"),
+  // Product surface the user is entitled to. "full" = the whole app (org
+  // members). "designer" = the self-contained Focus View only (individual
+  // "designer package" subscribers), gated in proxy.ts. Defaults to "full"
+  // so every existing user keeps full access after the migration.
+  accessMode: text("access_mode").notNull().default("full"),
   // Which org this user is currently viewing. Nullable: when null,
   // `getCurrentUser` falls back to the user's first active membership. Set
   // by the org switcher; ON DELETE SET NULL so deleting an org doesn't

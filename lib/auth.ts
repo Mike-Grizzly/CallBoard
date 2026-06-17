@@ -14,6 +14,9 @@ import { createOrganization } from "@/lib/organization";
 import { can } from "@/lib/permissions";
 import type { Role } from "@/types/roles";
 
+/** Which product surface a user is entitled to. */
+export type AccessMode = "full" | "designer";
+
 export type CurrentUser = {
   id: string;
   email: string;
@@ -23,7 +26,14 @@ export type CurrentUser = {
   organizationId: string;
   organizationName: string;
   organizationLogoUrl: string | null;
+  /** "designer" = restricted to the self-contained Focus View. */
+  accessMode: AccessMode;
 };
+
+/** True when the user only has access to the self-contained Focus View. */
+export function isDesignerOnly(user: { accessMode: AccessMode }): boolean {
+  return user.accessMode === "designer";
+}
 
 function fallbackOrgName(firstName: string, lastName: string, email: string) {
   const personal = [firstName, lastName].filter(Boolean).join(" ").trim();
@@ -181,6 +191,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       organizationId: org.id,
       organizationName: org.name,
       organizationLogoUrl: org.logoUrl ?? null,
+      accessMode: "full",
     };
   }
 
@@ -243,6 +254,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       organizationId: org.id,
       organizationName: org.name,
       organizationLogoUrl: org.logoUrl ?? null,
+      accessMode: (existing[0].accessMode as AccessMode) ?? "full",
     };
   }
 
@@ -266,6 +278,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     organizationId: membership.organizationId,
     organizationName: membership.organizationName,
     organizationLogoUrl: membership.organizationLogoUrl ?? null,
+    accessMode: (existing[0].accessMode as AccessMode) ?? "full",
   };
 });
 
