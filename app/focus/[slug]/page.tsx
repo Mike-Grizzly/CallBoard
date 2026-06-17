@@ -2,17 +2,36 @@ import { notFound, redirect } from "next/navigation";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getProductionBySlug } from "@/features/productions/queries";
-import { getProductionMembership } from "@/features/members/queries";
+import {
+  getProductionMembership,
+  getProductionMembers,
+} from "@/features/members/queries";
 import {
   getDefaultScript,
   getScriptAnnotations,
 } from "@/features/scripts/queries";
 import { getScriptUrl, ensureMemberBookmarks } from "@/features/scripts/actions";
+import {
+  getStageConfiguration,
+  getCastMembers,
+  getBlockingPositionsForBeat,
+  getCustomSetPieces,
+  getArrowsForBeat,
+} from "@/features/blocking/queries";
+import { getScenesWithBeats } from "@/features/scenes/queries";
+import { ensureFirstSceneAndBeat } from "@/features/scenes/actions";
+import { getDocumentById } from "@/features/documents/queries";
+import { getDocumentUrl } from "@/features/documents/actions";
+import {
+  getCustomSetPieceUrls,
+  getGroundPlanImageUrl,
+} from "@/features/blocking/actions";
 import type {
   Annotation,
   Bookmark,
   PageOverrides,
 } from "@/features/scripts/constants";
+import { BlockingCanvas } from "@/app/(app)/productions/[slug]/blocking/blocking-canvas";
 import { FocusShell } from "./focus-shell";
 import { FocusScriptHost } from "./focus-script-host";
 
@@ -40,10 +59,10 @@ export default async function FocusPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ mode?: string }>;
+  searchParams: Promise<{ mode?: string; beat?: string }>;
 }) {
   const { slug } = await params;
-  const { mode: modeParam } = await searchParams;
+  const { mode: modeParam, beat: requestedBeatId } = await searchParams;
   const mode = modeParam === "blocking" ? "blocking" : "script";
 
   const user = await requireCurrentUser();
@@ -64,14 +83,92 @@ export default async function FocusPage({
     userInitials: userInitials(user),
   };
 
-  // Blocking focus is a later phase — keep the toggle live but route here.
+  // Blocking focus: the same Blocking tool, embedded chrome-free in the focus
+  // shell. Data fetching mirrors the Blocking page so the canvas behaves
+  // identically.
   if (mode === "blocking") {
+    if (!can(user.role, "blocking:view")) {
+      redirect(`/productions/${slug}`);
+    }
+
+    const [
+      stageConfig,
+      scenesWithBeatsInitial,
+      castMembers,
+      productionMembers,
+      customPieceRows,
+    ] = await Promise.all([
+      getStageConfiguration(production.id),
+      getScenesWithBeats(production.id),
+      getCastMembers(production.id),
+      getProductionMembers(production.id),
+      getCustomSetPieces(production.id),
+    ]);
+
+    // No stage config yet: editors set one up; viewers get the empty canvas.
+    if (!stageConfig && can(user.role, "blocking:edit")) {
+      redirect(`/productions/${slug}/blocking/setup`);
+    }
+
+    // Seed a default Scene 1 / Beat 1 so editors land on an editable canvas.
+    let scenesWithBeats = scenesWithBeatsInitial;
+    const noBeats = scenesWithBeats.every((s) => s.beats.length === 0);
+    if (noBeats && can(user.role, "blocking:edit")) {
+      await ensureFirstSceneAndBeat(production.id);
+      scenesWithBeats = await getScenesWithBeats(production.id);
+    }
+
+    let groundPlanImageUrl: string | null = null;
+    let blockingPdfUrl: string | null = null;
+    if (stageConfig?.groundPlanImagePath) {
+      groundPlanImageUrl = await getGroundPlanImageUrl(stageConfig.groundPlanImagePath);
+    }
+    if (stageConfig?.groundPlanDocumentId) {
+      const doc = await getDocumentById(stageConfig.groundPlanDocumentId);
+      if (doc) blockingPdfUrl = await getDocumentUrl(doc.id);
+    }
+
+    const signedUrls = await getCustomSetPieceUrls(production.id);
+    const initialCustomSetPieces = customPieceRows.map((p) => ({
+      id: p.id,
+      name: p.name,
+      storagePath: p.storagePath,
+      fileType: p.fileType,
+      imageUrl: signedUrls[p.storagePath] ?? "",
+    }));
+
+    const allBeats = scenesWithBeats.flatMap((s) => s.beats);
+    const targetBeatId =
+      (requestedBeatId && allBeats.some((b) => b.id === requestedBeatId)
+        ? requestedBeatId
+        : null) ??
+      allBeats[0]?.id ??
+      null;
+    const [initialPositions, initialArrows] = targetBeatId
+      ? await Promise.all([
+          getBlockingPositionsForBeat(targetBeatId),
+          getArrowsForBeat(targetBeatId),
+        ])
+      : [[], []];
+
     return (
       <FocusShell {...shellProps} mode="blocking">
-        <div className="fx-soon">
-          <p>Blocking focus mode is coming soon.</p>
-          <a href={`/productions/${slug}/blocking`}>Open the Blocking tool →</a>
-        </div>
+        <BlockingCanvas
+          production={{ id: production.id, title: production.title, slug }}
+          stageConfig={stageConfig}
+          scenesWithBeats={scenesWithBeats}
+          castMembers={castMembers}
+          productionMembers={productionMembers}
+          pdfUrl={blockingPdfUrl}
+          groundPlanImageUrl={groundPlanImageUrl}
+          canEdit={can(user.role, "blocking:edit")}
+          currentUserId={user.id}
+          initialBeatId={targetBeatId}
+          initialPositions={initialPositions}
+          initialArrows={initialArrows}
+          initialCustomSetPieces={initialCustomSetPieces}
+          embedded
+        />
       </FocusShell>
     );
   }

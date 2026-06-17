@@ -1,6 +1,6 @@
 # Handoff: Focus View — Script & Blocking
 
-**Status:** In progress — `claude/practical-cannon-p0w5a3` (Phases 1–2: Script Focus shell + cue margin gutter)
+**Status:** In progress — `claude/practical-cannon-p0w5a3` (Script Focus shell + cue margin gutter + cue sheet; Blocking focus embedded)
 
 ## Overview
 **Focus View** is a full-screen, distraction-free editing mode for the CallBoard/Proscene

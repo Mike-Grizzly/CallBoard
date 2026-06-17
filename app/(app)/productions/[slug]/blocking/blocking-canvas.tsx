@@ -93,6 +93,9 @@ type Props = {
   initialPositions: Pick<BlockingPosition, "entityType" | "entityId" | "xPercent" | "yPercent" | "rotation">[];
   initialArrows: CustomArrow[];
   initialCustomSetPieces: CustomSetPieceClient[];
+  // Rendered inside the Focus View shell: fill the parent (no app-layout
+  // offsets, no fixed positioning) and drop the redundant fullscreen toggle.
+  embedded?: boolean;
 };
 
 // ─── Actor Token ────────────────────────────────────────────────────
@@ -700,6 +703,7 @@ export function BlockingCanvas({
   initialPositions,
   initialArrows,
   initialCustomSetPieces,
+  embedded = false,
 }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -1549,7 +1553,16 @@ export function BlockingCanvas({
     <div
       className="anim-in bk-shell"
       style={
-        fullscreen
+        embedded
+          ? {
+              // Fill the Focus View stage (a flex child with a definite height).
+              height: "100%",
+              display: "grid",
+              gridTemplateColumns: "240px 1fr 260px",
+              overflow: "hidden",
+              background: "var(--bg)",
+            }
+          : fullscreen
           ? {
               position: "fixed",
               inset: 0,
@@ -2057,16 +2070,18 @@ export function BlockingCanvas({
                 <Settings className="h-3.5 w-3.5" /><span>Stage Setup</span>
               </button>
             )}
-            <button
-              onClick={() => setFullscreen((v) => !v)}
-              className="btn ghost"
-              style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-              title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
-            >
-              {fullscreen
-                ? <Minimize2 className="h-3.5 w-3.5" />
-                : <Maximize2 className="h-3.5 w-3.5" />}
-            </button>
+            {!embedded && (
+              <button
+                onClick={() => setFullscreen((v) => !v)}
+                className="btn ghost"
+                style={{ height: 28, padding: "0 10px", fontSize: 12 }}
+                title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+              >
+                {fullscreen
+                  ? <Minimize2 className="h-3.5 w-3.5" />
+                  : <Maximize2 className="h-3.5 w-3.5" />}
+              </button>
+            )}
           </div>
         </div>
 
