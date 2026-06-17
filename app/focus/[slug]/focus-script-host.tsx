@@ -16,6 +16,8 @@ type ShellProps = {
   orgName: string;
   posterInitial: string;
   userInitials: string;
+  designerOnly?: boolean;
+  projects?: { slug: string; title: string }[];
 };
 
 type ScriptProps = {

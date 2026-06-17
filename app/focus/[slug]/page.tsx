@@ -1,7 +1,10 @@
 import { notFound, redirect } from "next/navigation";
-import { requireCurrentUser } from "@/lib/auth";
+import { requireCurrentUser, isDesignerOnly } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getProductionBySlug } from "@/features/productions/queries";
+import {
+  getProductionBySlug,
+  getVisibleProductions,
+} from "@/features/productions/queries";
 import {
   getProductionMembership,
   getProductionMembers,
@@ -80,12 +83,17 @@ export default async function FocusPage({
     if (!membership) redirect("/productions");
   }
 
+  // Projects the user can switch between from inside Focus (their only
+  // navigation when they're a designer-only subscriber).
+  const visible = await getVisibleProductions(user);
   const shellProps = {
     slug,
     showTitle: production.title,
     orgName: user.organizationName,
     posterInitial: production.title.trim().charAt(0).toUpperCase() || "•",
     userInitials: userInitials(user),
+    designerOnly: isDesignerOnly(user),
+    projects: visible.map((p) => ({ slug: p.slug, title: p.title })),
   };
 
   // Blocking focus: the same Blocking tool, embedded chrome-free in the focus

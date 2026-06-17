@@ -17,6 +17,11 @@ type Props = {
    *  "Margin view" switch is shown (script mode only). */
   marginView?: boolean;
   onToggleMargin?: () => void;
+  /** Designer-package subscriber: Focus is their whole app — no exit, and the
+   *  show pill becomes a project switcher. */
+  designerOnly?: boolean;
+  /** Productions the user can switch between from the show pill. */
+  projects?: { slug: string; title: string }[];
   children: ReactNode;
 };
 
@@ -47,10 +52,27 @@ export function FocusShell({
   mode,
   marginView,
   onToggleMargin,
+  designerOnly = false,
+  projects = [],
   children,
 }: Props) {
   const router = useRouter();
   const exitTo = `/productions/${slug}/${mode === "blocking" ? "blocking" : "script"}`;
+  const [projectsOpen, setProjectsOpen] = useState(false);
+  const gigRef = useRef<HTMLDivElement>(null);
+  const switchable = projects.length > 1;
+
+  // Close the project switcher on outside-click.
+  useEffect(() => {
+    if (!projectsOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (gigRef.current && !gigRef.current.contains(e.target as Node)) {
+        setProjectsOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", onDown);
+    return () => window.removeEventListener("mousedown", onDown);
+  }, [projectsOpen]);
 
   // Exit transition: play the reverse animation, then navigate. `exitingRef`
   // guards against double-firing (e.g. Esc + click). Reduced-motion users skip
@@ -59,6 +81,8 @@ export function FocusShell({
   const exitingRef = useRef(false);
 
   const exit = useCallback(() => {
+    // Designers have nowhere to exit to — Focus is their whole app.
+    if (designerOnly) return;
     if (exitingRef.current) return;
     exitingRef.current = true;
     const reduced =
@@ -70,12 +94,16 @@ export function FocusShell({
     }
     setExiting(true);
     window.setTimeout(() => router.push(exitTo), 180);
-  }, [router, exitTo]);
+  }, [router, exitTo, designerOnly]);
 
   // Esc exits focus — but never while the user is typing in a field.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      if (projectsOpen) {
+        setProjectsOpen(false);
+        return;
+      }
       const el = document.activeElement as HTMLElement | null;
       if (
         el &&
@@ -90,7 +118,7 @@ export function FocusShell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [exit]);
+  }, [exit, projectsOpen]);
 
   const cycleTheme = () => {
     const cur = readThemePref();
@@ -161,14 +189,60 @@ export function FocusShell({
           <span className="focuslab">Focus</span>
         </div>
 
-        <div className="fx-gig" title={`${showTitle} · ${orgName}`}>
-          <span className="poster">{posterInitial}</span>
-          <span className="meta">
-            <span className="show">
-              <ShowTitle title={showTitle} />
+        <div className="fx-gig-wrap" ref={gigRef}>
+          <div
+            className="fx-gig"
+            data-switch={switchable ? "1" : undefined}
+            title={`${showTitle} · ${orgName}`}
+            role={switchable ? "button" : undefined}
+            tabIndex={switchable ? 0 : undefined}
+            onClick={switchable ? () => setProjectsOpen((v) => !v) : undefined}
+            onKeyDown={
+              switchable
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setProjectsOpen((v) => !v);
+                    }
+                  }
+                : undefined
+            }
+          >
+            <span className="poster">{posterInitial}</span>
+            <span className="meta">
+              <span className="show">
+                <ShowTitle title={showTitle} />
+              </span>
+              <span className="org">{orgName}</span>
             </span>
-            <span className="org">{orgName}</span>
-          </span>
+            {switchable && (
+              <svg className="fx-gig-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            )}
+          </div>
+          {switchable && projectsOpen && (
+            <div className="fx-projects" role="menu">
+              <div className="fx-projects-head">Switch project</div>
+              {projects.map((p) => (
+                <button
+                  key={p.slug}
+                  type="button"
+                  role="menuitem"
+                  className="fx-project"
+                  data-on={p.slug === slug ? "1" : undefined}
+                  onClick={() => {
+                    setProjectsOpen(false);
+                    if (p.slug !== slug) {
+                      router.push(`/focus/${p.slug}?mode=${mode}`);
+                    }
+                  }}
+                >
+                  {p.title}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <span className="fx-spring" />
@@ -235,12 +309,14 @@ export function FocusShell({
 
         <div className="avatar" title="You">{userInitials}</div>
 
-        <button type="button" className="btn fx-exit" onClick={exit}>
-          <svg className="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
-          </svg>
-          Exit focus <kbd>Esc</kbd>
-        </button>
+        {!designerOnly && (
+          <button type="button" className="btn fx-exit" onClick={exit}>
+            <svg className="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
+            </svg>
+            Exit focus <kbd>Esc</kbd>
+          </button>
+        )}
       </header>
 
       <div className="fx-stage">{children}</div>
