@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import { applyThemePref, readThemePref, THEME_PREFS } from "@/lib/theme";
 import { quickCreateProduction } from "@/features/productions/actions";
+import { logout } from "@/app/actions/auth";
 
 type Mode = "script" | "blocking";
 
@@ -73,6 +74,8 @@ export function FocusShell({
   const router = useRouter();
   const exitTo = `/productions/${slug}/${mode === "blocking" ? "blocking" : "script"}`;
   const [projectsOpen, setProjectsOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [createErr, setCreateErr] = useState<string | null>(null);
@@ -110,6 +113,18 @@ export function FocusShell({
     window.addEventListener("mousedown", onDown);
     return () => window.removeEventListener("mousedown", onDown);
   }, [projectsOpen]);
+
+  // Close the account menu on outside-click.
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setAccountOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", onDown);
+    return () => window.removeEventListener("mousedown", onDown);
+  }, [accountOpen]);
 
   // Exit transition: play the reverse animation, then navigate. `exitingRef`
   // guards against double-firing (e.g. Esc + click). Reduced-motion users skip
@@ -381,7 +396,39 @@ export function FocusShell({
 
         <span className="fx-divider" />
 
-        <div className="avatar" title="You">{userInitials}</div>
+        <div className="fx-account-wrap" ref={accountRef}>
+          <button
+            type="button"
+            className="avatar fx-account-btn"
+            title="Account"
+            aria-haspopup="menu"
+            aria-expanded={accountOpen}
+            onClick={() => setAccountOpen((v) => !v)}
+          >
+            {userInitials}
+          </button>
+          {accountOpen && (
+            <div className="fx-account-menu" role="menu">
+              {userName && <div className="fx-account-name">{userName}</div>}
+              <button
+                type="button"
+                role="menuitem"
+                className="fx-account-item"
+                onClick={() => {
+                  setAccountOpen(false);
+                  router.push(`/focus/${slug}/settings`);
+                }}
+              >
+                Account &amp; settings
+              </button>
+              <form action={logout} className="fx-account-logout">
+                <button type="submit" role="menuitem" className="fx-account-item">
+                  Log out
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
 
         {!designerOnly && (
           <button type="button" className="btn fx-exit" onClick={exit}>

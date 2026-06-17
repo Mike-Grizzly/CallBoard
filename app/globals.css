@@ -12914,3 +12914,31 @@ body[data-theme="dusk"] .fx-brand .mark .brand-badge.is-dark { display: block; }
 }
 .fx-newproject .btn.primary { flex: 0 0 auto; }
 .fx-newproject-err { font-size: 11px; color: var(--c-clay); padding: 4px 6px 2px; }
+
+/* Focus account menu (avatar) */
+.fx-account-wrap { position: relative; }
+.fx-account-btn { appearance: none; border: 0; cursor: pointer; padding: 0; }
+.fx-account-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 60; min-width: 180px;
+  padding: 5px; background: var(--bg-elev); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: var(--shadow-2, 0 8px 30px rgba(0,0,0,.18));
+}
+.fx-account-name {
+  font-size: 11px; font-weight: 600; color: var(--ink-4);
+  padding: 6px 9px 5px; border-bottom: 1px solid var(--border); margin-bottom: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fx-account-logout { margin: 0; }
+.fx-account-item {
+  display: block; width: 100%; text-align: left; appearance: none; border: 0;
+  background: transparent; font: inherit; font-size: 13px; color: var(--ink);
+  padding: 8px 9px; border-radius: 7px; cursor: pointer;
+}
+.fx-account-item:hover { background: var(--bg-muted); }
+
+/* Focus settings surface */
+.fx-settings { height: 100%; overflow: auto; padding: 28px 24px 64px; }
+.fx-settings-inner { width: 100%; max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+.fx-settings-inner > h1 { font-size: 22px; font-weight: 600; color: var(--ink); margin: 0; }
+.fx-settings-section { display: flex; flex-direction: column; gap: 10px; }
+.fx-settings-section > h2 { font-size: 15px; font-weight: 600; color: var(--ink); margin: 0; }
