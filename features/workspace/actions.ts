@@ -437,7 +437,7 @@ export async function saveBrandColors(
   return { success: true };
 }
 
-
+export type OnboardingInput = {
   brandColor?: string | null;
   brandColorSecondary?: string | null;
   brandColorHighlight?: string | null;
