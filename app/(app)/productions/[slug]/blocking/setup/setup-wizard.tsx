@@ -19,6 +19,9 @@ type Props = {
   productionSlug: string;
   pdfDocuments: DocumentWithUploader[];
   existingConfig: StageConfiguration | null;
+  /** Where to go when setup finishes / is cancelled. Defaults to the Blocking
+   *  tool; the Focus View passes its own route so it stays in focus. */
+  returnTo?: string;
 };
 
 type CalibrationPoint = { xPercent: number; yPercent: number };
@@ -28,8 +31,10 @@ export function SetupWizard({
   productionSlug,
   pdfDocuments,
   existingConfig,
+  returnTo,
 }: Props) {
   const router = useRouter();
+  const doneHref = returnTo ?? `/productions/${productionSlug}/blocking`;
   const [step, setStep] = useState<1 | 2>(1);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -215,7 +220,7 @@ export function SetupWizard({
       if (result.error) {
         setError(result.error);
       } else {
-        router.push(`/productions/${productionSlug}/blocking`);
+        router.push(doneHref);
       }
     });
   }
@@ -284,12 +289,7 @@ export function SetupWizard({
           {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={() =>
-                router.push(`/productions/${productionSlug}/blocking`)
-              }
-            >
+            <Button variant="outline" onClick={() => router.push(doneHref)}>
               Cancel
             </Button>
             {existingConfig && selectedDocId && (

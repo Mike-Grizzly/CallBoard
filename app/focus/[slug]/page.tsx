@@ -20,7 +20,10 @@ import {
 } from "@/features/blocking/queries";
 import { getScenesWithBeats } from "@/features/scenes/queries";
 import { ensureFirstSceneAndBeat } from "@/features/scenes/actions";
-import { getDocumentById } from "@/features/documents/queries";
+import {
+  getDocumentById,
+  getDocumentsByProduction,
+} from "@/features/documents/queries";
 import { getDocumentUrl } from "@/features/documents/actions";
 import {
   getCustomSetPieceUrls,
@@ -32,6 +35,7 @@ import type {
   PageOverrides,
 } from "@/features/scripts/constants";
 import { BlockingCanvas } from "@/app/(app)/productions/[slug]/blocking/blocking-canvas";
+import { SetupWizard } from "@/app/(app)/productions/[slug]/blocking/setup/setup-wizard";
 import { FocusShell } from "./focus-shell";
 import { FocusScriptHost } from "./focus-script-host";
 import { FocusScriptUpload } from "./focus-script-upload";
@@ -106,9 +110,33 @@ export default async function FocusPage({
       getCustomSetPieces(production.id),
     ]);
 
-    // No stage config yet: editors set one up; viewers get the empty canvas.
+    // No stage config yet: editors (incl. Creative) set one up right here in
+    // focus; viewers fall through to the empty canvas.
     if (!stageConfig && can(user.role, "blocking:edit")) {
-      redirect(`/productions/${slug}/blocking/setup`);
+      const allDocuments = await getDocumentsByProduction(production.id);
+      const pdfDocuments = allDocuments.filter(
+        (d) => d.contentType === "application/pdf",
+      );
+      return (
+        <FocusShell {...shellProps} mode="blocking">
+          <div className="fx-setup">
+            <div className="fx-setup-inner">
+              <h1>Stage setup</h1>
+              <p>
+                Select a ground plan and define the stage dimensions for{" "}
+                {production.title}.
+              </p>
+              <SetupWizard
+                productionId={production.id}
+                productionSlug={slug}
+                pdfDocuments={pdfDocuments}
+                existingConfig={null}
+                returnTo={`/focus/${slug}?mode=blocking`}
+              />
+            </div>
+          </div>
+        </FocusShell>
+      );
     }
 
     // Seed a default Scene 1 / Beat 1 so editors land on an editable canvas.
