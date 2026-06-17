@@ -12,6 +12,8 @@ import {
 import {
   getDefaultScript,
   getScriptAnnotations,
+  getLatestScriptParse,
+  getProductionParseUsage,
 } from "@/features/scripts/queries";
 import { getScriptUrl, ensureMemberBookmarks } from "@/features/scripts/actions";
 import {
@@ -39,6 +41,7 @@ import type {
 } from "@/features/scripts/constants";
 import { BlockingCanvas } from "@/app/(app)/productions/[slug]/blocking/blocking-canvas";
 import { SetupWizard } from "@/app/(app)/productions/[slug]/blocking/setup/setup-wizard";
+import { AiReviewClient } from "@/app/(app)/productions/[slug]/script/ai/ai-review-client";
 import { FocusShell } from "./focus-shell";
 import { FocusScriptHost } from "./focus-script-host";
 import { FocusScriptUpload } from "./focus-script-upload";
@@ -67,10 +70,14 @@ export default async function FocusPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ mode?: string; beat?: string }>;
+  searchParams: Promise<{ mode?: string; beat?: string; view?: string }>;
 }) {
   const { slug } = await params;
-  const { mode: modeParam, beat: requestedBeatId } = await searchParams;
+  const {
+    mode: modeParam,
+    beat: requestedBeatId,
+    view,
+  } = await searchParams;
   const mode = modeParam === "blocking" ? "blocking" : "script";
 
   const user = await requireCurrentUser();
@@ -206,6 +213,27 @@ export default async function FocusPage({
           initialCustomSetPieces={initialCustomSetPieces}
           embedded
         />
+      </FocusShell>
+    );
+  }
+
+  // AI script setup, embedded in focus so designers never leave for /script/ai.
+  if (view === "ai" && can(user.role, "documents:upload")) {
+    const [parse, usage] = await Promise.all([
+      getLatestScriptParse(production.id),
+      getProductionParseUsage(production.id),
+    ]);
+    return (
+      <FocusShell {...shellProps} mode="script">
+        <div className="fx-ai">
+          <AiReviewClient
+            slug={slug}
+            productionId={production.id}
+            initialParse={parse}
+            usage={usage}
+            inFocus
+          />
+        </div>
       </FocusShell>
     );
   }

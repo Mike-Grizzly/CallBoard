@@ -12895,3 +12895,7 @@ body[data-theme="dusk"] .fx-brand .mark .brand-badge.is-dark { display: block; }
 }
 .fx-project:hover { background: var(--bg-muted); }
 .fx-project[data-on="1"] { color: var(--accent-ink); font-weight: 600; background: var(--bg-sunken); }
+
+/* Focus View: embedded AI script-setup review */
+.fx-ai { height: 100%; overflow: auto; padding: 22px 24px 56px; }
+.fx-ai > .anim-in { margin: 0 auto; }

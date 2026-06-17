@@ -54,18 +54,35 @@ type ParseUsage = {
   windowDays: number;
 };
 
+// Navigation targets that must stay inside /focus when embedded there
+// (designer-package users have no dashboard to return to).
+function focusHrefs(slug: string, inFocus: boolean) {
+  return {
+    docs: inFocus ? `/focus/${slug}?mode=script` : `/productions/${slug}/documents`,
+    script: inFocus ? `/focus/${slug}?mode=script` : `/productions/${slug}/script`,
+    blocking: inFocus
+      ? `/focus/${slug}?mode=blocking`
+      : `/productions/${slug}/blocking`,
+    members: inFocus ? `/focus/${slug}?mode=script` : `/productions/${slug}/members`,
+  };
+}
+
 export function AiReviewClient({
   slug,
   productionId,
   initialParse,
   usage,
+  inFocus = false,
 }: {
   slug: string;
   productionId: string;
   initialParse: ParseRow | null;
   usage: ParseUsage;
+  /** Rendered inside the Focus View shell: keep all navigation within /focus. */
+  inFocus?: boolean;
 }) {
   const router = useRouter();
+  const { docs: docsHref } = focusHrefs(slug, inFocus);
   const [parse, setParse] = useState<ParseRow | null>(initialParse);
 
   // Poll while the analysis is still running.
@@ -88,7 +105,7 @@ export function AiReviewClient({
   return (
     <div className="anim-in" style={{ maxWidth: 820, margin: "0 auto", padding: "8px 0 64px" }}>
       <Link
-        href={`/productions/${slug}/documents`}
+        href={docsHref}
         style={{
           display: "inline-flex",
           alignItems: "center",
@@ -153,12 +170,15 @@ export function AiReviewClient({
         </p>
       </div>
 
-      {!parse && <EmptyState slug={slug} />}
+      {!parse && <EmptyState slug={slug} inFocus={inFocus} />}
       {parse?.status === "processing" && <Processing />}
-      {parse?.status === "failed" && <Failed error={parse.error} slug={slug} />}
+      {parse?.status === "failed" && (
+        <Failed error={parse.error} slug={slug} inFocus={inFocus} />
+      )}
       {parse?.status === "applied" && (
         <Applied
           slug={slug}
+          inFocus={inFocus}
           parseId={parse.id}
           onReanalyze={(newId) =>
             setParse((p) =>
@@ -174,10 +194,11 @@ export function AiReviewClient({
           parseId={parse.id}
           result={parse.result as ScriptParseResult}
           slug={slug}
+          inFocus={inFocus}
           onApplied={() =>
             setParse((p) => (p ? { ...p, status: "applied" } : p))
           }
-          onDiscarded={() => router.push(`/productions/${slug}/documents`)}
+          onDiscarded={() => router.push(docsHref)}
           onReanalyze={(newId) =>
             setParse((p) =>
               p
@@ -258,14 +279,15 @@ function Card({ children }: { children: React.ReactNode }) {
   );
 }
 
-function EmptyState({ slug }: { slug: string }) {
+function EmptyState({ slug, inFocus }: { slug: string; inFocus: boolean }) {
+  const { docs: docsHref } = focusHrefs(slug, inFocus);
   return (
     <Card>
       <p style={{ fontSize: 14, color: "var(--ink-2)", margin: "0 0 12px" }}>
         No analysis yet. Open a script in the Documents tab, use its menu, and
         choose <strong>Analyze with AI</strong>.
       </p>
-      <Link href={`/productions/${slug}/documents`} style={primaryLink}>
+      <Link href={docsHref} style={primaryLink}>
         Go to Documents
       </Link>
     </Card>
@@ -296,7 +318,16 @@ function Processing() {
   );
 }
 
-function Failed({ error, slug }: { error: string | null; slug: string }) {
+function Failed({
+  error,
+  slug,
+  inFocus,
+}: {
+  error: string | null;
+  slug: string;
+  inFocus: boolean;
+}) {
+  const { docs: docsHref } = focusHrefs(slug, inFocus);
   return (
     <Card>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -308,7 +339,7 @@ function Failed({ error, slug }: { error: string | null; slug: string }) {
           <p style={{ fontSize: 13, color: "var(--ink-3)", margin: "4px 0 14px" }}>
             {error ?? "Something went wrong while reading the script."}
           </p>
-          <Link href={`/productions/${slug}/documents`} style={primaryLink}>
+          <Link href={docsHref} style={primaryLink}>
             Back to Documents
           </Link>
         </div>
@@ -319,13 +350,20 @@ function Failed({ error, slug }: { error: string | null; slug: string }) {
 
 function Applied({
   slug,
+  inFocus,
   parseId,
   onReanalyze,
 }: {
   slug: string;
+  inFocus: boolean;
   parseId: string;
   onReanalyze: (newParseId: string) => void;
 }) {
+  const {
+    script: scriptHref,
+    blocking: blockingHref,
+    members: membersHref,
+  } = focusHrefs(slug, inFocus);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <Card>
@@ -352,13 +390,13 @@ function Applied({
           been added to the script for everyone on the team.
         </p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <Link href={`/productions/${slug}/members`} style={primaryLink}>
+          <Link href={membersHref} style={primaryLink}>
             Assign actors
           </Link>
-          <Link href={`/productions/${slug}/script`} style={ghostLink}>
+          <Link href={scriptHref} style={ghostLink}>
             Open script
           </Link>
-          <Link href={`/productions/${slug}/blocking`} style={ghostLink}>
+          <Link href={blockingHref} style={ghostLink}>
             Blocking
           </Link>
         </div>
@@ -442,6 +480,7 @@ function ReviewForm({
   parseId,
   result,
   slug,
+  inFocus,
   onApplied,
   onDiscarded,
   onReanalyze,
@@ -449,10 +488,12 @@ function ReviewForm({
   parseId: string;
   result: ScriptParseResult;
   slug: string;
+  inFocus: boolean;
   onApplied: () => void;
   onDiscarded: () => void;
   onReanalyze: (newParseId: string) => void;
 }) {
+  const { script: scriptHref } = focusHrefs(slug, inFocus);
   const [roles, setRoles] = useState<RoleEdit[]>(
     (result?.roles ?? []).map((r) => ({ ...r, key: nextKey() })),
   );
@@ -657,7 +698,7 @@ function ReviewForm({
         <button onClick={discard} disabled={isPending} style={ghostBtn}>
           Discard
         </button>
-        <Link href={`/productions/${slug}/script`} style={{ ...ghostBtn, textDecoration: "none" }}>
+        <Link href={scriptHref} style={{ ...ghostBtn, textDecoration: "none" }}>
           Cancel
         </Link>
       </div>

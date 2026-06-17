@@ -96,11 +96,11 @@ export function FocusScriptUpload({
         setStage("Starting AI analysis…");
         const res = await startScriptParse(fd);
         if (!res.error && res.parseId) {
-          // Kick the background run, then hand off to the review screen.
+          // Kick the background run, then hand off to the in-focus review.
           fetch(`/api/scripts/${res.parseId}/run`, { method: "POST" }).catch(
             () => {},
           );
-          router.push(`/productions/${slug}/script/ai`);
+          router.push(`/focus/${slug}?mode=script&view=ai`);
           return;
         }
         // Analysis couldn't start (e.g. a cost cap) — keep the uploaded script
