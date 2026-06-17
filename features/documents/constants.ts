@@ -31,6 +31,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   producer: "Producers",
   director: "Directors",
   choreographer: "Choreographers",
+  creative: "Creative",
   stage_manager: "Stage Management",
   cast: "Cast",
   crew: "Crew",

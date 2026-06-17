@@ -10,6 +10,7 @@ const ROLE_LABELS: Record<Role, string> = {
   producer: "Producer",
   director: "Director",
   choreographer: "Choreographer",
+  creative: "Creative",
   stage_manager: "Stage Manager",
   cast: "Cast",
   crew: "Crew",

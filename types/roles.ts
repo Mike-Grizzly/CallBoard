@@ -9,6 +9,9 @@ export const ROLES = [
   "producer",
   "director",
   "choreographer",
+  // Creative / design team (designers, music staff). Editor-tier: can upload
+  // scripts & ground plans, run AI parsing, and edit blocking.
+  "creative",
   "stage_manager",
   "cast",
   "crew",

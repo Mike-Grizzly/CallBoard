@@ -20,6 +20,12 @@ export const ROLE_META: Record<
     category: "Creative",
     tier: "Editor",
   },
+  creative: {
+    label: "Creative",
+    c: "plum",
+    category: "Creative",
+    tier: "Editor",
+  },
   stage_manager: {
     label: "Stage Manager",
     c: "sage",

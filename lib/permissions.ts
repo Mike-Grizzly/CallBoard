@@ -92,6 +92,23 @@ const CAPABILITY_MAP: Record<Role, ReadonlySet<Capability>> = {
     "notes:view",
     "notes:create",
   ]),
+  // Creative / design team — script & ground-plan uploads, AI parsing, and
+  // blocking edits. Editor-tier access modeled on the choreographer.
+  creative: new Set<Capability>([
+    "productions:view",
+    "reports:view",
+    "reports:create",
+    "documents:view",
+    "documents:upload",
+    "videos:view",
+    "videos:create",
+    "announcements:view",
+    "activity:view",
+    "blocking:view",
+    "blocking:edit",
+    "notes:view",
+    "notes:create",
+  ]),
   stage_manager: new Set<Capability>([
     "productions:view",
     "reports:view",
