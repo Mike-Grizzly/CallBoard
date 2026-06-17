@@ -68,7 +68,7 @@ export async function signInWithOAuth(formData: FormData): Promise<void> {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: provider as OAuthProvider,
     options: {
-      redirectTo: `${origin}/auth/callback?next=/dashboard`,
+      redirectTo: `${origin}/auth/callback?next=/setup`,
     },
   });
 
