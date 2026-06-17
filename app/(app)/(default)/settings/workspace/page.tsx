@@ -27,7 +27,7 @@ export default async function WorkspaceSettingsPage() {
   const overview = await getWorkspaceOverview(user.organizationId);
   if (!overview) redirect("/dashboard");
 
-  const [members, logoRow] = await Promise.all([
+  const [members, orgRow] = await Promise.all([
     getOrganizationMembers(user.organizationId),
     db
       .select({ logoUrl: organizations.logoUrl })
@@ -36,7 +36,7 @@ export default async function WorkspaceSettingsPage() {
       .limit(1),
   ]);
 
-  const logoUrl = await getSignedLogoUrl(logoRow[0]?.logoUrl ?? null);
+  const logoUrl = await getSignedLogoUrl(orgRow[0]?.logoUrl ?? null);
 
   const candidates: TransferCandidate[] = members
     .filter((m) => m.userId !== user.id)

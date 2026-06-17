@@ -47,14 +47,19 @@ export const organizations = pgTable("organizations", {
   // days so support can restore it. Hard purge is deferred.
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 
-  // ─── Onboarding profile (captured in the create-workspace wizard) ──────
+  // ─── Onboarding profile ──────────────────────────────────────────────────
   // Self-reported company profile. Optional — every survey step is skippable,
-  // so all three are nullable. Stored as the free-text bucket labels from
+  // so all fields are nullable. Stored as the free-text bucket labels from
   // features/workspace/constants.ts; used to tailor defaults and for product
   // insight, not for any access decision.
+  brandColor: text("brand_color"),
+  brandColorSecondary: text("brand_color_secondary"),
+  brandColorHighlight: text("brand_color_highlight"),
+  avgAudienceSize: text("avg_audience_size"),
   annualShows: text("annual_shows"),
   teamSize: text("team_size"),
   productionTypes: text("production_types").array(),
+  onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
 
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
