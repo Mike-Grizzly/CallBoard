@@ -12739,19 +12739,36 @@ body[data-theme="dusk"] .fx-brand .mark .brand-badge.is-dark { display: block; }
 
 /* Script / Blocking segmented control */
 .fx-modeswitch {
-  display: flex; background: var(--bg-sunken);
+  position: relative; display: flex; background: var(--bg-sunken);
   border: 1px solid var(--border); border-radius: 999px; padding: 3px;
 }
+/* Sliding active indicator — animates between the two equal-width buttons. */
+.fx-ms-pill {
+  position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px);
+  border-radius: 999px; background: var(--bg-elev); box-shadow: var(--shadow-1);
+  transition: transform .24s cubic-bezier(.4, 0, .2, 1);
+  pointer-events: none;
+}
+.fx-modeswitch[data-active="blocking"] .fx-ms-pill { transform: translateX(100%); }
 .fx-modeswitch button {
+  position: relative; z-index: 1; flex: 1 1 0; min-width: 104px; white-space: nowrap;
   appearance: none; border: 0; background: transparent; font: inherit;
   font-size: 13px; font-weight: 500; color: var(--ink-3);
   padding: 6px 16px; border-radius: 999px; cursor: pointer;
-  display: inline-flex; align-items: center; gap: 7px; transition: color .12s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  transition: color .15s;
 }
 .fx-modeswitch button .ico { width: 15px; height: 15px; }
 .fx-modeswitch button:hover { color: var(--ink); }
-.fx-modeswitch button[data-on="1"] {
-  background: var(--bg-elev); color: var(--ink); box-shadow: var(--shadow-1);
+.fx-modeswitch button[data-on="1"] { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) {
+  .fx-ms-pill { transition: none; }
+}
+
+/* Fixed slot so the margin toggle (script only) doesn't shift the top bar. */
+.fx-margin-slot {
+  display: flex; align-items: center; justify-content: flex-end;
+  min-width: 116px; flex: 0 0 auto;
 }
 
 .fx-divider { width: 1px; height: 26px; background: var(--border); flex: 0 0 auto; }

@@ -98,6 +98,9 @@ export function FocusShell({
     applyThemePref(THEME_PREFS[(idx + 1) % THEME_PREFS.length]);
   };
 
+  // Switching modes re-renders this same shell with a new `mode`, so the
+  // segmented control's `data-active` flips on the same element and the pill
+  // slides via CSS — no local mirror state needed.
   const switchMode = (m: Mode) => {
     if (m !== mode) router.push(`/focus/${slug}?mode=${m}`);
   };
@@ -170,7 +173,8 @@ export function FocusShell({
 
         <span className="fx-spring" />
 
-        <div className="fx-modeswitch" role="tablist" aria-label="Tool">
+        <div className="fx-modeswitch" role="tablist" aria-label="Tool" data-active={mode}>
+          <span className="fx-ms-pill" aria-hidden />
           <button
             type="button"
             data-mode="script"
@@ -200,8 +204,10 @@ export function FocusShell({
 
         <span className="fx-spring" />
 
-        {onToggleMargin && mode === "script" && (
-          <>
+        {/* Fixed-width slot: reserves the margin-toggle's space in both modes so
+            the spring-centered mode switch never shifts when tools change. */}
+        <div className="fx-margin-slot">
+          {onToggleMargin && mode === "script" && (
             <button
               type="button"
               className="fx-toggle"
@@ -213,9 +219,10 @@ export function FocusShell({
               <span>Margin view</span>
               <span className="fx-sw" aria-hidden />
             </button>
-            <span className="fx-divider" />
-          </>
-        )}
+          )}
+        </div>
+
+        <span className="fx-divider" />
 
         <button type="button" className="fx-iconbtn" title="Theme" onClick={cycleTheme} aria-label="Cycle theme">
           <svg className="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
