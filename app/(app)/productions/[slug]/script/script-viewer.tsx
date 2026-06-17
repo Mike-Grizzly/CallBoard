@@ -164,6 +164,26 @@ export function ScriptViewer({
   const [pageOverrides] = useState<PageOverrides>(initialPageOverrides);
   const [hasStalePages, setHasStalePages] = useState(initialHasStalePages);
 
+  // Default label text sizes applied to newly-placed cues (per-user, persisted
+  // locally). Existing cues keep their own scale; changing a default only
+  // affects cues created afterwards.
+  const [cueNumScaleDefault, setCueNumScaleDefault] = useState(1);
+  const [cueDescScaleDefault, setCueDescScaleDefault] = useState(1);
+  useEffect(() => {
+    const n = Number(localStorage.getItem("cb:cueNumScale"));
+    if (n > 0) setCueNumScaleDefault(n);
+    const d = Number(localStorage.getItem("cb:cueDescScale"));
+    if (d > 0) setCueDescScaleDefault(d);
+  }, []);
+  function setNumDefault(v: number) {
+    setCueNumScaleDefault(v);
+    localStorage.setItem("cb:cueNumScale", String(v));
+  }
+  function setDescDefault(v: number) {
+    setCueDescScaleDefault(v);
+    localStorage.setItem("cb:cueDescScale", String(v));
+  }
+
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [zoomIndex, setZoomIndex] = useState(1); // index into ZOOM_STEPS; 1 = 100%
   // Default to fitting the whole page in the available height, so a script
@@ -831,6 +851,19 @@ export function ScriptViewer({
     triggerSave();
   }
 
+  // Clear every cue's manual label placement (both in-page and margin), so they
+  // return to auto-stacking. Used to undo stale/edge-pinned placements.
+  function resetAllCuePositions() {
+    const next = latestAnnotationsRef.current.map((a) =>
+      a.type === "cue"
+        ? ({ ...a, labelPos: undefined, marginLabelPos: undefined } as Annotation)
+        : a,
+    );
+    latestAnnotationsRef.current = next;
+    setAnnotations(next);
+    triggerSave();
+  }
+
   function addBookmark() {
     const title = newBookmarkTitle.trim();
     if (!title) return;
@@ -1140,6 +1173,8 @@ export function ScriptViewer({
         color: cueColor,
         marker: isPipe ? "pipe" : "box",
         line: isPipe ? capturePipeLine(rect) : captureLineText(rect),
+        cueNumScale: cueNumScaleDefault,
+        cueDescScale: cueDescScaleDefault,
       });
     }
 
@@ -2427,6 +2462,11 @@ export function ScriptViewer({
           onDelete={deleteAnnotation}
           onEdit={updateAnnotation}
           readOnly={isPhone}
+          numScaleDefault={cueNumScaleDefault}
+          descScaleDefault={cueDescScaleDefault}
+          onNumScaleDefault={setNumDefault}
+          onDescScaleDefault={setDescDefault}
+          onResetPositions={resetAllCuePositions}
         />
       </div>
     </div>
@@ -3191,14 +3231,15 @@ function drawAnnotationOnCanvas(
     ctx.arc(labelX, labelY, serif, 0, Math.PI * 2);
     ctx.fillStyle = cc;
     ctx.fill();
-    const ts = ann.cueTextScale ?? 1;
+    const numScale = ann.cueNumScale ?? ann.cueTextScale ?? 1;
+    const descScale = ann.cueDescScale ?? ann.cueTextScale ?? 1;
     ctx.fillStyle = cc;
     ctx.textAlign = isLeft ? "left" : "right";
-    ctx.font = `bold ${13 * s * ts}px system-ui, sans-serif`;
+    ctx.font = `bold ${13 * s * numScale}px system-ui, sans-serif`;
     ctx.fillText(ann.cueNumber, isLeft ? labelX + 6 * s : labelX - 6 * s, labelY - 4 * s);
     if (ann.cueDescription) {
-      ctx.font = `${9 * s * ts}px system-ui, sans-serif`;
-      ctx.fillText(ann.cueDescription, isLeft ? labelX + 6 * s : labelX - 6 * s, labelY + 12 * s * ts);
+      ctx.font = `${9 * s * descScale}px system-ui, sans-serif`;
+      ctx.fillText(ann.cueDescription, isLeft ? labelX + 6 * s : labelX - 6 * s, labelY + 12 * s * descScale);
     }
   }
 
@@ -3373,16 +3414,19 @@ function AnnotationShape({
     const cc = annotation.color ?? CUE_STROKE;
     const serif = 3 * s;
     const draggable = !!onLabelPointerDown;
-    // Per-cue label text scale (number + description), default 1.
-    const ts = annotation.cueTextScale ?? 1;
+    // Per-cue label text scale: number and description sized independently
+    // (legacy cueTextScale applies to both when the split values are absent).
+    const numScale = annotation.cueNumScale ?? annotation.cueTextScale ?? 1;
+    const descScale = annotation.cueDescScale ?? annotation.cueTextScale ?? 1;
+    const ts = Math.max(numScale, descScale); // card sizing tracks the larger
     // Gutter card geometry (margin mode only): a neutral, readable card whose
     // width fits the longer of the cue number / description rather than filling
     // the whole gutter. A thin colored bar on the left carries the cue color.
     const ACCENT_W = 3 * s;
     const padL = 9 * s;
     const padR = 11 * s;
-    const numTextW = (annotation.cueNumber?.length ?? 0) * 8.2 * s * ts;
-    const descTextW = (annotation.cueDescription?.length ?? 0) * 5.0 * s * ts;
+    const numTextW = (annotation.cueNumber?.length ?? 0) * 8.2 * s * numScale;
+    const descTextW = (annotation.cueDescription?.length ?? 0) * 5.0 * s * descScale;
     const contentW = Math.max(numTextW, descTextW);
     const cardX = labelX;
     const availW = canvasW + gutter - cardX - 6 * s;
@@ -3468,7 +3512,8 @@ function AnnotationShape({
         >
           {focusMargin ? (
             <>
-              {/* Neutral card + colored left accent bar (readable in any theme) */}
+              {/* White card + colored left accent bar — readable on the dark
+                  gutter (and fine on light). Dark text, fixed (not theme vars). */}
               <rect
                 x={cardX}
                 y={cardY}
@@ -3477,8 +3522,8 @@ function AnnotationShape({
                 rx={5 * s}
                 ry={5 * s}
                 style={{
-                  fill: "var(--bg-elev)",
-                  stroke: selected ? cc : "var(--border-strong)",
+                  fill: "#ffffff",
+                  stroke: selected ? cc : "rgba(0,0,0,0.22)",
                   strokeWidth: (selected ? 1.5 : 1) * s,
                 }}
               />
@@ -3491,9 +3536,9 @@ function AnnotationShape({
               />
               <text
                 x={textX}
-                y={annotation.cueDescription ? labelY - 3 * s * ts : labelY + 4 * s * ts}
+                y={annotation.cueDescription ? labelY - 3 * s * numScale : labelY + 4 * s * numScale}
                 textAnchor="start"
-                fontSize={12.5 * s * ts}
+                fontSize={12.5 * s * numScale}
                 fill={cc}
                 fontWeight="700"
                 fontFamily="system-ui, sans-serif"
@@ -3503,10 +3548,10 @@ function AnnotationShape({
               {annotation.cueDescription && (
                 <text
                   x={textX}
-                  y={labelY + 10 * s * ts}
+                  y={labelY + 10 * s * descScale}
                   textAnchor="start"
-                  fontSize={9 * s * ts}
-                  fill="var(--ink-2)"
+                  fontSize={9 * s * descScale}
+                  fill="#52525b"
                   fontFamily="system-ui, sans-serif"
                 >
                   {annotation.cueDescription}
@@ -3530,7 +3575,7 @@ function AnnotationShape({
                 x={isLeft ? labelX + 6 * s : labelX - 6 * s}
                 y={labelY - 4 * s}
                 textAnchor={textAnchor}
-                fontSize={13 * s * ts}
+                fontSize={13 * s * numScale}
                 fill={cc}
                 fontWeight="700"
                 fontFamily="system-ui, sans-serif"
@@ -3540,9 +3585,9 @@ function AnnotationShape({
               {annotation.cueDescription && (
                 <text
                   x={isLeft ? labelX + 6 * s : labelX - 6 * s}
-                  y={labelY + 12 * s * ts}
+                  y={labelY + 12 * s * descScale}
                   textAnchor={textAnchor}
-                  fontSize={9 * s * ts}
+                  fontSize={9 * s * descScale}
                   fill={cc}
                   fontFamily="system-ui, sans-serif"
                 >
@@ -3790,6 +3835,39 @@ function BookmarksPanel({
 
 // ── AnnotationsPanel ──────────────────────────────────────────────────────
 
+// Small labeled range used for cue label text sizing (per-cue + defaults).
+function ScaleSlider({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label
+      style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, color: "var(--ink-3)" }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <span style={{ flexShrink: 0, width: 46 }}>{label}</span>
+      <input
+        type="range"
+        min={0.7}
+        max={1.8}
+        step={0.1}
+        value={value}
+        onMouseDown={(e) => e.stopPropagation()}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={{ flex: 1, accentColor: "var(--accent)" }}
+      />
+      <span style={{ flexShrink: 0, width: 30, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+        {Math.round(value * 100)}%
+      </span>
+    </label>
+  );
+}
+
 function AnnotationsPanel({
   annotations,
   currentPage,
@@ -3798,6 +3876,11 @@ function AnnotationsPanel({
   onDelete,
   onEdit,
   readOnly,
+  numScaleDefault,
+  descScaleDefault,
+  onNumScaleDefault,
+  onDescScaleDefault,
+  onResetPositions,
 }: {
   annotations: Annotation[];
   currentPage: number;
@@ -3806,6 +3889,11 @@ function AnnotationsPanel({
   onDelete: (id: string) => void;
   onEdit: (id: string, changes: Partial<Annotation>) => void;
   readOnly: boolean;
+  numScaleDefault: number;
+  descScaleDefault: number;
+  onNumScaleDefault: (v: number) => void;
+  onDescScaleDefault: (v: number) => void;
+  onResetPositions: () => void;
 }) {
   // Freehand ink is rendered on the page, not listed/edited in this panel.
   const listable = annotations.filter((a) => a.type !== "ink");
@@ -3860,6 +3948,35 @@ function AnnotationsPanel({
               {cues.length}
             </span>
           </div>
+          {!readOnly && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 5,
+                padding: "7px 8px",
+                marginBottom: 8,
+                borderRadius: 7,
+                background: "var(--bg-sunken)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>
+                Default label size
+              </div>
+              <ScaleSlider label="Number" value={numScaleDefault} onChange={onNumScaleDefault} />
+              <ScaleSlider label="Descr." value={descScaleDefault} onChange={onDescScaleDefault} />
+              {cues.some((c) => c.type === "cue" && (c.labelPos || c.marginLabelPos)) && (
+                <button
+                  type="button"
+                  onClick={onResetPositions}
+                  style={{ alignSelf: "flex-start", marginTop: 1, fontSize: 10.5, color: "var(--ink-3)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+                >
+                  Reset all cue positions
+                </button>
+              )}
+            </div>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {cues.map((ann) => (
               <PanelAnnotationItem
@@ -4069,31 +4186,22 @@ function PanelAnnotationItem({
                   );
                 })}
               </div>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 7,
-                  marginTop: 5,
-                  fontSize: 11,
-                  color: "var(--ink-3)",
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span style={{ flexShrink: 0 }}>Text size</span>
-                <input
-                  type="range"
-                  min={0.7}
-                  max={1.8}
-                  step={0.1}
-                  value={annotation.cueTextScale ?? 1}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onChange={(e) =>
-                    onEdit({ cueTextScale: Number(e.target.value) } as Partial<Annotation>)
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 5 }}>
+                <ScaleSlider
+                  label="Number"
+                  value={annotation.cueNumScale ?? annotation.cueTextScale ?? 1}
+                  onChange={(v) =>
+                    onEdit({ cueNumScale: v, cueTextScale: undefined } as Partial<Annotation>)
                   }
-                  style={{ flex: 1, accentColor: "var(--accent)" }}
                 />
-              </label>
+                <ScaleSlider
+                  label="Descr."
+                  value={annotation.cueDescScale ?? annotation.cueTextScale ?? 1}
+                  onChange={(v) =>
+                    onEdit({ cueDescScale: v, cueTextScale: undefined } as Partial<Annotation>)
+                  }
+                />
+              </div>
               {(annotation.labelPos || annotation.marginLabelPos) && (
                 <button
                   type="button"

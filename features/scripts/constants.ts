@@ -69,7 +69,12 @@ export type CueAnnotation = {
   // (x can exceed 1 — the gutter sits past the page's right edge).
   marginLabelPos?: { x: number; y: number };
   // Multiplier for the cue number/description label text size (default 1).
+  // `cueTextScale` is the legacy single control (scaled both); cueNumScale /
+  // cueDescScale scale the number and description independently and take
+  // precedence when present.
   cueTextScale?: number;
+  cueNumScale?: number;
+  cueDescScale?: number;
 };
 
 /**
