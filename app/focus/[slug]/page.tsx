@@ -34,6 +34,7 @@ import type {
 import { BlockingCanvas } from "@/app/(app)/productions/[slug]/blocking/blocking-canvas";
 import { FocusShell } from "./focus-shell";
 import { FocusScriptHost } from "./focus-script-host";
+import { FocusScriptUpload } from "./focus-script-upload";
 
 type CurrentUserLike = {
   firstName: string | null;
@@ -177,12 +178,16 @@ export default async function FocusPage({
   if (!script) {
     return (
       <FocusShell {...shellProps} mode="script">
-        <div className="fx-soon">
-          <p>No script uploaded yet.</p>
-          <a href={`/productions/${slug}/documents`}>
-            Upload one in Documents and set it as the default →
-          </a>
-        </div>
+        {can(user.role, "documents:upload") ? (
+          <FocusScriptUpload productionId={production.id} slug={slug} />
+        ) : (
+          <div className="fx-soon">
+            <p>No script uploaded yet.</p>
+            <a href={`/productions/${slug}/documents`}>
+              Ask an editor to upload one and set it as the default →
+            </a>
+          </div>
+        )}
       </FocusShell>
     );
   }

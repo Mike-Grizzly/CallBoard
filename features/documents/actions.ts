@@ -14,6 +14,8 @@ import { ROLES } from "@/types/roles";
 export type UploadDocumentResult = {
   error?: string;
   success?: boolean;
+  /** Id of the document row created by finalizeDocumentUpload. */
+  documentId?: string;
 };
 
 export async function createDefaultFolders(productionId: string) {
@@ -233,20 +235,23 @@ export async function finalizeDocumentUpload(input: {
     return { error: "Upload could not be verified." };
   }
 
-  await db.insert(documents).values({
-    productionId: input.productionId,
-    uploadedBy: user.id,
-    folderId: input.folderId || undefined,
-    title,
-    fileName: input.fileName,
-    fileSize: input.fileSize,
-    contentType: input.contentType,
-    storagePath: input.storagePath,
-    documentType: input.documentType || "general",
-  });
+  const [created] = await db
+    .insert(documents)
+    .values({
+      productionId: input.productionId,
+      uploadedBy: user.id,
+      folderId: input.folderId || undefined,
+      title,
+      fileName: input.fileName,
+      fileSize: input.fileSize,
+      contentType: input.contentType,
+      storagePath: input.storagePath,
+      documentType: input.documentType || "general",
+    })
+    .returning({ id: documents.id });
 
   revalidatePath("/productions");
-  return { success: true };
+  return { success: true, documentId: created?.id };
 }
 
 export async function deleteDocument(
