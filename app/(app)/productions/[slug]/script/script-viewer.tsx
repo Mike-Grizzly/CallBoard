@@ -851,17 +851,6 @@ export function ScriptViewer({
     triggerSave();
   }
 
-  // Re-read the script text under a cue and refresh its stored `line` (the
-  // dialogue shown in the cue table). Only valid for cues on the current page,
-  // where the text layer is live — which is every cue the side panel lists.
-  function recaptureCueLine(id: string) {
-    const cue = latestAnnotationsRef.current.find((a) => a.id === id);
-    if (!cue || cue.type !== "cue") return;
-    const line =
-      cue.marker === "pipe" ? capturePipeLine(cue.rect) : captureLineText(cue.rect);
-    updateAnnotation(id, { line } as Partial<Annotation>);
-  }
-
   // Clear every cue's manual label placement (both in-page and margin), so they
   // return to auto-stacking. Used to undo stale/edge-pinned placements.
   function resetAllCuePositions() {
@@ -2482,7 +2471,6 @@ export function ScriptViewer({
           onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
           onDelete={deleteAnnotation}
           onEdit={updateAnnotation}
-          onRecapture={recaptureCueLine}
           readOnly={isPhone}
           numScaleDefault={cueNumScaleDefault}
           descScaleDefault={cueDescScaleDefault}
@@ -3904,7 +3892,6 @@ function AnnotationsPanel({
   onSelect,
   onDelete,
   onEdit,
-  onRecapture,
   readOnly,
   numScaleDefault,
   descScaleDefault,
@@ -3918,7 +3905,6 @@ function AnnotationsPanel({
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string, changes: Partial<Annotation>) => void;
-  onRecapture: (id: string) => void;
   readOnly: boolean;
   numScaleDefault: number;
   descScaleDefault: number;
@@ -4017,7 +4003,6 @@ function AnnotationsPanel({
                 onSelect={() => onSelect(ann.id)}
                 onDelete={() => onDelete(ann.id)}
                 onEdit={(changes) => onEdit(ann.id, changes)}
-                onRecapture={() => onRecapture(ann.id)}
                 readOnly={readOnly}
               />
             ))}
@@ -4061,7 +4046,6 @@ function PanelAnnotationItem({
   onSelect,
   onDelete,
   onEdit,
-  onRecapture,
   readOnly,
 }: {
   annotation: Annotation;
@@ -4069,7 +4053,6 @@ function PanelAnnotationItem({
   onSelect: () => void;
   onDelete: () => void;
   onEdit: (changes: Partial<Annotation>) => void;
-  onRecapture?: () => void;
   readOnly: boolean;
 }) {
   const [editing, setEditing] = useState(false);
@@ -4236,27 +4219,6 @@ function PanelAnnotationItem({
                   }
                 />
               </div>
-              {onRecapture && (
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={onRecapture}
-                  title="Re-read the script text under this cue and refresh the cue-table dialogue"
-                  style={{
-                    marginTop: 5,
-                    fontSize: 11,
-                    color: "var(--ink-3)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                    textDecoration: "underline",
-                    textAlign: "left",
-                  }}
-                >
-                  Re-capture dialogue from script
-                </button>
-              )}
               {(annotation.labelPos || annotation.marginLabelPos) && (
                 <button
                   type="button"
