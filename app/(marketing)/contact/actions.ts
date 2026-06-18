@@ -1,6 +1,8 @@
 "use server";
 
+import { headers } from "next/headers";
 import { Resend } from "resend";
+import { checkAuthRateLimit } from "@/lib/rate-limit";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
@@ -23,6 +25,14 @@ export async function submitContactForm(
   // Honeypot: a hidden field real users never see. Bots fill it — silently
   // accept so they get no signal, but send nothing.
   if (((formData.get("company") as string) ?? "").trim()) return { ok: true };
+
+  const h = await headers();
+  const ip =
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    h.get("x-real-ip") ??
+    "unknown";
+  const rl = await checkAuthRateLimit(ip);
+  if (rl.limited) return { error: "Too many requests. Please wait a few minutes." };
 
   const name = ((formData.get("name") as string) ?? "").trim();
   const email = ((formData.get("email") as string) ?? "").trim();

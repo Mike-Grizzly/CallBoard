@@ -18,7 +18,7 @@ import {
 import { ROLE_META } from "@/features/members/constants";
 import { ROLES, type Role } from "@/types/roles";
 
-const LOGO_ACCEPT = "image/svg+xml,image/png,image/jpeg";
+const LOGO_ACCEPT = "image/png,image/jpeg";
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 
 type InviteRow = {
@@ -70,8 +70,8 @@ export function SetupForm({ orgName }: { orgName: string }) {
     e.target.value = "";
     if (!file) return;
     setError(null);
-    if (!["image/svg+xml", "image/png", "image/jpeg"].includes(file.type)) {
-      setError("Logo must be an SVG, PNG, or JPG.");
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      setError("Logo must be a PNG or JPG.");
       return;
     }
     if (file.size > LOGO_MAX_BYTES) {
@@ -197,7 +197,7 @@ export function SetupForm({ orgName }: { orgName: string }) {
                   )}
                 </div>
               </div>
-              <div className="hint">SVG, PNG, or JPG. Square works best. Up to 2MB.</div>
+              <div className="hint">PNG or JPG. Square works best. Up to 2MB.</div>
               <input ref={logoInputRef} type="file" accept={LOGO_ACCEPT} onChange={onPickLogo} style={{ display: "none" }} />
             </div>
           </section>

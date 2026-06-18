@@ -18,6 +18,21 @@ export type UploadDocumentResult = {
   documentId?: string;
 };
 
+const ALLOWED_DOCUMENT_TYPES = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "text/plain",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+];
+
 export async function createDefaultFolders(productionId: string) {
   await db.insert(documentFolders).values(
     DEFAULT_FOLDERS.map((name, i) => ({
@@ -165,21 +180,7 @@ export async function requestDocumentUpload(
     return { error: "File size must be under 64MB." };
   }
 
-  const allowedTypes = [
-    "application/pdf",
-    "image/png",
-    "image/jpeg",
-    "image/gif",
-    "image/webp",
-    "text/plain",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-powerpoint",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  ];
-  if (!allowedTypes.includes(contentType)) {
+  if (!ALLOWED_DOCUMENT_TYPES.includes(contentType)) {
     return {
       error: "Unsupported file type. Upload a PDF, image, or Office document.",
     };
@@ -232,6 +233,9 @@ export async function finalizeDocumentUpload(input: {
   // stored object to a production.
   if (!input.storagePath.startsWith(`documents/${input.productionId}/`)) {
     return { error: "Upload could not be verified." };
+  }
+  if (!ALLOWED_DOCUMENT_TYPES.includes(input.contentType)) {
+    return { error: "Unsupported file type." };
   }
 
   const [created] = await db
@@ -327,10 +331,9 @@ export async function permanentlyDeleteDocument(
 }
 
 export async function fetchDocumentComments(documentId: string) {
-  // Gate on access: resolveAccessibleDocument enforces production membership
-  // AND restricted-folder visibility. Returning [] for inaccessible documents
-  // prevents enumerating another tenant's comment threads (and member emails).
-  if (!(await resolveAccessibleDocument(documentId))) return [];
+  if (!(await resolveAccessibleDocument(documentId))) {
+    return { error: "Document not found." };
+  }
   const { getDocumentComments } = await import("./queries");
   return getDocumentComments(documentId);
 }
@@ -353,13 +356,17 @@ export async function postComment(
     return { error: "Comment must be 2000 characters or less." };
   }
 
-  // Verify document exists and get production slug for notification link
+  // Gate on both production membership and restricted-folder visibility.
+  if (!(await resolveAccessibleDocument(documentId))) {
+    return { error: "Document not found." };
+  }
+
+  // Fetch title + production slug needed to build notification links.
   const doc = await db
     .select({
       id: documents.id,
       title: documents.title,
       slug: productions.slug,
-      productionId: documents.productionId,
     })
     .from(documents)
     .innerJoin(productions, eq(documents.productionId, productions.id))
@@ -367,11 +374,6 @@ export async function postComment(
     .limit(1);
 
   if (doc.length === 0) {
-    return { error: "Document not found." };
-  }
-
-  // Only members of the document's production may comment on it.
-  if (!(await userCanAccessProduction(user, doc[0].productionId))) {
     return { error: "Document not found." };
   }
 
@@ -539,7 +541,8 @@ export async function moveDocument(
 export async function fetchDeletedDocumentsByProduction(productionId: string) {
   const user = await requireCurrentUser();
   if (!(await userCanAccessProduction(user, productionId))) return [];
-  return db
+  const canManage = can(user.role, "productions:manage");
+  const rows = await db
     .select({
       id: documents.id,
       title: documents.title,
@@ -549,9 +552,20 @@ export async function fetchDeletedDocumentsByProduction(productionId: string) {
       storagePath: documents.storagePath,
       folderName: documentFolders.name,
       deletedAt: documents.deletedAt,
+      folderVisibility: documentFolders.visibility,
+      folderAllowedRoles: documentFolders.allowedRoles,
     })
     .from(documents)
     .leftJoin(documentFolders, eq(documents.folderId, documentFolders.id))
     .where(and(eq(documents.productionId, productionId), isNotNull(documents.deletedAt)))
     .orderBy(desc(documents.deletedAt));
+  return rows
+    .filter((r) =>
+      canViewFolder(
+        { visibility: r.folderVisibility, allowedRoles: r.folderAllowedRoles },
+        user.role,
+        canManage,
+      ),
+    )
+    .map(({ folderVisibility: _v, folderAllowedRoles: _a, ...rest }) => rest);
 }

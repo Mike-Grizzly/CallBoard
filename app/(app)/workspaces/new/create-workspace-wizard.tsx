@@ -40,7 +40,7 @@ const STEPS = [
   { id: "review", no: "04", label: "Review", hint: "Confirm & create" },
 ] as const;
 
-const LOGO_ACCEPT = "image/svg+xml,image/png,image/jpeg";
+const LOGO_ACCEPT = "image/png,image/jpeg";
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 const NAME_MAX = 60;
 
@@ -102,8 +102,8 @@ export default function CreateWorkspaceWizard() {
     e.target.value = "";
     if (!file) return;
     setError(null);
-    if (!["image/svg+xml", "image/png", "image/jpeg"].includes(file.type)) {
-      setError("Logo must be an SVG, PNG, or JPG.");
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      setError("Logo must be a PNG or JPG.");
       return;
     }
     if (file.size > LOGO_MAX_BYTES) {
@@ -349,7 +349,7 @@ export default function CreateWorkspaceWizard() {
                       </div>
                     </div>
                     <div className="hint">
-                      Optional. SVG, PNG, or JPG. Square works best. Up to 2MB.
+                      Optional. PNG or JPG. Square works best. Up to 2MB.
                     </div>
                     <input
                       ref={logoInputRef}

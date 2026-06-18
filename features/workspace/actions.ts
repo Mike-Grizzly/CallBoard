@@ -11,6 +11,7 @@ import { and, eq, isNull, ne } from "drizzle-orm";
 import { requireCurrentUser } from "@/lib/auth";
 import { createOrganization } from "@/lib/organization";
 import { can } from "@/lib/permissions";
+import { assertCanMutate } from "@/features/billing/guard";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { ROLES, type Role } from "@/types/roles";
 
@@ -37,6 +38,9 @@ export async function renameWorkspace(
   if (!can(user.role, "settings:manage")) {
     return { error: "You don't have permission to rename this workspace." };
   }
+
+  const billing = await assertCanMutate(user.organizationId);
+  if (billing.error) return { error: billing.error };
 
   const name = ((formData.get("name") as string) || "").trim();
 
@@ -123,6 +127,10 @@ export async function transferWorkspaceOwnership(
   if (!can(user.role, "settings:manage")) {
     return { error: "You don't have permission to transfer this workspace." };
   }
+
+  const billing = await assertCanMutate(user.organizationId);
+  if (billing.error) return { error: billing.error };
+
   if (!targetUserId) return { error: "Pick a member to transfer to." };
   if (targetUserId === user.id) {
     return { error: "Pick a different member." };
@@ -287,9 +295,8 @@ export async function requestWorkspaceLogoUpload(
     .createSignedUploadUrl(storagePath);
 
   if (error || !data) {
-    return {
-      error: `Could not start upload: ${error?.message ?? "unknown error"}`,
-    };
+    console.error("Workspace logo upload URL failed:", error?.message);
+    return { error: "Could not start upload. Please try again." };
   }
 
   return { path: data.path, token: data.token };

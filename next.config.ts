@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 // Security headers applied to every response. The CSP is deliberately scoped to
 // the high-value, low-breakage directives: it locks down plugins (object-src),
@@ -9,7 +10,7 @@ import type { NextConfig } from "next";
 const securityHeaders = [
   {
     key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
+    value: "max-age=63072000; includeSubDomains",
   },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
@@ -38,4 +39,9 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? withSentryConfig(nextConfig, {
+      silent: true,
+      disableLogger: true,
+    })
+  : nextConfig;

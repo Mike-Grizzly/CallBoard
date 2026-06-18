@@ -14,6 +14,21 @@ export type UploadResult = {
   success?: boolean;
 };
 
+const ALLOWED_ATTACHMENT_TYPES = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "text/plain",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+];
+
 /**
  * Resolve a report's owning production and verify the caller can access it.
  * Report attachments inherit their report's production access — without this,
@@ -57,21 +72,7 @@ export async function requestReportAttachmentUpload(
     return { error: "File size must be under 10MB." };
   }
 
-  const allowedTypes = [
-    "application/pdf",
-    "image/png",
-    "image/jpeg",
-    "image/gif",
-    "image/webp",
-    "text/plain",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-powerpoint",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  ];
-  if (!allowedTypes.includes(contentType)) {
+  if (!ALLOWED_ATTACHMENT_TYPES.includes(contentType)) {
     return {
       error: "Unsupported file type. Upload a PDF, image, or Office document.",
     };
@@ -115,6 +116,9 @@ export async function finalizeReportAttachmentUpload(input: {
   if (!input.storagePath.startsWith(`reports/${input.reportId}/`)) {
     return { error: "Upload could not be verified." };
   }
+  if (!ALLOWED_ATTACHMENT_TYPES.includes(input.contentType)) {
+    return { error: "Unsupported file type." };
+  }
 
   await db.insert(reportAttachments).values({
     reportId: input.reportId,
@@ -157,7 +161,8 @@ export async function getAttachmentUrl(attachmentId: string): Promise<string> {
 }
 
 export async function getReportAttachments(reportId: string) {
-  await requireCurrentUser();
+  const user = await requireCurrentUser();
+  if (!(await userCanAccessReport(user, reportId))) return [];
   return db
     .select()
     .from(reportAttachments)

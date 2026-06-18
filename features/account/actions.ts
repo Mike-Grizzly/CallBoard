@@ -126,7 +126,8 @@ export async function changePassword(
   const { error } = await supabase.auth.updateUser({ password: newPassword });
 
   if (error) {
-    return { error: error.message };
+    console.error("changePassword failed:", error.message);
+    return { error: "Could not update password. Try again." };
   }
 
   return { success: true };
@@ -166,7 +167,8 @@ export async function changeEmail(
   );
 
   if (error) {
-    return { error: error.message };
+    console.error("changeEmail failed:", error.message);
+    return { error: "Could not update email address. Try again." };
   }
 
   return {
@@ -295,13 +297,12 @@ export async function deleteOwnAccount(
     const admin = createSupabaseAdminClient();
     const { error } = await admin.auth.admin.deleteUser(user.id);
     if (error && !/not\s*found/i.test(error.message)) {
-      return { error: error.message };
+      console.error("deleteOwnAccount auth delete failed:", error.message);
+      return { error: "Could not delete your account. Please contact support." };
     }
   } catch (err) {
-    return {
-      error:
-        err instanceof Error ? err.message : "Could not delete your account.",
-    };
+    console.error("deleteOwnAccount failed:", err);
+    return { error: "Could not delete your account. Please contact support." };
   }
 
   // Clear the (now-orphaned) session cookie and send them off.

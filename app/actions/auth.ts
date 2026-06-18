@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { checkAuthRateLimit } from "@/lib/rate-limit";
 
 export type AuthResult = {
   error?: string;
@@ -18,6 +19,15 @@ export type AuthResult = {
 // here and a button in components/auth/oauth-buttons.tsx to enable it.
 const OAUTH_PROVIDERS = ["google"] as const;
 type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
+
+async function requestIp(): Promise<string> {
+  const h = await headers();
+  return (
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    h.get("x-real-ip") ??
+    "unknown"
+  );
+}
 
 /**
  * The origin of the site the user is actually on (localhost, a Vercel preview,
@@ -91,6 +101,9 @@ export async function login(
     return { error: "Email and password are required." };
   }
 
+  const rl = await checkAuthRateLimit(await requestIp());
+  if (rl.limited) return { error: rl.error };
+
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase.auth.signInWithPassword({
@@ -131,6 +144,9 @@ export async function signup(
   if (accountType === "organization" && !organizationName) {
     return { error: "Workspace name is required." };
   }
+
+  const rl = await checkAuthRateLimit(await requestIp());
+  if (rl.limited) return { error: rl.error };
 
   const supabase = await createSupabaseServerClient();
 
@@ -202,6 +218,9 @@ export async function requestPasswordReset(
   if (!email) {
     return { error: "Email is required." };
   }
+
+  const rl = await checkAuthRateLimit(await requestIp());
+  if (rl.limited) return { error: rl.error };
 
   const supabase = await createSupabaseServerClient();
 

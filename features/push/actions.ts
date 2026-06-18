@@ -32,18 +32,18 @@ function isSafePushEndpoint(endpoint: string): boolean {
   if (url.protocol !== "https:") return false;
 
   const host = url.hostname.toLowerCase();
-  // Block loopback, link-local, and RFC1918 private ranges by name/IP.
+  // Block loopback, link-local, RFC1918 private ranges, and IPv4-mapped IPv6.
   if (
     host === "localhost" ||
     host.endsWith(".localhost") ||
     host === "0.0.0.0" ||
-    host === "::1" ||
     host === "[::1]" ||
     host.startsWith("127.") ||
     host.startsWith("10.") ||
     host.startsWith("192.168.") ||
     host.startsWith("169.254.") || // link-local (incl. cloud metadata 169.254.169.254)
     /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+    host.startsWith("[::ffff:") || // IPv4-mapped IPv6 (e.g. [::ffff:127.0.0.1])
     host.startsWith("[fd") || // unique-local IPv6
     host.startsWith("[fe80") // link-local IPv6
   ) {

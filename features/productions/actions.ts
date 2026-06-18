@@ -96,19 +96,23 @@ async function generateUniqueSlug(
   title: string,
 ): Promise<string> {
   const base = slugify(title) || "production";
-  const existing = await db
-    .select({ slug: productions.slug })
-    .from(productions)
-    .where(eq(productions.organizationId, organizationId));
-  const taken = new Set(existing.map((r) => r.slug));
-
   let slug = base;
   let n = 2;
-  while (taken.has(slug)) {
+  while (true) {
+    const [clash] = await db
+      .select({ id: productions.id })
+      .from(productions)
+      .where(
+        and(
+          eq(productions.organizationId, organizationId),
+          eq(productions.slug, slug),
+        ),
+      )
+      .limit(1);
+    if (!clash) return slug;
     slug = `${base}-${n}`;
     n += 1;
   }
-  return slug;
 }
 
 const toDate = (value: string | undefined | null): string | null => {

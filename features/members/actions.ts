@@ -17,6 +17,7 @@ import {
   type CurrentUser,
 } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { assertCanMutate } from "@/features/billing/guard";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendOrgInviteNotification } from "@/features/notifications/announce";
 import type { Role } from "@/types/roles";
@@ -56,6 +57,9 @@ export async function updateMemberRole(
   if (!can(currentUser.role, "settings:manage")) {
     return { error: "You don't have permission to manage team members." };
   }
+
+  const billing = await assertCanMutate(currentUser.organizationId);
+  if (billing.error) return { error: billing.error };
 
   const membershipId = formData.get("membership_id") as string;
   const newRole = formData.get("role") as string;
@@ -190,6 +194,9 @@ export async function assignProductionMember(
     return { error: "You don't have permission to manage productions." };
   }
 
+  const billing = await assertCanMutate(currentUser.organizationId);
+  if (billing.error) return { error: billing.error };
+
   const productionId = formData.get("production_id") as string;
   const role = formData.get("role") as string;
   const userIdsJson = formData.get("user_ids") as string;
@@ -235,31 +242,32 @@ export async function assignProductionMember(
 
   const characterName = (formData.get("character_name") as string | null)?.trim() || null;
 
-  for (const userId of userIds) {
-    const existing = await db
-      .select()
-      .from(productionMemberships)
-      .where(
-        and(
-          eq(productionMemberships.userId, userId),
-          eq(productionMemberships.productionId, productionId),
-        ),
-      )
-      .limit(1);
+  // Batch-fetch existing memberships to avoid N+1 queries.
+  const existingRows = await db
+    .select({ id: productionMemberships.id, userId: productionMemberships.userId })
+    .from(productionMemberships)
+    .where(
+      and(
+        eq(productionMemberships.productionId, productionId),
+        inArray(productionMemberships.userId, userIds),
+      ),
+    );
+  const existingByUser = new Map(existingRows.map((r) => [r.userId, r.id]));
 
-    if (existing.length > 0) {
+  const toInsert: { userId: string; productionId: string; role: string; characterName: string | null }[] = [];
+  for (const userId of userIds) {
+    const existingId = existingByUser.get(userId);
+    if (existingId) {
       await db
         .update(productionMemberships)
         .set({ role, ...(characterName !== null ? { characterName } : {}) })
-        .where(eq(productionMemberships.id, existing[0].id));
+        .where(eq(productionMemberships.id, existingId));
     } else {
-      await db.insert(productionMemberships).values({
-        userId,
-        productionId,
-        role,
-        characterName,
-      });
+      toInsert.push({ userId, productionId, role, characterName });
     }
+  }
+  if (toInsert.length > 0) {
+    await db.insert(productionMemberships).values(toInsert);
   }
 
   revalidatePath(`/productions`);
@@ -275,6 +283,9 @@ export async function updateCharacterName(
   if (!can(currentUser.role, "productions:manage")) {
     return { error: "You don't have permission to manage productions." };
   }
+
+  const billing = await assertCanMutate(currentUser.organizationId);
+  if (billing.error) return { error: billing.error };
 
   const membershipId = formData.get("membership_id") as string;
   const characterName =
@@ -382,6 +393,9 @@ export async function assignRoleToMember(
     return { error: "You don't have permission to manage casting." };
   }
 
+  const billing = await assertCanMutate(currentUser.organizationId);
+  if (billing.error) return { error: billing.error };
+
   const loaded = await loadRoleForCasting(currentUser, roleId);
   if ("error" in loaded) return { error: loaded.error };
   const { role } = loaded;
@@ -470,6 +484,9 @@ export async function unassignRole(
   if (!can(currentUser.role, "productions:manage")) {
     return { error: "You don't have permission to manage casting." };
   }
+
+  const billing = await assertCanMutate(currentUser.organizationId);
+  if (billing.error) return { error: billing.error };
 
   const loaded = await loadRoleForCasting(currentUser, roleId);
   if ("error" in loaded) return { error: loaded.error };
@@ -590,6 +607,10 @@ export async function assignTeamMember(input: {
   if (!can(currentUser.role, "productions:manage")) {
     return { error: "You don't have permission to manage productions." };
   }
+
+  const billing = await assertCanMutate(currentUser.organizationId);
+  if (billing.error) return { error: billing.error };
+
   if (!ROLES.includes(input.role)) return { error: "Invalid role." };
   if (!(await userCanAccessProduction(currentUser, input.productionId))) {
     return { error: "You don't have access to this production." };
@@ -692,49 +713,59 @@ async function applyAssignments(
 ) {
   if (!assignments || assignments.length === 0) return;
 
-  for (const a of assignments) {
-    if (!a.productionId || !ROLES.includes(a.role)) continue;
+  const valid = assignments.filter((a) => a.productionId && ROLES.includes(a.role));
+  if (valid.length === 0) return;
 
-    // Skip assignments to productions outside the caller's organization.
-    const [prod] = await db
-      .select({ id: productions.id })
-      .from(productions)
-      .where(
-        and(
-          eq(productions.id, a.productionId),
-          eq(productions.organizationId, organizationId),
-        ),
-      )
-      .limit(1);
-    if (!prod) continue;
+  const requestedProdIds = [...new Set(valid.map((a) => a.productionId))];
 
-    const existing = await db
-      .select({ id: productionMemberships.id })
-      .from(productionMemberships)
-      .where(
-        and(
-          eq(productionMemberships.userId, userId),
-          eq(productionMemberships.productionId, a.productionId),
-        ),
-      )
-      .limit(1);
+  // Batch-fetch productions that belong to this org to filter out cross-tenant attempts.
+  const orgProds = await db
+    .select({ id: productions.id })
+    .from(productions)
+    .where(
+      and(
+        inArray(productions.id, requestedProdIds),
+        eq(productions.organizationId, organizationId),
+      ),
+    );
+  const allowedProdIds = new Set(orgProds.map((p) => p.id));
 
-    if (existing.length > 0) {
+  const allowed = valid.filter((a) => allowedProdIds.has(a.productionId));
+  if (allowed.length === 0) return;
+
+  const allowedIds = allowed.map((a) => a.productionId);
+
+  // Batch-fetch existing memberships for this user across all allowed productions.
+  const existingRows = await db
+    .select({ id: productionMemberships.id, productionId: productionMemberships.productionId })
+    .from(productionMemberships)
+    .where(
+      and(
+        eq(productionMemberships.userId, userId),
+        inArray(productionMemberships.productionId, allowedIds),
+      ),
+    );
+  const existingByProd = new Map(existingRows.map((r) => [r.productionId, r.id]));
+
+  const toInsert: { userId: string; productionId: string; role: string; characterName: string | null }[] = [];
+  for (const a of allowed) {
+    const existingId = existingByProd.get(a.productionId);
+    if (existingId) {
       await db
         .update(productionMemberships)
-        .set({
-          role: a.role,
-          characterName: a.characterName?.trim() || null,
-        })
-        .where(eq(productionMemberships.id, existing[0].id));
+        .set({ role: a.role, characterName: a.characterName?.trim() || null })
+        .where(eq(productionMemberships.id, existingId));
     } else {
-      await db.insert(productionMemberships).values({
+      toInsert.push({
         userId,
         productionId: a.productionId,
         role: a.role,
         characterName: a.characterName?.trim() || null,
       });
     }
+  }
+  if (toInsert.length > 0) {
+    await db.insert(productionMemberships).values(toInsert);
   }
 }
 
@@ -751,6 +782,9 @@ export async function inviteMembers(
   if (!can(currentUser.role, "settings:manage")) {
     return { error: "You don't have permission to manage team members." };
   }
+
+  const billing = await assertCanMutate(currentUser.organizationId);
+  if (billing.error) return { error: billing.error };
 
   if (!input.people || input.people.length === 0) {
     return { error: "No people to add." };
@@ -951,12 +985,12 @@ export async function inviteMembers(
         outcome: input.sendInvite ? "invited" : "added",
       });
     } catch (err) {
+      console.error("Invite failed:", err);
       results.push({
         email,
         name,
         outcome: "error",
-        message:
-          err instanceof Error ? err.message : "Something went wrong.",
+        message: "Could not add this person. Check the email and try again.",
       });
     }
   }
@@ -983,6 +1017,9 @@ export async function updatePersonProfile(
   if (!can(currentUser.role, "settings:manage")) {
     return { error: "You don't have permission to manage team members." };
   }
+
+  const billing = await assertCanMutate(currentUser.organizationId);
+  if (billing.error) return { error: billing.error };
 
   const userId = formData.get("user_id") as string;
   if (!userId) return { error: "Missing user ID." };
@@ -1018,6 +1055,9 @@ export async function setMemberStatus(
   if (!can(currentUser.role, "settings:manage")) {
     return { error: "You don't have permission to manage team members." };
   }
+
+  const billing = await assertCanMutate(currentUser.organizationId);
+  if (billing.error) return { error: billing.error };
 
   if (!MEMBER_STATUSES.includes(status)) {
     return { error: "Invalid status." };
