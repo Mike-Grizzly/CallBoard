@@ -353,13 +353,23 @@ export async function postComment(
 
   // Verify document exists and get production slug for notification link
   const doc = await db
-    .select({ id: documents.id, title: documents.title, slug: productions.slug })
+    .select({
+      id: documents.id,
+      title: documents.title,
+      slug: productions.slug,
+      productionId: documents.productionId,
+    })
     .from(documents)
     .innerJoin(productions, eq(documents.productionId, productions.id))
     .where(eq(documents.id, documentId))
     .limit(1);
 
   if (doc.length === 0) {
+    return { error: "Document not found." };
+  }
+
+  // Only members of the document's production may comment on it.
+  if (!(await userCanAccessProduction(user, doc[0].productionId))) {
     return { error: "Document not found." };
   }
 
@@ -472,6 +482,23 @@ export async function moveDocument(
 
   if (!documentId) {
     return { error: "Missing document ID." };
+  }
+
+  // Confirm the caller can access this document's production before moving it.
+  const doc = await resolveAccessibleDocument(documentId);
+  if (!doc) return { error: "Document not found." };
+
+  // A target folder must live in the same production, or the move would file
+  // the document under another production's (or org's) folder.
+  if (folderId) {
+    const [folder] = await db
+      .select({ productionId: documentFolders.productionId })
+      .from(documentFolders)
+      .where(eq(documentFolders.id, folderId))
+      .limit(1);
+    if (!folder || folder.productionId !== doc.productionId) {
+      return { error: "Destination folder not found." };
+    }
   }
 
   await db

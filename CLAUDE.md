@@ -51,7 +51,7 @@ docs closeout.
 4. **proxy.ts** handles auth — do NOT create a middleware.ts
 5. **`params` is a Promise** in Next.js 16 pages — must be awaited
 6. **Constants must NOT be exported from `"use server"` files** — causes hydration errors. Use separate `constants.ts`
-7. **Supabase Storage** uses anon key client (not service role) — RLS policies required on bucket
+7. **Supabase Storage** uses the **service-role admin client** (`lib/supabase/admin.ts`) for all object reads/writes/signed-URLs; browser uploads use signed upload tokens. Both bypass RLS, so access control lives **entirely** in the server actions (`requireCurrentUser` + `can()` + `userCanAccessProduction`). The `attachments` bucket RLS is intentionally **deny-all** (RLS enabled, no policies) as defense-in-depth — do NOT add broad `authenticated` policies back
 8. **`experimental.serverActions.bodySizeLimit: "64mb"`** in next.config.ts — required for file uploads
 
 ## Known issues to not re-introduce
@@ -59,7 +59,7 @@ docs closeout.
 - `users` table name conflicts with Supabase — table is named `profiles` (file is still `db/schema/users.ts`)
 - Composite unique constraints on membership tables cause `drizzle-kit push` to hang — prevented in app code instead
 - TipTap requires `immediatelyRender: false` for SSR
-- `dangerouslySetInnerHTML` in `RichTextDisplay` — no sanitization (known risk, documented)
+- `dangerouslySetInnerHTML` is used in `RichTextDisplay` and the announcement drawer/center — but the HTML is sanitized via `lib/sanitize.ts` (`RichTextDisplay` sanitizes inline; announcement `bodyHtml` is sanitized at the query layer in `features/announcements/queries.ts`). Keep any new rich-text render path running through `sanitizeHtml`
 
 ## Session closeout
 

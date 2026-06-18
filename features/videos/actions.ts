@@ -212,7 +212,8 @@ export async function deleteTimestampNote(
 
 /** Client-callable refresh of the notes panel after a mutation. */
 export async function fetchTimestampNotes(videoId: string) {
-  await requireCurrentUser();
+  const video = await resolveAccessibleVideo(videoId);
+  if (!video) return [];
   const { getTimestampNotesByVideo } = await import("./queries");
   return getTimestampNotesByVideo(videoId);
 }

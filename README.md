@@ -1,103 +1,82 @@
-# Show Portal
+# Proscene
 
-A lightweight production portal for small theatre companies — a single shared
-workspace per show for communication, reports, documents, schedules, and
-role-based visibility.
+A lightweight production portal for small theatre companies — one shared
+workspace per show for communication, rehearsal reports, documents, schedules,
+script tools, and role-based visibility.
 
-This repository is the MVP. It is being built in vertical slices per the
-product tech packet.
+Production site: [proscene.app](https://proscene.app)
 
-> **Note:** Steps 1-7 have been implemented (Foundation, Auth, Roles/Permissions, Productions/Dashboard, Reports/Daily Log, Document Center, File Uploads). See `/docs/current-status.md` for the full status.
+> **Status:** actively developed. See [`docs/current-status.md`](docs/current-status.md)
+> for the authoritative, up-to-date picture of what is built. The high-level
+> capability areas below are stable; individual features evolve quickly.
+
+---
+
+## What it does
+
+- **Organizations & productions** — each company gets an org; each show is a
+  production with its own members and roles.
+- **Roles & permissions** — six roles mapped to capabilities via a central
+  `can(role, capability)` check, enforced in both server actions and UI.
+- **Rehearsal reports & daily log** — structured reports with rich text and
+  file attachments.
+- **Document center** — per-production documents with signed-URL downloads.
+- **Announcements & notes** — rich-text announcements with read receipts and
+  per-production notes/mentions.
+- **Script tools** — upload and analyze scripts (cast list, scene breakdown),
+  with optional AI assistance.
+- **Notifications** — in-app plus optional Web Push (PWA).
 
 ---
 
 ## Tech stack
 
-- **Framework**: Next.js 16 (App Router) + React 19
-- **Language**: TypeScript (strict)
-- **UI**: Tailwind CSS v4 + local shadcn-style primitives + lucide-react icons
-- **Auth / DB / Storage**: Supabase (auth wired in Phase 2)
-- **ORM**: Drizzle (`drizzle-kit push` workflow during MVP)
-- **Deployment target**: Vercel-ready; local-only during MVP development
+- **Framework:** Next.js 16 (App Router) + React 19
+- **Language:** TypeScript (strict)
+- **UI:** Tailwind CSS v4 + local primitives + lucide-react, TipTap rich text
+- **Auth / DB / Storage:** Supabase (email/password + Google OAuth)
+- **ORM:** Drizzle
+- **Email:** Resend
+- **Deployment:** Vercel
 
 ---
 
-## Project structure
+## Architecture at a glance
 
-```
-app/
-  (app)/                 Route group for the authenticated shell (no real auth yet)
-    layout.tsx           Shared app shell (topbar + sidebar)
-    dashboard/           Placeholder page
-    productions/         Placeholder page
-    reports/             Placeholder page
-    documents/           Placeholder page
-    announcements/       Placeholder page
-    activity/            Placeholder page
-    settings/            Placeholder page (admin-only later)
-  layout.tsx             Root HTML layout
-  page.tsx               Redirects to /dashboard
-  globals.css            Tailwind + theme tokens
+- Auth and route protection run through `proxy.ts` (not `middleware.ts`).
+- Feature code lives in `features/{name}/` with `queries.ts` / `actions.ts`.
+- Server actions return typed results, check `can(role, capability)`, and call
+  `revalidatePath()`.
+- Permission checks happen in **both** server actions (security) and UI (UX).
+- Uploaded files live in a single private Supabase Storage bucket
+  (`attachments`); access is mediated by short-lived signed URLs.
 
-components/
-  ui/                    Local UI primitives (button, card, separator)
-  app-shell/             Topbar, sidebar, nav items, placeholder page
-
-features/                Domain-specific UI/logic (empty in Phase 1)
-
-lib/
-  supabase/server.ts     Server-side Supabase client (Server Components / Actions)
-  supabase/client.ts     Browser-side Supabase client
-  permissions.ts         Capability-map skeleton (no enforcement yet)
-  utils.ts               cn() helper
-
-db/
-  index.ts               Drizzle client
-  schema/                Drizzle tables (organizations, productions)
-
-types/
-  roles.ts               Fixed role enum
-
-drizzle.config.ts        Drizzle Kit config (uses DATABASE_URL)
-```
-
----
-
-## Environment variables
-
-All four values come from your Supabase project dashboard. Copy
-`.env.example` to `.env.local` and fill them in:
-
-| Variable                        | Where to find it                                                  |
-| ------------------------------- | ----------------------------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Project Settings → API → Project URL                              |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project Settings → API → `anon` / `public` key                    |
-| `SUPABASE_SERVICE_ROLE_KEY`     | Project Settings → API → `service_role` key (**server only**)     |
-| `DATABASE_URL`                  | Project Settings → Database → Connection string → Transaction pooler URI |
-
-`.env.local` is gitignored.
+See [`docs/architecture.md`](docs/architecture.md) for the full picture.
 
 ---
 
 ## Local setup
 
+This app requires your own Supabase project (and, for the optional features,
+Resend / Anthropic / Web Push keys).
+
 ```bash
 # 1. Install dependencies
 npm install
 
-# 2. Copy env template and fill in Supabase values
+# 2. Copy the env template and fill in your values
 cp .env.example .env.local
-# (edit .env.local)
+# edit .env.local — every variable is documented inline in .env.example
 
-# 3. Push the schema to Supabase
-npm run db:push
-
-# 4. Run the dev server
+# 3. Run the dev server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). You should be redirected
-to `/dashboard`.
+Open [http://localhost:3000](http://localhost:3000).
+
+All environment variables — required and optional — are documented inline in
+[`.env.example`](.env.example). Never commit real secrets; `.env*` is
+gitignored.
 
 ---
 
@@ -105,58 +84,28 @@ to `/dashboard`.
 
 | Command             | What it does                              |
 | ------------------- | ----------------------------------------- |
-| `npm run dev`       | Start Next.js dev server                  |
+| `npm run dev`       | Start the Next.js dev server              |
 | `npm run build`     | Production build                          |
 | `npm run start`     | Run the production build                  |
 | `npm run lint`      | Lint with ESLint                          |
-| `npm run db:push`   | Sync Drizzle schema to Supabase Postgres  |
+| `npm run db:push`   | Sync the Drizzle schema to Postgres       |
 | `npm run db:studio` | Open Drizzle Studio against your database |
 
 ---
 
-## Phase 1 manual test checklist
+## Documentation
 
-Use this to verify the foundation slice before moving on to Phase 2 (Auth).
-
-1. [ ] `npm install` completes without errors.
-2. [ ] `.env.local` exists and contains the four Supabase values.
-3. [ ] `npm run db:push` runs successfully. Confirm in the Supabase dashboard
-       (Table Editor) that the `organizations` and `productions` tables exist.
-4. [ ] `npm run dev` boots without errors.
-5. [ ] Visiting `http://localhost:3000/` redirects to `/dashboard`.
-6. [ ] The top bar shows "Show Portal" and the sidebar lists:
-       Productions, Dashboard, Reports, Documents, Announcements, Activity,
-       Settings.
-7. [ ] Clicking each sidebar item navigates to a placeholder page, the URL
-       updates to the correct path, and the shell stays intact.
-8. [ ] The active sidebar item is visually highlighted.
-9. [ ] No console errors in the browser or terminal.
-
-### Known limitations (by design)
-
-- No auth — every page is publicly visible during Phase 1.
-- No feature logic — every page is a static placeholder.
-- `lib/permissions.ts` exists but `can()` always returns `false`. Real
-  enforcement is wired up in Phase 3.
-- The sidebar collapses to nothing on mobile; a proper mobile drawer will
-  arrive with a later UX polish pass.
-- Only two tables exist so far (`organizations`, `productions`). Additional
-  tables (`rehearsal_reports`, `documents`, `announcements`, `activity_log`,
-  memberships, users profile) will be added by their respective feature
-  phases, not speculatively.
+The [`docs/`](docs) folder is the persistent project context — architecture,
+development rules, feature specs, current status, decisions, and open
+questions. `CLAUDE.md` and `AGENTS.md` provide context for AI coding assistants.
 
 ---
 
-## AI development context
+## License
 
-Before using Claude Code or another AI coding assistant, read `CLAUDE.md` (read automatically by Claude Code) and `/docs/session-start.md`.
+Copyright (C) 2026 Proscene.
 
-The `/docs` folder is the persistent project context for architecture, development rules, feature specs, current status, decisions, and open questions. It should be updated whenever architecture, schema, permissions, feature status, or major product decisions change.
-
----
-
-## Contributing
-
-This project is built in strict vertical slices. Before adding a new feature,
-read the tech packet and confirm the phase scope with the product owner. Do
-not expand schema, permissions, or shared primitives speculatively.
+Licensed under the **GNU Affero General Public License v3.0** — see
+[`LICENSE`](LICENSE). In short: you're free to use, study, modify, and share
+this code, but if you run a modified version as a network service, you must
+make your modified source available to its users (AGPL §13).

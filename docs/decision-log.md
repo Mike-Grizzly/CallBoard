@@ -1342,14 +1342,14 @@ page `/settings/notifications`. Implemented but **not yet browser-verified**.
 
 ## 2026-06-03 — Orphaned (login-less) profiles: diagnosis, cleanup, invite hardening
 
-**Context:** A password reset for a member shown in the org (`mgrigsby.beazleyrealtors@gmail.com`) never delivered. Investigation via the live Supabase project found the address had a `profiles` row but **no `auth.users` account** — so Supabase silently 200s the reset (anti-enumeration) and sends nothing. Several such orphan profiles existed (1 real director, 10 `@wellmantheatre.org` demo/seed rows from one 2026-05-14 batch, and 2 duplicate `katieandmikeyplaygames` rows alongside the real login).
+**Context:** A password reset for a member shown in the org never delivered. Investigation via the live Supabase project found the address had a `profiles` row but **no `auth.users` account** — so Supabase silently 200s the reset (anti-enumeration) and sends nothing. Several such orphan profiles existed (1 real director, 10 demo/seed rows from one 2026-05-14 batch, and 2 duplicate rows alongside a real member's login).
 
-**Root cause:** logins link to profiles by `profiles.id == auth.users.id` (`lib/auth.ts`). The current invite flow is correct (creates the auth user first, then `profile.id = auth.id`). The orphans are **legacy** rows with random ids and no auth account; on signup they can't link, so a fresh self-signup profile + new org is created instead (this is how the katie duplicates arose). Additionally, `inviteMembers` assumed "profile exists ⇒ login exists", so re-inviting an orphan just added a membership and reported success without provisioning an account.
+**Root cause:** logins link to profiles by `profiles.id == auth.users.id` (`lib/auth.ts`). The current invite flow is correct (creates the auth user first, then `profile.id = auth.id`). The orphans are **legacy** rows with random ids and no auth account; on signup they can't link, so a fresh self-signup profile + new org is created instead (this is how the duplicates arose). Additionally, `inviteMembers` assumed "profile exists ⇒ login exists", so re-inviting an orphan just added a membership and reported success without provisioning an account.
 
 **Security assessment:** NOT a vulnerability in the exploit sense. Orphans have no auth row (no password, no session). Because linking is by auth UID (not email), signing up with an orphan's email yields a new account + new org and does **not** inherit the orphan's role/memberships. Latent risk noted: any future "reconcile by email" logic must be gated on verified email ownership and limited to the admin invite flow.
 
 **Decisions / actions:**
-1. **Data cleanup (production):** deleted the orphan director profile + the 2 duplicate katie profiles (all login-less, no authored content; FKs to `profiles.id` are all CASCADE). Left the 10 `@wellmantheatre.org` demo rows in place for now.
+1. **Data cleanup (production):** deleted the orphan director profile + the 2 duplicate profiles (all login-less, no authored content; FKs to `profiles.id` are all CASCADE). Left the 10 demo rows in place for now.
 2. **Invite hardening (code):** `inviteMembers` now calls `auth.admin.getUserById` on a matched profile; if there's no login it deletes the orphan and falls through to the normal create path (real auth account + invite email).
 3. **UX:** member list shows a "Pending invite" badge for `profiles.status = 'invited'`.
 
@@ -2291,3 +2291,19 @@ real?" judgment required.
 **To restore:** set `BILLING_ENABLED = true`. The trial then starts on each org's next first-production creation; everything else resumes exactly as before.
 
 **Verification:** `tsc` + `eslint` clean; `next build` green. Not browser-verified.
+
+---
+
+## 2026-06-18 — Pre-open-source security hardening pass
+
+**Context:** Preparing to make the repository public. Ran a full security audit; the foundations held (no SQL injection — Drizzle parameterizes everything; signed-URL actions correctly access-check; proxy gates routes; AI parse route gated with good resource caps), but several server actions skipped the org/production ownership check and were cross-tenant exploitable, and the AI pipeline had two design-level risks.
+
+**Key correction:** All Supabase Storage access uses the **service-role admin client** (`lib/supabase/admin.ts`), which bypasses RLS — CLAUDE.md note 7's "anon key" claim was wrong. Security therefore rests entirely on the app-layer checks. The over-broad `attachments` bucket RLS (any authenticated user could read/delete any object via the direct Storage API with their own JWT) was replaced with **deny-all** (RLS enabled, no policies); nothing in the app relied on those policies, so it's a pure defense-in-depth win.
+
+**Decisions / fixes:**
+1. **Authorization (committed):** added `userCanAccessProduction` / org checks to `deleteCustomSetPiece`, `finalizeCustomSetPieceUpload`, `fetchDeletedReportsByProduction`, `fetchTimestampNotes`, `acknowledgeAnnouncement`, `postComment`, `moveDocument` (+ target-folder same-production check), `updateNote` (tag org-ownership), and the OCR billing lock. Fixed an **open redirect** in `app/auth/callback` (`next` must be a same-origin relative path). Dropped `"use server"` from `features/mentions/write.ts` so its auth-trusting helpers can't be invoked as RPC endpoints.
+2. **AI cache scoped per-org:** `script_cache` was keyed by content fingerprint alone and shared across orgs — a prompt-injected breakdown applied in one org could be served to another. Re-keyed on `(organization_id, fingerprint)`; reads resolve the org from the production (wizard parses skip the cache); legacy global rows cleared. The cross-org dedup convenience was deliberately traded away for tenant isolation.
+3. **Org-wide AI budget:** added `ORG_PARSE_LIMIT_PER_MONTH = 50` as a denial-of-wallet backstop — the per-production/per-designer caps don't bound total spend since each new production grants fresh quota. Checked in `startScriptParse` and `reanalyzeScript`.
+4. **PII scrub:** removed a real third-party email and member identifiers from `decision-log.md` / `open-questions.md`. Handoff/design rosters confirmed fabricated (reserved 555 numbers, fictional domains) and left in place.
+
+**Impact:** DB migration applied (`script_cache.organization_id` + composite unique index; bucket RLS deny-all). Code changes across blocking/reports/videos/announcements/documents/notes/scripts/mentions actions + the auth callback. `tsc` + `eslint` clean. Two `completeOnboarding`/`pinItem` low items intentionally left (own-org, non-disclosing). Not browser-verified.

@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import type Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/db";
-import { documents, scriptParses, scriptCache } from "@/db/schema";
+import { documents, productions, scriptParses, scriptCache } from "@/db/schema";
 import { and, desc, eq, isNotNull, ne } from "drizzle-orm";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getAnthropicClient, SCRIPT_PARSE_MODEL } from "@/lib/anthropic";
@@ -287,11 +287,31 @@ export async function runScriptParse(parseId: string): Promise<void> {
       .update(isScanned ? bytes : normalizeText(fullText))
       .digest("hex");
 
-    if (!parse.notes) {
+    // The cache is scoped per organization — a breakdown produced in one org
+    // (where a script could carry prompt-injection) must never be served to
+    // another. Resolve the owning org from the production; wizard parses (no
+    // production linked yet) have no org to scope to, so they skip the cache
+    // and parse fresh.
+    let cacheOrgId: string | null = null;
+    if (parse.productionId) {
+      const [prod] = await db
+        .select({ organizationId: productions.organizationId })
+        .from(productions)
+        .where(eq(productions.id, parse.productionId))
+        .limit(1);
+      cacheOrgId = prod?.organizationId ?? null;
+    }
+
+    if (!parse.notes && cacheOrgId) {
       const [hit] = await db
         .select({ result: scriptCache.result })
         .from(scriptCache)
-        .where(eq(scriptCache.fingerprint, fingerprint))
+        .where(
+          and(
+            eq(scriptCache.organizationId, cacheOrgId),
+            eq(scriptCache.fingerprint, fingerprint),
+          ),
+        )
         .limit(1);
       const cached = hit?.result as ScriptParseResult | undefined;
       if (cached && ((cached.roles?.length ?? 0) > 0 || (cached.scenes?.length ?? 0) > 0)) {

@@ -498,8 +498,8 @@ default in place today.
 ## Orphaned profiles / invites (2026-06-03)
 
 - **Legacy orphan profiles** (a `profiles` row with no `auth.users` account) existed
-  from an older invite/seed path. Three were deleted (director + 2 katie dupes);
-  **10 `@wellmantheatre.org` demo rows remain** by choice. If more real orphans
+  from an older invite/seed path. Three were deleted (director + 2 duplicates);
+  **10 demo rows remain** by choice. If more real orphans
   exist in other orgs, they'll show as members but can't log in or reset a
   password until re-invited. `inviteMembers` now self-heals these on re-invite.
 - **Misleading password reset.** Supabase returns 200 for reset requests on

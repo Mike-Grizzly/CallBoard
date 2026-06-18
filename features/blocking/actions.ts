@@ -544,6 +544,9 @@ export async function finalizeCustomSetPieceUpload(input: {
   if (!input.productionId || !input.storagePath) {
     return { error: "Upload could not be completed." };
   }
+  if (!(await userCanAccessProduction(user, input.productionId))) {
+    return { error: "You don't have permission to upload set pieces." };
+  }
   if (!input.storagePath.startsWith(`set-pieces/${input.productionId}/`)) {
     return { error: "Upload could not be verified." };
   }
@@ -593,6 +596,9 @@ export async function deleteCustomSetPiece(
     .where(eq(customSetPieces.id, pieceId))
     .limit(1);
   if (!piece) return { error: "Set piece not found." };
+  if (!(await userCanAccessProduction(user, piece.productionId))) {
+    return { error: "You don't have permission to delete this set piece." };
+  }
 
   const supabase = createSupabaseAdminClient();
   await supabase.storage.from("attachments").remove([piece.storagePath]);

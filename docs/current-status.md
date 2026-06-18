@@ -222,7 +222,7 @@
 - Supabase Storage integration using `attachments` bucket
 - Used by both report attachments (Step 5) and document center (Step 6)
 - Server action body size limit increased to 64MB in next.config.ts
-- Storage RLS policies: authenticated users can insert/select/delete
+- Storage RLS: deny-all (RLS enabled, no policies) — all object access uses the service-role admin client (bypasses RLS) or signed upload/download tokens; access control is enforced in the server actions (updated 2026-06-18)
 - Signed URLs generated server-side with 1-hour expiry
 - File size validation: 64MB for documents, 10MB for report attachments
 
@@ -983,11 +983,11 @@ overhaul before PR #20 merged:
 ## Known limitations
 
 - No composite unique constraints on membership tables (removed because drizzle-kit push hangs with them) — duplicate memberships prevented in app code only
-- `getDocumentUrl()` and `getAttachmentUrl()` do not check if the requesting user has access to the parent production/report
-- Supabase Storage RLS policies are broad (any authenticated user can access any file in `attachments` bucket)
+- ~~`getDocumentUrl()` and `getAttachmentUrl()` do not check access~~ — RESOLVED (2026-06-18): both verify `userCanAccessProduction` / `resolveAccessibleDocument` before signing
+- ~~Supabase Storage RLS policies are broad~~ — RESOLVED (2026-06-18): bucket RLS is now deny-all (enabled, no policies); all storage goes through the service-role admin client, so app-layer checks are the boundary
 - No file type validation on uploads (any file type accepted)
 - No duplicate file detection
-- `dangerouslySetInnerHTML` in RichTextDisplay without HTML sanitization
+- `dangerouslySetInnerHTML` in RichTextDisplay/announcements — HTML is sanitized via `lib/sanitize.ts` (inline in RichTextDisplay; at the query layer for announcement `bodyHtml`)
 - TipTap bullet points not rendering due to Tailwind prose CSS reset
 - `drizzle-kit push` is effectively retired — it crashes introspecting CHECK constraints on this Supabase database (a `drizzle-kit` CLI bug, unrelated to `drizzle-orm`). Schema changes are applied via the Supabase SQL Editor / MCP, with `db/schema/*` kept in sync by hand. See decision-log entries dated 2026-05-20.
 - README.md is outdated (still says "Phase 1: Foundation and app shell")

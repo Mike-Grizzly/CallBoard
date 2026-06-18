@@ -148,6 +148,14 @@ export const PARSE_WINDOW_DAYS = 30;
 export const DESIGNER_PARSE_LIMIT_PER_PRODUCTION = 1;
 export const DESIGNER_PARSE_LIMIT_PER_USER = 2;
 
+// Org-wide denial-of-wallet backstop. The per-production and per-designer caps
+// don't bound total spend on their own — a user who can create productions gets
+// fresh per-production quota with every new show. This ceiling caps how many AI
+// analyses an entire organization can run per calendar month. Set well above
+// normal use so it only ever stops a runaway or abusive account; it resets on
+// the 1st of each month.
+export const ORG_PARSE_LIMIT_PER_MONTH = 50;
+
 // ----- AI script analysis (the model's proposal, pre-review) -----
 
 /** Character/role types the analyser may assign. Mirrors the wizard's set. */
