@@ -648,6 +648,8 @@ export async function createBeatArrow(
   if (!can(user.role, "blocking:edit")) {
     return { error: "You don't have permission to add arrows." };
   }
+  const lock = await assertCanMutate(user.organizationId);
+  if (lock.error) return { error: lock.error };
   const [beat] = await db
     .select({ productionId: productionScenes.productionId })
     .from(sceneBeats)

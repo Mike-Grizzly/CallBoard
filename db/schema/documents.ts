@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, integer, boolean, timestamp, index } from "drizzle-orm/pg-core";
 import { productions } from "./productions";
 import { profiles } from "./users";
 
@@ -42,7 +42,9 @@ export const documents = pgTable("documents", {
     .notNull()
     .defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
-});
+}, (table) => [
+  index("documents_production_idx").on(table.productionId),
+]);
 
 export const documentComments = pgTable("document_comments", {
   id: uuid("id").primaryKey().defaultRandom(),

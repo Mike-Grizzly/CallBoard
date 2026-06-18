@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, index } from "drizzle-orm/pg-core";
 import { profiles } from "./users";
 
 export const notifications = pgTable("notifications", {
@@ -17,6 +17,8 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (table) => [
+  index("notifications_recipient_idx").on(table.recipientId),
+]);
 
 export type Notification = typeof notifications.$inferSelect;

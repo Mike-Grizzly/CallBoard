@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, index } from "drizzle-orm/pg-core";
 import { productions } from "./productions";
 import { profiles } from "./users";
 
@@ -15,7 +15,10 @@ export const productionMemberships = pgTable("production_memberships", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (table) => [
+  index("prod_memberships_user_idx").on(table.userId),
+  index("prod_memberships_production_idx").on(table.productionId),
+]);
 
 export type ProductionMembership = typeof productionMemberships.$inferSelect;
 export type NewProductionMembership = typeof productionMemberships.$inferInsert;

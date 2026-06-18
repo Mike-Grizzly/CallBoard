@@ -6,6 +6,7 @@ import {
   integer,
   timestamp,
   jsonb,
+  index,
 } from "drizzle-orm/pg-core";
 import { productions } from "./productions";
 import { profiles } from "./users";
@@ -71,7 +72,9 @@ export const rehearsalReports = pgTable("rehearsal_reports", {
     .notNull()
     .defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
-});
+}, (table) => [
+  index("rehearsal_reports_production_idx").on(table.productionId),
+]);
 
 export type RehearsalReport = typeof rehearsalReports.$inferSelect;
 export type NewRehearsalReport = typeof rehearsalReports.$inferInsert;

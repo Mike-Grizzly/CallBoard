@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, date, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, date, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { organizations } from "./organizations";
 
 /**
@@ -49,7 +49,9 @@ export const productions = pgTable("productions", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (table) => [
+  index("productions_org_idx").on(table.organizationId),
+]);
 
 export type Production = typeof productions.$inferSelect;
 export type NewProduction = typeof productions.$inferInsert;
