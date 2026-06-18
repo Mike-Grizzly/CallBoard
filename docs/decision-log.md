@@ -2291,3 +2291,19 @@ real?" judgment required.
 **To restore:** set `BILLING_ENABLED = true`. The trial then starts on each org's next first-production creation; everything else resumes exactly as before.
 
 **Verification:** `tsc` + `eslint` clean; `next build` green. Not browser-verified.
+
+---
+
+## 2026-06-18 — Pre-open-source security hardening pass
+
+**Context:** Preparing to make the repository public. Ran a full security audit; the foundations held (no SQL injection — Drizzle parameterizes everything; signed-URL actions correctly access-check; proxy gates routes; AI parse route gated with good resource caps), but several server actions skipped the org/production ownership check and were cross-tenant exploitable, and the AI pipeline had two design-level risks.
+
+**Key correction:** All Supabase Storage access uses the **service-role admin client** (`lib/supabase/admin.ts`), which bypasses RLS — CLAUDE.md note 7's "anon key" claim was wrong. Security therefore rests entirely on the app-layer checks. The over-broad `attachments` bucket RLS (any authenticated user could read/delete any object via the direct Storage API with their own JWT) was replaced with **deny-all** (RLS enabled, no policies); nothing in the app relied on those policies, so it's a pure defense-in-depth win.
+
+**Decisions / fixes:**
+1. **Authorization (committed):** added `userCanAccessProduction` / org checks to `deleteCustomSetPiece`, `finalizeCustomSetPieceUpload`, `fetchDeletedReportsByProduction`, `fetchTimestampNotes`, `acknowledgeAnnouncement`, `postComment`, `moveDocument` (+ target-folder same-production check), `updateNote` (tag org-ownership), and the OCR billing lock. Fixed an **open redirect** in `app/auth/callback` (`next` must be a same-origin relative path). Dropped `"use server"` from `features/mentions/write.ts` so its auth-trusting helpers can't be invoked as RPC endpoints.
+2. **AI cache scoped per-org:** `script_cache` was keyed by content fingerprint alone and shared across orgs — a prompt-injected breakdown applied in one org could be served to another. Re-keyed on `(organization_id, fingerprint)`; reads resolve the org from the production (wizard parses skip the cache); legacy global rows cleared. The cross-org dedup convenience was deliberately traded away for tenant isolation.
+3. **Org-wide AI budget:** added `ORG_PARSE_LIMIT_PER_MONTH = 50` as a denial-of-wallet backstop — the per-production/per-designer caps don't bound total spend since each new production grants fresh quota. Checked in `startScriptParse` and `reanalyzeScript`.
+4. **PII scrub:** removed a real third-party email and member identifiers from `decision-log.md` / `open-questions.md`. Handoff/design rosters confirmed fabricated (reserved 555 numbers, fictional domains) and left in place.
+
+**Impact:** DB migration applied (`script_cache.organization_id` + composite unique index; bucket RLS deny-all). Code changes across blocking/reports/videos/announcements/documents/notes/scripts/mentions actions + the auth callback. `tsc` + `eslint` clean. Two `completeOnboarding`/`pinItem` low items intentionally left (own-org, non-disclosing). Not browser-verified.
