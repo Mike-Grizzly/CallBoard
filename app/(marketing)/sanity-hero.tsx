@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
+import { stegaClean } from "@sanity/client/stega";
 import type { HomePage } from "@/lib/sanity/queries";
 import { HOME_HERO_MOCK_HTML } from "./home-content";
 
@@ -14,6 +15,9 @@ function emphasize(s: string): string {
 }
 
 export function SanityHero({ home }: { home: HomePage }) {
+  // hrefs must be free of stega markers or the links break in preview.
+  const primaryHref = stegaClean(home.primaryCtaHref) || "/signup";
+  const secondaryHref = stegaClean(home.secondaryCtaHref) || "/contact?reason=demo";
   return (
     <section className="hero night" data-screen-label="Hero">
       <div className="hero-glow" />
@@ -29,7 +33,7 @@ export function SanityHero({ home }: { home: HomePage }) {
             )}
             {home.heroSubhead && <p className="lede">{home.heroSubhead}</p>}
             <div className="hero-actions">
-              <Link className="btn primary lg" href={home.primaryCtaHref || "/signup"}>
+              <Link className="btn primary lg" href={primaryHref}>
                 {home.primaryCtaLabel || "Start free"}{" "}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14" />
@@ -37,7 +41,7 @@ export function SanityHero({ home }: { home: HomePage }) {
                 </svg>
               </Link>
               {home.secondaryCtaLabel && (
-                <Link className="btn lg" href={home.secondaryCtaHref || "/contact?reason=demo"}>
+                <Link className="btn lg" href={secondaryHref}>
                   {home.secondaryCtaLabel}
                 </Link>
               )}

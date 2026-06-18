@@ -844,3 +844,22 @@ browser-verified** (no display in the sandbox). Open items:
 - **Needs a real eyeball** on: the desktop two-column drag feel, the ≤859px
   board⇄company toggle + bottom sheets, and the four themes (the `.drop` highlight
   uses `--accent`).
+
+---
+
+## Sanity Visual Editing: read token + live updates (added 2026-06-18)
+
+- The Studio's Presentation pane (click-to-edit preview) needs a **`SANITY_API_READ_TOKEN`**
+  (Viewer role) in the deploy env to show *drafts* and validate the preview URL. Without it,
+  preview falls back to published content only. Confirm the token is set in Vercel
+  (Production + Preview) before telling the owner the feature is live.
+- **No live updates yet.** Edits appear in the preview on navigation/refresh, not keystroke-
+  live, because we use Draft Mode + stega rather than `defineLive` / the Live Content API
+  (see `decision-log.md` 2026-06-18). If the owner wants the preview to update as they type,
+  that's the follow-up: adopt `defineLive`/`SanityLive` and move queries to `sanityFetch`.
+- **stega cleaning is load-bearing.** Any *new* Sanity field rendered as a URL, slug, key,
+  or numeric data-attribute must be wrapped in `stegaClean` or it will break inside preview
+  (invisible markers corrupt the value). Display-only text should be left encoded so it stays
+  click-to-edit. Easy to forget when adding fields.
+- **Not browser-verified** — the overlays, the enable/disable round-trip, and the pricing
+  billing toggle inside the preview iframe all need an eyeball on a real deploy.

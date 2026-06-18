@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { stegaClean } from "@sanity/client/stega";
 import type { PostCard } from "@/lib/sanity/queries";
 import { urlForImage } from "@/lib/sanity/image";
 
@@ -57,9 +58,9 @@ export function SanityBlogIndex({ posts }: { posts: PostCard[] }) {
       {featured && (
         <section className="section-tight">
           <div className="wrap">
-            <Link className="feat-post reveal" href={`/blog/${featured.slug}`}>
+            <Link className="feat-post reveal" href={`/blog/${stegaClean(featured.slug)}`}>
               <Cover
-                url={urlForImage(featured.coverImage)?.width(900).height(675).url() ?? null}
+                url={urlForImage(stegaClean(featured.coverImage))?.width(900).height(675).url() ?? null}
                 label="cover"
                 accent
               />
@@ -91,9 +92,9 @@ export function SanityBlogIndex({ posts }: { posts: PostCard[] }) {
           <div className="wrap">
             <div className="posts reveal">
               {rest.map((p) => (
-                <Link key={p._id} className="post" href={`/blog/${p.slug}`}>
+                <Link key={p._id} className="post" href={`/blog/${stegaClean(p.slug)}`}>
                   <Cover
-                    url={urlForImage(p.coverImage)?.width(640).height(400).url() ?? null}
+                    url={urlForImage(stegaClean(p.coverImage))?.width(640).height(400).url() ?? null}
                     label={p.title}
                   />
                   <div className="body">
