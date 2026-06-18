@@ -28,6 +28,7 @@ import {
   PARSE_WINDOW_DAYS,
   DESIGNER_PARSE_LIMIT_PER_PRODUCTION,
   DESIGNER_PARSE_LIMIT_PER_USER,
+  ORG_PARSE_LIMIT_PER_MONTH,
   type Bookmark,
   type ScriptParseResult,
 } from "./constants";
@@ -244,6 +245,37 @@ async function failIfStale(row: {
 export type StartScriptParseResult = { error?: string; parseId?: string };
 
 /**
+ * Org-wide denial-of-wallet backstop. The per-production and per-designer caps
+ * don't bound total spend, since creating a new production hands out fresh
+ * per-production quota. This counts every non-failed parse attributed to a
+ * production in this org since the start of the current calendar month, and
+ * returns the org's monthly limit message once the ceiling is hit (else null).
+ */
+async function orgParseBudgetError(
+  organizationId: string,
+): Promise<string | null> {
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+
+  const rows = await db
+    .select({ id: scriptParses.id })
+    .from(scriptParses)
+    .innerJoin(productions, eq(scriptParses.productionId, productions.id))
+    .where(
+      and(
+        eq(productions.organizationId, organizationId),
+        gte(scriptParses.createdAt, monthStart),
+        ne(scriptParses.status, "failed"),
+      ),
+    );
+
+  return rows.length >= ORG_PARSE_LIMIT_PER_MONTH
+    ? `Your organization has reached its limit of ${ORG_PARSE_LIMIT_PER_MONTH} AI analyses this month. It resets at the start of next month.`
+    : null;
+}
+
+/**
  * Stage an AI analysis of a script document. Inserts a `script_parses` row in
  * `processing` state and returns its id; the caller then kicks
  * `POST /api/scripts/[parseId]/run`, which does the slow work off the request
@@ -328,6 +360,9 @@ export async function startScriptParse(
       };
     }
   }
+
+  const orgBudgetError = await orgParseBudgetError(user.organizationId);
+  if (orgBudgetError) return { error: orgBudgetError };
 
   const [parse] = await db
     .insert(scriptParses)
@@ -421,6 +456,9 @@ export async function reparseWithNotes(
       };
     }
   }
+
+  const orgBudgetError = await orgParseBudgetError(user.organizationId);
+  if (orgBudgetError) return { error: orgBudgetError };
 
   const [row] = await db
     .insert(scriptParses)
@@ -635,13 +673,14 @@ export async function applyScriptParse(
     .set({ processingStatus: "applied" })
     .where(eq(documents.id, documentId));
 
-  // Populate the global, cross-org cache so the next production that uploads
-  // the identical file reuses this breakdown. Cache the SERVER-STORED model
-  // result (what runScriptParse wrote on the row), not the client-supplied
-  // `result` payload — the apply payload is trusted only for this caller's own
-  // production, and must not be propagated to other orgs as-is. Stores ONLY the
-  // structural breakdown (title/roles/scenes/bookmarks) — never annotations,
-  // casting, or production data.
+  // Populate this organization's cache so the next production in the SAME org
+  // that uploads the identical file reuses this breakdown. Cache the
+  // SERVER-STORED model result (what runScriptParse wrote on the row), not the
+  // client-supplied `result` payload — the apply payload is trusted only for
+  // this caller's own production. The cache is scoped per org (a script can
+  // carry prompt-injection), so it is never propagated to other orgs. Stores
+  // ONLY the structural breakdown (title/roles/scenes/bookmarks) — never
+  // annotations, casting, or production data.
   const cacheResult = parse.modelResult as ScriptParseResult | null;
   if (
     parse.fingerprint &&
@@ -651,12 +690,13 @@ export async function applyScriptParse(
     await db
       .insert(scriptCache)
       .values({
+        organizationId: user.organizationId,
         fingerprint: parse.fingerprint,
         title: (cacheResult.title ?? "").trim() || null,
         result: cacheResult,
       })
       .onConflictDoUpdate({
-        target: scriptCache.fingerprint,
+        target: [scriptCache.organizationId, scriptCache.fingerprint],
         set: {
           title: (cacheResult.title ?? "").trim() || null,
           result: cacheResult,
