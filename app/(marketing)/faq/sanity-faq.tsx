@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { stegaClean } from "@sanity/client/stega";
 import type { FaqItem } from "@/lib/sanity/queries";
 
 const CATEGORY_ORDER = [
@@ -25,7 +26,10 @@ const PL = (
 export function SanityFaq({ items }: { items: FaqItem[] }) {
   const byCat = new Map<string, FaqItem[]>();
   for (const it of items) {
-    const c = it.category || "Other";
+    // Category drives the group key and the #anchor slug, so it must be clean
+    // of stega markers to stay stable. Question/answer text keep theirs and
+    // remain click-to-edit in preview.
+    const c = stegaClean(it.category) || "Other";
     if (!byCat.has(c)) byCat.set(c, []);
     byCat.get(c)!.push(it);
   }

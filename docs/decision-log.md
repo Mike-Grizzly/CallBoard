@@ -2339,3 +2339,20 @@ real?" judgment required.
 **Manual follow-ups (not code):** enable Supabase Auth "leaked password protection" (HaveIBeenPwned) in the dashboard; consider a CAPTCHA/rate-limit on the public contact form; revisit transitive `undici`/Sanity-tooling CVEs on the next `sanity` upgrade.
 
 **Verification:** `tsc --noEmit` clean; `eslint` shows no new errors (15 pre-existing, all in untouched files/handoff); `next build` green (exit 0, validated with placeholder env). Not browser-verified.
+
+---
+
+## 2026-06-18 — Sanity Visual Editing via Draft Mode + stega (not the Live Content API)
+
+**Decision:** Added the Sanity **Presentation tool** + **Visual Editing** so marketing-site editors get a live, click-to-edit preview of the real pages inside the embedded Studio (`/studio`). Wired through Next.js **Draft Mode** and **stega**-encoded content rather than adopting `defineLive` / the Live Content API.
+
+**Reason:** The existing read path is a thin set of `getX()` helpers wrapping `sanityClient.fetch` with graceful static fallbacks. The Draft Mode + stega approach drops in behind that path with one `loadQuery()` helper and a preview client, and needs no realtime infrastructure or query rewrite to `sanityFetch`. `defineLive` would add live-updating previews but requires the Live Content API, `defineLive`/`SanityLive` wiring, and a per-fetch perspective/stega refactor — more surface area than the click-to-edit goal warrants right now. Live updates can be layered on later without undoing this.
+
+**Impact:**
+- `getSanityPreviewClient()` (drafts perspective, stega on, no CDN) is used only when `draftMode().isEnabled`; published reads keep ISR (`revalidate: 60`) and **never** carry stega markers.
+- stega embeds invisible markers in **every** returned string, which corrupt any value used as a URL/slug/key/number. `stegaClean` is therefore mandatory on those values in the Sanity consumers; cleaning a field also removes its on-page overlay (accepted trade-off for hrefs, blog slugs, pricing billing-toggle data-attrs, image sources, FAQ category anchors).
+- **Requires a `SANITY_API_READ_TOKEN`** (Viewer role) for drafts to appear in preview; without it, only published content previews. The `/api/draft-mode/enable` route validates the Studio's signed preview URL against this token before granting preview, so anonymous visitors can't enable it.
+- No change to marketing-page render mode: the app is already fully dynamic because the root layout reads the theme `cookies()`.
+- Same-origin only: the Studio frames the site from the same domain, so the existing `X-Frame-Options: SAMEORIGIN` / `frame-ancestors 'self'` headers need no change.
+
+**Verification:** `tsc --noEmit` clean; `eslint` clean on touched areas; `next build` compiles, typechecks, and collects all routes (placeholder env). Not browser-verified — the Presentation pane + overlays need an eyeball on a deploy with the read token set.
