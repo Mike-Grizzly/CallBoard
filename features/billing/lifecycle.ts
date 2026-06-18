@@ -22,6 +22,7 @@ import {
 import { getOrganizationMembers } from "@/features/members/queries";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
+  BILLING_ENABLED,
   LIFECYCLE,
   LIFECYCLE_DAY,
   TRIAL_DISCOUNT_PCT,
@@ -256,6 +257,8 @@ export async function processOrg(
 
 /** Orgs eligible for lifecycle processing today. */
 export async function candidateOrgs(): Promise<LifecycleOrg[]> {
+  // Open beta: the trial/purge lifecycle is paused entirely.
+  if (!BILLING_ENABLED) return [];
   const rows = await db
     .select({
       id: organizations.id,

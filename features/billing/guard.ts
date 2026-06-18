@@ -20,6 +20,7 @@ import {
   type OrgBillingFields,
 } from "@/lib/billing";
 import {
+  BILLING_ENABLED,
   PRODUCTION_LIMIT,
   PLAN_LABELS,
   PLANS,
@@ -88,6 +89,7 @@ const READ_ONLY_MSG =
 export async function assertCanMutate(
   orgId: string,
 ): Promise<{ error?: string }> {
+  if (!BILLING_ENABLED) return {}; // open beta: no write gating
   const org = await getOrgBilling(orgId);
   if (!org) return { error: "Organization not found." };
   const level = mutationLevel(org);
@@ -104,6 +106,7 @@ export async function assertCanMutate(
 export async function assertCanOperate(
   orgId: string,
 ): Promise<{ error?: string }> {
+  if (!BILLING_ENABLED) return {}; // open beta: no operational gating
   const org = await getOrgBilling(orgId);
   if (!org) return { error: "Organization not found." };
   if (mutationLevel(org) === "locked") return { error: READ_ONLY_MSG };
@@ -118,6 +121,7 @@ export async function assertCanOperate(
 export async function assertCanCreateProduction(
   orgId: string,
 ): Promise<{ error?: string }> {
+  if (!BILLING_ENABLED) return {}; // open beta: unlimited productions
   const org = await getOrgBilling(orgId);
   if (!org) return { error: "Organization not found." };
   if (org.grandfathered) return {}; // existing orgs: unlimited, never gated
@@ -162,6 +166,7 @@ export async function firstProductionTrialNotice(
   orgId: string,
   closingDate: string | null,
 ): Promise<string | null> {
+  if (!BILLING_ENABLED) return null; // open beta: no trial messaging
   const org = await getOrgBilling(orgId);
   if (!org || org.grandfathered || !org.trialStartedAt) return null;
   // Already subscribed / pre-authorized → no trial messaging.
@@ -201,6 +206,10 @@ export async function firstProductionTrialNotice(
 export async function startTrialIfFirstProduction(
   orgId: string,
 ): Promise<boolean> {
+  // Open beta: don't start the trial clock. Leaving trialStartedAt unstamped
+  // means re-enabling billing later gives the org a fresh trial instead of one
+  // that's already expired from a date during the free beta.
+  if (!BILLING_ENABLED) return false;
   const now = new Date();
   const rows = await db
     .update(organizations)

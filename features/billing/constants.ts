@@ -18,6 +18,25 @@ export function isPlanId(value: string | null | undefined): value is PlanId {
   return value === PLANS.FREE || PAID_PLANS.includes(value as PlanId);
 }
 
+// ─── Open-beta kill switch ──────────────────────────────────────────────────
+// While Proscene is in open beta we are NOT charging anyone. With this set to
+// `false`, every paywall is disabled site-wide and fully reversibly:
+//   • all billing gates (assertCanMutate / assertCanOperate /
+//     assertCanCreateProduction) become no-ops — full access, unlimited
+//     productions, never read-only;
+//   • the 60-day trial clock never starts (trialStartedAt is left unstamped),
+//     so re-enabling later gives beta orgs a fresh trial rather than an
+//     instantly-expired one;
+//   • the trial countdown pill, the trial/upgrade banner, and the in-app
+//     trial notices all hide;
+//   • Checkout / customer-portal actions refuse politely;
+//   • the daily billing-lifecycle cron does nothing (no nudge/lock/purge
+//     emails, no file purges).
+// The marketing pricing page stays up (with a beta disclosure) so the plans
+// are previewable. To RESTORE the full trial + subscription system exactly as
+// before, flip this back to `true` — no other code change is required.
+export const BILLING_ENABLED = false;
+
 // ─── Trial clock ──────────────────────────────────────────────────────────
 // Anchored to the org's FIRST production (trialStartedAt), not signup.
 export const TRIAL_DAYS = 60;

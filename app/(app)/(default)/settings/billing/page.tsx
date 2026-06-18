@@ -7,6 +7,7 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { Icon } from "@/components/ui/icon";
 import { billingState, type BillingStatus } from "@/lib/billing";
+import { BILLING_ENABLED } from "@/features/billing/constants";
 import {
   stripeConfigured,
   availablePaidPlans,
@@ -46,6 +47,35 @@ export default async function BillingSettingsPage() {
     .where(eq(organizations.id, user.organizationId))
     .limit(1);
   if (!org) redirect("/dashboard");
+
+  // Open beta: payments are paused. Show a reassuring notice instead of any
+  // plan/checkout UI. Flip BILLING_ENABLED back on to restore the full page.
+  if (!BILLING_ENABLED) {
+    return (
+      <div className="page-narrow anim-in" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <Link href="/settings" className="muted" style={{ fontSize: 13, textDecoration: "none" }}>
+          <Icon name="ChevronLeft" size={14} aria-hidden /> Settings
+        </Link>
+
+        <div>
+          <div className="h-eyebrow">Billing</div>
+          <h1 className="h-section">Plan &amp; billing</h1>
+        </div>
+
+        <div className="card card-pad">
+          <h3 style={{ fontSize: 15, margin: 0, fontWeight: 600 }}>
+            Proscene is free while we&apos;re in beta.
+          </h3>
+          <p className="muted" style={{ fontSize: 13.5, marginTop: 8, lineHeight: 1.55 }}>
+            We&apos;re not taking payments right now, so there&apos;s nothing to set up.
+            Your whole workspace has full access to every feature, with no card and
+            no trial countdown. When we introduce paid plans we&apos;ll let you know
+            well in advance, and early companies will be looked after.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const state = billingState(org);
   const planOptions: PlanOption[] = availablePaidPlans().map((id) => ({

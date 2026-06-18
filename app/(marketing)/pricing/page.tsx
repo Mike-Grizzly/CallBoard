@@ -11,6 +11,7 @@ import {
 import { PricingInteractions } from "./pricing-interactions";
 import { getPricingTiers } from "@/lib/sanity/queries";
 import { SanityTiers } from "./sanity-tiers";
+import { BILLING_ENABLED } from "@/features/billing/constants";
 
 export const metadata: Metadata = {
   title: "Pricing · Proscene",
@@ -26,6 +27,19 @@ export default async function PricingPage() {
   return (
     <>
       <div data-page="pricing" data-aud="designers">
+        {!BILLING_ENABLED && (
+          <div className="wrap" style={{ paddingTop: "clamp(24px,4vw,40px)" }}>
+            <div className="beta-notice" role="note">
+              <span className="beta-notice-badge">Open beta</span>
+              <div>
+                <strong>Proscene is free right now, and we are not taking payments yet.</strong>{" "}
+                We are still in open beta, so every feature is open to your whole
+                company at no cost. The plans below are a preview of how pricing
+                will work once we leave beta. Nothing to pay, and no card needed.
+              </div>
+            </div>
+          </div>
+        )}
         {tiers.length > 0 ? (
           <>
             <div dangerouslySetInnerHTML={{ __html: PRICING_HERO_HTML }} />

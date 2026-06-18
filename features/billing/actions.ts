@@ -12,15 +12,20 @@ import {
   type BillingInterval,
   type PaidPlanId,
 } from "@/lib/stripe";
+import { BILLING_ENABLED } from "./constants";
 
 const siteUrl = () =>
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.proscene.app";
+
+const BETA_PAUSED_MSG =
+  "Proscene is free during our open beta, so there's nothing to pay right now.";
 
 /** Start a subscription Checkout for the caller's org. Returns a redirect URL. */
 export async function createCheckoutSession(
   plan: PaidPlanId,
   interval: BillingInterval,
 ): Promise<{ url?: string; error?: string }> {
+  if (!BILLING_ENABLED) return { error: BETA_PAUSED_MSG };
   const user = await requireCurrentUser();
   if (!can(user.role, "settings:manage")) {
     return { error: "Only an admin can manage billing." };
@@ -83,6 +88,7 @@ export async function createCheckoutSession(
 
 /** Open the Stripe Customer Portal so an admin can manage/cancel the plan. */
 export async function createPortalSession(): Promise<{ url?: string; error?: string }> {
+  if (!BILLING_ENABLED) return { error: BETA_PAUSED_MSG };
   const user = await requireCurrentUser();
   if (!can(user.role, "settings:manage")) {
     return { error: "Only an admin can manage billing." };

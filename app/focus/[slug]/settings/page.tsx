@@ -11,6 +11,7 @@ import {
 import { getProductionMembership } from "@/features/members/queries";
 import { getNotificationPreferences } from "@/features/notifications/preferences";
 import { billingState, type BillingStatus } from "@/lib/billing";
+import { BILLING_ENABLED } from "@/features/billing/constants";
 import {
   stripeConfigured,
   availablePaidPlans,
@@ -100,8 +101,9 @@ export default async function FocusSettingsPage({
     projects: visible.map((p) => ({ slug: p.slug, title: p.title })),
   };
 
-  // Billing is org-level today; only workspace admins manage it.
-  const canBilling = can(user.role, "settings:manage");
+  // Billing is org-level today; only workspace admins manage it. Hidden
+  // entirely during the open beta (no payments) — see BILLING_ENABLED.
+  const canBilling = BILLING_ENABLED && can(user.role, "settings:manage");
   let billing: {
     headline: string;
     planOptions: PlanOption[];

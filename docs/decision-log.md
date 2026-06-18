@@ -2270,3 +2270,24 @@ real?" judgment required.
 **Sanity:** Kept the existing fetch + static-fallback architecture on every CMS-backed page (home hero, blog, faq, pricing tiers); updated both the static fallback and the `sanity-*.tsx` render components to the new design.
 
 **Verification:** `tsc` + `eslint` clean; `next build` compiles, typechecks, and prerenders all six marketing routes (placeholder env). Not browser-verified (no display in sandbox).
+
+---
+
+## 2026-06-18 — Payments paused for open beta (single reversible kill switch)
+
+**Decision:** While in open beta we are not charging anyone, so all paywalls are disabled site-wide behind one flag: **`BILLING_ENABLED` in `features/billing/constants.ts`** (currently `false`). Flipping it back to `true` restores the entire trial + subscription system with no other code change.
+
+**Why a single flag (not deleting the billing code):** The trial-gating system (`lib/billing.ts`, `features/billing/guard.ts` + `lifecycle.ts`, the Stripe actions, the trial banner/countdown, the billing pages) is intact and tested. A kill switch keeps it warm and makes "turn payments back on" a one-line change, versus ripping it out and rebuilding later.
+
+**What `BILLING_ENABLED = false` does:**
+- **Gates become no-ops** — `assertCanMutate`, `assertCanOperate`, and `assertCanCreateProduction` all return `{}` (full access, unlimited productions, never read-only).
+- **Shared state** — `billingState()` returns full access (`status: "none"`) and `trialPhase()` returns `no_production`, so `mutationLevel()` is always `"full"` and the trial countdown pill + trial/upgrade banner hide automatically (both read these).
+- **Trial clock never starts** — `startTrialIfFirstProduction()` is a no-op (returns false) and `firstProductionTrialNotice()` returns null. Deliberately leaving `trialStartedAt` unstamped means re-enabling billing later gives beta orgs a **fresh** trial rather than one already expired from a beta-era date.
+- **Checkout/portal refuse** — `createCheckoutSession`/`createPortalSession` return a friendly "free during beta" message (defense in depth; the UI is already hidden).
+- **Lifecycle cron is inert** — `candidateOrgs()` returns `[]`, so no nudge/lock/purge emails and no file purges fire.
+- **Billing UI** — `/settings/billing` shows a "Proscene is free while we're in beta" notice instead of plan/checkout buttons; the Focus settings billing section is hidden.
+- **Marketing** — the pricing page stays up (plans still visible) with a prominent open-beta disclosure banner (`page.tsx`, gated on the flag; `.beta-notice` styles in `pricing.css`) stating we are not taking payments yet and the plans are a preview.
+
+**To restore:** set `BILLING_ENABLED = true`. The trial then starts on each org's next first-production creation; everything else resumes exactly as before.
+
+**Verification:** `tsc` + `eslint` clean; `next build` green. Not browser-verified.

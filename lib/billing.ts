@@ -4,6 +4,7 @@
 // (everyone existing at launch) always have access.
 
 import {
+  BILLING_ENABLED,
   TRIAL_DAYS,
   NUDGE_DAY,
   WARNING_DAY,
@@ -36,6 +37,11 @@ export type OrgBillingFields = {
 const DAY = 86_400_000;
 
 export function billingState(org: OrgBillingFields): BillingState {
+  // Open beta: billing disabled → everyone has full access, no trial.
+  if (!BILLING_ENABLED) {
+    return { hasAccess: true, status: "none", trialEndsAt: null, daysLeftInTrial: null };
+  }
+
   const now = Date.now();
 
   // A live subscription takes display precedence — so a grandfathered org that
@@ -113,6 +119,12 @@ export function trialPhase(
   org: { trialStartedAt: Date | null },
   now: Date = new Date(),
 ): TrialState {
+  // Open beta: no trial clock → behave as "trial not started" so countdown
+  // pills and trial banners stay hidden.
+  if (!BILLING_ENABLED) {
+    return { phase: "no_production", daysRemaining: TRIAL_DAYS, graceDaysRemaining: 0 };
+  }
+
   if (!org.trialStartedAt) {
     return { phase: "no_production", daysRemaining: TRIAL_DAYS, graceDaysRemaining: 0 };
   }
