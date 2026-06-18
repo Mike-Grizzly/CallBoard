@@ -305,6 +305,17 @@ export async function acknowledgeAnnouncement(
     return { error: "Missing announcement ID." };
   }
 
+  // Only let members acknowledge announcements in their own organization —
+  // otherwise any signed-in user could pollute another org's ack roster.
+  const [announcement] = await db
+    .select({ organizationId: announcements.organizationId })
+    .from(announcements)
+    .where(eq(announcements.id, announcementId))
+    .limit(1);
+  if (!announcement || announcement.organizationId !== user.organizationId) {
+    return { error: "Announcement not found." };
+  }
+
   const existing = await db
     .select({ id: announcementAcks.id })
     .from(announcementAcks)

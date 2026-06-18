@@ -416,7 +416,10 @@ export async function permanentlyDeleteReport(
 }
 
 export async function fetchDeletedReportsByProduction(productionId: string) {
-  await requireCurrentUser();
+  const user = await requireCurrentUser();
+  if (!(await userCanAccessProduction(user, productionId))) {
+    return [];
+  }
   return db
     .select({
       id: rehearsalReports.id,

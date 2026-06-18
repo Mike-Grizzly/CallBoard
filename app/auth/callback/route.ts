@@ -16,6 +16,17 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * user set a first password. Everything else (OAuth, plain confirmations) keeps
  * the generic login error.
  */
+/**
+ * Only ever redirect to a path on our own origin. `next` arrives from the
+ * query string, and `new URL(next, origin)` would happily follow an absolute
+ * URL like `https://evil.com` (the `origin` base is ignored), turning this
+ * endpoint into an open redirect. Accept only same-origin relative paths
+ * (a single leading slash, not `//`); anything else falls back to /setup.
+ */
+function safeNext(next: string): string {
+  return next.startsWith("/") && !next.startsWith("//") ? next : "/setup";
+}
+
 function failureRedirect(next: string, origin: string): NextResponse {
   const isEmailRecoveryLink =
     next.startsWith("/invite/accept") || next.startsWith("/reset-password");
@@ -30,7 +41,7 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
-  const next = searchParams.get("next") ?? "/setup";
+  const next = safeNext(searchParams.get("next") ?? "/setup");
 
   const supabase = await createSupabaseServerClient();
 

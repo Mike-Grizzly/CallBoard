@@ -176,6 +176,7 @@ export async function saveScriptOcrPages(
 
 /** Mark an OCR job failed so the viewer can offer a retry. */
 export async function failScriptOcr(ocrId: string): Promise<void> {
+  const user = await requireCurrentUser();
   const [row] = await db
     .select({ storagePath: scriptOcr.storagePath })
     .from(scriptOcr)
@@ -183,6 +184,7 @@ export async function failScriptOcr(ocrId: string): Promise<void> {
     .limit(1);
   if (!row) return;
   if (!(await gateStoragePath(row.storagePath))) return;
+  if ((await assertCanMutate(user.organizationId)).error) return;
   await db
     .update(scriptOcr)
     .set({ status: "failed", updatedAt: new Date() })

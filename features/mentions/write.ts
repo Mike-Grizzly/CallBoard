@@ -1,4 +1,8 @@
-"use server";
+// NOT a "use server" module. These helpers trust caller-supplied org/user
+// ids and do no authorization of their own, so they must never be exposed as
+// server-action RPC endpoints — they are internal functions invoked only by
+// already-authorized server actions (reports, announcements, notes). The
+// `@/db` import also keeps this module off the client bundle.
 
 import { db } from "@/db";
 import { mentions } from "@/db/schema";

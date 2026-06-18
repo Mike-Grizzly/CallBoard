@@ -1342,14 +1342,14 @@ page `/settings/notifications`. Implemented but **not yet browser-verified**.
 
 ## 2026-06-03 — Orphaned (login-less) profiles: diagnosis, cleanup, invite hardening
 
-**Context:** A password reset for a member shown in the org (`mgrigsby.beazleyrealtors@gmail.com`) never delivered. Investigation via the live Supabase project found the address had a `profiles` row but **no `auth.users` account** — so Supabase silently 200s the reset (anti-enumeration) and sends nothing. Several such orphan profiles existed (1 real director, 10 `@wellmantheatre.org` demo/seed rows from one 2026-05-14 batch, and 2 duplicate `katieandmikeyplaygames` rows alongside the real login).
+**Context:** A password reset for a member shown in the org never delivered. Investigation via the live Supabase project found the address had a `profiles` row but **no `auth.users` account** — so Supabase silently 200s the reset (anti-enumeration) and sends nothing. Several such orphan profiles existed (1 real director, 10 demo/seed rows from one 2026-05-14 batch, and 2 duplicate rows alongside a real member's login).
 
-**Root cause:** logins link to profiles by `profiles.id == auth.users.id` (`lib/auth.ts`). The current invite flow is correct (creates the auth user first, then `profile.id = auth.id`). The orphans are **legacy** rows with random ids and no auth account; on signup they can't link, so a fresh self-signup profile + new org is created instead (this is how the katie duplicates arose). Additionally, `inviteMembers` assumed "profile exists ⇒ login exists", so re-inviting an orphan just added a membership and reported success without provisioning an account.
+**Root cause:** logins link to profiles by `profiles.id == auth.users.id` (`lib/auth.ts`). The current invite flow is correct (creates the auth user first, then `profile.id = auth.id`). The orphans are **legacy** rows with random ids and no auth account; on signup they can't link, so a fresh self-signup profile + new org is created instead (this is how the duplicates arose). Additionally, `inviteMembers` assumed "profile exists ⇒ login exists", so re-inviting an orphan just added a membership and reported success without provisioning an account.
 
 **Security assessment:** NOT a vulnerability in the exploit sense. Orphans have no auth row (no password, no session). Because linking is by auth UID (not email), signing up with an orphan's email yields a new account + new org and does **not** inherit the orphan's role/memberships. Latent risk noted: any future "reconcile by email" logic must be gated on verified email ownership and limited to the admin invite flow.
 
 **Decisions / actions:**
-1. **Data cleanup (production):** deleted the orphan director profile + the 2 duplicate katie profiles (all login-less, no authored content; FKs to `profiles.id` are all CASCADE). Left the 10 `@wellmantheatre.org` demo rows in place for now.
+1. **Data cleanup (production):** deleted the orphan director profile + the 2 duplicate profiles (all login-less, no authored content; FKs to `profiles.id` are all CASCADE). Left the 10 demo rows in place for now.
 2. **Invite hardening (code):** `inviteMembers` now calls `auth.admin.getUserById` on a matched profile; if there's no login it deletes the orphan and falls through to the normal create path (real auth account + invite email).
 3. **UX:** member list shows a "Pending invite" badge for `profiles.status = 'invited'`.
 

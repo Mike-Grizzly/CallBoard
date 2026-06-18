@@ -90,6 +90,22 @@ export async function updateNote(
     return { error: "You can only edit your own notes." };
   }
 
+  // A supplied tag must belong to the caller's organization — otherwise a note
+  // could be labelled with another org's tag.
+  if (fields.tagId) {
+    const [tag] = await db
+      .select({ id: noteTags.id })
+      .from(noteTags)
+      .where(
+        and(
+          eq(noteTags.id, fields.tagId),
+          eq(noteTags.organizationId, user.organizationId),
+        ),
+      )
+      .limit(1);
+    if (!tag) return { error: "Tag not found." };
+  }
+
   await db
     .update(productionNotes)
     .set({ ...fields, updatedAt: new Date() })
