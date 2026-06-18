@@ -678,9 +678,11 @@ function DoneScreen({
   done: Done;
   router: ReturnType<typeof useRouter>;
 }) {
+  // Hard navigate so the destination always gets a fresh server render with
+  // the new org's selectedOrganizationId — client-side push + refresh() races
+  // and can serve a cached page still scoped to the previous org.
   const go = (href: string) => {
-    router.push(href);
-    router.refresh();
+    window.location.href = href;
   };
   return (
     <div className="main" style={{ margin: "0 auto", maxWidth: 560, paddingTop: 80 }}>

@@ -405,3 +405,31 @@ export async function switchOrganization(
   revalidatePath("/", "layout");
   return { success: true };
 }
+
+export type OnboardingInput = {
+  avgAudienceSize?: string | null;
+  annualShows?: string | null;
+  teamSize?: string | null;
+  productionTypes?: string[];
+};
+
+export async function completeOnboarding(
+  input: OnboardingInput,
+): Promise<WorkspaceActionResult> {
+  const user = await requireCurrentUser();
+
+  await db
+    .update(organizations)
+    .set({
+      avgAudienceSize: input.avgAudienceSize ?? null,
+      annualShows: input.annualShows ?? null,
+      teamSize: input.teamSize ?? null,
+      productionTypes: input.productionTypes ?? [],
+      onboardedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(organizations.id, user.organizationId));
+
+  revalidatePath("/", "layout");
+  return { success: true };
+}

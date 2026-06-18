@@ -12942,3 +12942,146 @@ body[data-theme="dusk"] .fx-brand .mark .brand-badge.is-dark { display: block; }
 .fx-settings-inner > h1 { font-size: 22px; font-weight: 600; color: var(--ink); margin: 0; }
 .fx-settings-section { display: flex; flex-direction: column; gap: 10px; }
 .fx-settings-section > h2 { font-size: 15px; font-weight: 600; color: var(--ink); margin: 0; }
+/* ─────────────────────────────────────────────────────────────────────────
+   Dashboard welcome state — shown when a new workspace has no productions.
+   ───────────────────────────────────────────────────────────────────────── */
+.ws-wrap {
+  position: relative;
+  min-height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 80px 24px 80px;
+  overflow: hidden;
+}
+
+/* Stage curtains + spotlight — purely decorative */
+.ws-stage-art {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.ws-curtain {
+  position: absolute;
+  top: 0;
+  width: 120px;
+  height: 340px;
+  border-radius: 0 0 60px 60px;
+  opacity: 0.08;
+  background: var(--c-clay);
+}
+.ws-curtain-l { left: 0; transform: skewX(6deg); transform-origin: top left; }
+.ws-curtain-r { right: 0; transform: skewX(-6deg); transform-origin: top right; }
+.ws-spotlight {
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, var(--c-amber) 0%, transparent 70%);
+  opacity: 0.06;
+}
+
+.ws-body {
+  position: relative;
+  z-index: 1;
+  max-width: 640px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ws-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin: 0 0 14px;
+}
+
+.ws-headline {
+  font-size: clamp(32px, 6vw, 52px);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  margin: 0 0 20px;
+}
+.ws-headline em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.ws-sub {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-3);
+  margin: 0 0 32px;
+  max-width: 480px;
+}
+
+.ws-actions {
+  margin-bottom: 56px;
+}
+
+.ws-cta {
+  font-size: 15px;
+  padding: 14px 28px;
+  gap: 10px;
+  border-radius: 10px;
+}
+
+.ws-features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+}
+
+.ws-feat {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.ws-feat-ico {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--bg-muted);
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}
+
+.ws-feat-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 3px;
+}
+
+.ws-feat-desc {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-4);
+}
+
+@media (max-width: 600px) {
+  .ws-wrap { padding: 48px 16px 64px; }
+  .ws-features { grid-template-columns: 1fr; }
+  .ws-curtain { width: 72px; }
+}

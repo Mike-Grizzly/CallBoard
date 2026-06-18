@@ -24,3 +24,10 @@ export const PRODUCTION_TYPE_OPTIONS = [
   "Improv / comedy",
   "Concerts / cabaret",
 ] as const;
+
+export const AUDIENCE_SIZE_OPTIONS = [
+  "Under 50",
+  "50–200",
+  "200–500",
+  "500+",
+] as const;

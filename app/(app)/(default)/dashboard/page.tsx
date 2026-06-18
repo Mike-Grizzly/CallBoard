@@ -42,6 +42,7 @@ import {
   type MdTimelineItem,
 } from "./mobile-dashboard";
 import { OnboardingDialog } from "./onboarding-dialog";
+import { WelcomeState } from "./welcome-state";
 
 // Deterministic color per production — same palette as the left rail
 const PROD_COLORS = [
@@ -520,6 +521,23 @@ export default async function DashboardPage() {
     kind:
       pin.itemType === "note" && pin.subtype === "todo" ? "todo" : pin.itemType,
   }));
+
+  // Fresh workspace with no productions — show the welcome moment instead
+  // of the normal (empty) dashboard.
+  if (myProductions.length === 0) {
+    const firstName = user.firstName ?? null;
+    const orgName = user.organizationName ?? "Your workspace";
+    return (
+      <div className="page-narrow home">
+        {!hasNotifPrefs && <OnboardingDialog />}
+        <WelcomeState
+          firstName={firstName}
+          orgName={orgName}
+          canManage={canManage}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="page-narrow home">

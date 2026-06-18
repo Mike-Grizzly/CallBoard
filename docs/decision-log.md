@@ -2241,3 +2241,12 @@ bought to unlock a free designer-month is a guaranteed net loss — no "is this 
 real?" judgment required.
 
 **Impact.** Updated the referral section of `docs/feature-specs/21-designer-seats.md`.
+**2026-06-17 — Brand color customization scrapped**
+
+**Decision:** Implemented then removed workspace brand color customization (3 slots: primary/secondary/highlight) in the same session.
+
+**Why removed:** The feature only meaningfully affected accent/status/callout colors — not the structural chrome (rail, backgrounds, borders). Overriding structural vars would conflict with the existing 4-theme system (warm/dark/dusk/cool) and create unresolvable accessibility issues when arbitrary admin-chosen colors clash with theme-specific ink values. The value proposition for "tint the buttons a different shade" wasn't strong enough to justify the maintenance surface and future support burden ("my app is unreadable" tickets).
+
+**What remains:** The DB columns (`brand_color`, `brand_color_secondary`, `brand_color_highlight`) are still on `organizations` (nullable, all null). If a future design solves the theme-conflict problem — e.g., a proper per-workspace theme system that replaces rather than overlays the global themes — the columns are already there.
+
+**Kept:** Everything else from the session — org setup wizard, logo upload, welcome state, survey data collection, team invite on setup.
