@@ -16,6 +16,43 @@ export type PushSubInput = {
 export type PushActionResult = { error?: string; success?: boolean };
 
 /**
+ * A push endpoint is a URL the server later POSTs to (features/push/send.ts).
+ * Reject anything that isn't a public HTTPS URL so a user can't register an
+ * endpoint pointing at an internal/metadata address and turn their own push
+ * deliveries into a blind SSRF probe. Real push services (FCM, Mozilla,
+ * Windows) are always public HTTPS hosts.
+ */
+function isSafePushEndpoint(endpoint: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:") return false;
+
+  const host = url.hostname.toLowerCase();
+  // Block loopback, link-local, and RFC1918 private ranges by name/IP.
+  if (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host === "0.0.0.0" ||
+    host === "::1" ||
+    host === "[::1]" ||
+    host.startsWith("127.") ||
+    host.startsWith("10.") ||
+    host.startsWith("192.168.") ||
+    host.startsWith("169.254.") || // link-local (incl. cloud metadata 169.254.169.254)
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+    host.startsWith("[fd") || // unique-local IPv6
+    host.startsWith("[fe80") // link-local IPv6
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * Register the current browser/device for push and flip the user's push
  * preference on. Endpoint uniqueness is enforced here (delete-then-insert)
  * rather than a DB constraint — see the push-subscriptions schema note.
@@ -25,6 +62,9 @@ export async function savePushSubscription(
 ): Promise<PushActionResult> {
   const user = await requireCurrentUser();
   if (!input?.endpoint || !input.p256dh || !input.auth) {
+    return { error: "Invalid push subscription." };
+  }
+  if (!isSafePushEndpoint(input.endpoint)) {
     return { error: "Invalid push subscription." };
   }
 

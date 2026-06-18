@@ -243,10 +243,12 @@ export async function deleteWorkspace(
   return { success: true, nextOrganizationId: nextOrgId };
 }
 
-const LOGO_ALLOWED_TYPES = ["image/svg+xml", "image/png", "image/jpeg"];
+// SVG is intentionally excluded: an SVG can carry inline <script>, and the
+// logo is served from storage on a URL a member could open directly. Raster
+// formats can't execute, so we only accept PNG/JPG.
+const LOGO_ALLOWED_TYPES = ["image/png", "image/jpeg"];
 const LOGO_MAX_SIZE = 2 * 1024 * 1024;
 const LOGO_EXTENSIONS: Record<string, string> = {
-  "image/svg+xml": "svg",
   "image/png": "png",
   "image/jpeg": "jpg",
 };
@@ -270,7 +272,7 @@ export async function requestWorkspaceLogoUpload(
   }
   if (!fileName || fileSize <= 0) return { error: "Pick a file." };
   if (!LOGO_ALLOWED_TYPES.includes(contentType)) {
-    return { error: "Logo must be an SVG, PNG, or JPG." };
+    return { error: "Logo must be a PNG or JPG." };
   }
   if (fileSize > LOGO_MAX_SIZE) {
     return { error: "Logo must be 2MB or smaller." };
@@ -417,6 +419,10 @@ export async function completeOnboarding(
   input: OnboardingInput,
 ): Promise<WorkspaceActionResult> {
   const user = await requireCurrentUser();
+
+  if (!can(user.role, "settings:manage")) {
+    return { error: "Only admins can update workspace settings." };
+  }
 
   await db
     .update(organizations)

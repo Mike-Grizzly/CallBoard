@@ -2307,3 +2307,35 @@ real?" judgment required.
 4. **PII scrub:** removed a real third-party email and member identifiers from `decision-log.md` / `open-questions.md`. Handoff/design rosters confirmed fabricated (reserved 555 numbers, fictional domains) and left in place.
 
 **Impact:** DB migration applied (`script_cache.organization_id` + composite unique index; bucket RLS deny-all). Code changes across blocking/reports/videos/announcements/documents/notes/scripts/mentions actions + the auth callback. `tsc` + `eslint` clean. Two `completeOnboarding`/`pinItem` low items intentionally left (own-org, non-disclosing). Not browser-verified.
+
+---
+
+## 2026-06-18 — Second security audit + hardening pass (branch `claude/pensive-thompson-7bbxwf`)
+
+**Context:** Full senior-level security audit of the whole repo (secrets, deps, authn/z, injection, data exposure, config, Supabase/RLS). Foundations again held — no SQL injection (Drizzle parameterizes all `sql` templates, incl. the raw pins UNION), rich text sanitized through `lib/sanitize.ts`, no secrets in source or git history, RLS deny-all on all 39 tables (intended; Drizzle bypasses via direct `DATABASE_URL`), proxy gates routes, Stripe webhook + cron secret-verified. Fixed the gaps below.
+
+**Authorization / IDOR (committed):**
+1. **Restricted-folder document access (was High):** `resolveAccessibleDocument` (documents) now enforces `canViewFolder` in addition to `userCanAccessProduction`, so excluded roles can no longer mint signed URLs for restricted-folder docs via `getDocumentUrl`/`getDocumentDownloadUrl`/delete/restore/move.
+2. **`fetchDocumentComments`** now gates through `resolveAccessibleDocument` (was authenticate-only → cross-tenant comment/email read). Returns `[]` when inaccessible.
+3. **Report attachment upload/finalize** (`features/reports/attachments.ts`): added a local `userCanAccessReport` ownership check — previously only `reports:create` + path-prefix, so a user could attach files to any org's report by id (cross-tenant write).
+4. **`fetchDeletedDocumentsByProduction`** added `userCanAccessProduction` guard (was leaking deleted-file metadata cross-tenant).
+5. **`pinItem`** now validates `itemType` against an allowlist and verifies access to the item before inserting (was: pin any UUID → its title/production surfaced on the attacker's dashboard via `getPinsForUser`).
+6. **`completeOnboarding`** gated on `settings:manage` (was any member).
+
+**Injection / XSS / data exposure (committed):**
+7. **Document mention resolution** scoped to the caller's org members (was scanning all profiles globally → cross-tenant mention notification leak).
+8. **Client-asserted content-type / inline render:** removed `image/svg+xml` from logo and set-piece upload allowlists (SVG can carry inline script); added `sandbox` to the document-viewer PDF (`allow-downloads`) and text/JSON (`sandbox=""`) iframes so a disguised HTML payload can't execute. **Behavior change:** vector (SVG) logos and set pieces are no longer accepted — raster only. Can be restored later behind server-side SVG sanitization.
+9. **Push endpoint SSRF:** `savePushSubscription` validates the endpoint is a public HTTPS URL (rejects loopback/link-local/RFC1918/metadata hosts).
+10. **Sanity blog link mark** validates the href scheme (http/https/mailto/tel/relative) — blocks `javascript:` click-XSS from CMS content.
+11. **Error-message hygiene:** invite/createUser and resend-invite no longer surface the raw Supabase admin error (account-existence enumeration); detail logged server-side. Storage upload-URL failures return a generic message.
+12. **`server-only` guards** added to `lib/supabase/admin.ts`, `lib/stripe.ts`, `lib/anthropic.ts`, `lib/workspace-logo.ts` (added the `server-only` dep) so any future client import fails the build instead of silently bundling secret-reading code.
+
+**Config / infra:**
+13. **Security headers** added in `next.config.ts` (HSTS, X-Content-Type-Options, X-Frame-Options SAMEORIGIN, Referrer-Policy, Permissions-Policy, and a minimal CSP: `object-src 'none'; base-uri 'self'; frame-ancestors 'self'` — deliberately no `default-src`/`script-src` to avoid breaking Supabase/Sanity/Stripe/GTM).
+14. **Storage bucket size limit:** set `attachments` bucket `file_size_limit = 64MB` via Supabase (was null/unlimited — client-asserted `fileSize` checks don't bound the direct browser→Supabase upload).
+
+**Dependencies:** upgraded `next` 16.2.3 → **16.2.9** (clears the App Router proxy-bypass / SSRF / DoS advisories), `drizzle-orm` 0.38.3 → **0.45.2** (SQLi-via-identifiers advisory), and pinned `form-data ^4.0.6`, `ws ^8.21.0`, `shell-quote ^1.8.4` via `overrides`. `npm audit`: **24 → 20** vulns; **critical 1 → 0**, **high 5 → 1**. The remaining high (`undici` 7.x) and most moderates are transitive under `@sanity/cli` → jsdom (dev/build tooling, not the app runtime); overriding undici would force a breaking major bump on jsdom, so left noted.
+
+**Manual follow-ups (not code):** enable Supabase Auth "leaked password protection" (HaveIBeenPwned) in the dashboard; consider a CAPTCHA/rate-limit on the public contact form; revisit transitive `undici`/Sanity-tooling CVEs on the next `sanity` upgrade.
+
+**Verification:** `tsc --noEmit` clean; `eslint` shows no new errors (15 pre-existing, all in untouched files/handoff); `next build` green (exit 0, validated with placeholder env). Not browser-verified.

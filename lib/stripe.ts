@@ -1,3 +1,4 @@
+import "server-only";
 import Stripe from "stripe";
 
 // Server-only. Null until STRIPE_SECRET_KEY is set, so the app builds/runs

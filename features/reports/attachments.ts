@@ -14,6 +14,25 @@ export type UploadResult = {
   success?: boolean;
 };
 
+/**
+ * Resolve a report's owning production and verify the caller can access it.
+ * Report attachments inherit their report's production access — without this,
+ * a user with `reports:create` in their own org could attach files to any
+ * report in any org by passing an arbitrary reportId (cross-tenant IDOR).
+ */
+async function userCanAccessReport(
+  user: Awaited<ReturnType<typeof requireCurrentUser>>,
+  reportId: string,
+): Promise<boolean> {
+  const [report] = await db
+    .select({ productionId: rehearsalReports.productionId })
+    .from(rehearsalReports)
+    .where(eq(rehearsalReports.id, reportId))
+    .limit(1);
+  if (!report) return false;
+  return userCanAccessProduction(user, report.productionId);
+}
+
 export async function requestReportAttachmentUpload(
   reportId: string,
   fileName: string,
@@ -30,6 +49,9 @@ export async function requestReportAttachmentUpload(
   if (lock.error) return { error: lock.error };
 
   if (!reportId) return { error: "Missing report." };
+  if (!(await userCanAccessReport(user, reportId))) {
+    return { error: "Report not found." };
+  }
   if (!fileName || fileSize <= 0) return { error: "Please select a file." };
   if (fileSize > 10 * 1024 * 1024) {
     return { error: "File size must be under 10MB." };
@@ -64,9 +86,8 @@ export async function requestReportAttachmentUpload(
     .createSignedUploadUrl(storagePath);
 
   if (error || !data) {
-    return {
-      error: `Could not start upload: ${error?.message ?? "unknown error"}`,
-    };
+    console.error("Report attachment upload URL failed:", error?.message);
+    return { error: "Could not start upload. Please try again." };
   }
 
   return { path: data.path, token: data.token };
@@ -87,6 +108,9 @@ export async function finalizeReportAttachmentUpload(input: {
 
   if (!input.reportId || !input.storagePath) {
     return { error: "Upload could not be completed." };
+  }
+  if (!(await userCanAccessReport(user, input.reportId))) {
+    return { error: "Report not found." };
   }
   if (!input.storagePath.startsWith(`reports/${input.reportId}/`)) {
     return { error: "Upload could not be verified." };

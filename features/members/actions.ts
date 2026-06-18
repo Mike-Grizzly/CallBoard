@@ -916,11 +916,14 @@ export async function inviteMembers(
           });
 
       if (error || !data.user) {
+        // Don't surface the raw admin-API error: messages like "already
+        // registered" let a manager enumerate which emails have accounts.
+        if (error) console.error("Invite/createUser failed:", error.message);
         results.push({
           email,
           name,
           outcome: "error",
-          message: error?.message ?? "Could not create account.",
+          message: "Could not add this person. Check the email and try again.",
         });
         continue;
       }
@@ -1167,11 +1170,13 @@ export async function resendInvite(
       },
       redirectTo,
     });
-    if (error) return { error: error.message };
+    if (error) {
+      console.error("Resend invite failed:", error.message);
+      return { error: "Could not resend invite." };
+    }
   } catch (err) {
-    return {
-      error: err instanceof Error ? err.message : "Could not resend invite.",
-    };
+    console.error("Resend invite failed:", err);
+    return { error: "Could not resend invite." };
   }
 
   revalidatePath("/people");

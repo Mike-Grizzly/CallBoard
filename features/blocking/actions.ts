@@ -507,9 +507,11 @@ export async function requestCustomSetPieceUpload(
   if (lock.error) return { error: lock.error };
   if (!fileName || fileSize <= 0) return { error: "No file selected." };
 
-  const allowed = ["image/svg+xml", "image/png", "image/jpeg"];
+  // SVG excluded: it can carry inline <script>, and set-piece images are
+  // served from storage on a directly-openable URL. Raster only.
+  const allowed = ["image/png", "image/jpeg"];
   if (!allowed.includes(contentType)) {
-    return { error: "Only SVG, PNG, and JPG files are supported." };
+    return { error: "Only PNG and JPG files are supported." };
   }
   if (fileSize > 5 * 1024 * 1024) {
     return { error: "File must be under 5 MB." };
