@@ -1,0 +1,61 @@
+name: CI
+
+# Runs on every PR into main and on pushes to main. The two hard gates
+# (typecheck + build) both pass on main today, so enabling "require status
+# checks" in branch protection won't block existing work. Lint is run as
+# informational only (continue-on-error) because the repo currently has
+# pre-existing eslint errors in handoff/ design files and a few components;
+# flip it to a hard gate once those are cleaned up.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same ref to save minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, Lint, Build
+    runs-on: ubuntu-latest
+
+    # Placeholder, non-secret values. `next build` evaluates server modules
+    # during page-data collection and throws if these are missing, but it never
+    # actually connects (the Postgres/Supabase clients are created lazily), so
+    # dummy values are sufficient to validate the build.
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_PUBLIC_SANITY_PROJECT_ID: dsciikio
+      NEXT_PUBLIC_SANITY_DATASET: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint (informational)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build
+        run: npm run build
