@@ -40,6 +40,64 @@ export function isPaidPlanId(value: string): value is PaidPlanId {
   return (PAID_PLANS as string[]).includes(value);
 }
 
+// ─── Designer package (individual-billed sub-product) ───────────────────────
+// A separate billing axis from the org plans: billed to the USER, not the org.
+// Three tiers × {monthly, annual} = six prices, created in the Stripe dashboard
+// and wired in via env. See docs/feature-specs/21-designer-seats.md.
+export type DesignerTier = "single" | "bundle" | "pro";
+
+const DESIGNER_TIERS: DesignerTier[] = ["single", "bundle", "pro"];
+
+export const DESIGNER_PRICE_IDS: Record<
+  DesignerTier,
+  Record<BillingInterval, string | undefined>
+> = {
+  single: {
+    monthly: process.env.STRIPE_PRICE_DESIGNER_SINGLE_MONTHLY,
+    annual: process.env.STRIPE_PRICE_DESIGNER_SINGLE_ANNUAL,
+  },
+  bundle: {
+    monthly: process.env.STRIPE_PRICE_DESIGNER_BUNDLE_MONTHLY,
+    annual: process.env.STRIPE_PRICE_DESIGNER_BUNDLE_ANNUAL,
+  },
+  pro: {
+    monthly: process.env.STRIPE_PRICE_DESIGNER_PRO_MONTHLY,
+    annual: process.env.STRIPE_PRICE_DESIGNER_PRO_ANNUAL,
+  },
+};
+
+export function isDesignerTier(value: string): value is DesignerTier {
+  return (DESIGNER_TIERS as string[]).includes(value);
+}
+
+export function designerPriceIdFor(
+  tier: DesignerTier,
+  interval: BillingInterval,
+): string | undefined {
+  return DESIGNER_PRICE_IDS[tier]?.[interval];
+}
+
+/** Reverse-map a Stripe price id to a designer tier + interval (for the webhook). */
+export function designerTierForPriceId(
+  priceId: string,
+): { tier: DesignerTier; interval: BillingInterval } | null {
+  for (const tier of DESIGNER_TIERS) {
+    for (const interval of INTERVALS) {
+      if (DESIGNER_PRICE_IDS[tier][interval] === priceId) {
+        return { tier, interval };
+      }
+    }
+  }
+  return null;
+}
+
+/** Designer tiers with at least one configured price — purchasable right now. */
+export function availableDesignerTiers(): DesignerTier[] {
+  return DESIGNER_TIERS.filter(
+    (t) => DESIGNER_PRICE_IDS[t].monthly || DESIGNER_PRICE_IDS[t].annual,
+  );
+}
+
 export function priceIdFor(
   plan: PaidPlanId,
   interval: BillingInterval,
