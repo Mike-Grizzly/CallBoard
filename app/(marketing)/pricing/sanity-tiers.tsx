@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { stegaClean } from "@sanity/client/stega";
 import type { PricingTier } from "@/lib/sanity/queries";
 
 const Tick = () => (
@@ -26,19 +27,31 @@ export function SanityTiers({ tiers }: { tiers: PricingTier[] }) {
   return (
     <div className="tiers">
       {tiers.map((t) => {
+        // The price/note strings double as data-attribute values that
+        // pricing-interactions.tsx parses for the monthly/annual toggle, so they
+        // must be stripped of stega markers (which would otherwise corrupt the
+        // toggle in preview). Cleaning them also drops their on-page overlay —
+        // an acceptable trade for a working toggle; name/description/features
+        // keep theirs. ctaHref is cleaned for the same reason links need it.
+        const priceProduction = stegaClean(t.priceProduction);
+        const priceAnnual = stegaClean(t.priceAnnual);
+        const noteProduction = stegaClean(t.noteProduction);
+        const noteAnnual = stegaClean(t.noteAnnual);
+        const ctaHref = stegaClean(t.ctaHref) || "/signup";
+
         // Billing-toggle data attributes (read by pricing-interactions.tsx),
         // only emitted when an annual price exists.
-        const priceProps: Record<string, string> = t.priceAnnual
+        const priceProps: Record<string, string> = priceAnnual
           ? {
-              "data-amt-monthly": t.priceProduction ?? "",
-              "data-amt-annual": t.priceAnnual,
+              "data-amt-monthly": priceProduction ?? "",
+              "data-amt-annual": priceAnnual,
             }
           : {};
-        const perProps: Record<string, string> = t.priceAnnual ? { "data-per": "" } : {};
-        const subProps: Record<string, string> = t.noteAnnual
+        const perProps: Record<string, string> = priceAnnual ? { "data-per": "" } : {};
+        const subProps: Record<string, string> = noteAnnual
           ? {
-              "data-sub-monthly": t.noteProduction ?? "",
-              "data-sub-annual": t.noteAnnual,
+              "data-sub-monthly": noteProduction ?? "",
+              "data-sub-annual": noteAnnual,
             }
           : {};
         const featProps: Record<string, string> = t.featured ? { "data-feat": "" } : {};
@@ -50,7 +63,7 @@ export function SanityTiers({ tiers }: { tiers: PricingTier[] }) {
             {t.description && <div className="tier-desc">{t.description}</div>}
             <div className="tier-price">
               <span className="amt" {...priceProps}>
-                {t.priceProduction}
+                {priceProduction}
               </span>
               {t.period && (
                 <span className="per" {...perProps}>
@@ -59,9 +72,9 @@ export function SanityTiers({ tiers }: { tiers: PricingTier[] }) {
               )}
             </div>
             <div className="tier-sub" {...subProps}>
-              {t.noteProduction ?? ""}
+              {noteProduction ?? ""}
             </div>
-            <Link className={t.featured ? "btn primary" : "btn"} href={t.ctaHref || "/signup"}>
+            <Link className={t.featured ? "btn primary" : "btn"} href={ctaHref}>
               {t.ctaLabel || "Start 60-day trial"}
             </Link>
             <ul className="tier-list">

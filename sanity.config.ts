@@ -2,6 +2,7 @@
 
 import { defineConfig } from "sanity";
 import { structureTool } from "sanity/structure";
+import { presentationTool } from "sanity/presentation";
 import { visionTool } from "@sanity/vision";
 import { schemaTypes } from "./sanity/schema";
 
@@ -13,6 +14,16 @@ export default defineConfig({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "dsciikio",
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || "production",
   basePath: "/studio",
-  plugins: [structureTool(), visionTool()],
+  plugins: [
+    // "Presentation" — the live, clickable preview of the marketing site inside
+    // the Studio. Opening it loads the site in a side pane and (via Draft Mode +
+    // stega) lets editors click on-page text to jump straight to its field.
+    // previewMode.enable points at the route that turns Draft Mode on.
+    presentationTool({
+      previewUrl: { previewMode: { enable: "/api/draft-mode/enable" } },
+    }),
+    structureTool(),
+    visionTool(),
+  ],
   schema: { types: schemaTypes },
 });

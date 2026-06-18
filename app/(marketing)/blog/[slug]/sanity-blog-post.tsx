@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PortableText, type PortableTextComponents } from "@portabletext/react";
+import { stegaClean } from "@sanity/client/stega";
 import type { Post } from "@/lib/sanity/queries";
 import { urlForImage } from "@/lib/sanity/image";
 
@@ -56,7 +57,7 @@ const components: PortableTextComponents = {
     strong: ({ children }) => <strong>{children}</strong>,
     em: ({ children }) => <em>{children}</em>,
     link: ({ children, value }) => {
-      const href = safeLinkHref(value?.href);
+      const href = safeLinkHref(stegaClean(value?.href));
       if (!href) return <>{children}</>;
       return (
         <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-ink)" }}>
@@ -67,7 +68,7 @@ const components: PortableTextComponents = {
   },
   types: {
     image: ({ value }) => {
-      const url = urlForImage(value)?.width(1200).url();
+      const url = urlForImage(stegaClean(value))?.width(1200).url();
       if (!url) return null;
       // eslint-disable-next-line @next/next/no-img-element
       return <img className="ph" src={url} alt={value?.alt || ""} style={{ objectFit: "cover" }} />;
@@ -76,7 +77,7 @@ const components: PortableTextComponents = {
 };
 
 export function SanityBlogPost({ post }: { post: Post }) {
-  const cover = urlForImage(post.coverImage)?.width(1400).height(600).url() ?? null;
+  const cover = urlForImage(stegaClean(post.coverImage))?.width(1400).height(600).url() ?? null;
 
   return (
     <article>
