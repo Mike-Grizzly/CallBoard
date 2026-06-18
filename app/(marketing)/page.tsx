@@ -5,9 +5,9 @@ import { getHomePage } from "@/lib/sanity/queries";
 import { SanityHero } from "./sanity-hero";
 
 export const metadata: Metadata = {
-  title: "Proscene — The production hub for stage managers",
+  title: "Proscene: the one place your show lives",
   description:
-    "The paper call board, reinvented. Proscene keeps your whole production on the same page — calls, calendars, scripts, blocking, and reports.",
+    "Calls, calendar, script, blocking, and reports, connected and shared by everyone. Proscene keeps cast, crew, and creative teams on the same page, from first read to closing night.",
 };
 
 export const revalidate = 60;

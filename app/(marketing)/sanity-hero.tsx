@@ -1,9 +1,10 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import type { HomePage } from "@/lib/sanity/queries";
 import { HOME_HERO_MOCK_HTML } from "./home-content";
 
 // Trusted owner-authored copy. Escape HTML, then turn *asterisks* into the
-// crimson accent <em> used across the marketing headlines.
+// amber accent <em> used across the marketing headlines.
 function emphasize(s: string): string {
   const esc = s
     .replace(/&/g, "&amp;")
@@ -14,7 +15,7 @@ function emphasize(s: string): string {
 
 export function SanityHero({ home }: { home: HomePage }) {
   return (
-    <section className="hero" data-screen-label="Hero">
+    <section className="hero night" data-screen-label="Hero">
       <div className="hero-glow" />
       <div className="wrap">
         <div className="hero-grid">
@@ -51,7 +52,12 @@ export function SanityHero({ home }: { home: HomePage }) {
             )}
           </div>
 
-          <div className="hero-media" dangerouslySetInnerHTML={{ __html: HOME_HERO_MOCK_HTML }} />
+          {/* Product window mock (static); the floating chip is part of the markup. */}
+          <div
+            className="hero-media stage"
+            style={{ "--glow": "transparent" } as CSSProperties}
+            dangerouslySetInnerHTML={{ __html: HOME_HERO_MOCK_HTML }}
+          />
         </div>
       </div>
     </section>

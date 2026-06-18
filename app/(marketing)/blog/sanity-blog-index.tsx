@@ -49,7 +49,7 @@ export function SanityBlogIndex({ posts }: { posts: PostCard[] }) {
           </h1>
           <p className="lede lede-narrow" style={{ marginTop: 18 }}>
             Walkthroughs, stage-management craft, and the occasional opinion about call
-            times — written by people who&apos;ve held the book.
+            times, written by people who&apos;ve held the book.
           </p>
         </div>
       </section>

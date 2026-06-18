@@ -14,10 +14,10 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = await getPostBySlug(slug);
   if (post) {
-    return { title: `${post.title} — Proscene`, description: post.excerpt };
+    return { title: `${post.title} · Proscene`, description: post.excerpt };
   }
   return {
-    title: "Set up your first production — Proscene",
+    title: "Set up your first production · Proscene",
     description:
       "A blank screen to your first call going out, step by step. We build a real show and have the whole company confirmed by the end.",
   };

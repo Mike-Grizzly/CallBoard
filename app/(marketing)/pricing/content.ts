@@ -1,155 +1,291 @@
-// Pricing page body — split into fragments so the tier cards can be rendered
-// from Sanity (SanityTiers) when present, with this static version as fallback.
+// Pricing page body, split into fragments so the COMPANIES tier cards can be
+// rendered from Sanity (SanityTiers) when present, with the static version as
+// fallback.
 //
-// Model: the ORGANIZATION subscribes; participants (cast/crew/designers) are
-// always free. Tiers differ only by how many productions you can run at once —
-// every paid tier includes the full toolset. New orgs get a 60-day free trial
-// that starts with their first production.
+// Model: the ORGANIZATION subscribes; participants (cast, crew, designers) are
+// always free. Company plans differ only by how many productions you can run at
+// once. A separate "Proscene Studio" set of personal plans (coming soon) serves
+// freelance designers and choreographers and is billed to the individual.
+//
+// Two controls live in the hero:
+//   1) Audience segmented control. Sets data-aud on the [data-page="pricing"]
+//      container, which swaps the [data-aud-panel] panels via CSS.
+//   2) Billing toggle. Rewrites prices/period/sub-labels from the
+//      data-amt-monthly / data-amt-annual / data-per / data-sub-* attributes.
 const TICK =
   '<span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>';
 const YES =
   '<td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td>';
+const NO = '<td class="no">&ndash;</td>';
 
 export const PRICING_HERO_HTML = `
   <section class="page-hero">
     <div class="wrap">
       <span class="eyebrow no-rule" style="justify-content:center">Pricing</span>
-      <h1 class="display" style="margin-top:16px;font-size:clamp(36px,5.4vw,64px)">Pay for the shows you run. <em>Never for the people in them.</em></h1>
-      <p class="lede" style="margin:18px auto 0;max-width:56ch">Your whole company — cast, crew, designers, stage management, front of house — works in Proscene at no per-seat cost, on every plan. You only pay per active production.</p>
-      <div class="billing" role="group" aria-label="Billing period">
-        <button data-period="annual" data-on>Annual <span class="save">save ~20%</span></button>
-        <button data-period="monthly">Monthly</button>
+      <h1 class="display" style="margin-top:16px;font-size:clamp(36px,5.4vw,64px)">Pay for the shows <em>you run.</em></h1>
+      <p class="lede" style="margin:18px auto 0;max-width:56ch">Never for the people in them. Whether you're a company running a season or a designer touring between them, your collaborators are always free.</p>
+      <div class="controls">
+        <div class="aud-toggle" role="tablist" aria-label="Who's paying?">
+          <button class="aud-seg" id="tab-designers" role="tab" type="button" data-aud="designers" aria-controls="pricing-panels" aria-selected="true" tabindex="0">For individuals</button>
+          <button class="aud-seg" id="tab-companies" role="tab" type="button" data-aud="companies" aria-controls="pricing-panels" aria-selected="false" tabindex="-1">For companies</button>
+          <span class="aud-thumb" aria-hidden="true"></span>
+        </div>
+        <div class="billing" role="group" aria-label="Billing period">
+          <button data-period="monthly" data-on>Monthly</button>
+          <button data-period="annual">Annual <span class="save">save ~20%</span></button>
+        </div>
       </div>
     </div>
   </section>
 `;
 
-export const PRICING_TIERS_HTML = `
-  <section class="section" style="padding-top:36px">
-    <div class="wrap">
-      <div class="tiers reveal">
+// Lead-in line that sits above the COMPANIES tiers. Kept separate so it can wrap
+// the Sanity-driven tiers when present.
+export const PRICING_COMPANIES_LEAD_HTML = `
+      <div class="panel-lead">
+        <span class="eyebrow no-rule">For companies &amp; theatres</span>
+        <h2>Plans differ only by how many shows you run <em>at once.</em></h2>
+        <p>Every paid plan includes the entire toolset and unlimited cast, crew, and creative team. New organizations get a 60-day free trial, no card, and the clock starts at your first production, not signup.</p>
+      </div>
+`;
+
+// Everything in the COMPANIES panel that sits BELOW the tier cards. Shared by
+// both the static and Sanity-driven renderings.
+export const PRICING_COMPANIES_REST_HTML = `
+      <div class="free-banner">
+        <div class="fb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="fb-body">
+          <b>Participants are always free.</b>
+          <p>Anyone you invite to a show, actors, crew, designers, stage managers, works free, with no plan and no card. There are never per-seat fees on any tier.</p>
+        </div>
+        <a class="btn-link" href="#" data-noop style="display:inline-flex">How invites work <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+      </div>
+
+      <div class="includes">
+        <div class="includes-head">
+          <span class="lbl">Every paid plan includes</span>
+          <h3>The whole toolset, <em>no add-ons, no upsells.</em></h3>
+        </div>
+        <div class="inc-grid">
+          <div>${TICK} Script &amp; scene breakdown</div>
+          <div>${TICK} Blocking &amp; ground plans</div>
+          <div>${TICK} Auto reports &amp; PDF export</div>
+          <div>${TICK} Calls, calendar &amp; confirmations</div>
+          <div>${TICK} Document &amp; media library</div>
+          <div>${TICK} AI script setup &amp; mobile app</div>
+        </div>
+      </div>
+
+      <div class="compare-wrap">
+        <table class="compare">
+          <thead>
+            <tr><th>Plan</th><th>Participant</th><th>Season</th><th data-feat>Repertory</th><th>Company</th></tr>
+          </thead>
+          <tbody>
+            <tr class="grouphd"><td colspan="5">What you pay</td></tr>
+            <tr><td>Billed to</td><td>Free</td><td>The org</td><td>The org</td><td>The org</td></tr>
+            <tr><td>Active productions at once</td><td>1 (all-time)</td><td>1</td><td>3</td><td>Unlimited</td></tr>
+            <tr><td>People per production</td><td>Unlimited</td><td>Unlimited</td><td>Unlimited</td><td>Unlimited</td></tr>
+            <tr><td>Storage</td><td>5 GB</td><td>100 GB</td><td>250 GB</td><td>500 GB</td></tr>
+            <tr class="grouphd"><td colspan="5">The toolset</td></tr>
+            <tr><td>Calls, calendar &amp; confirmations</td>${YES}${YES}${YES}${YES}</tr>
+            <tr><td>Script &amp; AI script setup</td>${NO}${YES}${YES}${YES}</tr>
+            <tr><td>Blocking &amp; ground plans</td>${NO}${YES}${YES}${YES}</tr>
+            <tr><td>Auto reports &amp; PDF export</td>${NO}${YES}${YES}${YES}</tr>
+            <tr><td>Document &amp; media library</td>${NO}${YES}${YES}${YES}</tr>
+            <tr><td>Mobile app</td>${YES}${YES}${YES}${YES}</tr>
+            <tr class="grouphd"><td colspan="5">Company &amp; support</td></tr>
+            <tr><td>Custom branding</td>${NO}${NO}${NO}${YES}</tr>
+            <tr><td>Support</td>${NO}<td>Standard</td><td>Email</td><td>Priority</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="center kicker" style="margin-top:30px">Students &amp; educators get discounted school-year pricing, hand-verified.
+        <a class="btn-link" href="/contact?reason=school" style="display:inline-flex;vertical-align:middle">Talk to us about your school <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+      </p>
+`;
+
+// Static COMPANIES tier cards (fallback when Sanity has no pricing tiers).
+const PRICING_COMPANIES_TIERS_HTML = `
+      <div class="tiers">
         <div class="tier">
           <div class="tier-name">Season</div>
-          <div class="tier-desc">For companies that run one show at a time.</div>
-          <div class="tier-price"><span class="amt" data-price data-annual="$249" data-monthly="$25">$249</span><span class="per" data-per>/ yr</span></div>
-          <div class="tier-sub" data-note data-annual="Billed yearly" data-monthly="Billed monthly">Billed yearly</div>
-          <a class="btn primary" href="/signup">Start 60-day free trial</a>
+          <div class="tier-desc">For one show at a time, a single company, in production.</div>
+          <div class="tier-price">
+            <span class="amt" data-amt-monthly="$25" data-amt-annual="$249">$25</span>
+            <span class="per" data-per>/ month</span>
+          </div>
+          <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$25/mo, billed annually">Billed monthly</div>
+          <a class="btn" href="/signup">Start 60-day trial</a>
+          <div class="tier-cap"><b>1</b> active production &middot; 100&nbsp;GB</div>
           <ul class="tier-list">
-            <li>${TICK} 1 active production</li>
+            <li>${TICK} The complete toolset</li>
             <li>${TICK} Unlimited cast &amp; crew</li>
-            <li>${TICK} Reports, calls, scripts, blocking</li>
-            <li>${TICK} Document &amp; media library</li>
-            <li>${TICK} 100 GB document &amp; media storage</li>
-            <li>${TICK} Mobile app for the whole company</li>
+            <li>${TICK} Mobile app for the company</li>
           </ul>
         </div>
         <div class="tier" data-feat>
           <span class="tier-flag">Most popular</span>
           <div class="tier-name">Repertory</div>
-          <div class="tier-desc">For busy and multi-stage companies juggling several shows.</div>
-          <div class="tier-price"><span class="amt" data-price data-annual="$499" data-monthly="$49">$499</span><span class="per" data-per>/ yr</span></div>
-          <div class="tier-sub" data-note data-annual="Billed yearly" data-monthly="Billed monthly">Billed yearly</div>
-          <a class="btn primary" href="/signup">Start 60-day free trial</a>
+          <div class="tier-desc">For companies juggling a few productions in parallel.</div>
+          <div class="tier-price">
+            <span class="amt" data-amt-monthly="$49" data-amt-annual="$499">$49</span>
+            <span class="per" data-per>/ month</span>
+          </div>
+          <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$49/mo, billed annually">Billed monthly</div>
+          <a class="btn primary" href="/signup">Start 60-day trial</a>
+          <div class="tier-cap"><b>3</b> active productions &middot; 250&nbsp;GB</div>
           <ul class="tier-list">
-            <li>${TICK} Up to 3 productions at once</li>
             <li>${TICK} Everything in Season</li>
-            <li>${TICK} 250 GB storage</li>
-            <li>${TICK} The complete production toolset</li>
+            <li>${TICK} Run three shows side by side</li>
             <li>${TICK} Email support</li>
           </ul>
         </div>
         <div class="tier">
           <div class="tier-name">Company</div>
-          <div class="tier-desc">For theatres and programs running a full season.</div>
-          <div class="tier-price"><span class="amt" data-price data-annual="$799" data-monthly="$79">$799</span><span class="per" data-per>/ yr</span></div>
-          <div class="tier-sub" data-note data-annual="Billed yearly" data-monthly="Billed monthly">Billed yearly</div>
-          <a class="btn" href="/signup">Start 60-day free trial</a>
+          <div class="tier-desc">For theatres and programs running a whole season at once.</div>
+          <div class="tier-price">
+            <span class="amt" data-amt-monthly="$79" data-amt-annual="$799">$79</span>
+            <span class="per" data-per>/ month</span>
+          </div>
+          <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$79/mo, billed annually">Billed monthly</div>
+          <a class="btn" href="/signup">Start 60-day trial</a>
+          <div class="tier-cap"><b>Unlimited</b> productions &middot; 500&nbsp;GB</div>
           <ul class="tier-list">
-            <li>${TICK} Unlimited productions</li>
             <li>${TICK} Everything in Repertory</li>
-            <li>${TICK} 500 GB storage</li>
             <li>${TICK} Custom branding</li>
             <li>${TICK} Priority support</li>
           </ul>
         </div>
       </div>
-      <p class="center kicker" style="margin-top:26px">Performers, crew, and stage managers never pay — only the company that runs the show subscribes.</p>
+`;
+
+// COMPANIES panel pieces, so page.tsx can inject the Sanity-driven <SanityTiers>
+// between the lead-in and the rest. These are self-contained HTML fragments
+// (no unclosed tags), each rendered into its own dangerouslySetInnerHTML wrapper;
+// page.tsx supplies the surrounding <section>/<div class="wrap">.
+export const PRICING_COMPANIES_OPEN_HTML = PRICING_COMPANIES_LEAD_HTML;
+export const PRICING_COMPANIES_CLOSE_HTML = PRICING_COMPANIES_REST_HTML;
+
+// Full static COMPANIES panel (used when Sanity has no tiers).
+export const PRICING_COMPANIES_HTML = `
+  <section class="section aud-panel" data-aud-panel="companies" style="padding-top:clamp(20px,3vw,30px)">
+    <div class="wrap">
+${PRICING_COMPANIES_LEAD_HTML}${PRICING_COMPANIES_TIERS_HTML}${PRICING_COMPANIES_REST_HTML}
     </div>
   </section>
 `;
 
-export const PRICING_EDU_HTML = `
-  <section class="section" style="padding-top:0">
-    <div class="wrap-narrow">
-      <div class="edu-band reveal" style="text-align:center;border:1px solid var(--border);border-radius:18px;padding:34px 28px;background:var(--bg-muted)">
-        <span class="eyebrow no-rule" style="justify-content:center">Schools &amp; universities</span>
-        <h2 class="title" style="margin-top:12px;font-size:clamp(24px,3.4vw,36px)">Special pricing for <em>education.</em></h2>
-        <p class="lede" style="margin:14px auto 0;max-width:52ch">Drama departments, university theatre programs, and educators get a discounted plan for the school year. Tell us a little about your program and we'll get you set up.</p>
-        <p style="margin:22px 0 0"><a class="btn primary" href="/contact?reason=school">Get education pricing</a></p>
-        <p class="muted" style="font-size:13px;margin-top:14px">We verify quickly by hand — a department email or your program's website is plenty. No paperwork.</p>
+// INDIVIDUALS panel (Proscene Studio). Static only, all CTAs are data-noop.
+export const PRICING_INDIVIDUALS_HTML = `
+  <section class="section aud-panel" data-aud-panel="designers" style="padding-top:clamp(20px,3vw,30px)">
+    <div class="wrap">
+      <div class="panel-lead">
+        <span class="badge-new"><span class="dot"></span>New &middot; coming soon</span>
+        <span class="eyebrow no-rule">Proscene Studio</span>
+        <h2>A private studio that <em>tours with you.</em></h2>
+        <p>For the freelance lighting, set, sound, or projection designer or choreographer who hops between companies. Your own script, your own ground plan, your own workspace, billed to you, not a theatre. Monthly works great for gig work, switch the toggle above.</p>
+      </div>
+
+      <div class="tiers">
+        <div class="tier">
+          <div class="tier-name">Single Tool</div>
+          <div class="tier-desc">Pick one, Script or Blocking, for the way you work.</div>
+          <div class="tier-price">
+            <span class="amt" data-amt-monthly="$5.99" data-amt-annual="$59">$5.99</span>
+            <span class="per" data-per>/ month</span>
+          </div>
+          <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$5.99/mo, billed annually">Billed monthly</div>
+          <a class="btn" href="#" data-noop>Notify me</a>
+          <div class="tier-cap"><b>1</b> production &middot; swap &amp; replace</div>
+          <ul class="tier-list">
+            <li>${TICK} Script <span class="em">or</span> Blocking</li>
+            <li>${TICK} Your uploaded script + AI parse</li>
+            <li>${TICK} One private ground plan</li>
+          </ul>
+        </div>
+        <div class="tier" data-feat>
+          <span class="tier-flag">Best value</span>
+          <div class="tier-name">Studio</div>
+          <div class="tier-desc">Both tools together, script and blocking, side by side.</div>
+          <div class="tier-price">
+            <span class="amt" data-amt-monthly="$9.99" data-amt-annual="$99">$9.99</span>
+            <span class="per" data-per>/ month</span>
+          </div>
+          <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$9.99/mo, billed annually">Billed monthly</div>
+          <a class="btn primary" href="#" data-noop>Notify me</a>
+          <div class="tier-cap"><b>1</b> production &middot; swap &amp; replace</div>
+          <ul class="tier-list">
+            <li>${TICK} Script <span class="em">+</span> Blocking</li>
+            <li>${TICK} Your uploaded script + AI parse</li>
+            <li>${TICK} Both views, pinned together</li>
+          </ul>
+        </div>
+        <div class="tier">
+          <div class="tier-name">Studio Pro</div>
+          <div class="tier-desc">Stop swapping, keep all your shows open at once.</div>
+          <div class="tier-price">
+            <span class="amt" data-amt-monthly="$14.99" data-amt-annual="$149">$14.99</span>
+            <span class="per" data-per>/ month</span>
+          </div>
+          <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$14.99/mo, billed annually">Billed monthly</div>
+          <a class="btn" href="#" data-noop>Notify me</a>
+          <div class="tier-cap"><b>Unlimited</b> shows, all at once</div>
+          <ul class="tier-list">
+            <li>${TICK} Script <span class="em">+</span> Blocking</li>
+            <li>${TICK} Your uploaded script + AI parse</li>
+            <li>${TICK} Every show running in parallel</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="d-notes">
+        <div class="d-note">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.5 2.3 7.1-6.3-4.6L5.7 21l2.3-7.1-6-4.5h7.6z"/></svg></div>
+          <div>
+            <b>Solo prep, not a team workspace.</b>
+            <p>Studio is just for you, Script and Blocking only. Calls, scheduling, reports, the document center, and sharing live on the company plans. Need those for a team? That's an org plan.</p>
+          </div>
+        </div>
+        <div class="d-note">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div>
+            <b>Org invites stay free.</b>
+            <p>Invited to a show by a company on a paid plan? You already have their full suite there, free. Studio is only for your own private prep between gigs, the two never collide.</p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 `;
 
+// Shared tail: pricing FAQ + closing CTA. Same for both renderings.
 export const PRICING_REST_HTML = `
   <section class="section" style="background:var(--bg-muted);border-top:1px solid var(--border)">
-    <div class="wrap">
-      <div class="section-head center reveal" style="text-align:center;margin-bottom:8px">
-        <span class="eyebrow no-rule">Compare plans</span>
-        <h2 class="title" style="margin-top:14px">Everything, side by <em>side.</em></h2>
-      </div>
-      <div class="compare-wrap reveal">
-        <table class="compare">
-          <thead>
-            <tr><th>Feature</th><th>Season</th><th>Repertory</th><th>Company</th></tr>
-          </thead>
-          <tbody>
-            <tr class="grouphd"><td colspan="4">The essentials</td></tr>
-            <tr><td>Active productions at once</td><td>1</td><td>3</td><td>Unlimited</td></tr>
-            <tr><td>Cast, crew &amp; designers</td><td>Unlimited</td><td>Unlimited</td><td>Unlimited</td></tr>
-            <tr><td>Document &amp; media storage</td><td>100 GB</td><td>250 GB</td><td>500 GB</td></tr>
-            <tr><td>Calls, calendar &amp; confirmations</td>${YES}${YES}${YES}</tr>
-            <tr class="grouphd"><td colspan="4">The book</td></tr>
-            <tr><td>Script &amp; scene breakdown</td>${YES}${YES}${YES}</tr>
-            <tr><td>Blocking &amp; ground plans</td>${YES}${YES}${YES}</tr>
-            <tr><td>Auto reports &amp; PDF export</td>${YES}${YES}${YES}</tr>
-            <tr><td>Document &amp; media library</td>${YES}${YES}${YES}</tr>
-            <tr class="grouphd"><td colspan="4">For organizations</td></tr>
-            <tr><td>Custom branding</td><td class="no">—</td><td class="no">—</td>${YES}</tr>
-            <tr><td>Support</td><td>Email</td><td>Email</td><td>Priority</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <section class="section">
     <div class="wrap-narrow">
       <div class="section-head center reveal" style="text-align:center;margin:0 auto 36px">
         <span class="eyebrow no-rule">Billing questions</span>
         <h2 class="title" style="margin-top:14px">The fine print, <em>in plain English.</em></h2>
       </div>
       <div class="faq-mini reveal">
-        <details class="qa"><summary>Do I pay for everyone in my company?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Never. Only the organization running the show subscribes. Every performer, crew member, designer, and stage manager you invite works in Proscene for free — whether your show has a cast of four or forty.</p></details>
-        <details class="qa"><summary>How does the free trial work?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Your 60-day free trial starts when you create your first production — not the day you sign up — so the clock never runs out before you've really begun. No card required. Subscribe any time to keep going.</p></details>
-        <details class="qa"><summary>What happens when the trial ends?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>So we never pull the rug out mid-tech, your day-to-day stays on: you keep sending rehearsal reports, announcements, and call schedules for a grace period to finish your run. The script and blocking tools pause until you subscribe, and you can always view and export everything you've made.</p></details>
-        <details class="qa"><summary>Can I be a participant without paying?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Absolutely. Sign up as a participant and you'll join the productions you're invited to with no cost and no company to set up. If you ever decide to run your own show, you can create a workspace any time.</p></details>
-        <details class="qa"><summary>Is there pricing for schools?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Yes — drama departments and university programs get discounted education pricing for the school year. <a href="/contact?reason=school">Reach out</a> and we'll verify your program by hand and get you set up.</p></details>
-        <details class="qa"><summary>How much file storage do I get?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Plenty for the paperwork of a show: 100&nbsp;GB on Season, 250&nbsp;GB on Repertory, and 500&nbsp;GB on Company, measured across your whole workspace — thousands of scripts, plots, and production photos. Large-scale video hosting isn't part of the plans yet; if that's on your wishlist, <a href="/contact">tell us</a> and it helps us prioritize.</p></details>
-        <details class="qa"><summary>What happens to my data if I cancel?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Your productions are yours. Export everything to PDF and CSV at any time, and closed shows stay readable. We never remove uploaded files without warning you well in advance, with time to download them first.</p></details>
+        <details class="qa"><summary>Do I pay for everyone in my company?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Never. The organization subscribes; cast, crew, designers, and stage management are always free on every plan. Whether your show has a company of four or forty, the price is the same. Plans differ only by how many productions you can run at once.</p></details>
+        <details class="qa"><summary>How does the free trial work?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>New organizations get a 60-day free trial, no card required. The clock doesn't start at signup, it starts when you open your first production, so you can set things up on your own schedule.</p></details>
+        <details class="qa"><summary>What's the difference between monthly and annual?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Annual is roughly ten months for the price of twelve, about 20% off. Both give you the identical toolset; annual just costs less per month. You can switch between them at any time.</p></details>
+        <details class="qa"><summary>What is Proscene Studio, and is it different from a plan?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Studio is a personal subscription for freelance designers and choreographers, Script and Blocking only, billed to you instead of a theatre. It's for your own private prep between gigs. When a company invites you to their show, you already get their full suite there for free; Studio doesn't change that. It's coming soon, switch to the "For individuals" view and tap Notify me to hear when it ships.</p></details>
+        <details class="qa"><summary>Is there a free plan for schools?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Schools get discounted school-year pricing, hand-verified by our team. Reach out and we'll get your department set up.</p></details>
       </div>
       <p class="center" style="margin-top:34px"><a class="btn-link" href="/faq" style="display:inline-flex">Read the full FAQ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a></p>
     </div>
   </section>
 
-  <section class="section" style="padding-top:0">
+  <section class="section">
     <div class="wrap">
       <div class="cta-band center reveal">
         <div class="cta-curtain"></div>
         <div style="position:relative">
-          <h2 class="title" style="font-size:clamp(28px,4vw,46px)">Start free. Subscribe when <em>you load in.</em></h2>
-          <p class="lede" style="margin:18px auto 30px;max-width:48ch">Your first production is free for 60 days — no card, and the clock only starts when you do.</p>
+          <h2 class="title" style="font-size:clamp(28px,4vw,46px)">Start free. Pay when <em>you load in.</em></h2>
+          <p class="lede" style="margin:18px auto 30px;max-width:48ch">Sixty days on us, no card, and the clock only starts at your first production.</p>
           <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
             <a class="btn primary lg" href="/signup">Start free</a>
             <a class="btn ghost lg" href="/contact?reason=demo">Book a demo</a>
@@ -162,4 +298,9 @@ export const PRICING_REST_HTML = `
 
 // Full static page (fallback when Sanity has no pricing tiers).
 export const PRICING_HTML =
-  PRICING_HERO_HTML + PRICING_TIERS_HTML + PRICING_EDU_HTML + PRICING_REST_HTML;
+  PRICING_HERO_HTML +
+  `<div id="pricing-panels">` +
+  PRICING_COMPANIES_HTML +
+  PRICING_INDIVIDUALS_HTML +
+  `</div>` +
+  PRICING_REST_HTML;

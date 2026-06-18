@@ -23,7 +23,7 @@ function fmtDate(d?: string) {
   }
 }
 function initials(name?: string) {
-  if (!name) return "P";
+  if (!name) return "PS";
   return name
     .split(/\s+/)
     .map((p) => p[0])
@@ -90,7 +90,7 @@ export function SanityBlogPost({ post }: { post: Post }) {
           <div className="art-byline">
             <span className="av">{initials(post.author)}</span>
             <div>
-              <b>{post.author || "Proscene"}</b>
+              <b>{post.author || "The Proscene team"}</b>
               <span>{fmtDate(post.publishedAt)}</span>
             </div>
           </div>

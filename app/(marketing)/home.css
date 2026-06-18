@@ -1,7 +1,10 @@
-/* Home page-local styles (from the original index.html <style> block).
+/* Home page-local styles (from the redesigned index.html <style> block).
    Scoped to [data-page="home"] so per-page rules can't collide across
-   marketing pages; tokens resolve from the .ps-site ancestor. */
+   marketing pages; tokens resolve from the .ps-site ancestor. Shared classes
+   (.night, .hero-glow, .checklist, .cta-band, .window) live in marketing.css;
+   only page-specific rules live here. */
 
+/* hero layout + the embedded product mock */
 [data-page="home"] .hero-grid{
   display:grid;grid-template-columns:1.05fr 1.15fr;gap:clamp(32px,5vw,64px);
   align-items:center;
@@ -13,6 +16,7 @@
 [data-page="home"] .hero-note{display:flex;align-items:center;gap:9px;color:var(--ink-3);font-size:13.5px}
 [data-page="home"] .hero-note svg{width:15px;height:15px;color:var(--c-sage)}
 
+/* The mocked "Next Call" card from the product, framed in a window */
 [data-page="home"] .mock{padding:18px;background:linear-gradient(180deg,var(--bg-muted),var(--bg-sunken))}
 [data-page="home"] .mock-card{
   background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;
@@ -47,17 +51,19 @@
 [data-page="home"] .mock-bar i{display:block;height:100%;width:82%;background:var(--c-sage);border-radius:999px}
 [data-page="home"] .mock-actions{display:flex;gap:10px;margin-top:18px}
 [data-page="home"] .mock-btn{height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:500;flex:1}
-[data-page="home"] .mock-btn.primary{background:var(--accent);color:#fff}
+[data-page="home"] .mock-btn.primary{background:var(--accent);color:var(--on-accent)}
 [data-page="home"] .mock-btn.ghost{background:var(--bg-muted);color:var(--ink-2);border:1px solid var(--border)}
 [data-page="home"] .mock-btn svg{width:14px;height:14px}
 [data-page="home"] .mock-tabs{display:flex;gap:6px;padding:0 20px 16px;flex-wrap:wrap}
 [data-page="home"] .mock-tab{font-size:11.5px;color:var(--ink-3);padding:4px 9px;border-radius:6px;background:var(--bg-muted);font-weight:500}
 [data-page="home"] .mock-tab[data-on]{background:var(--accent-soft);color:var(--accent-ink)}
 
+/* split feature row */
 [data-page="home"] .split{display:grid;grid-template-columns:1fr 1fr;gap:clamp(36px,5vw,72px);align-items:center}
 [data-page="home"] .split.flip .split-media{order:-1}
 [data-page="home"] .split-media{position:relative}
 
+/* mini panels used as inline product proofs */
 [data-page="home"] .panel{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-2);overflow:hidden}
 [data-page="home"] .panel-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);font-size:13.5px}
 [data-page="home"] .panel-row:last-child{border-bottom:0}
@@ -66,25 +72,43 @@
 [data-page="home"] .panel-row .lead span{font-size:12px;color:var(--ink-4)}
 [data-page="home"] .panel-time{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-3)}
 
-[data-page="home"] .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
-[data-page="home"] .step{display:flex;flex-direction:column;gap:14px}
-[data-page="home"] .step h3{font-family:var(--font-display);font-size:21px;font-weight:600;letter-spacing:-.01em}
-[data-page="home"] .step p{color:var(--ink-3);font-size:15px;line-height:1.55}
+/* steps: big italic numerals, hairline-unified (no boxes). Overrides the
+   shared .step-num badge from marketing.css for the home page only */
+[data-page="home"] .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(28px,4vw,48px);border-top:1.5px solid var(--border-strong);padding-top:42px}
+[data-page="home"] .step{display:flex;flex-direction:column;gap:12px}
+[data-page="home"] .step .step-num{font-family:var(--font-display);font-style:italic;font-weight:500;font-size:clamp(46px,5vw,62px);line-height:.85;letter-spacing:-.02em;color:var(--accent);width:auto;height:auto;border:0;border-radius:0;display:block}
+[data-page="home"] .step h3{font-family:var(--font-display);font-size:22px;font-weight:600;letter-spacing:-.012em}
+[data-page="home"] .step p{color:var(--ink-3);font-size:15px;line-height:1.58}
 
+/* big testimonial / belief pull-quote */
 [data-page="home"] .quote{font-family:var(--font-display);font-weight:500;font-size:clamp(24px,3.2vw,38px);line-height:1.28;letter-spacing:-.012em;text-wrap:balance}
-[data-page="home"] .quote em{font-style:normal;color:color-mix(in oklch,var(--accent) 72%, white)}
+[data-page="home"] .quote em{font-style:italic;color:color-mix(in oklch,var(--accent) 72%, white)}
 [data-page="home"] .quote-by{display:flex;align-items:center;gap:14px;margin-top:30px}
 [data-page="home"] .quote-av{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600;font-size:16px;background:linear-gradient(135deg,var(--c-clay),var(--accent))}
 [data-page="home"] .quote-by b{display:block;color:var(--night-ink);font-weight:600}
 [data-page="home"] .quote-by span{color:var(--night-ink-3);font-size:14px}
 
-[data-page="home"] .ptease{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-[data-page="home"] .ptier{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-l);padding:24px;display:flex;flex-direction:column;gap:6px}
-[data-page="home"] .ptier[data-feat]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent), var(--shadow-2)}
-[data-page="home"] .ptier .tname{font-family:var(--font-display);font-size:19px;font-weight:600}
-[data-page="home"] .ptier .tprice{font-family:var(--font-display);font-size:34px;font-weight:600;letter-spacing:-.02em;margin:4px 0 2px}
-[data-page="home"] .ptier .tprice small{font-size:14px;color:var(--ink-3);font-weight:400;font-family:var(--font-ui)}
-[data-page="home"] .ptier .tdesc{color:var(--ink-3);font-size:13.5px;min-height:38px}
+/* free-form value props, borderless, unified by one hairline */
+[data-page="home"] .values{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(28px,4vw,54px);margin-top:54px;border-top:1.5px solid var(--border-strong);padding-top:44px}
+[data-page="home"] .value{display:flex;flex-direction:column;align-items:flex-start;gap:13px}
+[data-page="home"] .value-ico{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-ink)}
+[data-page="home"] .value-ico svg{width:26px;height:26px}
+[data-page="home"] .value-ico[data-c="dusk"]{background:var(--c-dusk-soft);color:color-mix(in oklch,var(--c-dusk) 60%,var(--ink))}
+[data-page="home"] .value-ico[data-c="sage"]{background:var(--c-sage-soft);color:color-mix(in oklch,var(--c-sage) 55%,var(--ink))}
+[data-page="home"] .value h3{font-family:var(--font-display);font-size:22px;font-weight:600;letter-spacing:-.012em}
+[data-page="home"] .value p{color:var(--ink-3);font-size:15.5px;line-height:1.6}
+
+/* stage glow + gentle tilt behind product panels (the pop) */
+[data-page="home"] .stage{position:relative}
+[data-page="home"] .stage::before{content:"";position:absolute;inset:-14% 0;z-index:0;pointer-events:none;background:radial-gradient(58% 56% at 50% 42%, var(--glow, var(--accent-soft)), transparent 72%);opacity:.92;filter:blur(6px)}
+[data-page="home"] .stage .panel,[data-page="home"] .stage .window{position:relative;z-index:1}
+[data-page="home"] .stage.tilt .panel{transform:rotate(-1.1deg);transition:transform .25s ease}
+[data-page="home"] .stage.tilt:hover .panel{transform:rotate(0)}
+
+/* floating chip poking out of a panel, for life */
+[data-page="home"] .float-chip{position:absolute;z-index:4;display:inline-flex;align-items:center;gap:8px;background:var(--bg-elev);border:1px solid var(--border);border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:600;color:var(--ink-2);box-shadow:var(--shadow-3);white-space:nowrap}
+[data-page="home"] .float-chip .fdot{width:8px;height:8px;border-radius:50%;background:var(--c-sage);flex-shrink:0}
+[data-page="home"] .float-chip[data-c="accent"] .fdot{background:var(--accent)}
 
 @media (max-width:860px){
   [data-page="home"] .hero-grid{grid-template-columns:1fr;gap:40px}
@@ -92,6 +116,6 @@
   [data-page="home"] .hero-media{order:2}
   [data-page="home"] .split{grid-template-columns:1fr;gap:32px}
   [data-page="home"] .split.flip .split-media{order:0}
-  [data-page="home"] .steps{grid-template-columns:1fr}
-  [data-page="home"] .ptease{grid-template-columns:1fr}
+  [data-page="home"] .values{grid-template-columns:1fr;gap:32px}
+  [data-page="home"] .steps{grid-template-columns:1fr;gap:30px}
 }
