@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog &amp; Walkthroughs · ProScene</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="site.css">
+<style>
+  .page-hero{padding:clamp(48px,7vw,72px) 0 clamp(20px,3vw,32px)}
+  .blog-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:24px}
+  .blog-tab{padding:8px 15px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid var(--border-strong);color:var(--ink-2);background:var(--bg-elev)}
+  .blog-tab[data-on]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  /* placeholder image area, striped */
+  .ph{
+    background:
+      repeating-linear-gradient(135deg, var(--bg-sunken) 0 10px, var(--bg-muted) 10px 20px);
+    border:1px solid var(--border);position:relative;overflow:hidden;
+  }
+  .ph::after{content:attr(data-label);position:absolute;bottom:10px;left:12px;font-family:var(--font-mono);font-size:10.5px;color:var(--ink-4);background:var(--bg-elev);padding:2px 7px;border-radius:5px;border:1px solid var(--border)}
+  .ph[data-accent]{background:repeating-linear-gradient(135deg, var(--accent-soft) 0 10px, color-mix(in oklch,var(--accent-soft) 70%,var(--bg)) 10px 20px)}
+
+  .feat-post{display:grid;grid-template-columns:1.1fr 1fr;gap:36px;align-items:center;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden;box-shadow:var(--shadow-1)}
+  .feat-post .ph{aspect-ratio:4/3;border:0;border-right:1px solid var(--border)}
+  .feat-post .body{padding:clamp(24px,3vw,40px)}
+  .feat-post .body .meta{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+  .feat-post h2{font-family:var(--font-display);font-size:clamp(24px,3vw,34px);font-weight:600;letter-spacing:-.015em;line-height:1.12;margin-bottom:12px}
+  .feat-post p{color:var(--ink-3);font-size:16px;line-height:1.6;margin-bottom:20px}
+
+  .posts{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+  .post{display:flex;flex-direction:column;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden;box-shadow:var(--shadow-1);transition:transform .18s,box-shadow .18s,border-color .18s}
+  .post:hover{transform:translateY(-3px);box-shadow:var(--shadow-2);border-color:var(--border-strong)}
+  .post .ph{aspect-ratio:16/10;border:0;border-bottom:1px solid var(--border)}
+  .post .body{padding:20px;display:flex;flex-direction:column;gap:10px;flex:1}
+  .post .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .post h3{font-family:var(--font-display);font-size:20px;font-weight:600;letter-spacing:-.01em;line-height:1.18}
+  .post p{color:var(--ink-3);font-size:14px;line-height:1.55;flex:1}
+  .post .by{font-size:12.5px;color:var(--ink-4);margin-top:4px}
+  .read{font-size:12px;color:var(--ink-4);font-family:var(--font-mono)}
+  @media (max-width:900px){.posts{grid-template-columns:repeat(2,1fr)}.feat-post{grid-template-columns:1fr}.feat-post .ph{border-right:0;border-bottom:1px solid var(--border)}}
+  @media (max-width:600px){.posts{grid-template-columns:1fr}}
+</style>
+</head>
+<body data-page="blog">
+
+  <section class="page-hero">
+    <div class="wrap">
+      <span class="eyebrow">The ProScene blog</span>
+      <h1 class="display" style="margin-top:18px;font-size:clamp(34px,5vw,58px)">Notes from the <em>prompt desk.</em></h1>
+      <p class="lede lede-narrow" style="margin-top:18px">Walkthroughs, stage-management craft, and the occasional opinion about call times, written by people who've held the book.</p>
+      <div class="blog-tabs">
+        <button class="blog-tab" data-on>All</button>
+        <button class="blog-tab">Walkthroughs</button>
+        <button class="blog-tab">SM craft</button>
+        <button class="blog-tab">Product</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURED -->
+  <section class="section-tight">
+    <div class="wrap">
+      <a class="feat-post reveal" href="blog-post.html">
+        <div class="ph" data-accent data-label="hero / setup-walkthrough.jpg"></div>
+        <div class="body">
+          <div class="meta">
+            <span class="pill" data-c="accent">Walkthrough</span>
+            <span class="read">8 min read</span>
+          </div>
+          <h2>Set up your first production in ProScene, a 10-minute walkthrough</h2>
+          <p>From a blank screen to your first call going out. We build a real show step by step: venues, cast list, the rehearsal calendar, and sending a call the whole company confirms.</p>
+          <span class="btn-link" style="display:inline-flex">Read the walkthrough <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+          <div class="by" style="margin-top:14px">The ProScene team · May 28, 2026</div>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- GRID -->
+  <section class="section" style="padding-top:8px">
+    <div class="wrap">
+      <div class="posts reveal">
+        <a class="post" href="blog-post.html">
+          <div class="ph" data-label="reports-feature.jpg"></div>
+          <div class="body">
+            <div class="meta"><span class="pill" data-c="amber">Walkthrough</span><span class="read">6 min</span></div>
+            <h3>Daily reports that send themselves</h3>
+            <p>Tag notes by department as the room runs, and let ProScene format and route the report before you've packed up.</p>
+            <div class="by">The ProScene team · May 21, 2026</div>
+          </div>
+        </a>
+
+        <a class="post" href="blog-post.html">
+          <div class="ph" data-label="blocking-guide.jpg"></div>
+          <div class="body">
+            <div class="meta"><span class="pill" data-c="clay">SM craft</span><span class="read">9 min</span></div>
+            <h3>Blocking notation that anyone can read back</h3>
+            <p>A field guide to recording moves so your shorthand survives the night, and makes sense to the swing six weeks later.</p>
+            <div class="by">The ProScene team · May 14, 2026</div>
+          </div>
+        </a>
+
+        <a class="post" href="blog-post.html">
+          <div class="ph" data-label="conflict-detection.jpg"></div>
+          <div class="body">
+            <div class="meta"><span class="pill" data-c="dusk">Product</span><span class="read">4 min</span></div>
+            <h3>New: conflict detection across your whole company</h3>
+            <p>ProScene now flags double-bookings before you schedule them. Here's how it reads the cast's availability.</p>
+            <div class="by">The ProScene team · May 7, 2026</div>
+          </div>
+        </a>
+
+        <a class="post" href="blog-post.html">
+          <div class="ph" data-label="cast-list-import.jpg"></div>
+          <div class="body">
+            <div class="meta"><span class="pill" data-c="accent">Walkthrough</span><span class="read">5 min</span></div>
+            <h3>Import a cast list in under a minute</h3>
+            <p>Paste from a spreadsheet, map the columns, and you've got a full company with roles, contacts, and conflicts.</p>
+            <div class="by">The ProScene team · Apr 30, 2026</div>
+          </div>
+        </a>
+
+        <a class="post" href="blog-post.html">
+          <div class="ph" data-label="tech-week.jpg"></div>
+          <div class="body">
+            <div class="meta"><span class="pill" data-c="clay">SM craft</span><span class="read">11 min</span></div>
+            <h3>Surviving tech week: a stage manager's checklist</h3>
+            <p>The calls, the cue-to-cue, the running times, what to track, when to call breaks, and how to keep everyone fed and sane.</p>
+            <div class="by">The ProScene team · Apr 16, 2026</div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- NEWSLETTER -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap-narrow">
+      <div class="card card-pad center reveal" style="padding:clamp(32px,4vw,48px)">
+        <span class="eyebrow no-rule" style="justify-content:center;margin-bottom:14px">The half-hour call</span>
+        <h3 class="subtitle">A short letter for stage managers, twice a month.</h3>
+        <p class="lede" style="margin:12px auto 24px;max-width:46ch">Craft, product updates, and the occasional war story. No spam, unsubscribe in a tap.</p>
+        <form style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;max-width:440px;margin:0 auto" onsubmit="return false">
+          <input type="email" placeholder="you@theatre.com" aria-label="Email" style="flex:1;min-width:220px;height:50px;border:1px solid var(--border-strong);border-radius:var(--radius);padding:0 16px;font-size:15px;font-family:inherit;background:var(--bg-elev)">
+          <button class="btn primary" style="height:50px" type="submit">Subscribe</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <script src="site.js"></script>
+  <script>
+    (function(){const t=[...document.querySelectorAll('.blog-tab')];t.forEach(b=>b.addEventListener('click',()=>{t.forEach(x=>x.removeAttribute('data-on'));b.setAttribute('data-on','');}));})();
+  </script>
+</body>
+</html>

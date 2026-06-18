@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 48" width="144" height="96" aria-label="Rug"><rect x="0.5" y="0.5" width="71" height="47" fill="none" stroke="#1f1a14" stroke-width="0.5" stroke-dasharray="2 1.5"></rect>
+      <rect x="3.5" y="3.5" width="65" height="41" fill="none" stroke="#1f1a14" stroke-width="0.4" opacity="0.55"></rect>
+      <rect x="6.5" y="6.5" width="59" height="35" fill="none" stroke="#1f1a14" stroke-width="0.3" opacity="0.4"></rect>
+      <line x1="36" y1="6.5" x2="36" y2="41.5" stroke="#1f1a14" stroke-width="0.25" opacity="0.4" stroke-dasharray="1 1"></line>
+      <line x1="6.5" y1="24" x2="65.5" y2="24" stroke="#1f1a14" stroke-width="0.25" opacity="0.4" stroke-dasharray="1 1"></line>
+</svg>

@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 16" width="120" height="32" aria-label="Bench"><rect x="0.5" y="0.5" width="59" height="15" rx="1" fill="none" stroke="#1f1a14" stroke-width="0.6"></rect>
+      <line x1="2" y1="5.3" x2="58" y2="5.3" stroke="#1f1a14" stroke-width="0.3" opacity="0.5"></line>
+      <line x1="2" y1="10.7" x2="58" y2="10.7" stroke="#1f1a14" stroke-width="0.3" opacity="0.5"></line>
+</svg>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Set up your first production · ProScene</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="site.css">
+<style>
+  .art-hero{padding:clamp(40px,6vw,68px) 0 0}
+  .art-back{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink-3);font-weight:500;margin-bottom:22px}
+  .art-back svg{width:16px;height:16px}
+  .art-back:hover{color:var(--ink)}
+  .art-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+  .art-title{font-family:var(--font-display);font-weight:600;font-size:clamp(30px,4.4vw,52px);letter-spacing:-.02em;line-height:1.08;max-width:18ch}
+  .art-lede{font-size:clamp(17px,1.6vw,21px);line-height:1.55;color:var(--ink-2);margin-top:18px;max-width:60ch}
+  .art-byline{display:flex;align-items:center;gap:12px;margin:26px 0}
+  .art-byline .av{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600;background:linear-gradient(135deg,var(--c-clay),var(--accent))}
+  .art-byline b{display:block;font-size:14.5px}
+  .art-byline span{font-size:13px;color:var(--ink-4)}
+
+  .ph{background:repeating-linear-gradient(135deg, var(--bg-sunken) 0 10px, var(--bg-muted) 10px 20px);border:1px solid var(--border);border-radius:var(--radius-l);position:relative;overflow:hidden}
+  .ph::after{content:attr(data-label);position:absolute;bottom:12px;left:14px;font-family:var(--font-mono);font-size:11px;color:var(--ink-4);background:var(--bg-elev);padding:3px 8px;border-radius:6px;border:1px solid var(--border)}
+  .art-cover{aspect-ratio:21/9;margin:8px 0 0}
+
+  .art-body{max-width:680px;margin:0 auto;font-size:18px;line-height:1.7;color:var(--ink-2)}
+  .art-body > *{margin:0 auto}
+  .art-body p{margin:24px 0}
+  .art-body h2{font-family:var(--font-display);font-size:30px;font-weight:600;letter-spacing:-.015em;color:var(--ink);margin:48px 0 4px;line-height:1.15}
+  .art-body h2 .step{font-style:italic;color:var(--accent);font-size:.7em;display:block;margin-bottom:2px}
+  .art-body h3{font-size:21px;font-weight:600;color:var(--ink);margin:32px 0 0}
+  .art-body strong{color:var(--ink);font-weight:600}
+  .art-body em{font-style:italic}
+  .art-body ul{margin:20px 0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:12px}
+  .art-body ul li{display:flex;gap:12px;align-items:flex-start}
+  .art-body ul li .tick{width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center;flex-shrink:0;margin-top:3px}
+  .art-body ul li .tick svg{width:13px;height:13px;stroke-width:2.4}
+  .art-body .ph{aspect-ratio:16/9;margin:32px auto}
+  .callout{background:var(--bg-muted);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:18px 22px;margin:32px 0;font-size:16px}
+  .callout b{color:var(--ink)}
+  .pull{font-family:var(--font-display);font-size:26px;line-height:1.3;font-weight:500;color:var(--ink);letter-spacing:-.01em;margin:40px 0;text-wrap:balance}
+  .pull em{font-style:italic;color:var(--accent)}
+
+  /* numbered step chip in code/mock */
+  .panel{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-1);overflow:hidden;margin:28px 0}
+  .panel-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);font-size:14px}
+  .panel-row:last-child{border-bottom:0}
+  .panel-row .lead{flex:1;color:var(--ink-2)}
+  .panel-row .lead b{color:var(--ink);font-weight:600;display:block}
+  .panel-head{background:var(--bg-muted);font-weight:600;color:var(--ink)}
+
+  .art-foot{max-width:680px;margin:48px auto 0;padding-top:28px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .more{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:18px}
+  .more a{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden;box-shadow:var(--shadow-1);transition:transform .18s,box-shadow .18s}
+  .more a:hover{transform:translateY(-3px);box-shadow:var(--shadow-2)}
+  .more .ph{aspect-ratio:16/9;border:0;border-bottom:1px solid var(--border);border-radius:0}
+  .more .b{padding:16px 18px}
+  .more h4{font-family:var(--font-display);font-size:18px;font-weight:600;margin-bottom:4px}
+  .more span{font-size:13px;color:var(--ink-4)}
+  @media (max-width:600px){.more{grid-template-columns:1fr}}
+</style>
+</head>
+<body data-page="blog">
+
+  <article>
+    <header class="art-hero">
+      <div class="wrap-narrow">
+        <a class="art-back" href="blog.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg> Back to the blog</a>
+        <div class="art-meta">
+          <span class="pill" data-c="accent">Walkthrough</span>
+          <span class="read mono" style="color:var(--ink-4)">8 min read</span>
+        </div>
+        <h1 class="art-title">Set up your first production in ProScene</h1>
+        <p class="art-lede">A blank screen to your first call going out, step by step. We'll build a real show, <em>The Pirates of Penzance</em>, and have the whole company confirmed by the end.</p>
+        <div class="art-byline">
+          <span class="av">PS</span>
+          <div><b>The ProScene team</b><span>May 28, 2026</span></div>
+        </div>
+      </div>
+      <div class="wrap">
+        <div class="ph art-cover" data-accent data-label="cover / new-production.jpg" style="background:repeating-linear-gradient(135deg, var(--accent-soft) 0 12px, color-mix(in oklch,var(--accent-soft) 70%,var(--bg)) 12px 24px)"></div>
+      </div>
+    </header>
+
+    <div class="section">
+      <div class="art-body">
+        <p>If you've stage-managed before, you know the first week is mostly logistics: a cast list, a calendar, a venue, and a hundred small details you'll spend the run keeping straight. The promise of ProScene is that you do this <strong>once</strong>, and then it works for you every night after. Here's the whole setup, start to finish.</p>
+
+        <div class="callout"><b>Before you start:</b> have your cast list handy (a spreadsheet is perfect) and know your rehearsal dates and venue. That's everything you need.</div>
+
+        <h2><span class="step">Step one</span>Create the production</h2>
+        <p>From your workspace, hit <strong>New production</strong>. Name the show, set the company it belongs to, and pick your dates, first rehearsal through closing night. ProScene uses these to build the spine of your calendar, so don't worry about being precise yet; you can move anything later.</p>
+        <p>Add your venues while you're here. Most shows have a couple, a rehearsal studio and the theatre itself. Naming them now means every call you send later just references the right room.</p>
+
+        <div class="panel">
+          <div class="panel-row panel-head">New production</div>
+          <div class="panel-row"><span class="lead"><b>The Pirates of Penzance</b><span style="font-size:12px;color:var(--ink-4)">Gilbert &amp; Sullivan · Comic opera</span></span><span class="pill" data-c="accent">Spring season</span></div>
+          <div class="panel-row"><span class="lead">Rehearsals begin</span><span class="mono" style="font-size:12px;color:var(--ink-3)">Apr 7 → Jun 1</span></div>
+          <div class="panel-row"><span class="lead">Venues</span><span class="mono" style="font-size:12px;color:var(--ink-3)">Studio A · Wellman Theatre</span></div>
+        </div>
+
+        <h2><span class="step">Step two</span>Bring in your company</h2>
+        <p>This is the part people dread and shouldn't. Instead of typing 22 actors by hand, paste your cast list straight from a spreadsheet. ProScene reads the columns and maps them, name, role, email, phone, emergency contact, and you confirm the matches in one pass.</p>
+        <ul>
+          <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Paste from Sheets, Excel, or Numbers, or upload a CSV</li>
+          <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Set each person's role: principal, ensemble, crew, design, FOH</li>
+          <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Reuse a company you've built before in one click</li>
+        </ul>
+        <p>Everyone you add gets an invite. They tap one link, and they're in, seeing exactly what their role should see and nothing more.</p>
+
+        <div class="pull">"The first time I imported a cast list and watched 22 people appear in ten seconds, I genuinely laughed out loud at my desk."</div>
+
+        <h2><span class="step">Step three</span>Build the rehearsal calendar</h2>
+        <p>Now the part that earns its keep. Lay out your rehearsal period, block by block, scene by scene. Drag to reschedule, mark tech week, and as you go, ProScene quietly checks the cast's availability and flags conflicts <em>before</em> they cost you a room.</p>
+        <div class="ph" data-label="screenshot / production-calendar.jpg"></div>
+        <p>You don't have to plan the whole period in one sitting. Most stage managers rough in the shape, read-throughs, music calls, blocking weeks, runs, tech, and fill in detail a week at a time. The calendar is the single source everyone reads from, so a change you make here reaches all 22 phones at once.</p>
+
+        <h2><span class="step">Step four</span>Send your first call</h2>
+        <p>Pick a rehearsal, choose who's needed, by scene, by role, or hand-picked, and send. That's it. The call lands on everyone's device, they confirm with a tap, and you watch the room fill up in real time.</p>
+        <div class="panel">
+          <div class="panel-row panel-head">Tonight · Act II Stumble Run · 7:00 PM</div>
+          <div class="panel-row"><span class="lead"><b>Tom Mercer</b> · Pirate King</span><span class="pill" data-c="sage"><span class="dot"></span>Confirmed</span></div>
+          <div class="panel-row"><span class="lead"><b>Priya Anand</b> · Mabel</span><span class="pill" data-c="sage"><span class="dot"></span>Confirmed</span></div>
+          <div class="panel-row"><span class="lead"><b>Marcus Ellroy</b> · Sergeant</span><span class="pill" data-c="amber"><span class="dot"></span>Seen</span></div>
+        </div>
+        <p>No more "did everyone get that?" The night before and the morning of, ProScene nudges anyone who hasn't confirmed, so you're not the human reminder service anymore.</p>
+
+        <div class="callout"><b>That's the whole setup.</b> From here, you layer in the script, take blocking, and file reports as you rehearse, but the show is already running on ProScene, and you did it in about ten minutes.</div>
+
+        <p>The point isn't the software. It's the hour you get back every night, and the quiet certainty that the whole company knows where to be. Build the show once. Let it carry you to closing.</p>
+      </div>
+
+      <div class="art-foot">
+        <span class="kicker">Written by the ProScene team</span>
+        <div style="display:flex;gap:10px">
+          <a class="btn sm" href="#" data-noop>Share</a>
+          <a class="btn primary sm" href="#" data-noop>Start your production</a>
+        </div>
+      </div>
+
+      <div class="wrap-narrow" style="margin-top:48px">
+        <h3 class="subtitle" style="margin-bottom:4px">Keep reading</h3>
+        <div class="more">
+          <a href="blog-post.html">
+            <div class="ph" data-label="reports.jpg"></div>
+            <div class="b"><h4>Daily reports that send themselves</h4><span>Walkthrough · 6 min</span></div>
+          </a>
+          <a href="blog-post.html">
+            <div class="ph" data-label="tech-week.jpg"></div>
+            <div class="b"><h4>Surviving tech week: a checklist</h4><span>SM craft · 11 min</span></div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- CTA -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="cta-band center reveal">
+        <div class="cta-curtain"></div>
+        <div style="position:relative">
+          <h2 class="title" style="font-size:clamp(28px,4vw,46px)">Ready to set up <em>your show?</em></h2>
+          <p class="lede" style="margin:18px auto 30px;max-width:46ch">Ten minutes from now, your company could be confirming their first call.</p>
+          <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+            <a class="btn primary lg" href="#" data-noop>Start free</a>
+            <a class="btn ghost lg" href="features.html">Tour the features</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="site.js"></script>
+</body>
+</html>

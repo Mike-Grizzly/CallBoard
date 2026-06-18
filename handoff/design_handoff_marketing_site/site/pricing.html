@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pricing · ProScene</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="site.css">
+<style>
+  .page-hero{padding:clamp(48px,7vw,80px) 0 clamp(18px,2.5vw,28px);text-align:center}
+
+  /* ── controls: audience switcher + billing toggle ── */
+  .controls{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:28px}
+  .aud-toggle{
+    position:relative;display:inline-grid;grid-auto-flow:column;
+    background:var(--bg-sunken);border:1px solid var(--border);
+    border-radius:999px;padding:4px;
+  }
+  .aud-seg{
+    position:relative;z-index:1;appearance:none;border:0;background:transparent;
+    font-family:var(--font-ui);font-size:14.5px;font-weight:600;letter-spacing:-.005em;
+    color:var(--ink-3);padding:10px 22px;border-radius:999px;white-space:nowrap;
+    cursor:pointer;transition:color .2s ease;
+  }
+  .aud-seg:hover{color:var(--ink)}
+  .aud-seg[aria-selected="true"]{color:var(--on-accent)}
+  .aud-seg:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .aud-thumb{
+    position:absolute;top:4px;left:4px;z-index:0;height:calc(100% - 8px);width:0;
+    border-radius:999px;background:var(--accent);
+    box-shadow:0 4px 12px -4px color-mix(in oklch,var(--accent) 60%,transparent);
+    transition:left .28s cubic-bezier(.4,.1,.2,1),width .28s cubic-bezier(.4,.1,.2,1);
+  }
+  .billing{display:inline-flex;align-items:center;gap:6px;background:var(--bg-elev);border:1px solid var(--border);border-radius:999px;padding:5px}
+  .billing button{border:0;background:transparent;padding:9px 18px;border-radius:999px;font-size:14px;font-weight:500;color:var(--ink-3);white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+  .billing button[data-on]{background:var(--ink);color:var(--bg)}
+  .billing .save{font-size:11.5px;color:var(--c-sage);font-weight:600}
+  .billing button[data-on] .save{color:color-mix(in oklch,var(--c-sage) 75%,white)}
+
+  /* ── audience panels ── */
+  .aud-panel{display:none}
+  body[data-aud="companies"] .aud-panel[data-aud-panel="companies"]{display:block}
+  body[data-aud="designers"] .aud-panel[data-aud-panel="designers"]{display:block}
+  @media (prefers-reduced-motion:no-preference){
+    .aud-panel{animation:audIn .34s ease both}
+  }
+  @keyframes audIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* lead-in line for each panel */
+  .panel-lead{text-align:center;max-width:62ch;margin:0 auto clamp(28px,4vw,40px)}
+  .panel-lead .eyebrow{justify-content:center;margin-bottom:14px}
+  .panel-lead h2{font-family:var(--font-display);font-size:clamp(24px,3vw,34px);font-weight:600;letter-spacing:-.02em}
+  .panel-lead em{font-style:italic;color:var(--accent)}
+  .panel-lead p{color:var(--ink-3);font-size:16px;margin-top:12px}
+  .panel-lead .badge-new{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-ink);background:var(--accent-soft);border-radius:999px;padding:5px 13px;margin-bottom:16px}
+  .panel-lead .badge-new .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+  /* tiers */
+  .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:start}
+  .tier{
+    background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-l);
+    padding:30px;display:flex;flex-direction:column;box-shadow:var(--shadow-1);position:relative;
+  }
+  .tier[data-feat]{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent),var(--shadow-3);z-index:1}
+  .tier-flag{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:11.5px;font-weight:600;letter-spacing:.06em;padding:5px 14px;border-radius:999px;text-transform:uppercase;white-space:nowrap}
+  .tier-name{font-family:var(--font-display);font-size:23px;font-weight:600;letter-spacing:-.01em}
+  .tier-desc{color:var(--ink-3);font-size:14px;margin-top:6px;min-height:42px}
+  .tier-price{display:flex;align-items:baseline;gap:5px;margin:18px 0 4px}
+  .tier-price .amt{font-family:var(--font-display);font-size:46px;font-weight:600;letter-spacing:-.025em;line-height:1}
+  .tier-price .per{color:var(--ink-3);font-size:14px}
+  .tier-sub{font-size:12.5px;color:var(--ink-4);min-height:18px}
+  .tier-cap{font-size:13px;color:var(--ink-2);margin:14px 0 0;font-weight:500;display:flex;align-items:center;gap:8px}
+  .tier-cap b{font-family:var(--font-display);font-weight:600;color:var(--ink)}
+  .tier .btn{margin:20px 0 22px;width:100%}
+  .tier-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px}
+  .tier-list li{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--ink-2)}
+  .tier-list .tick{width:18px;height:18px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center;flex-shrink:0;margin-top:1px}
+  .tier-list .tick svg{width:11px;height:11px;stroke-width:2.6}
+  .tier-list .em{font-style:normal;color:var(--ink-4)}
+
+  /* "everyone is free" banner */
+  .free-banner{
+    display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:space-between;
+    background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-l);
+    padding:22px 26px;box-shadow:var(--shadow-1);margin-top:22px;
+  }
+  .free-banner .fb-icon{width:42px;height:42px;border-radius:11px;background:var(--c-sage-soft);color:color-mix(in oklch,var(--c-sage) 55%,var(--ink));display:grid;place-items:center;flex-shrink:0}
+  .free-banner .fb-icon svg{width:22px;height:22px}
+  .free-banner .fb-body{flex:1;min-width:240px}
+  .free-banner b{font-family:var(--font-display);font-size:16px;font-weight:600}
+  .free-banner p{color:var(--ink-3);font-size:14px;margin-top:3px}
+
+  /* "every plan includes" strip */
+  .includes{margin-top:54px}
+  .includes-head{text-align:center;margin-bottom:26px}
+  .includes-head .lbl{font-size:12.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4)}
+  .includes-head h3{font-family:var(--font-display);font-size:clamp(22px,2.6vw,28px);font-weight:600;letter-spacing:-.02em;margin-top:10px}
+  .includes-head em{font-style:italic;color:var(--accent)}
+  .inc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 26px}
+  .inc-grid div{display:flex;gap:11px;align-items:flex-start;font-size:14.5px;color:var(--ink-2)}
+  .inc-grid .tick{width:20px;height:20px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center;flex-shrink:0;margin-top:1px}
+  .inc-grid .tick svg{width:12px;height:12px;stroke-width:2.5}
+
+  /* designer clarifying notes */
+  .d-notes{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:30px}
+  .d-note{display:flex;gap:13px;align-items:flex-start;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-l);padding:20px 22px;box-shadow:var(--shadow-1)}
+  .d-note .ic{width:34px;height:34px;border-radius:9px;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center;flex-shrink:0}
+  .d-note .ic svg{width:18px;height:18px}
+  .d-note b{font-family:var(--font-display);font-size:15px;font-weight:600;display:block;margin-bottom:4px}
+  .d-note p{color:var(--ink-3);font-size:13.5px;line-height:1.55}
+
+  /* comparison table */
+  .compare{width:100%;border-collapse:collapse}
+  .compare th,.compare td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--border);font-size:14.5px}
+  .compare thead th{font-family:var(--font-display);font-size:17px;font-weight:600;border-bottom:2px solid var(--border-strong)}
+  .compare thead th:first-child{font-family:var(--font-ui);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-4);font-weight:600}
+  .compare td:not(:first-child),.compare th:not(:first-child){text-align:center;width:19%}
+  .compare th[data-feat]{color:var(--accent-ink)}
+  .compare td:first-child{color:var(--ink-2)}
+  .compare tbody tr:hover{background:var(--bg-muted)}
+  .compare .yes{color:var(--accent-ink)}
+  .compare .yes svg{width:18px;height:18px;stroke-width:2.4}
+  .compare .no{color:var(--ink-4)}
+  .compare .grouphd td{font-weight:600;color:var(--ink);background:var(--bg-muted);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase}
+  .compare-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-elev);box-shadow:var(--shadow-1);margin-top:54px}
+
+  .faq-mini{display:flex;flex-direction:column;gap:0}
+  .qa{border-bottom:1px solid var(--border);padding:22px 0}
+  .qa summary{font-family:var(--font-display);font-size:19px;font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:16px;align-items:center}
+  .qa summary::-webkit-details-marker{display:none}
+  .qa summary .pl{width:24px;height:24px;flex-shrink:0;color:var(--ink-3);transition:transform .2s}
+  .qa[open] summary .pl{transform:rotate(45deg)}
+  .qa p{margin-top:12px;color:var(--ink-3);font-size:15px;line-height:1.6;max-width:70ch}
+
+  @media (max-width:860px){
+    .tiers{grid-template-columns:1fr;max-width:420px;margin:0 auto}
+    .tier[data-feat]{order:-1}
+    .inc-grid{grid-template-columns:1fr;max-width:420px;margin:0 auto}
+    .d-notes{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body data-page="pricing" data-aud="designers">
+
+  <section class="page-hero">
+    <div class="wrap">
+      <span class="eyebrow no-rule" style="justify-content:center">Pricing</span>
+      <h1 class="display" style="margin-top:16px;font-size:clamp(36px,5.4vw,64px)">Pay for the shows <em>you run.</em></h1>
+      <p class="lede" style="margin:18px auto 0;max-width:56ch">Never for the people in them. Whether you're a company running a season or a designer touring between them, your collaborators are always free.</p>
+      <div class="controls">
+        <div class="aud-toggle" role="tablist" aria-label="Who's paying?">
+          <button class="aud-seg" id="tab-designers" role="tab" type="button" data-aud="designers" aria-controls="pricing-panels" aria-selected="true" tabindex="0">For individuals</button>
+          <button class="aud-seg" id="tab-companies" role="tab" type="button" data-aud="companies" aria-controls="pricing-panels" aria-selected="false" tabindex="-1">For companies</button>
+          <span class="aud-thumb" aria-hidden="true"></span>
+        </div>
+        <div class="billing" role="group" aria-label="Billing period">
+          <button data-period="monthly" data-on>Monthly</button>
+          <button data-period="annual">Annual <span class="save">save ~20%</span></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="pricing-panels">
+
+  <!-- ════════ COMPANIES ════════ -->
+  <section class="section aud-panel" data-aud-panel="companies" style="padding-top:clamp(20px,3vw,30px)">
+    <div class="wrap">
+      <div class="panel-lead">
+        <span class="eyebrow no-rule">For companies &amp; theatres</span>
+        <h2>Plans differ only by how many shows you run <em>at once.</em></h2>
+        <p>Every paid plan includes the entire toolset and unlimited cast, crew, and creative team. New organizations get a 60-day free trial, no card, and the clock starts at your first production, not signup.</p>
+      </div>
+
+      <div class="tiers">
+        <!-- SEASON -->
+        <div class="tier">
+          <div class="tier-name">Season</div>
+          <div class="tier-desc">For one show at a time, a single company, in production.</div>
+          <div class="tier-price">
+            <span class="amt" data-amt-monthly="$25" data-amt-annual="$249">$25</span>
+            <span class="per" data-per>/ month</span>
+          </div>
+          <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$25/mo, billed annually">Billed monthly</div>
+          <a class="btn" href="#" data-noop>Start 60-day trial</a>
+          <div class="tier-cap"><b>1</b> active production · 100&nbsp;GB</div>
+          <ul class="tier-list">
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> The complete toolset</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Unlimited cast &amp; crew</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Mobile app for the company</li>
+          </ul>
+        </div>
+        <!-- REPERTORY -->
+        <div class="tier" data-feat>
+          <span class="tier-flag">Most popular</span>
+          <div class="tier-name">Repertory</div>
+          <div class="tier-desc">For companies juggling a few productions in parallel.</div>
+          <div class="tier-price">
+            <span class="amt" data-amt-monthly="$49" data-amt-annual="$499">$49</span>
+            <span class="per" data-per>/ month</span>
+          </div>
+          <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$49/mo, billed annually">Billed monthly</div>
+          <a class="btn primary" href="#" data-noop>Start 60-day trial</a>
+          <div class="tier-cap"><b>3</b> active productions · 250&nbsp;GB</div>
+          <ul class="tier-list">
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Everything in Season</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Run three shows side by side</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Email support</li>
+          </ul>
+        </div>
+        <!-- COMPANY -->
+        <div class="tier">
+          <div class="tier-name">Company</div>
+          <div class="tier-desc">For theatres and programs running a whole season at once.</div>
+          <div class="tier-price">
+            <span class="amt" data-amt-monthly="$79" data-amt-annual="$799">$79</span>
+            <span class="per" data-per>/ month</span>
+          </div>
+          <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$79/mo, billed annually">Billed monthly</div>
+          <a class="btn" href="#" data-noop>Start 60-day trial</a>
+          <div class="tier-cap"><b>Unlimited</b> productions · 500&nbsp;GB</div>
+          <ul class="tier-list">
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Everything in Repertory</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Custom branding</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Priority support</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- everyone is free -->
+      <div class="free-banner">
+        <div class="fb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="fb-body">
+          <b>Participants are always free.</b>
+          <p>Anyone you invite to a show, actors, crew, designers, SMs, works free, no plan and no card. There are never per-seat fees on any tier.</p>
+        </div>
+        <a class="btn-link" href="#" data-noop style="display:inline-flex">How invites work <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+      </div>
+
+      <!-- every plan includes -->
+      <div class="includes">
+        <div class="includes-head">
+          <span class="lbl">Every paid plan includes</span>
+          <h3>The whole toolset, <em>no add-ons, no upsells.</em></h3>
+        </div>
+        <div class="inc-grid">
+          <div><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Script &amp; scene breakdown</div>
+          <div><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Blocking &amp; ground plans</div>
+          <div><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Auto reports &amp; PDF export</div>
+          <div><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Calls, calendar &amp; confirmations</div>
+          <div><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Document &amp; media library</div>
+          <div><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> AI script setup &amp; mobile app</div>
+        </div>
+      </div>
+
+      <!-- COMPARISON -->
+      <div class="compare-wrap">
+        <table class="compare">
+          <thead>
+            <tr><th>Plan</th><th>Participant</th><th>Season</th><th data-feat>Repertory</th><th>Company</th></tr>
+          </thead>
+          <tbody>
+            <tr class="grouphd"><td colspan="5">What you pay</td></tr>
+            <tr><td>Billed to</td><td>Free</td><td>The org</td><td>The org</td><td>The org</td></tr>
+            <tr><td>Active productions at once</td><td>1 (all-time)</td><td>1</td><td>3</td><td>Unlimited</td></tr>
+            <tr><td>People per production</td><td>Unlimited</td><td>Unlimited</td><td>Unlimited</td><td>Unlimited</td></tr>
+            <tr><td>Storage</td><td>5 GB</td><td>100 GB</td><td>250 GB</td><td>500 GB</td></tr>
+            <tr class="grouphd"><td colspan="5">The toolset</td></tr>
+            <tr><td>Calls, calendar &amp; confirmations</td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
+            <tr><td>Script &amp; AI script setup</td><td class="no">, </td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
+            <tr><td>Blocking &amp; ground plans</td><td class="no">, </td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
+            <tr><td>Auto reports &amp; PDF export</td><td class="no">, </td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
+            <tr><td>Document &amp; media library</td><td class="no">, </td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
+            <tr><td>Mobile app</td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
+            <tr class="grouphd"><td colspan="5">Company &amp; support</td></tr>
+            <tr><td>Custom branding</td><td class="no">, </td><td class="no">, </td><td class="no">, </td><td class="yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
+            <tr><td>Support</td><td class="no">, </td><td>Standard</td><td>Email</td><td>Priority</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="center kicker" style="margin-top:30px">Students &amp; educators get discounted school-year pricing, hand-verified.
+        <a class="btn-link" href="#" data-noop style="display:inline-flex;vertical-align:middle">Talk to us about your school <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ════════ DESIGNERS & CHOREOGRAPHERS ════════ -->
+  <section class="section aud-panel" data-aud-panel="designers" style="padding-top:clamp(20px,3vw,30px)">
+    <div class="wrap">
+      <div class="panel-lead">
+        <span class="badge-new"><span class="dot"></span>New · coming soon</span>
+        <span class="eyebrow no-rule">Proscene Studio</span>
+        <h2>A private studio that <em>tours with you.</em></h2>
+        <p>For the freelance lighting, set, sound, projection designer or choreographer who hops between companies. Your own script, your own ground plan, your own workspace, billed to you, not a theatre. Monthly works great for gig work; switch the toggle above.</p>
+      </div>
+
+      <div class="tiers">
+        <!-- SINGLE TOOL -->
+        <div class="tier">
+          <div class="tier-name">Single Tool</div>
+          <div class="tier-desc">Pick one, Script or Blocking, for the way you work.</div>
+          <div class="tier-price">
+            <span class="amt" data-amt-monthly="$5.99" data-amt-annual="$59">$5.99</span>
+            <span class="per" data-per>/ month</span>
+          </div>
+          <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$5.99/mo, billed annually">Billed monthly</div>
+          <a class="btn" href="#" data-noop>Notify me</a>
+          <div class="tier-cap"><b>1</b> production · swap &amp; replace</div>
+          <ul class="tier-list">
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Script <span class="em">or</span> Blocking</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Your uploaded script + AI parse</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> One private ground plan</li>
+          </ul>
+        </div>
+        <!-- STUDIO (bundle) -->
+        <div class="tier" data-feat>
+          <span class="tier-flag">Best value</span>
+          <div class="tier-name">Studio</div>
+          <div class="tier-desc">Both tools together, script and blocking, side by side.</div>
+          <div class="tier-price">
+            <span class="amt" data-amt-monthly="$9.99" data-amt-annual="$99">$9.99</span>
+            <span class="per" data-per>/ month</span>
+          </div>
+          <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$9.99/mo, billed annually">Billed monthly</div>
+          <a class="btn primary" href="#" data-noop>Notify me</a>
+          <div class="tier-cap"><b>1</b> production · swap &amp; replace</div>
+          <ul class="tier-list">
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Script <span class="em">+</span> Blocking</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Your uploaded script + AI parse</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Both views, pinned together</li>
+          </ul>
+        </div>
+        <!-- STUDIO PRO -->
+        <div class="tier">
+          <div class="tier-name">Studio Pro</div>
+          <div class="tier-desc">Stop swapping, keep all your shows open at once.</div>
+          <div class="tier-price">
+            <span class="amt" data-amt-monthly="$14.99" data-amt-annual="$149">$14.99</span>
+            <span class="per" data-per>/ month</span>
+          </div>
+          <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$14.99/mo, billed annually">Billed monthly</div>
+          <a class="btn" href="#" data-noop>Notify me</a>
+          <div class="tier-cap"><b>Unlimited</b> shows, all at once</div>
+          <ul class="tier-list">
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Script <span class="em">+</span> Blocking</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Your uploaded script + AI parse</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Every show running in parallel</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="d-notes">
+        <div class="d-note">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.5 2.3 7.1-6.3-4.6L5.7 21l2.3-7.1-6-4.5h7.6z"/></svg></div>
+          <div>
+            <b>Solo prep, not a team workspace.</b>
+            <p>Studio is just for you, Script and Blocking only. Calls, scheduling, reports, the document center, and sharing live on the company plans. Need those for a team? That's an org plan.</p>
+          </div>
+        </div>
+        <div class="d-note">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div>
+            <b>Org invites stay free.</b>
+            <p>Invited to a show by a company on a paid plan? You already have their full suite there, free. Studio is only for your own private prep between gigs, the two never collide.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  </div><!-- /#pricing-panels -->
+
+  <!-- PRICING FAQ -->
+  <section class="section" style="background:var(--bg-muted);border-top:1px solid var(--border)">
+    <div class="wrap-narrow">
+      <div class="section-head center reveal" style="text-align:center;margin:0 auto 36px">
+        <span class="eyebrow no-rule">Billing questions</span>
+        <h2 class="title" style="margin-top:14px">The fine print, <em>in plain English.</em></h2>
+      </div>
+      <div class="faq-mini reveal">
+        <details class="qa"><summary>Do I pay for everyone in my company?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Never. The organization subscribes; cast, crew, designers, and stage management are always free on every plan. Whether your show has a company of four or forty, the price is the same. Plans differ only by how many productions you can run at once.</p></details>
+        <details class="qa"><summary>How does the free trial work?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>New organizations get a 60-day free trial, no card required. The clock doesn't start at signup, it starts when you open your first production, so you can set things up on your own schedule.</p></details>
+        <details class="qa"><summary>What's the difference between monthly and annual?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Annual is roughly ten months for the price of twelve, about 20% off. Both give you the identical toolset; annual just costs less per month. You can switch between them at any time.</p></details>
+        <details class="qa"><summary>What is Proscene Studio, and is it different from a plan?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Studio is a personal subscription for freelance designers and choreographers, Script and Blocking only, billed to you instead of a theatre. It's for your own private prep between gigs. When a company invites you to their show, you already get their full suite there for free; Studio doesn't change that. It's coming soon, switch to the "For designers &amp; choreographers" view and tap Notify me to hear when it ships.</p></details>
+        <details class="qa"><summary>Is there a free plan for schools?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Schools get discounted school-year pricing, hand-verified by our team. Reach out and we'll get your department set up.</p></details>
+      </div>
+      <p class="center" style="margin-top:34px"><a class="btn-link" href="faq.html" style="display:inline-flex">Read the full FAQ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a></p>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section">
+    <div class="wrap">
+      <div class="cta-band center reveal">
+        <div class="cta-curtain"></div>
+        <div style="position:relative">
+          <h2 class="title" style="font-size:clamp(28px,4vw,46px)">Start free. Pay when <em>you load in.</em></h2>
+          <p class="lede" style="margin:18px auto 30px;max-width:48ch">Sixty days on us, no card, and the clock only starts at your first production.</p>
+          <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+            <a class="btn primary lg" href="#" data-noop>Start free</a>
+            <a class="btn ghost lg" href="#demo" data-noop>Book a demo</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="site.js"></script>
+  <script>
+    /* ── Billing period (monthly / annual) ── */
+    (function(){
+      const btns=[...document.querySelectorAll('.billing button')];
+      const apply=(period)=>{
+        btns.forEach(b=>b.toggleAttribute('data-on', b.dataset.period===period));
+        document.querySelectorAll('[data-amt-monthly]').forEach(el=>{
+          el.textContent = period==='annual' ? el.dataset.amtAnnual : el.dataset.amtMonthly;
+        });
+        document.querySelectorAll('[data-per]').forEach(el=>{
+          el.textContent = period==='annual' ? '/ year' : '/ month';
+        });
+        document.querySelectorAll('[data-sub-monthly]').forEach(el=>{
+          el.textContent = period==='annual' ? el.dataset.subAnnual : el.dataset.subMonthly;
+        });
+      };
+      btns.forEach(b=>b.addEventListener('click',()=>apply(b.dataset.period)));
+      apply('monthly');
+    })();
+
+    /* ── Audience switcher (companies / designers) ──
+       Segmented tablist: roving tabindex, arrow/Home/End keys, animated thumb.
+       Choice persists in localStorage and can be deep-linked with #designers
+       or #studio so a freelancer's link lands straight on Studio pricing. */
+    (function(){
+      const segs=[...document.querySelectorAll('.aud-seg')];
+      const thumb=document.querySelector('.aud-thumb');
+      const KEY='proscene:pricing:aud';
+      if(!segs.length) return;
+
+      function placeThumb(){
+        const active=segs.find(s=>s.getAttribute('aria-selected')==='true')||segs[0];
+        if(!thumb||!active) return;
+        thumb.style.left=active.offsetLeft+'px';
+        thumb.style.width=active.offsetWidth+'px';
+      }
+      function apply(aud, moveFocus){
+        document.body.setAttribute('data-aud', aud);
+        segs.forEach(s=>{
+          const on=s.dataset.aud===aud;
+          s.setAttribute('aria-selected', on?'true':'false');
+          s.tabIndex=on?0:-1;
+          if(on&&moveFocus) s.focus();
+        });
+        placeThumb();
+        try{ localStorage.setItem(KEY, aud); }catch(e){}
+      }
+      segs.forEach((s,i)=>{
+        s.addEventListener('click',()=>apply(s.dataset.aud,false));
+        s.addEventListener('keydown',(e)=>{
+          let ni=null;
+          if(e.key==='ArrowRight'||e.key==='ArrowDown') ni=(i+1)%segs.length;
+          else if(e.key==='ArrowLeft'||e.key==='ArrowUp') ni=(i-1+segs.length)%segs.length;
+          else if(e.key==='Home') ni=0;
+          else if(e.key==='End') ni=segs.length-1;
+          if(ni!=null){ e.preventDefault(); apply(segs[ni].dataset.aud,true); }
+        });
+      });
+
+      let start='designers';
+      const hash=(location.hash||'').toLowerCase();
+      if(hash==='#companies'||hash==='#company'||hash==='#teams') start='companies';
+      else if(hash==='#individuals'||hash==='#designers'||hash==='#studio'||hash==='#choreographers') start='designers';
+      else { try{ const v=localStorage.getItem(KEY); if(v==='companies'||v==='designers') start=v; }catch(e){} }
+      apply(start,false);
+
+      window.addEventListener('load', placeThumb);
+      window.addEventListener('resize', placeThumb, {passive:true});
+      if(document.fonts&&document.fonts.ready) document.fonts.ready.then(placeThumb);
+    })();
+  </script>
+</body>
+</html>

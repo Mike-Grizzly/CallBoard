@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAQ · ProScene</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="site.css">
+<style>
+  .page-hero{padding:clamp(48px,7vw,80px) 0 clamp(28px,3vw,40px);text-align:center}
+  .faq-search{
+    max-width:520px;margin:30px auto 0;display:flex;align-items:center;gap:10px;
+    background:var(--bg-elev);border:1px solid var(--border-strong);border-radius:var(--radius);
+    padding:0 16px;height:52px;box-shadow:var(--shadow-1);
+  }
+  .faq-search svg{width:18px;height:18px;color:var(--ink-4);flex-shrink:0}
+  .faq-search input{flex:1;border:0;background:transparent;font-size:16px;outline:none;color:var(--ink)}
+  .faq-search input::placeholder{color:var(--ink-4)}
+
+  .faq-layout{display:grid;grid-template-columns:220px 1fr;gap:48px;align-items:start}
+  .faq-side{position:sticky;top:90px;display:flex;flex-direction:column;gap:2px}
+  .faq-side a{padding:9px 12px;border-radius:8px;font-size:14px;font-weight:500;color:var(--ink-3);display:flex;justify-content:space-between;align-items:center}
+  .faq-side a:hover{background:var(--bg-muted);color:var(--ink)}
+  .faq-side a.active{background:var(--accent-soft);color:var(--accent-ink)}
+  .faq-side a .n{font-size:12px;color:var(--ink-4);font-variant-numeric:tabular-nums}
+
+  .faq-group{margin-bottom:48px;scroll-margin-top:90px}
+  .faq-group h2{font-family:var(--font-display);font-size:26px;font-weight:600;letter-spacing:-.01em;margin-bottom:6px}
+  .faq-group .gsub{color:var(--ink-3);font-size:14.5px;margin-bottom:14px}
+  .qa{border-bottom:1px solid var(--border);padding:20px 0}
+  .qa summary{font-size:16.5px;font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:16px;align-items:center;color:var(--ink)}
+  .qa summary::-webkit-details-marker{display:none}
+  .qa summary .pl{width:22px;height:22px;flex-shrink:0;color:var(--ink-3);transition:transform .2s}
+  .qa[open] summary .pl{transform:rotate(45deg)}
+  .qa p{margin-top:12px;color:var(--ink-3);font-size:15px;line-height:1.65;max-width:72ch}
+  .qa[hidden]{display:none}
+  .no-results{display:none;color:var(--ink-3);padding:30px 0}
+  @media (max-width:820px){.faq-layout{grid-template-columns:1fr;gap:24px}.faq-side{position:static;flex-direction:row;flex-wrap:wrap;overflow-x:auto}.faq-side a{white-space:nowrap}}
+</style>
+</head>
+<body data-page="faq">
+
+  <section class="page-hero">
+    <div class="wrap">
+      <span class="eyebrow no-rule" style="justify-content:center">Help</span>
+      <h1 class="display" style="margin-top:16px;font-size:clamp(36px,5.4vw,62px)">Questions, <em>answered.</em></h1>
+      <p class="lede" style="margin:18px auto 0;max-width:50ch">Everything stage managers ask before their first show. Can't find it? <a href="#" data-noop style="color:var(--accent-ink);font-weight:500">Talk to a human →</a></p>
+      <div class="faq-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="faqq" placeholder="Search questions…" aria-label="Search FAQ">
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:8px">
+    <div class="wrap">
+      <div class="faq-layout">
+        <aside class="faq-side" aria-label="FAQ categories">
+          <a href="#getting-started" class="active">Getting started <span class="n">4</span></a>
+          <a href="#company">The company <span class="n">4</span></a>
+          <a href="#features">Features <span class="n">4</span></a>
+          <a href="#billing">Billing <span class="n">4</span></a>
+          <a href="#data">Data &amp; privacy <span class="n">3</span></a>
+        </aside>
+
+        <div class="faq-main">
+          <p class="no-results" id="noresults">No questions match that search. Try a different word, or <a href="#" data-noop style="color:var(--accent-ink)">ask us directly</a>.</p>
+
+          <div class="faq-group" id="getting-started">
+            <h2>Getting started</h2>
+            <p class="gsub">From a blank screen to your first call.</p>
+            <details class="qa" open><summary>How long does it take to set up a production?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>About five minutes. Name the show, add your venues and rehearsal dates, then import or type your cast list. You can start sending calls the same afternoon and fill in the script and reports later.</p></details>
+            <details class="qa"><summary>Do I need to install anything?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>No. ProScene runs in any browser, and the company installs the mobile app from the App Store or Google Play. Nothing to maintain, nothing to update.</p></details>
+            <details class="qa"><summary>Can I import a cast list from a spreadsheet?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Yes. Paste from a spreadsheet or upload a CSV and ProScene maps the columns, names, roles, email, phone, and emergency contacts. Reuse the same company on your next show.</p></details>
+            <details class="qa"><summary>What if my actors aren't tech people?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>They tap one link to join and see exactly one thing: tonight's call and this week's schedule. There's nothing to learn. Confirming a call is a single button, and reminders arrive by text and push.</p></details>
+          </div>
+
+          <div class="faq-group" id="company">
+            <h2>The company</h2>
+            <p class="gsub">Cast, crew, designers, and who sees what.</p>
+            <details class="qa"><summary>Can different people see different things?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Yes, access is role-based. Principals see their calls and the script; designers see the reports tagged to their department; crew see the run sheet. The stage management team sees it all.</p></details>
+            <details class="qa"><summary>Is there a limit on company size?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>No limit, and no per-person cost. A four-hander and a forty-strong opera chorus are priced exactly the same.</p></details>
+            <details class="qa"><summary>Can guest directors or designers join just one show?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Absolutely. Add anyone to a single production with the access they need, and remove them when the show closes. The Company plan keeps a shared company directory across all your shows.</p></details>
+            <details class="qa"><summary>How do emergency contacts work?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Each person can store an emergency contact that's visible only to stage management. It's right there on the contact sheet when you need it, no scrambling through old emails.</p></details>
+          </div>
+
+          <div class="faq-group" id="features">
+            <h2>Features</h2>
+            <p class="gsub">Calls, script, blocking, and reports.</p>
+            <details class="qa"><summary>Can I send a call to only part of the company?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Yes. Call by scene, by role, by department, or hand-pick people. ProScene works out who's needed for the scenes you're working and only calls them.</p></details>
+            <details class="qa"><summary>What file types can I upload for the script?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>PDF and Word documents. ProScene detects scenes and characters automatically, and you can adjust the breakdown by hand. Line changes are versioned so the company always has the current pages.</p></details>
+            <details class="qa"><summary>Does blocking use standard notation?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>It supports the shorthand you already use, and expands it into plain language for anyone reading the book later. Moves pin to the exact line, so a cross is never floating in the margin.</p></details>
+            <details class="qa"><summary>Can I export reports as PDF?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Every report exports to a clean, printable PDF, and can be emailed straight from ProScene to the right departments. Running times and breaks are tracked automatically.</p></details>
+          </div>
+
+          <div class="faq-group" id="billing">
+            <h2>Billing</h2>
+            <p class="gsub">Plans, trials, and how we charge.</p>
+            <details class="qa"><summary>How does pricing work?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>The organization subscribes, never per person. Plans differ only by how many productions you can run at once: Season (1), Repertory (3), or Company (unlimited). Every paid plan includes the full toolset, and cast, crew, designers, and stage management are always free, no matter how many you invite.</p></details>
+            <details class="qa"><summary>Is there a free trial?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Yes, 60 days, no card required. The clock starts when you open your first production, not at signup, so you can set things up on your own schedule.</p></details>
+            <details class="qa"><summary>I'm a freelance designer or choreographer, do I need a company plan?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>No. Proscene Studio is a personal subscription, Script and Blocking only, billed to you instead of a theatre, for your own prep between gigs. And if a company invites you to their show, you already have their full suite there for free. It's coming soon; sign up to be notified on the pricing page.</p></details>
+            <details class="qa"><summary>Is there a discount for schools?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Yes, schools get discounted school-year pricing, hand-verified by our team. Reach out with your department details and we'll get you set up.</p></details>
+          </div>
+
+          <div class="faq-group" id="data">
+            <h2>Data &amp; privacy</h2>
+            <p class="gsub">Your show, your information.</p>
+            <details class="qa"><summary>Who owns the data in my productions?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>You do. We never sell data or use it to train anything. Export your full production, schedule, reports, contacts, to PDF and CSV whenever you like.</p></details>
+            <details class="qa"><summary>Is the company's contact info kept private?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Phone numbers and emergency contacts are visible only to stage management and the people you designate. The cast can't browse each other's personal details.</p></details>
+            <details class="qa"><summary>What happens to a show after it closes?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>It becomes a read-only archive you can revisit, export, or reopen for a remount. We never delete a closed production without telling you first.</p></details>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT CTA -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap-narrow">
+      <div class="card card-pad center reveal" style="padding:clamp(32px,4vw,48px)">
+        <h3 class="subtitle">Still have a question?</h3>
+        <p class="lede" style="margin:12px auto 24px;max-width:46ch">Our team are former stage managers. Ask us anything, we read every message.</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+          <a class="btn primary" href="#" data-noop>Message support</a>
+          <a class="btn" href="#demo" data-noop>Book a walkthrough</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="site.js"></script>
+  <script>
+    // search filter
+    (function(){
+      const q=document.getElementById('faqq');
+      const qas=[...document.querySelectorAll('.qa')];
+      const groups=[...document.querySelectorAll('.faq-group')];
+      const none=document.getElementById('noresults');
+      q.addEventListener('input',()=>{
+        const t=q.value.trim().toLowerCase();
+        let any=false;
+        qas.forEach(d=>{
+          const hit=!t||d.textContent.toLowerCase().includes(t);
+          d.hidden=!hit; if(hit)any=true;
+          if(t&&hit)d.open=true; if(!t)d.open=d.matches(':first-of-type')&&false;
+        });
+        groups.forEach(g=>{g.style.display=[...g.querySelectorAll('.qa')].some(d=>!d.hidden)?'':'none';});
+        none.style.display=any?'none':'block';
+      });
+    })();
+    // sidebar scrollspy
+    (function(){
+      const links=[...document.querySelectorAll('.faq-side a')];
+      const map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
+      const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));map.get(e.target.id)?.classList.add('active');}});},{rootMargin:'-30% 0px -60% 0px'});
+      document.querySelectorAll('.faq-group').forEach(g=>io.observe(g));
+    })();
+  </script>
+</body>
+</html>
