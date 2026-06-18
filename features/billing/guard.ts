@@ -63,10 +63,14 @@ async function countProductions(
   includeArchived: boolean,
 ): Promise<number> {
   const where = includeArchived
-    ? eq(productions.organizationId, orgId)
+    ? and(
+        eq(productions.organizationId, orgId),
+        isNull(productions.deletedAt),
+      )
     : and(
         eq(productions.organizationId, orgId),
         isNull(productions.archivedAt),
+        isNull(productions.deletedAt),
       );
   const [row] = await db.select({ n: count() }).from(productions).where(where);
   return row?.n ?? 0;

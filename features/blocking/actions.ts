@@ -9,6 +9,7 @@ import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { assertCanMutate } from "@/features/billing/guard";
 import { pushMentionNotifications } from "@/features/mentions/notify";
+import { getProductionMembers } from "@/features/members/queries";
 
 export type BlockingActionResult = { error?: string };
 
@@ -263,6 +264,9 @@ export async function removeBlockingPosition(
     return { error: "You don't have permission to edit blocking." };
   }
 
+  const billing = await assertCanMutate(user.organizationId);
+  if (billing.error) return { error: billing.error };
+
   const [beat] = await db
     .select({ productionId: productionScenes.productionId })
     .from(sceneBeats)
@@ -350,13 +354,18 @@ export async function createBeatComment(
     return { error: "You don't have permission to comment here." };
   }
 
+  // Filter mentions to production members only — never store cross-org user IDs.
+  const productionMembers = await getProductionMembers(beat.productionId);
+  const memberIdSet = new Set(productionMembers.map((m) => m.userId));
+  const safeMentionIds = mentionedUserIds.filter((id) => memberIdSet.has(id));
+
   const [row] = await db
     .insert(beatComments)
     .values({
       beatId,
       createdBy: user.id,
       body: trimmed,
-      mentionedUserIds,
+      mentionedUserIds: safeMentionIds,
     })
     .returning({ id: beatComments.id });
 

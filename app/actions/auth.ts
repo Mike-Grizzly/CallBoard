@@ -195,6 +195,9 @@ export async function resendVerification(
     return { error: "Email is required." };
   }
 
+  const rl = await checkAuthRateLimit(await requestIp());
+  if (rl.limited) return { error: rl.error };
+
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase.auth.resend({
@@ -265,7 +268,11 @@ export async function updatePassword(
     return { error: error.message };
   }
 
-  redirect("/setup");
+  // Revoke all other active sessions so the password reset invalidates any
+  // stolen or stale session cookies on other devices.
+  await supabase.auth.signOut({ scope: "global" });
+
+  redirect("/login");
 }
 
 export async function logout(): Promise<void> {
