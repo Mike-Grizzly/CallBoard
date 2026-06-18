@@ -33,6 +33,18 @@ function initials(name?: string) {
     .toUpperCase();
 }
 
+/**
+ * Only allow safe link schemes from CMS content. A `javascript:`/`data:` href
+ * on an anchor is a click-XSS vector; fall back to a no-op anchor otherwise.
+ */
+function safeLinkHref(href: unknown): string | undefined {
+  if (typeof href !== "string") return undefined;
+  const trimmed = href.trim();
+  if (/^(https?:|mailto:|tel:)/i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith("/") || trimmed.startsWith("#")) return trimmed;
+  return undefined;
+}
+
 const components: PortableTextComponents = {
   block: {
     h2: ({ children }) => <h2>{children}</h2>,
@@ -44,7 +56,7 @@ const components: PortableTextComponents = {
     strong: ({ children }) => <strong>{children}</strong>,
     em: ({ children }) => <em>{children}</em>,
     link: ({ children, value }) => (
-      <a href={value?.href} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-ink)" }}>
+      <a href={safeLinkHref(value?.href)} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-ink)" }}>
         {children}
       </a>
     ),

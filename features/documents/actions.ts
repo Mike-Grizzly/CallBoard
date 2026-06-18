@@ -1,14 +1,14 @@
 "use server";
 
 import { db } from "@/db";
-import { documents, documentFolders, documentComments, notifications, profiles, productions } from "@/db/schema";
+import { documents, documentFolders, documentComments, notifications, profiles, productions, organizationMemberships } from "@/db/schema";
 import { eq, and, isNotNull, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { assertCanMutate } from "@/features/billing/guard";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { DEFAULT_FOLDERS } from "./constants";
+import { DEFAULT_FOLDERS, canViewFolder } from "./constants";
 import { ROLES } from "@/types/roles";
 
 export type UploadDocumentResult = {
@@ -194,9 +194,8 @@ export async function requestDocumentUpload(
     .createSignedUploadUrl(storagePath);
 
   if (error || !data) {
-    return {
-      error: `Could not start upload: ${error?.message ?? "unknown error"}`,
-    };
+    console.error("Document upload URL failed:", error?.message);
+    return { error: "Could not start upload. Please try again." };
   }
 
   return { path: data.path, token: data.token };
@@ -328,7 +327,10 @@ export async function permanentlyDeleteDocument(
 }
 
 export async function fetchDocumentComments(documentId: string) {
-  await requireCurrentUser();
+  // Gate on access: resolveAccessibleDocument enforces production membership
+  // AND restricted-folder visibility. Returning [] for inaccessible documents
+  // prevents enumerating another tenant's comment threads (and member emails).
+  if (!(await resolveAccessibleDocument(documentId))) return [];
   const { getDocumentComments } = await import("./queries");
   return getDocumentComments(documentId);
 }
@@ -391,10 +393,17 @@ export async function postComment(
     const authorName =
       `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email;
 
-    // Find profiles by full name match
+    // Find profiles by full name match — scoped to the caller's organization
+    // so a name collision can't notify (and leak the comment snippet to) an
+    // unrelated user in another tenant.
     const allMentioned = await db
       .select({ id: profiles.id, firstName: profiles.firstName, lastName: profiles.lastName })
-      .from(profiles);
+      .from(profiles)
+      .innerJoin(
+        organizationMemberships,
+        eq(organizationMemberships.userId, profiles.id),
+      )
+      .where(eq(organizationMemberships.organizationId, user.organizationId));
 
     const recipientIds = allMentioned
       .filter((p) => {
@@ -428,13 +437,30 @@ async function resolveAccessibleDocument(documentId: string) {
     .select({
       storagePath: documents.storagePath,
       productionId: documents.productionId,
+      folderVisibility: documentFolders.visibility,
+      folderAllowedRoles: documentFolders.allowedRoles,
     })
     .from(documents)
+    .leftJoin(documentFolders, eq(documents.folderId, documentFolders.id))
     .where(eq(documents.id, documentId))
     .limit(1);
 
   if (!doc) return null;
   if (!(await userCanAccessProduction(user, doc.productionId))) return null;
+
+  // Restricted folders are visible only to managers and the roles granted
+  // access. The storage bucket is deny-all RLS, so this server-side check is
+  // the only thing standing between an excluded member and a signed URL.
+  const canManage = can(user.role, "productions:manage");
+  if (
+    !canViewFolder(
+      { visibility: doc.folderVisibility, allowedRoles: doc.folderAllowedRoles },
+      user.role,
+      canManage,
+    )
+  ) {
+    return null;
+  }
 
   return doc;
 }
@@ -511,7 +537,8 @@ export async function moveDocument(
 }
 
 export async function fetchDeletedDocumentsByProduction(productionId: string) {
-  await requireCurrentUser();
+  const user = await requireCurrentUser();
+  if (!(await userCanAccessProduction(user, productionId))) return [];
   return db
     .select({
       id: documents.id,

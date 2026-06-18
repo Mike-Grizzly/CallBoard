@@ -15,6 +15,10 @@ export function DocumentViewer({
     return (
       <iframe
         src={url}
+        // The stored content-type is asserted by the uploader, so the object
+        // could actually be HTML. Sandbox the frame so it can never execute
+        // scripts in this origin — the browser PDF viewer still works.
+        sandbox="allow-downloads"
         className="h-full min-h-[600px] w-full"
         title={fileName}
       />
@@ -47,6 +51,9 @@ export function DocumentViewer({
     return (
       <iframe
         src={url}
+        // Untrusted user-uploaded content rendered inline — sandbox with no
+        // allow-scripts so an HTML/SVG payload disguised as text can't run.
+        sandbox=""
         className="h-full min-h-[600px] w-full"
         style={{ background: "white" }}
         title={fileName}
