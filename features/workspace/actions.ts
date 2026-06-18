@@ -287,9 +287,8 @@ export async function requestWorkspaceLogoUpload(
     .createSignedUploadUrl(storagePath);
 
   if (error || !data) {
-    return {
-      error: `Could not start upload: ${error?.message ?? "unknown error"}`,
-    };
+    console.error("Workspace logo upload URL failed:", error?.message);
+    return { error: "Could not start upload. Please try again." };
   }
 
   return { path: data.path, token: data.token };

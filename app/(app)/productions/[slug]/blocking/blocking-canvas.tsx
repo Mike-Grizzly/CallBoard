@@ -2631,7 +2631,7 @@ export function BlockingCanvas({
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".svg,.png,.jpg,.jpeg,image/svg+xml,image/png,image/jpeg"
+                      accept=".png,.jpg,.jpeg,image/png,image/jpeg"
                       style={{ display: "none" }}
                       onChange={handleUploadPiece}
                     />

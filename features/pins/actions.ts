@@ -1,9 +1,11 @@
 "use server";
 
 import { db } from "@/db";
-import { userPins, documents, rehearsalReports } from "@/db/schema";
+import { userPins, documents, documentFolders, rehearsalReports } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
+import { can } from "@/lib/permissions";
+import { canViewFolder } from "@/features/documents/constants";
 import { revalidatePath } from "next/cache";
 
 /** Pinnable item types. Anything else is rejected. */
@@ -23,11 +25,23 @@ async function userCanAccessPinItem(
 ): Promise<boolean> {
   if (itemType === "document") {
     const [doc] = await db
-      .select({ productionId: documents.productionId })
+      .select({
+        productionId: documents.productionId,
+        folderVisibility: documentFolders.visibility,
+        folderAllowedRoles: documentFolders.allowedRoles,
+      })
       .from(documents)
+      .leftJoin(documentFolders, eq(documents.folderId, documentFolders.id))
       .where(eq(documents.id, itemId))
       .limit(1);
-    return doc ? userCanAccessProduction(user, doc.productionId) : false;
+    if (!doc) return false;
+    if (!(await userCanAccessProduction(user, doc.productionId))) return false;
+    const canManage = can(user.role, "productions:manage");
+    return canViewFolder(
+      { visibility: doc.folderVisibility, allowedRoles: doc.folderAllowedRoles },
+      user.role,
+      canManage,
+    );
   }
   if (itemType === "report") {
     const [report] = await db
@@ -48,7 +62,7 @@ export async function pinItem(
 ): Promise<{ error?: string; pinned: boolean }> {
   const user = await requireCurrentUser();
 
-  if (!(PINNABLE_TYPES as readonly string[]).includes(itemType) || !itemId) {
+  if (!itemId) {
     return { error: "That item can't be pinned.", pinned: false };
   }
 
@@ -68,6 +82,9 @@ export async function pinItem(
   const wantPinned = shouldPin ?? !isCurrentlyPinned;
 
   if (wantPinned && !isCurrentlyPinned) {
+    if (!(PINNABLE_TYPES as readonly string[]).includes(itemType)) {
+      return { error: "That item can't be pinned.", pinned: false };
+    }
     if (!(await userCanAccessPinItem(user, itemType, itemId))) {
       return { error: "That item can't be pinned.", pinned: false };
     }

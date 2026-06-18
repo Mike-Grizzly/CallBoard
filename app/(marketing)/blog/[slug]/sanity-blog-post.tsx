@@ -55,11 +55,15 @@ const components: PortableTextComponents = {
   marks: {
     strong: ({ children }) => <strong>{children}</strong>,
     em: ({ children }) => <em>{children}</em>,
-    link: ({ children, value }) => (
-      <a href={safeLinkHref(value?.href)} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-ink)" }}>
-        {children}
-      </a>
-    ),
+    link: ({ children, value }) => {
+      const href = safeLinkHref(value?.href);
+      if (!href) return <>{children}</>;
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-ink)" }}>
+          {children}
+        </a>
+      );
+    },
   },
   types: {
     image: ({ value }) => {

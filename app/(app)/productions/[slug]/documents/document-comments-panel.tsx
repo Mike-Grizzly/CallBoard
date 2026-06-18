@@ -42,8 +42,12 @@ export function DocumentCommentsPanel({ documentId, members }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
 
   const reload = useCallback(async () => {
-    const rows = await fetchDocumentComments(documentId);
-    setComments(rows);
+    const result = await fetchDocumentComments(documentId);
+    if (!Array.isArray(result)) {
+      setLoading(false);
+      return;
+    }
+    setComments(result);
     setLoading(false);
   }, [documentId]);
 

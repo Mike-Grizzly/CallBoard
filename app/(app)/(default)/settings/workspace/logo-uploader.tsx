@@ -10,7 +10,7 @@ import {
   requestWorkspaceLogoUpload,
 } from "@/features/workspace/actions";
 
-const ACCEPT = "image/svg+xml,image/png,image/jpeg";
+const ACCEPT = "image/png,image/jpeg";
 const MAX_BYTES = 2 * 1024 * 1024;
 const SQUARE_TOLERANCE = 0.05; // allow up to 5% off-square so a 500×501 image still counts
 
@@ -19,14 +19,7 @@ function isSquare(width: number, height: number) {
   return Math.abs(width - height) / Math.max(width, height) <= SQUARE_TOLERANCE;
 }
 
-/**
- * Reads the picked file enough to confirm it's roughly square. SVGs
- * can ship without intrinsic dimensions, so we accept SVG without the
- * shape check — the user is presumed to know what they uploaded.
- */
 async function validateImageShape(file: File): Promise<string | null> {
-  if (file.type === "image/svg+xml") return null;
-
   const dataUrl: string = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
@@ -69,8 +62,8 @@ export function WorkspaceLogoUploader({
     setError(null);
     setSuccess(false);
 
-    if (!["image/svg+xml", "image/png", "image/jpeg"].includes(file.type)) {
-      setError("Logo must be an SVG, PNG, or JPG.");
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      setError("Logo must be a PNG or JPG.");
       e.target.value = "";
       return;
     }
@@ -141,7 +134,7 @@ export function WorkspaceLogoUploader({
         className="muted"
         style={{ fontSize: 13, marginTop: 6, marginBottom: 12 }}
       >
-        SVG, PNG, or JPG. Square. Up to 2MB. Shows in the rail, settings, and
+        PNG or JPG. Square. Up to 2MB. Shows in the rail, settings, and
         any future emails or share pages.
       </p>
 

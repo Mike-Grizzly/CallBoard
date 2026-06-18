@@ -951,12 +951,12 @@ export async function inviteMembers(
         outcome: input.sendInvite ? "invited" : "added",
       });
     } catch (err) {
+      console.error("Invite failed:", err);
       results.push({
         email,
         name,
         outcome: "error",
-        message:
-          err instanceof Error ? err.message : "Something went wrong.",
+        message: "Could not add this person. Check the email and try again.",
       });
     }
   }
