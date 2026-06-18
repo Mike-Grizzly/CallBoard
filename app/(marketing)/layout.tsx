@@ -12,9 +12,9 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Proscene — The production hub for stage managers",
+  title: "Proscene — The one place your show lives",
   description:
-    "Proscene keeps your whole production on the same page — calls, calendars, scripts, blocking, and reports. One hub for the stage manager, the cast, and the crew.",
+    "Proscene keeps cast, crew, and creative teams in sync. Calls, calendar, script, blocking, and reports, all in one place. Stop scattering the production across drives, inboxes, and group chats.",
 };
 
 export default function MarketingLayout({

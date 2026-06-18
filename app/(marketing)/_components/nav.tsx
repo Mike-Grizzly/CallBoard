@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BrandMark } from "./brand-mark";
 
 const NAV_LINKS = [
   { label: "Features", href: "/features" },
   { label: "Pricing", href: "/pricing" },
-  { label: "Reviews", href: "/reviews" },
   { label: "Blog", href: "/blog" },
   { label: "FAQ", href: "/faq" },
 ];
@@ -16,7 +16,7 @@ function Brand() {
   return (
     <Link className="brand" href="/" aria-label="Proscene home">
       <span className="brand-mark">
-        <img src="/brand-ink.svg" alt="" width={30} height={30} />
+        <BrandMark id="pslogo-nav" />
       </span>
       <span className="brand-name">
         Pro<em>scene</em>

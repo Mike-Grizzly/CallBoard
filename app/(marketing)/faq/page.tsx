@@ -6,9 +6,9 @@ import { getFaqItems } from "@/lib/sanity/queries";
 import { SanityFaq } from "./sanity-faq";
 
 export const metadata: Metadata = {
-  title: "FAQ — Proscene",
+  title: "FAQ: Proscene",
   description:
-    "Everything stage managers ask before their first show — getting started, the company, features, billing, and data & privacy.",
+    "Everything stage managers ask before their first show: getting started, the company, features, billing, and data and privacy.",
 };
 
 export const revalidate = 60;

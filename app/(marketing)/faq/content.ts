@@ -1,4 +1,4 @@
-// FAQ page body — ported from faq.html.
+// FAQ page body, ported from faq.html.
 const PL =
   '<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
 const qa = (q: string, a: string) =>
@@ -24,7 +24,7 @@ export const FAQ_HTML = `
           <a href="#getting-started" class="active">Getting started <span class="n">4</span></a>
           <a href="#company">The company <span class="n">4</span></a>
           <a href="#features">Features <span class="n">4</span></a>
-          <a href="#billing">Billing <span class="n">3</span></a>
+          <a href="#billing">Billing <span class="n">4</span></a>
           <a href="#data">Data &amp; privacy <span class="n">3</span></a>
         </aside>
 
@@ -44,7 +44,7 @@ export const FAQ_HTML = `
             )}
             ${qa(
               "Can I import a cast list from a spreadsheet?",
-              "Yes. Paste from a spreadsheet or upload a CSV and Proscene maps the columns — names, roles, email, phone, and emergency contacts. Reuse the same company on your next show."
+              "Yes. Paste from a spreadsheet or upload a CSV and Proscene maps the columns: names, roles, email, phone, and emergency contacts. Reuse the same company on your next show."
             )}
             ${qa(
               "What if my actors aren't tech people?",
@@ -57,7 +57,7 @@ export const FAQ_HTML = `
             <p class="gsub">Cast, crew, designers, and who sees what.</p>
             ${qa(
               "Can different people see different things?",
-              "Yes — access is role-based. Principals see their calls and the script; designers see the reports tagged to their department; crew see the run sheet. The stage management team sees it all."
+              "Yes, access is role-based. Principals see their calls and the script; designers see the reports tagged to their department; crew see the run sheet. The stage management team sees it all."
             )}
             ${qa(
               "Is there a limit on company size?",
@@ -69,7 +69,7 @@ export const FAQ_HTML = `
             )}
             ${qa(
               "How do emergency contacts work?",
-              "Each person can store an emergency contact that's visible only to stage management. It's right there on the contact sheet when you need it — no scrambling through old emails."
+              "Each person can store an emergency contact that's visible only to stage management. It's right there on the contact sheet when you need it, no scrambling through old emails."
             )}
           </div>
 
@@ -86,7 +86,7 @@ export const FAQ_HTML = `
             )}
             ${qa(
               "Does blocking use standard notation?",
-              "It supports the shorthand you already use — and expands it into plain language for anyone reading the book later. Moves pin to the exact line, so a cross is never floating in the margin."
+              "It supports the shorthand you already use, and expands it into plain language for anyone reading the book later. Moves pin to the exact line, so a cross is never floating in the margin."
             )}
             ${qa(
               "Can I export reports as PDF?",
@@ -99,23 +99,19 @@ export const FAQ_HTML = `
             <p class="gsub">Plans, trials, and how we charge.</p>
             ${qa(
               "How does pricing work?",
-              "The organization running the show subscribes — never the people in it. Plans differ only by how many productions you run at once: Season (1), Repertory (3), and Company (unlimited). Every plan includes the full toolset and unlimited cast and crew."
+              "The organization subscribes, never the people in it. Plans differ only by how many productions you can run at once: Season (1), Repertory (3), or Company (unlimited). Every paid plan includes the full toolset, and cast, crew, designers, and stage management are always free, no matter how many you invite."
             )}
             ${qa(
               "Is there a free trial?",
-              "Yes — 60 days free, and the clock starts when you create your first production, not the day you sign up, so it never runs out before you've begun. No card required."
+              "Yes, 60 days, no card required. The clock starts when you open your first production, not the day you sign up, so it never runs out before you've begun."
             )}
             ${qa(
-              "What happens when the trial ends?",
-              "We won't pull the rug out mid-tech: you keep sending rehearsal reports, announcements, and schedules for a grace period to finish your run, and you can always view and export everything. The script and blocking tools pause until you subscribe."
+              "I'm a freelance designer or choreographer. Do I need a company plan?",
+              "No. Proscene Studio is a personal subscription, Script and Blocking only, billed to you instead of a theatre, for your own prep between gigs. And if a company invites you to their show, you already have their full suite there for free. It's coming soon; sign up to be notified on the <a href=\"/pricing\" style=\"color:var(--accent-ink)\">pricing page</a>."
             )}
             ${qa(
-              "Do participants pay?",
-              "Never. Cast, crew, designers, and stage managers join the shows they're invited to for free — only the company that runs the production pays."
-            )}
-            ${qa(
-              "Is there pricing for schools?",
-              "Yes — drama departments and university programs get discounted education pricing for the school year. Get in touch and we'll verify your program by hand and set you up."
+              "Is there a discount for schools?",
+              "Yes, schools get discounted school-year pricing, hand-verified by our team. It isn't free, but it's a meaningful break for drama departments and university programs. <a href=\"/contact\" style=\"color:var(--accent-ink)\">Reach out</a> with your department details and we'll get you set up."
             )}
           </div>
 
@@ -124,7 +120,7 @@ export const FAQ_HTML = `
             <p class="gsub">Your show, your information.</p>
             ${qa(
               "Who owns the data in my productions?",
-              "You do. We never sell data or use it to train anything. Export your full production — schedule, reports, contacts — to PDF and CSV whenever you like."
+              "You do. We never sell data or use it to train anything. Export your full production: schedule, reports, contacts, to PDF and CSV whenever you like."
             )}
             ${qa(
               "Is the company's contact info kept private?",
@@ -145,7 +141,7 @@ export const FAQ_HTML = `
     <div class="wrap-narrow">
       <div class="card card-pad center reveal" style="padding:clamp(32px,4vw,48px)">
         <h3 class="subtitle">Still have a question?</h3>
-        <p class="lede" style="margin:12px auto 24px;max-width:46ch">Our team are former stage managers. Ask us anything — we answer in hours, not days.</p>
+        <p class="lede" style="margin:12px auto 24px;max-width:46ch">Our team are former stage managers. Ask us anything, we read every message and answer in hours, not days.</p>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
           <a class="btn primary" href="/contact">Message support</a>
           <a class="btn" href="/contact?reason=demo">Book a walkthrough</a>

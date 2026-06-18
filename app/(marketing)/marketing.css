@@ -1,39 +1,47 @@
 /* ══════════════════════════════════════════════════════════════════════
-   Proscene — marketing site (ported from the standalone HTML mockup)
+   Proscene — marketing site (ported from the design handoff `site.css`)
    Scoped under `.ps-site` so the marketing tokens + base styles cannot
    leak into the live app, and so the app's body[data-theme] dark/dusk
    switching can't recolor the marketing pages (a closer ancestor that
    redeclares the tokens wins for its subtree).
+
+   Brand: "paper & spotlight" — warm, light, airy, with spotlight-amber
+   accent and a few dark "night" islands. Typeface stays Geist (loaded by
+   the marketing layout via next/font as --font-geist); --font-mono inherits
+   the app's Geist Mono.
    ══════════════════════════════════════════════════════════════════════ */
 
 .ps-site {
-  /* Warm theatre palette — paper, ink, curtain (matches the app) */
-  --bg: oklch(0.985 0.005 75);
-  --bg-elev: oklch(1 0 0);
-  --bg-muted: oklch(0.965 0.008 75);
-  --bg-sunken: oklch(0.955 0.01 75);
-  --border: oklch(0.92 0.01 75);
-  --border-strong: oklch(0.86 0.012 75);
-  --ink: oklch(0.22 0.012 60);
-  --ink-2: oklch(0.36 0.012 60);
-  --ink-3: oklch(0.52 0.012 60);
-  --ink-4: oklch(0.68 0.012 60);
+  /* Proscene brand — "paper & spotlight": warm, light, airy. Pure-white
+     elevated surfaces, warm-paper page, spotlight-amber accent, and a few
+     dark "night" islands reserved for dramatic moments. */
+  --bg: #F8F5EF;
+  --bg-elev: #FFFFFF;
+  --bg-muted: #EFEAE0;
+  --bg-sunken: #E6DECF;
+  --border: #E5DCCC;
+  --border-strong: #D3C7B1;
+  --ink: #15181F;
+  --ink-2: #3A3F48;
+  --ink-3: #5F636C;
+  --ink-4: #94908A;
 
-  /* Deep "house lights down" surface for dramatic sections */
-  --night: oklch(0.18 0.008 60);
-  --night-elev: oklch(0.225 0.009 60);
-  --night-border: oklch(0.3 0.012 60);
-  --night-ink: oklch(0.96 0.005 75);
-  --night-ink-2: oklch(0.8 0.008 75);
-  --night-ink-3: oklch(0.62 0.01 75);
+  /* Deep "house lights down" surface — brand ink (dark islands + footer) */
+  --night: #14171E;
+  --night-elev: #20252F;
+  --night-border: #2D3340;
+  --night-ink: #F5F2EA;
+  --night-ink-2: #C5C8CF;
+  --night-ink-3: #9398A4;
 
-  /* Accent — single curtain crimson */
-  --accent: oklch(0.55 0.16 25);
-  --accent-soft: oklch(0.93 0.04 25);
-  --accent-ink: oklch(0.4 0.14 25);
-  --accent-bright: oklch(0.62 0.18 28);
+  /* Accent — spotlight amber */
+  --accent: #E0A23A;
+  --accent-soft: #F8E9CB;
+  --accent-ink: #9C6B14;
+  --accent-bright: #ECB04E;
+  --on-accent: #15181F;
 
-  /* Categorical (curated, used sparingly for feature tags) */
+  /* Categorical (curated, light tints used sparingly for feature tags) */
   --c-sage: oklch(0.7 0.07 145);     --c-sage-soft: oklch(0.94 0.03 145);
   --c-amber: oklch(0.78 0.13 75);    --c-amber-soft: oklch(0.95 0.05 80);
   --c-dusk: oklch(0.6 0.1 260);      --c-dusk-soft: oklch(0.94 0.03 260);
@@ -41,10 +49,10 @@
   --c-sand: oklch(0.75 0.05 90);     --c-sand-soft: oklch(0.95 0.025 90);
   --c-plum: oklch(0.55 0.1 320);     --c-plum-soft: oklch(0.94 0.03 320);
 
-  --shadow-1: 0 1px 2px rgba(40,30,15,.04), 0 1px 1px rgba(40,30,15,.03);
-  --shadow-2: 0 6px 20px rgba(40,30,15,.06), 0 2px 6px rgba(40,30,15,.04);
-  --shadow-3: 0 20px 60px rgba(40,30,15,.12), 0 8px 24px rgba(40,30,15,.08);
-  --shadow-4: 0 40px 90px -20px rgba(40,30,15,.22), 0 16px 40px -12px rgba(40,30,15,.14);
+  --shadow-1: 0 1px 2px rgba(40,30,15,.05), 0 1px 1px rgba(40,30,15,.03);
+  --shadow-2: 0 6px 20px rgba(40,30,15,.07), 0 2px 6px rgba(40,30,15,.05);
+  --shadow-3: 0 20px 60px rgba(40,30,15,.13), 0 8px 24px rgba(40,30,15,.09);
+  --shadow-4: 0 40px 90px -20px rgba(40,30,15,.24), 0 16px 40px -12px rgba(40,30,15,.15);
 
   --radius-s: 6px;
   --radius: 10px;
@@ -107,13 +115,23 @@
   font-size:clamp(40px,6.2vw,76px);
   color:var(--ink);
 }
-.display em{font-style:normal;color:var(--accent)}
+.display em{font-style:italic;color:var(--accent)}
+
+/* Above-the-fold H1 — bold all-caps treatment */
+.hero-copy .display{
+  text-transform:uppercase;
+  font-weight:800;
+  letter-spacing:-.005em;
+  line-height:.98;
+  font-size:clamp(42px,6.6vw,82px);
+}
+.hero-copy .display em{font-style:italic;letter-spacing:0;}
 h2.title{
   font-family:var(--font-display);
   font-weight:700;letter-spacing:-.025em;line-height:1.08;
   font-size:clamp(30px,4.4vw,48px);
 }
-h2.title em{font-style:normal;color:var(--accent)}
+h2.title em{font-style:italic;color:var(--accent)}
 h3.subtitle{
   font-family:var(--font-display);
   font-weight:600;letter-spacing:-.018em;line-height:1.15;
@@ -142,7 +160,7 @@ h3.subtitle{
 .btn:active{transform:translateY(1px)}
 .btn svg{width:17px;height:17px}
 .btn.primary{
-  background:var(--accent);color:#fff;border-color:var(--accent);
+  background:var(--accent);color:var(--on-accent);border-color:var(--accent);
   box-shadow:0 6px 18px -6px color-mix(in oklch, var(--accent) 60%, transparent);
 }
 .btn.primary:hover{
@@ -226,13 +244,19 @@ h3.subtitle{
 /* ─── Top nav ──────────────────────────────────────────────────────────── */
 .nav{
   position:sticky;top:0;z-index:60;
-  background:color-mix(in oklch, var(--bg) 82%, transparent);
+  background:color-mix(in oklch, var(--bg-elev) 88%, transparent);
   backdrop-filter:saturate(1.4) blur(14px);
   -webkit-backdrop-filter:saturate(1.4) blur(14px);
-  border-bottom:1px solid transparent;
+  border-bottom:1px solid var(--border);
   transition:border-color .2s, background .2s;
 }
-.nav[data-scrolled="1"]{border-bottom-color:var(--border);background:color-mix(in oklch,var(--bg) 90%,transparent)}
+.nav[data-scrolled="1"]{border-bottom-color:var(--border-strong);background:color-mix(in oklch,var(--bg-elev) 96%,transparent)}
+.nav .brand-name{color:var(--ink)}
+.nav .brand-mark svg path{fill:var(--ink);stroke:var(--ink)}
+.nav .nav-link{color:var(--ink-2)}
+.nav .nav-link:hover{background:var(--bg-muted);color:var(--ink)}
+.nav .nav-link[aria-current="page"]{color:var(--ink)}
+.nav .nav-toggle{background:var(--bg-elev);border-color:var(--border-strong);color:var(--ink)}
 .nav-inner{
   max-width:var(--maxw);margin:0 auto;
   padding:14px var(--pad-x);
@@ -240,13 +264,12 @@ h3.subtitle{
 }
 .brand{display:inline-flex;align-items:center;gap:11px}
 .brand-mark{
-  width:30px;height:30px;
-  display:grid;place-items:center;
-  flex-shrink:0;
+  display:grid;place-items:center;flex-shrink:0;
+  height:30px;width:auto;
 }
-.brand-mark img{width:30px;height:30px;display:block}
+.brand-mark svg,.brand-logo{height:30px;width:auto;display:block}
 .brand-name{font-family:var(--font-display);font-weight:600;font-size:21px;letter-spacing:-.01em}
-.brand-name em{font-style:normal;color:var(--accent);font-weight:500}
+.brand-name em{font-style:italic;color:var(--accent);font-weight:500}
 .nav-links{display:flex;align-items:center;gap:4px;margin-left:8px}
 .nav-link{
   padding:8px 13px;border-radius:8px;
@@ -273,7 +296,7 @@ h3.subtitle{
 .trust{display:flex;align-items:center;gap:clamp(20px,4vw,52px);flex-wrap:wrap;justify-content:center}
 .trust-label{font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);font-weight:600}
 .trust-logo{
-  font-family:var(--font-display);font-style:normal;font-weight:500;
+  font-family:var(--font-display);font-style:italic;font-weight:500;
   font-size:19px;color:var(--ink-3);white-space:nowrap;
   transition:color .15s;
 }
@@ -281,7 +304,7 @@ h3.subtitle{
 
 /* ─── Stat row ─────────────────────────────────────────────────────────── */
 .stat-num{font-family:var(--font-display);font-weight:600;font-size:clamp(34px,4vw,46px);letter-spacing:-.02em;line-height:1}
-.stat-num em{font-style:normal;color:var(--accent)}
+.stat-num em{font-style:italic;color:var(--accent)}
 .stat-label{color:var(--ink-3);font-size:14.5px;margin-top:6px}
 
 /* ─── App window mock (CSS recreation of the product) ──────────────────── */
@@ -318,6 +341,7 @@ h3.subtitle{
   display:grid;grid-template-columns:1.6fr repeat(3,1fr);gap:40px;
   padding-bottom:48px;border-bottom:1px solid var(--night-border);
 }
+.footer .brand-mark{background:none}
 .footer .brand-name{color:var(--night-ink)}
 .footer-blurb{color:var(--night-ink-3);font-size:14.5px;margin-top:16px;max-width:34ch;line-height:1.6}
 .footer-col h4{font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--night-ink-3);font-weight:600;margin-bottom:16px}
@@ -354,15 +378,15 @@ h3.subtitle{
   background:var(--accent);
   border-radius:var(--radius-xl);
   padding:clamp(40px,5vw,64px);
-  color:#fff;position:relative;overflow:hidden;
+  color:var(--on-accent);position:relative;overflow:hidden;
 }
-.cta-band .display,.cta-band h2.title{color:#fff}
-.cta-band .display em,.cta-band h2.title em{color:color-mix(in oklch,var(--accent-soft) 90%, white);font-style:normal}
-.cta-band .lede{color:color-mix(in oklch,#fff 86%, var(--accent))}
-.cta-band .btn.primary{background:#fff;color:var(--accent-ink);border-color:#fff}
-.cta-band .btn.primary:hover{background:color-mix(in oklch,#fff 92%, var(--accent))}
-.cta-band .btn.ghost{color:#fff;border:1px solid color-mix(in oklch,#fff 50%, transparent)}
-.cta-band .btn.ghost:hover{background:color-mix(in oklch,#fff 14%, transparent)}
+.cta-band .display,.cta-band h2.title{color:var(--on-accent)}
+.cta-band .display em,.cta-band h2.title em{color:var(--on-accent);font-style:italic;opacity:.72}
+.cta-band .lede{color:color-mix(in oklch,var(--on-accent) 72%, var(--accent))}
+.cta-band .btn.primary{background:var(--night);color:var(--accent);border-color:var(--night)}
+.cta-band .btn.primary:hover{background:#0B0D12}
+.cta-band .btn.ghost{color:var(--on-accent);border:1px solid color-mix(in oklch,var(--on-accent) 38%, transparent)}
+.cta-band .btn.ghost:hover{background:color-mix(in oklch,var(--on-accent) 12%, transparent)}
 .cta-curtain{
   position:absolute;inset:0;opacity:.16;pointer-events:none;
   background-image:repeating-linear-gradient(90deg, transparent 0 28px, rgba(0,0,0,.5) 28px 30px);
@@ -383,7 +407,7 @@ h3.subtitle{
 
 /* ─── Step (how it works) ──────────────────────────────────────────────── */
 .step-num{
-  font-family:var(--font-display);font-style:normal;font-weight:500;
+  font-family:var(--font-display);font-style:italic;font-weight:500;
   font-size:15px;color:var(--accent-ink);
   width:38px;height:38px;border-radius:50%;
   border:1.5px solid var(--accent);
@@ -425,4 +449,11 @@ h3.subtitle{
 @media (max-width:520px){
   .grid-4{grid-template-columns:1fr}
   .trust{gap:18px}
+}
+
+/* ─── Dark-leaning helpers (dark nav + dark heroes, light bodies) ─── */
+.night .hero-note{color:var(--night-ink-2)}
+.night .hero-note svg{color:color-mix(in oklch,var(--c-sage) 75%,white)}
+@media (max-width:760px){
+  .nav .nav-links{background:var(--bg-elev);border-bottom-color:var(--border)}
 }

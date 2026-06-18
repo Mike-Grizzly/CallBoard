@@ -104,7 +104,8 @@ export function SanityFaq({ items }: { items: FaqItem[] }) {
           <div className="card card-pad center reveal" style={{ padding: "clamp(32px,4vw,48px)" }}>
             <h3 className="subtitle">Still have a question?</h3>
             <p className="lede" style={{ margin: "12px auto 24px", maxWidth: "46ch" }}>
-              Our team are former stage managers. Ask us anything — we answer in hours, not days.
+              Our team are former stage managers. Ask us anything, we read every
+              message and answer in hours, not days.
             </p>
             <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
               <Link className="btn primary" href="/contact">

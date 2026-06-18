@@ -20,7 +20,6 @@ const PUBLIC_ROUTES = [
   "/",
   "/features",
   "/pricing",
-  "/reviews",
   "/blog",
   "/faq",
   "/contact",

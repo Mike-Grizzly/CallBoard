@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandMark } from "./brand-mark";
 
 const COLS = [
   {
@@ -45,15 +46,15 @@ export function Footer() {
           <div>
             <Link className="brand" href="/" aria-label="Proscene home">
               <span className="brand-mark">
-                <img src="/brand-paper.svg" alt="" width={30} height={30} />
+                <BrandMark id="pslogo-foot" />
               </span>
               <span className="brand-name">
                 Pro<em>scene</em>
               </span>
             </Link>
             <p className="footer-blurb">
-              The production hub for stage managers. Calls, calendars, scripts, and
-              reports — everything your company needs, in one place.
+              The one place your show lives. Calls, calendar, script, blocking, and
+              reports, shared by the cast, the crew, and the creative team.
             </p>
           </div>
           {COLS.map((c) => (
