@@ -23,7 +23,7 @@ export function ContactForm({ reason }: { reason: string }) {
             <path d="M20 6L9 17l-5-5" />
           </svg>
         </div>
-        <h3 className="subtitle">Thanks — message sent.</h3>
+        <h3 className="subtitle">Thanks, message sent.</h3>
         <p className="lede" style={{ marginTop: 10 }}>
           We&apos;re former stage managers and we answer fast. You&apos;ll hear back at the email
           you gave us.

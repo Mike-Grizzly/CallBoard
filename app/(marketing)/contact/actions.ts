@@ -37,7 +37,7 @@ export async function submitContactForm(
     return { error: "Please enter a valid email address." };
   }
   if (message.length > 5000) {
-    return { error: "That message is a little long — please trim it down." };
+    return { error: "That message is a little long, please trim it down." };
   }
 
   try {
@@ -45,7 +45,7 @@ export async function submitContactForm(
       from: FROM,
       to: TO,
       replyTo: email,
-      subject: `Proscene · ${REASON_LABEL[reason]} — ${name}`,
+      subject: `Proscene · ${REASON_LABEL[reason]} · ${name}`,
       text:
         `Reason: ${REASON_LABEL[reason]}\n` +
         `Name: ${name}\n` +

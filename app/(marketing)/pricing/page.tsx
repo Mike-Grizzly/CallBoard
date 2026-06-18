@@ -13,7 +13,7 @@ import { getPricingTiers } from "@/lib/sanity/queries";
 import { SanityTiers } from "./sanity-tiers";
 
 export const metadata: Metadata = {
-  title: "Pricing — Proscene",
+  title: "Pricing · Proscene",
   description:
     "Pay for the shows you run, never for the people in them. Unlimited cast and crew on every plan. Season, Repertory, and Company tiers for organizations, plus Proscene Studio for freelance designers and discounted school pricing.",
 };

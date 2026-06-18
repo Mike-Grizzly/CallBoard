@@ -2250,3 +2250,23 @@ real?" judgment required.
 **What remains:** The DB columns (`brand_color`, `brand_color_secondary`, `brand_color_highlight`) are still on `organizations` (nullable, all null). If a future design solves the theme-conflict problem — e.g., a proper per-workspace theme system that replaces rather than overlays the global themes — the columns are already there.
 
 **Kept:** Everything else from the session — org setup wizard, logo upload, welcome state, survey data collection, team invite on setup.
+
+---
+
+## 2026-06-18 — Marketing site repositioned + amber rebrand (Geist kept, Reviews removed)
+
+**Decision:** Recreated the `handoff/design_handoff_marketing_site` design across all six marketing pages (Home, Features, Pricing, FAQ, Blog index, Blog post), repositioning the site from the stage-manager-only "Callboard" framing to **"the one place your show lives," syncing cast, crew, and creative teams.**
+
+**Brand tokens:** Adopted the handoff's "paper & spotlight" palette (spotlight-amber `--accent #E0A23A`, warm-paper light surfaces, dark "night" islands, italic `<em>` emphasis, white nav / dark logo, dark CTA button). Owner override: **keep Geist** as the typeface, not the handoff's Inter. Tokens stay **scoped under `.ps-site`** so the in-app product theme (still curtain-crimson + the 4-theme system) is untouched — this was an explicit choice to rebrand marketing only, not the app.
+
+**Wordmark casing:** Standardized on **"Proscene"** (lowercase s), not the handoff HTML's "ProScene" — matches the existing app/nav and the README's note that the public brand is "Proscene."
+
+**Reviews page removed:** Deleted `app/(marketing)/reviews/` and its `proxy.ts` public-route entry (the page was already a "coming soon" placeholder with no real, attributable testimonials; the handoff intentionally has no Reviews page). The `getTestimonials`/`getLogos` Sanity queries are left in `lib/sanity/queries.ts` unused (harmless; cheap to revive).
+
+**Audience toggles:** Features uses a two-segment toggle (Cast & Crew / Creative Teams) with Stage Management living inside the Cast & Crew segment (not its own third segment — owner's call, to keep the copy maintainable). Pricing uses an individuals/companies audience toggle plus a monthly/annual billing toggle. Both are container-scoped (`[data-page="..."][data-...]`), persisted in `localStorage`, and implemented as accessible tablists.
+
+**Copy convention:** No em-dashes in user-facing marketing copy (per the handoff), commas/colons/`·` instead; brand "Proscene" throughout.
+
+**Sanity:** Kept the existing fetch + static-fallback architecture on every CMS-backed page (home hero, blog, faq, pricing tiers); updated both the static fallback and the `sanity-*.tsx` render components to the new design.
+
+**Verification:** `tsc` + `eslint` clean; `next build` compiles, typechecks, and prerenders all six marketing routes (placeholder env). Not browser-verified (no display in sandbox).

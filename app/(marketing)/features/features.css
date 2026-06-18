@@ -1,19 +1,23 @@
-/* Features page-local styles (from features.html <style>). */
+/* Features page-local styles (ported from features.html <style>).
+   Scoped under [data-page="features"]. The audience segment is set on the
+   [data-page="features"] container itself, so segment selectors read
+   [data-page="features"][data-segment="..."]. */
+
 [data-page="features"] .page-hero{padding:clamp(48px,7vw,80px) 0 clamp(32px,4vw,48px)}
 [data-page="features"] .page-hero .display{max-width:16ch}
-[data-page="features"] .feature-nav{
-  position:sticky;top:61px;z-index:40;
-  background:color-mix(in oklch,var(--bg) 88%,transparent);
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
-}
-[data-page="features"] .feature-nav-inner{max-width:var(--maxw);margin:0 auto;padding:0 var(--pad-x);display:flex;gap:4px;overflow-x:auto}
-[data-page="features"] .feature-nav a{padding:14px 14px;font-size:14px;font-weight:500;color:var(--ink-3);border-bottom:2px solid transparent;white-space:nowrap}
-[data-page="features"] .feature-nav a:hover{color:var(--ink)}
-[data-page="features"] .feature-nav a.active{color:var(--ink);border-bottom-color:var(--accent)}
+
+/* dark dashboard hero (lean-dark balance; light bodies below) */
+[data-page="features"] .dh-hero{background:linear-gradient(180deg,var(--night),#0F1218)}
+[data-page="features"] .dh-hero .dh-intro .display{color:var(--night-ink)}
+[data-page="features"] .dh-hero .dh-intro .lede{color:var(--night-ink-2)}
+[data-page="features"] .dh-hero .dh-intro .eyebrow{color:color-mix(in oklch,var(--accent) 72%,white)}
+[data-page="features"] .dh-hero .dh-intro .eyebrow::before{background:color-mix(in oklch,var(--accent) 72%,white)}
+[data-page="features"] .dh-hero .dh-note{color:var(--night-ink-3)}
+[data-page="features"] .dh-hero .hero-actions .btn.lg:not(.primary){background:var(--night-elev);border-color:var(--night-border);color:var(--night-ink)}
+[data-page="features"] .dh-hero .hero-actions .btn.lg:not(.primary):hover{background:color-mix(in oklch,var(--night-elev) 80%,white)}
 [data-page="features"] .split{display:grid;grid-template-columns:1fr 1fr;gap:clamp(36px,5vw,72px);align-items:center}
 [data-page="features"] .split.flip .split-media{order:-1}
-[data-page="features"] .feat-block{scroll-margin-top:130px}
+[data-page="features"] .feat-block{scroll-margin-top:150px}
 [data-page="features"] .panel{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-2);overflow:hidden}
 [data-page="features"] .panel-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);font-size:13.5px}
 [data-page="features"] .panel-row:last-child{border-bottom:0}
@@ -23,7 +27,142 @@
 [data-page="features"] .panel-time{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-3)}
 [data-page="features"] .panel-head{background:var(--bg-muted);font-weight:600;color:var(--ink);display:flex;align-items:center;gap:9px}
 [data-page="features"] .panel-head svg{width:16px;height:16px}
+/* script lines mock */
 [data-page="features"] .scriptmock{padding:18px 20px;font-family:var(--font-display);font-size:15px;line-height:1.9;color:var(--ink-2)}
 [data-page="features"] .scriptmock .ch{font-variant:small-caps;letter-spacing:.06em;color:var(--ink);font-weight:600;font-family:var(--font-ui);font-size:12px;text-transform:uppercase}
 [data-page="features"] .scriptmock .blk{background:var(--accent-soft);color:var(--accent-ink);border-radius:5px;padding:1px 5px;font-family:var(--font-ui);font-size:12px}
-@media (max-width:860px){[data-page="features"] .split{grid-template-columns:1fr;gap:30px}[data-page="features"] .split.flip .split-media{order:0}}
+
+/* ══════════════════════════════════════════════════════════════════
+   AI SCRIPT SETUP, marquee feature band
+   ══════════════════════════════════════════════════════════════════ */
+[data-page="features"] .ai-feature{position:relative;overflow:hidden;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+[data-page="features"] .ai-feature .ai-glow{
+  position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.7;
+  background:radial-gradient(48% 60% at 82% 12%, color-mix(in oklch,var(--accent) 16%,transparent), transparent 70%),
+             radial-gradient(40% 50% at 4% 100%, var(--c-amber-soft), transparent 72%);
+}
+[data-page="features"] .ai-feature .wrap{position:relative;z-index:1}
+[data-page="features"] .ai-grid{display:grid;grid-template-columns:1.02fr 1fr;gap:clamp(34px,5vw,66px);align-items:center}
+[data-page="features"] .ai-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink)}
+[data-page="features"] .ai-eyebrow svg{width:16px;height:16px}
+[data-page="features"] .ai-feature .checklist{margin-top:24px}
+[data-page="features"] .ai-note{margin-top:24px;display:flex;gap:10px;align-items:center;font-size:13.5px;color:var(--ink-3)}
+[data-page="features"] .ai-note .pill{flex-shrink:0}
+
+/* mock review panel */
+[data-page="features"] .ai-panel{background:var(--bg-elev);border:1px solid var(--border-strong);border-radius:var(--radius-l);box-shadow:var(--shadow-4);overflow:hidden}
+[data-page="features"] .ai-p-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:var(--bg-muted);border-bottom:1px solid var(--border)}
+[data-page="features"] .ai-p-title{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:600;font-size:15px}
+[data-page="features"] .ai-p-title svg{width:18px;height:18px;color:var(--accent)}
+[data-page="features"] .ai-quota{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--accent-ink);background:color-mix(in oklch,var(--accent) 12%,var(--bg-elev));border:1px solid color-mix(in oklch,var(--accent) 38%,transparent);border-radius:999px;padding:4px 10px;font-variant-numeric:tabular-nums}
+[data-page="features"] .ai-quota svg{width:12px;height:12px}
+[data-page="features"] .ai-p-sub{padding:11px 16px 0;font-size:12px;color:var(--ink-4);font-family:var(--font-mono);display:flex;align-items:center;gap:7px}
+[data-page="features"] .ai-p-sub svg{width:13px;height:13px}
+[data-page="features"] .ai-block{padding:14px 16px;border-bottom:1px solid var(--border)}
+[data-page="features"] .ai-block:last-of-type{border-bottom:0}
+[data-page="features"] .ai-block-h{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+[data-page="features"] .ai-block-h svg{width:15px;height:15px;color:var(--accent)}
+[data-page="features"] .ai-block-h b{font-size:13.5px;font-weight:600}
+[data-page="features"] .ai-block-h .cnt{font-size:11px;color:var(--ink-3);background:var(--bg-muted);border-radius:999px;padding:2px 8px}
+[data-page="features"] .ai-rows{display:flex;flex-direction:column;gap:7px}
+[data-page="features"] .ai-row{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--ink-2)}
+[data-page="features"] .ai-row .nm{flex:1;color:var(--ink)}
+[data-page="features"] .ai-type{font-size:11px;font-weight:600;border-radius:5px;padding:2px 8px;white-space:nowrap}
+[data-page="features"] .ai-type.principal{background:var(--accent-soft);color:var(--accent-ink)}
+[data-page="features"] .ai-type.supporting{background:var(--c-dusk-soft);color:color-mix(in oklch,var(--c-dusk) 60%,var(--ink))}
+[data-page="features"] .ai-type.ensemble{background:var(--c-sand-soft);color:color-mix(in oklch,var(--c-sand) 40%,var(--ink))}
+[data-page="features"] .ai-pg{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);background:var(--bg-muted);border:1px solid var(--border);border-radius:5px;padding:2px 6px;min-width:42px;text-align:center}
+[data-page="features"] .ai-kind{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+[data-page="features"] .ai-kind.song{background:var(--c-plum)}
+[data-page="features"] .ai-kind.scene{background:var(--c-dusk)}
+[data-page="features"] .ai-more{font-size:12px;color:var(--ink-4);padding-top:2px}
+[data-page="features"] .ai-actions{display:flex;align-items:center;gap:9px;padding:14px 16px;background:var(--bg-muted);border-top:1px solid var(--border)}
+[data-page="features"] .ai-btn{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;border-radius:8px;padding:8px 14px;border:1px solid var(--border-strong)}
+[data-page="features"] .ai-btn svg{width:14px;height:14px}
+[data-page="features"] .ai-btn.apply{background:var(--ink);color:var(--bg-elev);border-color:var(--ink)}
+[data-page="features"] .ai-btn.ghost{background:transparent;color:var(--ink-2)}
+[data-page="features"] .ai-token{margin-left:auto;font-size:10.5px;color:var(--ink-4);max-width:15ch;text-align:right;line-height:1.35}
+
+/* upload → review → apply steps */
+[data-page="features"] .ai-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(16px,3vw,34px);margin-top:clamp(40px,5vw,60px)}
+[data-page="features"] .ai-step{position:relative}
+[data-page="features"] .ai-step .sn{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;border:1.5px solid var(--accent);color:var(--accent-ink);font-family:var(--font-display);font-weight:600;font-size:15px;margin-bottom:12px}
+[data-page="features"] .ai-step h4{font-family:var(--font-display);font-size:17px;font-weight:600;letter-spacing:-.01em;margin-bottom:5px}
+[data-page="features"] .ai-step p{font-size:14px;color:var(--ink-3);line-height:1.5}
+[data-page="features"] .ai-step:not(:last-child)::after{content:"";position:absolute;top:17px;left:46px;right:-17px;height:1.5px;background:var(--border-strong)}
+
+@media (max-width:860px){
+  [data-page="features"] .ai-grid{grid-template-columns:1fr;gap:34px}
+  [data-page="features"] .ai-steps{grid-template-columns:1fr;gap:22px}
+  [data-page="features"] .ai-step:not(:last-child)::after{display:none}
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   AUDIENCE SWITCHER (additive, uses existing tokens only)
+   A segmented control merged into the sticky feature bar. The toggle is
+   the primary control and the tool jump-links become a contextual second
+   row that reflects the active segment (Command center link only appears
+   for Cast & Crew).
+   ══════════════════════════════════════════════════════════════════ */
+[data-page="features"] .feature-bar{
+  position:sticky;top:61px;z-index:40;
+  background:color-mix(in oklch,var(--bg) 88%,transparent);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+[data-page="features"] .feature-bar-inner{
+  max-width:var(--maxw);margin:0 auto;padding:9px var(--pad-x);
+  display:flex;align-items:center;gap:20px;
+}
+/* segmented control */
+[data-page="features"] .aud-toggle{
+  position:relative;display:grid;grid-template-columns:1fr 1fr;flex-shrink:0;
+  background:var(--bg-sunken);border:1px solid var(--border);
+  border-radius:999px;padding:3px;
+}
+[data-page="features"] .aud-seg{
+  position:relative;z-index:1;appearance:none;border:0;background:transparent;
+  font-family:var(--font-ui);font-size:13.5px;font-weight:600;letter-spacing:-.005em;
+  color:var(--ink-3);padding:8px 18px;border-radius:999px;white-space:nowrap;
+  cursor:pointer;transition:color .2s ease;
+}
+[data-page="features"] .aud-seg:hover{color:var(--ink)}
+[data-page="features"] .aud-seg[aria-selected="true"]{color:var(--on-accent)}
+[data-page="features"] .aud-seg:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[data-page="features"] .aud-thumb{
+  position:absolute;top:3px;left:3px;z-index:0;height:calc(100% - 6px);width:0;
+  border-radius:999px;background:var(--accent);
+  box-shadow:0 4px 12px -4px color-mix(in oklch,var(--accent) 60%,transparent);
+  transition:left .28s cubic-bezier(.4,.1,.2,1),width .28s cubic-bezier(.4,.1,.2,1);
+}
+/* contextual jump nav */
+[data-page="features"] .feature-jump{display:flex;gap:2px;overflow-x:auto;flex:1;scrollbar-width:none}
+[data-page="features"] .feature-jump::-webkit-scrollbar{display:none}
+[data-page="features"] .feature-jump a{
+  padding:8px 12px;font-size:13.5px;font-weight:500;color:var(--ink-3);
+  border-radius:8px;white-space:nowrap;transition:color .12s,background .12s;
+}
+[data-page="features"] .feature-jump a:hover{color:var(--ink);background:var(--bg-muted)}
+[data-page="features"] .feature-jump a.active{color:var(--ink);background:var(--accent-soft)}
+[data-page="features"] .feature-jump a[hidden]{display:none}
+
+/* per-segment copy swap (display-only; demo panels are shared) */
+[data-page="features"] .aud-copy{display:none}
+[data-page="features"][data-segment="cast"] .aud-copy[data-seg="cast"]{display:block}
+[data-page="features"][data-segment="creative"] .aud-copy[data-seg="creative"]{display:block}
+/* blocks that only belong to one segment */
+[data-page="features"] .feat-block[data-aud="cast"]{display:none}
+[data-page="features"][data-segment="cast"] .feat-block[data-aud="cast"]{display:block}
+
+@media (prefers-reduced-motion:no-preference){
+  [data-page="features"] .aud-copy[data-seg]{animation:audIn .34s ease both}
+}
+@keyframes audIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+
+@media (max-width:860px){
+  [data-page="features"] .split{grid-template-columns:1fr;gap:30px}
+  [data-page="features"] .split.flip .split-media{order:0}
+  [data-page="features"] .feature-bar-inner{flex-direction:column;align-items:stretch;gap:9px}
+  [data-page="features"] .aud-toggle{width:100%}
+  [data-page="features"] .feature-jump{order:2}
+}

@@ -3,9 +3,9 @@ import "./contact.css";
 import { ContactForm } from "./contact-form";
 
 export const metadata: Metadata = {
-  title: "Contact — Proscene",
+  title: "Contact · Proscene",
   description:
-    "Questions, feedback, a demo, or student verification — get in touch. We're former stage managers and we answer fast.",
+    "Questions, feedback, a demo, or student verification: get in touch. We're former stage managers and we answer fast.",
 };
 
 const COPY: Record<string, { eyebrow: string; title: string; lede: string }> = {
@@ -22,7 +22,7 @@ const COPY: Record<string, { eyebrow: string; title: string; lede: string }> = {
   general: {
     eyebrow: "Get in touch",
     title: "Talk to a <em>human.</em>",
-    lede: "Questions, feedback, or anything else — we're former stage managers and we answer in hours, not days.",
+    lede: "Questions, feedback, or anything else: we're former stage managers and we answer in hours, not days.",
   },
 };
 

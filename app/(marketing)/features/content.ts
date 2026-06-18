@@ -1,5 +1,8 @@
-// Features page body — ported from features.html. Links rewired to Next routes
-// (pricing.html → /pricing); set-piece images point at /marketing/setpieces/*.
+// Features page body, ported from handoff features.html. Links rewired to Next
+// routes (pricing.html -> /pricing, placeholders -> # with data-noop); set-piece
+// images point at /marketing/setpieces/*. Brand is "Proscene"; no em-dashes.
+// The audience segment is set on the [data-page="features"] container (see
+// FeaturesInteractions); CSS reads [data-page="features"][data-segment="..."].
 export const FEATURES_HTML = `
   <section class="dh-hero">
     <div class="hero-glow"></div>
@@ -7,7 +10,7 @@ export const FEATURES_HTML = `
       <div class="dh-intro">
         <span class="eyebrow">The workspace</span>
         <h1 class="display">Your whole production, <em>at a glance.</em></h1>
-        <p class="lede">Open Proscene and you already know where things stand — tonight's call, today's schedule, every show on your desk, and exactly what's waiting on you. One home screen the whole company runs from.</p>
+        <p class="lede">Open Proscene and you already know where things stand: tonight's call, today's schedule, every show on your desk, and exactly what's waiting on you. One home screen the whole company runs from.</p>
         <div class="hero-actions">
           <a class="btn primary lg" href="/signup">Start free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
           <a class="btn lg" href="/contact?reason=demo">Book a demo</a>
@@ -41,7 +44,7 @@ export const FEATURES_HTML = `
               </div>
               <div class="dh-focal-body">
                 <div class="dh-focal-when">Tonight · 7:00 – 10:30 PM</div>
-                <div class="dh-focal-title">Act II — Stumble Run</div>
+                <div class="dh-focal-title">Act II, Stumble Run</div>
                 <div class="dh-focal-where"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg><span>Studio A</span><span class="pip"></span><span>Wellman Theatre</span><span class="pip"></span><span>Rehearsal 24 of 36</span></div>
               </div>
               <div class="dh-focal-mid">
@@ -73,7 +76,7 @@ export const FEATURES_HTML = `
               <div class="dh-tl-head"><span class="dh-tl-title">Today</span><span class="dh-tl-date">May 4</span></div>
               <div class="dh-tl-list">
                 <div class="dh-tl-item" data-s="done"><span class="dh-tl-time">10:00</span><span class="dh-tl-node"></span><div><div class="dh-tl-what">Production meeting</div><div class="dh-tl-sub">SM office · design + producer</div></div></div>
-                <div class="dh-tl-item" data-s="done"><span class="dh-tl-time">1:30</span><span class="dh-tl-node"></span><div><div class="dh-tl-what">Fight call — Act II</div><div class="dh-tl-sub">Studio A · w/ fight captain</div></div></div>
+                <div class="dh-tl-item" data-s="done"><span class="dh-tl-time">1:30</span><span class="dh-tl-node"></span><div><div class="dh-tl-what">Fight call, Act II</div><div class="dh-tl-sub">Studio A · w/ fight captain</div></div></div>
                 <div class="dh-tl-item" data-s="now"><span class="dh-tl-time">4:45</span><span class="dh-tl-node"></span><div><div class="dh-tl-what">Costume fitting <span class="dh-tl-now">NOW</span></div><div class="dh-tl-sub">Wardrobe · Edith &amp; Kate</div></div></div>
                 <div class="dh-tl-item" data-s="up"><span class="dh-tl-time">6:30</span><span class="dh-tl-node"></span><div><div class="dh-tl-what">Cast call / warm-ups</div><div class="dh-tl-sub">Studio A · house opens 6:15</div></div></div>
                 <div class="dh-tl-item" data-s="up"><span class="dh-tl-time">7:00</span><span class="dh-tl-node"></span><div><div class="dh-tl-what">Act II Stumble Run</div><div class="dh-tl-sub">Top to finale · est. 3h 15m</div></div></div>
@@ -85,8 +88,8 @@ export const FEATURES_HTML = `
               <div class="dh-wait-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/></svg></span><h4>Waiting on you</h4><span class="cnt">3</span></div>
               <div class="dh-wait-list">
                 <div class="dh-ment"><span class="dh-ment-av" style="background:#c0563f">EB</span><div style="min-width:0"><div class="dh-ment-head"><span class="dh-ment-from">Eleanor Bryce</span><span class="dh-ment-role">Director</span><span class="dh-ment-time">12m</span></div><p class="dh-ment-snip"><span class="dh-tag">@Maya</span> can we revisit Mabel's entrance timing? Felt rushed at bar 47.</p></div></div>
-                <div class="dh-ment"><span class="dh-ment-av" style="background:#7d6fb0">AI</span><div style="min-width:0"><div class="dh-ment-head"><span class="dh-ment-from">Adaeze Ife</span><span class="dh-ment-role">Costumes</span><span class="dh-ment-time">1h</span></div><p class="dh-ment-snip"><span class="dh-tag">@Maya</span> bloomer fittings for Edith &amp; Kate — Friday 4–6 still good?</p></div></div>
-                <div class="dh-ment"><span class="dh-ment-av" style="background:#4f7fb8">HV</span><div style="min-width:0"><div class="dh-ment-head"><span class="dh-ment-from">Helena Voss</span><span class="dh-ment-role">Music Dir.</span><span class="dh-ment-time">3h</span></div><p class="dh-ment-snip"><span class="dh-tag">@Maya</span> score v3 is posted — distribute to design?</p></div></div>
+                <div class="dh-ment"><span class="dh-ment-av" style="background:#7d6fb0">AI</span><div style="min-width:0"><div class="dh-ment-head"><span class="dh-ment-from">Adaeze Ife</span><span class="dh-ment-role">Costumes</span><span class="dh-ment-time">1h</span></div><p class="dh-ment-snip"><span class="dh-tag">@Maya</span> bloomer fittings for Edith &amp; Kate, Friday 4 to 6 still good?</p></div></div>
+                <div class="dh-ment"><span class="dh-ment-av" style="background:#4f7fb8">HV</span><div style="min-width:0"><div class="dh-ment-head"><span class="dh-ment-from">Helena Voss</span><span class="dh-ment-role">Music Dir.</span><span class="dh-ment-time">3h</span></div><p class="dh-ment-snip"><span class="dh-tag">@Maya</span> score v3 is posted, distribute to design?</p></div></div>
               </div>
             </aside>
           </div>
@@ -101,39 +104,176 @@ export const FEATURES_HTML = `
     </div>
   </section>
 
+  <!-- AI SCRIPT SETUP, marquee feature -->
+  <section class="section ai-feature">
+    <div class="ai-glow"></div>
+    <div class="wrap">
+      <div class="ai-grid reveal">
+        <div>
+          <span class="ai-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg> AI Script Setup</span>
+          <h2 class="title" style="margin:16px 0 16px">Upload the script. Start with the show already <em>built.</em></h2>
+          <p class="lede">Drop in the PDF, even a photocopied one, and Claude reads it cover to cover, then proposes your cast list, act-and-scene breakdown, and a bookmark for every scene and musical number. You review, tweak, and approve. Nothing touches your production until you say so.</p>
+          <ul class="checklist">
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Cast, scenes, and bookmarks proposed from the real script</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Scanned or photographed scripts read too, page by page</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Refine in plain English: "songs are misnumbered after p.30"</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> A licensed show parsed once is instant, and free, for the next company</li>
+          </ul>
+          <div class="ai-note">
+            <span class="pill" data-c="plum"><span class="dot"></span>Beta soon</span>
+            <span>Per-role line highlighting: each actor sees their own lines lit up.</span>
+          </div>
+        </div>
+
+        <!-- mock review panel -->
+        <div class="ai-panel reveal">
+          <div class="ai-p-head">
+            <span class="ai-p-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg> AI Script Setup</span>
+            <span class="ai-quota"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg> 4 of 5 analyses left</span>
+          </div>
+          <div class="ai-p-sub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> Pirates_of_Penzance.pdf · 112 pages</div>
+
+          <div class="ai-block">
+            <div class="ai-block-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M16 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-5-6.7"/></svg><b>Cast &amp; characters</b><span class="cnt">7</span></div>
+            <div class="ai-rows">
+              <div class="ai-row"><span class="nm">Mabel</span><span class="ai-type principal">Principal</span></div>
+              <div class="ai-row"><span class="nm">Frederic</span><span class="ai-type principal">Principal</span></div>
+              <div class="ai-row"><span class="nm">The Pirate King</span><span class="ai-type principal">Principal</span></div>
+              <div class="ai-row"><span class="nm">Ruth</span><span class="ai-type supporting">Supporting</span></div>
+              <div class="ai-more">+3 more: Major-General Stanley, Sergeant, Ensemble</div>
+            </div>
+          </div>
+
+          <div class="ai-block">
+            <div class="ai-block-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h8M3 12h8M3 19h8M15 5h6M15 12h6M15 19h6"/></svg><b>Scene breakdown</b><span class="cnt">2</span></div>
+            <div class="ai-rows">
+              <div class="ai-row"><span class="ai-pg">I · 1</span><span class="nm">A rocky seashore, Cornwall</span></div>
+              <div class="ai-row"><span class="ai-pg">II · 1</span><span class="nm">A ruined chapel by moonlight</span></div>
+            </div>
+          </div>
+
+          <div class="ai-block">
+            <div class="ai-block-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><b>Bookmarks · musical numbers</b></div>
+            <div class="ai-rows">
+              <div class="ai-row"><span class="ai-pg">p.31</span><span class="ai-kind song"></span><span class="nm">No. 5, Poor Wand'ring One</span></div>
+              <div class="ai-row"><span class="ai-pg">p.68</span><span class="ai-kind song"></span><span class="nm">No. 12, With Cat-like Tread</span></div>
+            </div>
+          </div>
+
+          <div class="ai-actions">
+            <span class="ai-btn apply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Apply to production</span>
+            <span class="ai-btn ghost">Discard</span>
+            <span class="ai-token">Reused a verified breakdown, no AI tokens used.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- the flow -->
+      <div class="ai-steps reveal">
+        <div class="ai-step">
+          <div class="sn">1</div>
+          <h4>Upload</h4>
+          <p>Any script PDF: typeset, exported, or scanned from the photocopier.</p>
+        </div>
+        <div class="ai-step">
+          <div class="sn">2</div>
+          <h4>Review</h4>
+          <p>Edit the proposed cast, scenes, and bookmarks. Not quite right? Tell it what to fix and re-run.</p>
+        </div>
+        <div class="ai-step">
+          <div class="sn">3</div>
+          <h4>Apply</h4>
+          <p>One tap populates the production and seeds bookmarks for the whole company.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="section-tight" style="padding:clamp(28px,4vw,44px) 0 4px;text-align:center">
     <div class="wrap">
       <span class="eyebrow">One source of truth</span>
       <h2 class="title" style="margin-top:14px;font-size:clamp(26px,3.4vw,40px)">Every part of the prompt book, <em>connected.</em></h2>
-      <p class="lede lede-narrow" style="margin:16px auto 0">Proscene isn't six tools stapled together. Calls, calendars, the script, blocking, and reports all share the same cast list, the same calendar, the same source of truth — so nothing falls out of sync.</p>
+      <p class="lede lede-narrow" style="margin:16px auto 0">Proscene isn't six tools stapled together. Calls, calendars, the script, blocking, and reports all share the same cast list and the same calendar, so whether you're in the cast, on a crew, or on the creative team, you're working from the same source of truth. Pick your view below.</p>
     </div>
   </section>
 
-  <nav class="feature-nav" aria-label="Features">
-    <div class="feature-nav-inner">
-      <a href="#calls" class="active">Calls</a>
-      <a href="#calendar">Calendar</a>
-      <a href="#script">Script</a>
-      <a href="#blocking">Blocking</a>
-      <a href="#reports">Reports</a>
-      <a href="#people">People</a>
-      <a href="#mobile">Mobile</a>
+  <!-- AUDIENCE TOGGLE + CONTEXTUAL JUMP NAV -->
+  <div class="feature-bar">
+    <div class="feature-bar-inner">
+      <div class="aud-toggle" role="tablist" aria-label="Choose your view">
+        <button class="aud-seg" id="tab-cast" role="tab" type="button" data-seg="cast" aria-controls="feat-panels" aria-selected="true" tabindex="0">For Cast &amp; Crew</button>
+        <button class="aud-seg" id="tab-creative" role="tab" type="button" data-seg="creative" aria-controls="feat-panels" aria-selected="false" tabindex="-1">For Creative Teams</button>
+        <span class="aud-thumb" aria-hidden="true"></span>
+      </div>
+      <nav class="feature-jump" aria-label="Jump to a tool">
+        <a href="#sm" data-aud="cast">Command center</a>
+        <a href="#calls" data-aud="both">Calls</a>
+        <a href="#calendar" data-aud="both">Calendar</a>
+        <a href="#script" data-aud="both">Script</a>
+        <a href="#blocking" data-aud="both">Blocking</a>
+        <a href="#reports" data-aud="both">Reports</a>
+        <a href="#people" data-aud="both">People</a>
+        <a href="#mobile" data-aud="both">Mobile</a>
+      </nav>
     </div>
-  </nav>
+  </div>
+
+  <div id="feat-panels" role="region" aria-label="Features by audience">
+
+  <!-- STAGE MANAGEMENT, Cast & Crew only, leads the view -->
+  <section class="section feat-block" id="sm" data-aud="cast">
+    <div class="wrap">
+      <div class="split reveal">
+        <div>
+          <div class="aud-copy" data-seg="cast">
+            <span class="pill" data-c="accent"><span class="dot"></span>Stage Management</span>
+            <h2 class="title" style="margin:16px 0 16px">Run the whole room from <em>one</em> command center.</h2>
+            <p class="lede" style="margin-bottom:22px">Proscene was born at the SM's table. Send calls, take blocking, log notes, and file the report from a single home screen, with the conflict flags and live confirmations that keep a show on its feet.</p>
+            <ul class="checklist">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> One command center: calls, calendar, script, blocking, reports</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Live confirmations and conflict flags as the room runs</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> File the daily report before the company's left the lobby</li>
+            </ul>
+          </div>
+        </div>
+        <div class="split-media">
+          <div class="panel">
+            <div class="panel-row panel-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 11h6M9 15h4"/></svg> Command center · Pirates · Wk 4</div>
+            <div class="panel-row"><span class="pill" data-c="accent"><span class="dot"></span>Calls</span><span class="lead"><b>Tonight's call sent</b><span>Act II Stumble · 22 called</span></span><span class="pill" data-c="sage"><span class="dot"></span>18/22 in</span></div>
+            <div class="panel-row"><span class="pill" data-c="dusk"><span class="dot"></span>Cal</span><span class="lead"><b>3 conflicts flagged</b><span>Thu 19:00 to 18:00 resolved</span></span><span class="pill" data-c="sage"><span class="dot"></span>Clear</span></div>
+            <div class="panel-row"><span class="pill" data-c="amber"><span class="dot"></span>Rpt</span><span class="lead"><b>Rehearsal Report #24</b><span>Routed to 5 departments</span></span><span class="pill" data-c="sage"><span class="dot"></span>Sent</span></div>
+            <div class="panel-row"><span class="pill" data-c="clay"><span class="dot"></span>Blk</span><span class="lead"><b>Blocking saved</b><span>Act II Sc. 1 · pinned to p.42</span></span><span class="panel-time">9:48</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- CALLS -->
   <section class="section feat-block" id="calls">
     <div class="wrap">
-      <div class="split reveal">
+      <div class="split flip reveal">
         <div>
-          <span class="pill" data-c="accent"><span class="dot"></span>Calls</span>
-          <h2 class="title" style="margin:16px 0 16px">Send the call. Watch the room <em>fill up.</em></h2>
-          <p class="lede" style="margin-bottom:22px">Build a call from your calendar, choose who's needed, and send. Everyone confirms with a tap — and you see exactly who hasn't, without sending a single follow-up text.</p>
-          <ul class="checklist">
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Who's-called logic by scene, role, or department</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Real-time confirmations and read receipts</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Auto-reminders the night before and morning of</li>
-          </ul>
+          <div class="aud-copy" data-seg="cast">
+            <span class="pill" data-c="accent"><span class="dot"></span>Calls</span>
+            <h2 class="title" style="margin:16px 0 16px">Never wonder if you're <em>called.</em></h2>
+            <p class="lede" style="margin-bottom:22px">See exactly when you're needed, confirm in a tap, and get a nudge before call. No group-text scramble, no "wait, am I in this scene?"</p>
+            <ul class="checklist">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Your calls only, by scene, role, and department</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Confirm with one tap, from anywhere</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Reminders the night before and morning of</li>
+            </ul>
+          </div>
+          <div class="aud-copy" data-seg="creative">
+            <span class="pill" data-c="accent"><span class="dot"></span>Calls</span>
+            <h2 class="title" style="margin:16px 0 16px">Call exactly who you <em>need.</em></h2>
+            <p class="lede" style="margin-bottom:22px">Build a call from the calendar, pick the scenes, roles, or departments, and send. Watch confirmations land in real time, without a single follow-up text.</p>
+            <ul class="checklist">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Who's-called logic by scene, role, or department</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Real-time confirmations and read receipts</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Auto-reminders go out for you</li>
+            </ul>
+          </div>
         </div>
         <div class="split-media">
           <div class="panel demo-calls" data-demo="calls" data-phases="4" data-interval="1700" data-rest="3">
@@ -144,7 +284,7 @@ export const FEATURES_HTML = `
             <div class="panel-row"><span class="cl-av will">WH</span><span class="lead"><b>Will Hart</b><span>Ensemble</span></span><span class="cl-status"><span class="pill pill-noreply">No reply</span><span class="pill pill-confirmed" data-c="sage"><span class="dot"></span>Confirmed</span></span></div>
             <div class="cl-phone">
               <div class="cl-ph-top"><span class="pdot"></span> Will Hart's phone · 6:12 PM</div>
-              <div class="cl-ph-body"><b>Tonight, 7:00 PM call</b><span>Act II — Stumble · Studio A</span></div>
+              <div class="cl-ph-body"><b>Tonight, 7:00 PM call</b><span>Act II, Stumble · Studio A</span></div>
               <button class="cl-ack" type="button" aria-hidden="true" tabindex="-1"><span class="lbl lbl-go">Acknowledge call</span><span class="lbl lbl-done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Confirmed for 7:00 PM</span></button>
             </div>
             <span class="demo-cursor"></span>
@@ -157,24 +297,36 @@ export const FEATURES_HTML = `
   <!-- CALENDAR -->
   <section class="section feat-block" id="calendar" style="background:var(--bg-muted);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
     <div class="wrap">
-      <div class="split flip reveal">
+      <div class="split reveal">
         <div>
-          <span class="pill" data-c="dusk"><span class="dot"></span>Calendar</span>
-          <h2 class="title" style="margin:16px 0 16px">One calendar the <em>whole company</em> trusts.</h2>
-          <p class="lede" style="margin-bottom:22px">Rehearsals, music calls, fittings, photo calls, and performances in a single timeline. Change one and every personal schedule updates instantly — with conflict detection across the cast.</p>
-          <ul class="checklist">
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Drag-to-reschedule with instant notify</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Personal calendars: each person sees their calls</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Subscribe from Google, Apple, or Outlook</li>
-          </ul>
+          <div class="aud-copy" data-seg="cast">
+            <span class="pill" data-c="dusk"><span class="dot"></span>Calendar</span>
+            <h2 class="title" style="margin:16px 0 16px">Know exactly when you're <em>called.</em></h2>
+            <p class="lede" style="margin-bottom:22px">Your personal calendar shows only your calls, rehearsals, fittings, and performances, synced to the phone you already use. Something moves, you'll know before you leave the house.</p>
+            <ul class="checklist">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> A personal calendar of just your calls</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Subscribe from Google, Apple, or Outlook</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Instant notice the moment a time moves</li>
+            </ul>
+          </div>
+          <div class="aud-copy" data-seg="creative">
+            <span class="pill" data-c="dusk"><span class="dot"></span>Calendar</span>
+            <h2 class="title" style="margin:16px 0 16px">Plan around the <em>whole company.</em></h2>
+            <p class="lede" style="margin-bottom:22px">Lay out rehearsals, music calls, fittings, and performances in one timeline, with conflict detection across the entire cast before you commit a room or a date.</p>
+            <ul class="checklist">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> The full company's availability in one view</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Conflict detection across the cast</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Drag-to-reschedule with instant notify</li>
+            </ul>
+          </div>
         </div>
         <div class="split-media">
           <div class="panel demo-cal" data-demo="calendar" data-phases="4" data-rest="3">
             <div class="panel-row panel-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg> This week · Studio A</div>
-            <div class="panel-row"><span class="pill" data-c="accent"><span class="dot"></span>Mon</span><span class="lead"><b>Act I — Run</b><span>Full company</span></span><span class="panel-time">18:30</span></div>
+            <div class="panel-row"><span class="pill" data-c="accent"><span class="dot"></span>Mon</span><span class="lead"><b>Act I, Run</b><span>Full company</span></span><span class="panel-time">18:30</span></div>
             <div class="panel-row"><span class="pill" data-c="dusk"><span class="dot"></span>Tue</span><span class="lead"><b>Patter songs</b><span>Principals</span></span><span class="panel-time">19:00</span></div>
             <div class="panel-row"><span class="pill" data-c="amber"><span class="dot"></span>Wed</span><span class="lead"><b>Fittings</b><span>Ensemble A</span></span><span class="panel-time">17:00</span></div>
-            <div class="panel-row cal-target"><span class="pill" data-c="sage"><span class="dot"></span>Thu</span><span class="lead"><b>Act II — Stumble</b><span>Full company</span></span><span class="cal-meta"><span class="cal-flag"><span class="cal-flag-bad">3 conflicts</span><span class="cal-flag-ok"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> clear</span></span><span class="panel-time cal-time"><span class="ct-old">19:00</span><span class="ct-new">18:00</span></span></span></div>
+            <div class="panel-row cal-target"><span class="pill" data-c="sage"><span class="dot"></span>Thu</span><span class="lead"><b>Act II, Stumble</b><span>Full company</span></span><span class="cal-meta"><span class="cal-flag"><span class="cal-flag-bad">3 conflicts</span><span class="cal-flag-ok"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> clear</span></span><span class="panel-time cal-time"><span class="ct-old">19:00</span><span class="ct-new">18:00</span></span></span></div>
             <div class="cal-toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg> <span><b>22 company calendars</b> updated · just now</span></div>
             <span class="demo-cursor"></span>
           </div>
@@ -186,40 +338,39 @@ export const FEATURES_HTML = `
   <!-- SCRIPT -->
   <section class="section feat-block" id="script">
     <div class="wrap">
-      <div class="split reveal">
+      <div class="split flip reveal">
         <div>
-          <span class="pill" data-c="sage"><span class="dot"></span>Script</span>
-          <h2 class="title" style="margin:16px 0 16px">The book, <em>live</em> and shared.</h2>
-          <p class="lede" style="margin-bottom:22px">Upload your script as a PDF and call the show right on the page. Drop light, sound, and fly cues as numbered marks pinned to the exact line — then share the prompt book with the company or export the whole cue sheet.</p>
-          <ul class="checklist">
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Number LX, sound &amp; fly cues right on the page</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Pipe or box markers pinned to the exact line</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Export a clean cue sheet to CSV</li>
-          </ul>
+          <div class="aud-copy" data-seg="cast">
+            <span class="pill" data-c="sage"><span class="dot"></span>Script</span>
+            <h2 class="title" style="margin:16px 0 16px">Always on the <em>current</em> page.</h2>
+            <p class="lede" style="margin-bottom:22px">Open the latest script with your blocking and line notes already on it, never a stale PDF from three versions ago. Jump straight from tonight's call to the pages you're running.</p>
+            <ul class="checklist">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Always the current draft, never a stale PDF</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Your blocking and cues pinned to the line</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Jump from any call straight to its pages</li>
+            </ul>
+          </div>
+          <div class="aud-copy" data-seg="creative">
+            <span class="pill" data-c="sage"><span class="dot"></span>Script</span>
+            <h2 class="title" style="margin:16px 0 16px">The book, <em>live</em> and shared.</h2>
+            <p class="lede" style="margin-bottom:22px">Upload the script and Proscene threads it through everything: blocking pins to lines, notes attach to the moment they're about, and a line change reaches the whole company at once.</p>
+            <ul class="checklist">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Scene &amp; French-scene breakdown built in</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Line notes and cuts tracked by version</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Changes reach the whole company at once</li>
+            </ul>
+          </div>
         </div>
         <div class="split-media">
           <div class="panel">
-            <div class="panel-row panel-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 3H8a2 2 0 0 0-2 2v14a2 2 0 0 1-2-2h13a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><path d="M10 8h7M10 12h7M10 16h4"/></svg> Act II, Scene 1 · p.42<span class="sc-mode">Calling script</span></div>
-            <div class="demo-script" data-demo="script" data-phases="4" data-interval="1400" data-rest="3">
-              <div class="sc-line">
-                <span class="sc-cue sc-r1" data-c="amber"><i>LX</i>14</span>
-                <span class="sc-pipe sc-r1" data-c="amber"></span>
-                <span class="sc-tx"><b>MABEL.</b> Stay, Frederic, stay!</span>
-              </div>
-              <div class="sc-line"><span class="sc-tx dim">They have no legal claim, no shadow of a claim—</span></div>
-              <div class="sc-line">
-                <span class="sc-cue sc-r2" data-c="dusk"><i>SQ</i>7</span>
-                <span class="sc-pipe sc-r2" data-c="dusk"></span>
-                <span class="sc-tx"><b>PIRATE KING.</b> We have proof.</span>
-              </div>
-              <div class="sc-line"><span class="sc-tx dim">You were born in leap-year, and so I'm afraid…</span></div>
-              <div class="sc-line">
-                <span class="sc-cue sc-r3" data-c="clay"><i>FLY</i>3</span>
-                <span class="sc-pipe sc-r3" data-c="clay"></span>
-                <span class="sc-tx dim">…you'll only have been existing twenty-one—</span>
-              </div>
-              <div class="sc-foot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h12M3 10h12M3 15h7"/><path d="M19 5v14M19 5l-2 2M19 5l2 2"/></svg> <b>3 cues</b> on this page<span class="sc-export">Export cue sheet · CSV</span></div>
-              <span class="demo-cursor"></span>
+            <div class="panel-row panel-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 3H8a2 2 0 0 0-2 2v14a2 2 0 0 1-2-2h13a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><path d="M10 8h7M10 12h7M10 16h4"/></svg> Act II, Scene 1 · p.42</div>
+            <div class="demo-script" data-demo="script" data-phases="5" data-interval="1400" data-rest="4">
+              <span class="sm-ch">Mabel</span>
+              <span class="sm-tx sm-hl1">Stay, Frederic, stay!</span><span class="sm-caret sm-caret1"></span><span class="sm-cue sm-cue1">↪ cross DSL</span><br>
+              They have no legal claim, no shadow of a claim,
+              <span class="sm-ch">Pirate King</span>
+              <span class="sm-tx sm-hl2">We have proof.</span><span class="sm-caret sm-caret2"></span><span class="sm-cue note sm-cue2">✎ hold for laugh</span><br>
+              You were born in leap-year, and so I'm afraid you'll have to wait…
             </div>
           </div>
         </div>
@@ -230,16 +381,28 @@ export const FEATURES_HTML = `
   <!-- BLOCKING -->
   <section class="section feat-block" id="blocking" style="background:var(--bg-muted);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
     <div class="wrap">
-      <div class="split flip reveal">
+      <div class="split reveal">
         <div>
-          <span class="pill" data-c="clay"><span class="dot"></span>Blocking</span>
-          <h2 class="title" style="margin:16px 0 16px">Blocking that <em>survives</em> the night.</h2>
-          <p class="lede" style="margin-bottom:22px">Drop actors onto the ground plan, record the move, and pin it to the line. When the director changes a cross at 9pm, it's in the book before notes — legible, shareable, and never lost to shorthand.</p>
-          <ul class="checklist">
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Ground-plan with draggable position tokens</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Moves pinned to the exact line of script</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Standard notation shorthand, expanded for everyone</li>
-          </ul>
+          <div class="aud-copy" data-seg="cast">
+            <span class="pill" data-c="clay"><span class="dot"></span>Blocking</span>
+            <h2 class="title" style="margin:16px 0 16px">Your blocking, <em>never</em> lost.</h2>
+            <p class="lede" style="margin-bottom:22px">Every move the director gives you is recorded on the ground plan and pinned to the line, legible the next morning, not buried in your own shorthand.</p>
+            <ul class="checklist">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> See your moves on the ground plan</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Each move pinned to the exact line</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Clear notation everyone can read</li>
+            </ul>
+          </div>
+          <div class="aud-copy" data-seg="creative">
+            <span class="pill" data-c="clay"><span class="dot"></span>Blocking</span>
+            <h2 class="title" style="margin:16px 0 16px">Stage it once, and <em>keep</em> it.</h2>
+            <p class="lede" style="margin-bottom:22px">Drop actors onto the ground plan, record the cross, and pin it to the script. Change a move at 9pm and it's in the book before notes, shareable straight to design.</p>
+            <ul class="checklist">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Ground-plan with draggable position tokens</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Moves pinned to the exact line of script</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Share staging with design and crew</li>
+            </ul>
+          </div>
         </div>
         <div class="split-media">
           <div class="panel demo-block" data-demo="blocking" data-phases="3" data-interval="2600" data-rest="2" style="padding:18px">
@@ -259,7 +422,7 @@ export const FEATURES_HTML = `
             <div class="bp-foot">
               <div class="bp-beats"><span class="bp-beat">1</span><span class="bp-beat">2</span><span class="bp-beat">3</span></div>
               <div class="bp-cap">
-                <span class="cap0"><b>Top of scene</b>&nbsp;— company set, Pirate King upstage right.</span>
+                <span class="cap0"><b>Top of scene</b>&nbsp;: company set, Pirate King upstage right.</span>
                 <span class="cap1"><b>PK</b>&nbsp;crosses DSL to Mabel on "We have proof."</span>
                 <span class="cap2"><b>Sergeant</b>&nbsp;takes centre; Mabel breaks stage-left.</span>
               </div>
@@ -273,16 +436,28 @@ export const FEATURES_HTML = `
   <!-- REPORTS -->
   <section class="section feat-block" id="reports">
     <div class="wrap">
-      <div class="split reveal">
+      <div class="split flip reveal">
         <div>
-          <span class="pill" data-c="amber"><span class="dot"></span>Reports</span>
-          <h2 class="title" style="margin:16px 0 16px">Daily reports, <em>done by curtain.</em></h2>
-          <p class="lede" style="margin-bottom:22px">Tag a note to a department as the room runs. Proscene formats the rehearsal and performance reports and routes each note to the people who need it — out before the company's left the lobby.</p>
-          <ul class="checklist">
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Rehearsal, performance &amp; production report templates</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Running time and break tracking</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Export to PDF or send straight to inboxes</li>
-          </ul>
+          <div class="aud-copy" data-seg="cast">
+            <span class="pill" data-c="amber"><span class="dot"></span>Reports</span>
+            <h2 class="title" style="margin:16px 0 16px">Every note reaches the <em>right</em> hands.</h2>
+            <p class="lede" style="margin-bottom:22px">Department notes route straight to the people who own them, scenic to scenic, wardrobe to wardrobe, so nothing's buried in a thread and nobody wades through what isn't theirs.</p>
+            <ul class="checklist">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> See only the notes that are yours</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Running times and breaks tracked for you</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> In your inbox before you leave the lobby</li>
+            </ul>
+          </div>
+          <div class="aud-copy" data-seg="creative">
+            <span class="pill" data-c="amber"><span class="dot"></span>Reports</span>
+            <h2 class="title" style="margin:16px 0 16px">Daily reports, <em>done by curtain.</em></h2>
+            <p class="lede" style="margin-bottom:22px">Tag a note to a department as the room runs. Proscene formats the rehearsal and performance reports and routes each note to the people who need it, out before the company's left the lobby.</p>
+            <ul class="checklist">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Rehearsal, performance &amp; production templates</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Running time and break tracking</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Export to PDF or send straight to inboxes</li>
+            </ul>
+          </div>
         </div>
         <div class="split-media">
           <div class="panel demo-report" data-demo="reports" data-phases="5" data-rest="4">
@@ -300,16 +475,28 @@ export const FEATURES_HTML = `
   <!-- PEOPLE -->
   <section class="section feat-block" id="people" style="background:var(--bg-muted);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
     <div class="wrap">
-      <div class="split flip reveal">
+      <div class="split reveal">
         <div>
-          <span class="pill" data-c="plum"><span class="dot"></span>People</span>
-          <h2 class="title" style="margin:16px 0 16px">Your company, <em>with the right keys.</em></h2>
-          <p class="lede" style="margin-bottom:22px">One contact sheet for cast, crew, designers, and front of house — with roles, emergency contacts, and conflicts. Permissions mean principals see calls, designers see notes, and no one sees more than they should.</p>
-          <ul class="checklist">
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Role-based access for every department</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Emergency contacts &amp; conflict calendars</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Reuse your company across every show</li>
-          </ul>
+          <div class="aud-copy" data-seg="cast">
+            <span class="pill" data-c="plum"><span class="dot"></span>People</span>
+            <h2 class="title" style="margin:16px 0 16px">The whole company, <em>one</em> contact sheet.</h2>
+            <p class="lede" style="margin-bottom:22px">Cast, crew, designers, and front of house in a single directory, with roles and emergency contacts, so you always know who's who and how to reach them.</p>
+            <ul class="checklist">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> One directory for the entire company</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Roles and emergency contacts on file</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> The same company, ready for every show</li>
+            </ul>
+          </div>
+          <div class="aud-copy" data-seg="creative">
+            <span class="pill" data-c="plum"><span class="dot"></span>People</span>
+            <h2 class="title" style="margin:16px 0 16px">Your company, <em>with the right keys.</em></h2>
+            <p class="lede" style="margin-bottom:22px">One contact sheet with permissions that fit each role, principals see calls, designers see notes, and no one sees more than they should.</p>
+            <ul class="checklist">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Role-based access for every department</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Emergency contacts &amp; conflict calendars</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Reuse your company across every show</li>
+            </ul>
+          </div>
         </div>
         <div class="split-media">
           <div class="panel">
@@ -323,13 +510,13 @@ export const FEATURES_HTML = `
     </div>
   </section>
 
-  <!-- MOBILE -->
+  <!-- MOBILE (shared across both segments) -->
   <section class="section night feat-block" id="mobile">
     <div class="wrap">
       <div class="section-head center reveal" style="text-align:center">
         <span class="eyebrow no-rule">Mobile</span>
         <h2 class="title" style="margin-top:16px">It all fits in a <em>pocket.</em></h2>
-        <p class="lede" style="margin-left:auto;margin-right:auto">Everything above travels with you. The Proscene app puts tonight's call, the day's schedule, and the latest report a glance away — on stage, in the booth, or on the bus home.</p>
+        <p class="lede" style="margin-left:auto;margin-right:auto">Everything above travels with you. The Proscene app puts tonight's call, the day's schedule, and the latest report a glance away, for cast, crew, and creative team alike, on stage, in the booth, or on the bus home.</p>
       </div>
       <div class="grid grid-3 reveal" style="margin-top:48px">
         <div class="night-card card-pad">
@@ -350,6 +537,8 @@ export const FEATURES_HTML = `
       </div>
     </div>
   </section>
+
+  </div><!-- /#feat-panels -->
 
   <!-- CTA -->
   <section class="section">

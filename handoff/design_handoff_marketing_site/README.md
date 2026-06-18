@@ -1,4 +1,14 @@
+**Status:** Implemented — 2026-06-18
+
 # Handoff: Proscene Marketing Website
+
+> Implemented on branch `claude/magical-ptolemy-ntimdb`. Recreated in the Next.js
+> app under `app/(marketing)/` against the existing marketing-page patterns
+> (static template-string content + page-local CSS + `"use client"`
+> interactions, Sanity fallbacks preserved). Adopted the handoff's "paper &
+> spotlight" amber brand **scoped under `.ps-site`**, but kept **Geist** as the
+> typeface (not Inter) per the owner. Wordmark casing standardized to
+> **"Proscene"** (not "ProScene"). The Reviews page was removed.
 
 ## Overview
 A 6‑page marketing site for **Proscene** — a production-management app for theatre stage managers, cast, crew, and creative teams. The site sells the product (calls, calendar, script, blocking, reports, people, mobile, and AI Script Setup), presents pricing for two buyer types (organizations and individuals), and hosts an FAQ and a blog.
