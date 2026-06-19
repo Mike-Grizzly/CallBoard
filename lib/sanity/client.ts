@@ -30,18 +30,17 @@ export const sanityClient = createClient({
   stega: { studioUrl: "/studio" },
 });
 
-// Preview client for Draft Mode / Visual Editing. Reads DRAFTS (so unpublished
-// edits show in the Studio's Presentation pane) and turns on stega encoding,
-// which embeds invisible "edit this field" markers into every returned string.
-// Those markers are what let the Presentation overlay map a piece of on-page
-// text back to its Studio field — but they MUST be stripped (stegaClean) from
-// any value used as a URL, slug, key, or number. Requires a read token to see
-// drafts; without one it falls back to encoding published content only.
+// Preview client for Draft Mode / Visual Editing. Carries the read token and
+// turns on stega encoding (the invisible "edit this field" markers that power
+// the Presentation overlays). The PERSPECTIVE (published vs drafts) is set
+// per-request in loadQuery from the Studio's Published/Drafts switcher — not
+// hardcoded here — so that switcher actually controls the preview. Requires a
+// valid read token: reading drafts is never anonymous, even on a public
+// dataset, so without the token a drafts query simply returns nothing.
 export function getSanityPreviewClient() {
   return sanityClient.withConfig({
     token,
     useCdn: false,
-    perspective: token ? "drafts" : "published",
     stega: { studioUrl: "/studio", enabled: true },
   });
 }
