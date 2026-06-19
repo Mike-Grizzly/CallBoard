@@ -2356,3 +2356,43 @@ real?" judgment required.
 - Same-origin only: the Studio frames the site from the same domain, so the existing `X-Frame-Options: SAMEORIGIN` / `frame-ancestors 'self'` headers need no change.
 
 **Verification:** `tsc --noEmit` clean; `eslint` clean on touched areas; `next build` compiles, typechecks, and collects all routes (placeholder env). Not browser-verified — the Presentation pane + overlays need an eyeball on a deploy with the read token set.
+
+---
+
+## 2026-06-19 — Security hardening batch 2: privilege, sessions, path validation, billing guards
+
+**Decision:** Second full security audit with 10 independent angles, followed by targeted fixes to the confirmed and high-plausibility findings. All fixes are additive server-side guards; no UI behavior changed for users with correct permissions and valid subscriptions.
+
+**reports:delete capability**
+
+Added `reports:delete` to `lib/permissions.ts`, granted only to `admin` and `producer`. `permanentlyDeleteReport` now requires it. Previously all three report-deletion actions (`deleteReport`, `restoreReport`, `permanentlyDeleteReport`) were gated on `reports:create`, meaning anyone who could file a report (including Stage Managers, Choreographers, Creative roles) could also irreversibly hard-delete them. `deleteReport` and `restoreReport` remain on `reports:create` (reversible actions, appropriate for the SM filing the report); only the irreversible hard-delete is elevated.
+
+**Session revocation on password change**
+
+`changePassword` (Settings → Account) now calls `supabase.auth.signOut({ scope: "others" })` after `updateUser`, revoking all other-device sessions while keeping the current device signed in. `updatePassword` (the forgot-password reset flow) does a full `signOut({ scope: "global" })` and redirects to `/login` — because in that flow the user may be recovering from compromise and all existing sessions should be treated as suspect. Previously changing a password had no effect on existing sessions.
+
+**sendReport recipient validation**
+
+`sendReport` now fetches `getProductionMembers(production.id)` and filters the client-supplied `recipientEmails` list to only addresses that appear in the production's member list. Non-member addresses are silently dropped. This prevents a report from being sent to arbitrary external addresses, which would have been a data-exfiltration vector for any user with `reports:create`.
+
+**Storage path traversal guard**
+
+Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject any `storagePath` containing `..`, `//`, `%2e`, or `%2f` before the `startsWith` prefix check. Supabase Storage stores object keys as flat strings (no filesystem traversal), but a path like `reports/MYID/../documents/VICTIMID/file.pdf` passes a naive `startsWith` check while pointing outside the authorized namespace. The rejection is strict: legitimate server-generated paths never contain these sequences.
+
+**Billing guard gaps closed**
+
+`removeBlockingPosition`, `deleteCall`, and `createTemplate` each had `can()` role checks but were missing the billing guard present in every other write in their respective files. Each now calls `assertCanMutate` or `assertCanOperate` as appropriate.
+
+**countProductions excludes deleted rows**
+
+`countProductions` in `billing/guard.ts` now always filters `isNull(productions.deletedAt)`. Previously soft-deleted productions counted against the plan limit, so deleting a show to free up a slot had no effect on the plan gate.
+
+**Sanitizer: enforce rel on blank-target links**
+
+`lib/sanitize.ts` `transformTags` now adds a `rel="noopener noreferrer"` transform for `<a>` tags, applying it whenever `target="_blank"` is present. This closes the reverse tabnapping vector in announcement and document rich-text without changing how links render.
+
+**beat comment mention filtering**
+
+`createBeatComment` now cross-references `mentionedUserIds` against `getProductionMembers(beat.productionId)` before storing. Only IDs that belong to the production's actual member list are persisted. This prevents cross-org user IDs from appearing in notification rows.
+
+**Verification:** `tsc --noEmit` clean; 152 permission tests pass (`npm run test`). Not browser-verified (all changes are server-action guards).
