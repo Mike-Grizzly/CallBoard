@@ -7,6 +7,7 @@ import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { assertCanMutate } from "@/features/billing/guard";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { verifyUploadMagicBytes } from "@/lib/upload-security";
 import { revalidatePath } from "next/cache";
 
 export type UploadResult = {
@@ -121,6 +122,13 @@ export async function finalizeReportAttachmentUpload(input: {
   }
   if (!ALLOWED_ATTACHMENT_TYPES.includes(input.contentType)) {
     return { error: "Unsupported file type." };
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const bytesOk = await verifyUploadMagicBytes(supabase, input.storagePath, input.contentType);
+  if (!bytesOk) {
+    await supabase.storage.from("attachments").remove([input.storagePath]);
+    return { error: "File content does not match the declared type." };
   }
 
   await db.insert(reportAttachments).values({
