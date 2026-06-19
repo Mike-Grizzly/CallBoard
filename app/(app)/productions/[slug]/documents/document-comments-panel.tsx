@@ -52,6 +52,8 @@ export function DocumentCommentsPanel({ documentId, members }: Props) {
   }, [documentId]);
 
   useEffect(() => {
+    // Intentional: load comments on mount / when the document changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     reload();
   }, [reload]);
 

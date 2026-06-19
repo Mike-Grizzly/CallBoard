@@ -1,11 +1,9 @@
 name: CI
 
-# Runs on every PR into main and on pushes to main. The two hard gates
-# (typecheck + build) both pass on main today, so enabling "require status
-# checks" in branch protection won't block existing work. Lint is run as
-# informational only (continue-on-error) because the repo currently has
-# pre-existing eslint errors in handoff/ design files and a few components;
-# flip it to a hard gate once those are cleaned up.
+# Runs on every PR into main and on pushes to main. Typecheck, lint, and
+# build are all hard gates and pass on main today, so enabling "require
+# status checks" in branch protection won't block existing work. (Lint
+# fails only on errors; the repo still has non-blocking warnings.)
 
 on:
   pull_request:
@@ -53,9 +51,8 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
-      - name: Lint (informational)
+      - name: Lint
         run: npm run lint
-        continue-on-error: true
 
       - name: Build
         run: npm run build

@@ -86,9 +86,9 @@ export function SignupForm() {
               style={{ marginTop: 3 }}
             />
             <span>
-              <b style={{ display: "block", fontSize: 14 }}>I'm a participant</b>
+              <b style={{ display: "block", fontSize: 14 }}>I&apos;m a participant</b>
               <span className="muted" style={{ fontSize: 12.5 }}>
-                Acting, crew, or design on someone else's show.
+                Acting, crew, or design on someone else&apos;s show.
               </span>
             </span>
           </label>
@@ -152,7 +152,7 @@ export function SignupForm() {
         </div>
       ) : (
         <p className="auth-hint" style={{ marginBottom: 14 }}>
-          You'll join the productions you're invited to — no company to set up.
+          You&apos;ll join the productions you&apos;re invited to — no company to set up.
           You can create your own workspace any time later if you decide to run
           your own shows.
         </p>

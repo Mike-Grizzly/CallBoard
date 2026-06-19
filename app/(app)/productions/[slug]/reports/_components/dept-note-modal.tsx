@@ -28,6 +28,9 @@ export function DeptNoteModal({
   const [draft, setDraft] = useState(value);
 
   useEffect(() => {
+    // Intentional: reset the editor draft to the saved value each time the
+    // modal opens (or the source value changes).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (open) setDraft(value);
   }, [open, value]);
 

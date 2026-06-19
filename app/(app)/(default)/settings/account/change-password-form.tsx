@@ -21,6 +21,9 @@ export function ChangePasswordForm() {
   useEffect(() => {
     if (state?.success) {
       formRef.current?.reset();
+      // Intentional: clear the controlled fields once the server action
+      // reports success so the form visibly resets.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNewPassword("");
       setConfirmPassword("");
     }

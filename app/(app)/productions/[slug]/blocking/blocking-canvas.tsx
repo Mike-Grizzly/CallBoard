@@ -1129,6 +1129,8 @@ export function BlockingCanvas({
     // prev/next-beat swipes. canEdit is false on phone so the drag/draw
     // paths below are no-ops anyway, leaving the gesture surface free.
     if (isPhone && e.pointerType === "touch") {
+      // In an event handler, not render — Date.now() is fine here (swipe timing).
+      // eslint-disable-next-line react-hooks/purity
       swipeStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
     }
     const { x, y } = canvasCoords(e);
@@ -1189,6 +1191,8 @@ export function BlockingCanvas({
       swipeStartRef.current = null;
       const dx = e.clientX - start.x;
       const dy = e.clientY - start.y;
+      // In an event handler, not render — Date.now() is fine here (swipe timing).
+      // eslint-disable-next-line react-hooks/purity
       const dt = Date.now() - start.t;
       if (
         Math.abs(dx) > 50 &&
