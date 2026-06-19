@@ -22,6 +22,7 @@ import {
 import { assertCanMutate } from "@/features/billing/guard";
 import { can } from "@/lib/permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { verifyUploadMagicBytes } from "@/lib/upload-security";
 import {
   PARSE_ROLE_TYPES,
   PARSE_LIMIT_PER_PRODUCTION,
@@ -945,6 +946,13 @@ export async function startWizardScriptParse(
   }
   if (!storagePath.startsWith(`wizard-scripts/${user.id}/`)) {
     return { error: "Upload could not be verified." };
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const bytesOk = await verifyUploadMagicBytes(supabase, storagePath, "application/pdf");
+  if (!bytesOk) {
+    await supabase.storage.from("attachments").remove([storagePath]);
+    return { error: "File content does not match the declared type." };
   }
 
   // Per-user cost cap (there's no production to cap against yet).
