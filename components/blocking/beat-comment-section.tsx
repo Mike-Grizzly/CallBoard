@@ -70,6 +70,9 @@ export function BeatCommentSection({
 
   useEffect(() => {
     if (!beatId) {
+      // Intentional: clear the list when no beat is selected, then load the
+      // selected beat's comments below.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setComments([]);
       return;
     }

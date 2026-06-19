@@ -80,6 +80,9 @@ export function WorkspaceRailBadge({
   // again starts clean.
   useEffect(() => {
     if (!open) {
+      // Intentional: clear transient menu state when it closes so the next
+      // open starts fresh.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCreating(false);
       setNewName("");
       setError(null);

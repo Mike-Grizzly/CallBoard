@@ -692,6 +692,9 @@ function TagManager({
   const [mounted, setMounted] = useState(false);
   const [, startTransition] = useTransition();
 
+  // Standard mount flag so the portal only renders client-side (avoids an
+  // SSR/hydration mismatch).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true); }, []);
 
   function handleAdd() {
