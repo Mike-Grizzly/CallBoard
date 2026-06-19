@@ -65,6 +65,9 @@ export async function createTemplate(
     return { error: "You don't have permission to manage templates." };
   }
 
+  const billing = await assertCanOperate(user.organizationId);
+  if (billing.error) return { error: billing.error };
+
   const productionId = trim(formData.get("production_id"));
   const fields = readTemplateFields(formData);
   if (!productionId || !fields.name) {

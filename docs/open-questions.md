@@ -863,3 +863,31 @@ browser-verified** (no display in the sandbox). Open items:
   click-to-edit. Easy to forget when adding fields.
 - **Not browser-verified** — the overlays, the enable/disable round-trip, and the pricing
   billing toggle inside the preview iframe all need an eyeball on a real deploy.
+
+---
+
+## Security audit batch 2 — remaining findings not yet fixed (added 2026-06-19)
+
+The 2026-06-19 hardening pass fixed the highest-severity confirmed issues. The following were found but deferred — they need a dedicated pass to address safely.
+
+**Auth hardening (lower-urgency)**
+- `app/actions/auth.ts` — Auth actions return raw Supabase error strings for login failures. Supabase can return different messages for "email not registered" vs "wrong password," enabling account enumeration. Fix: normalize all login failures to a single generic message.
+- `lib/rate-limit.ts` — Rate limiter keys only on IP address. An attacker can test 5 passwords against account A, get blocked, then get a fresh 5 attempts against account B. Fix: add a per-email counter alongside the per-IP counter.
+- `app/api/draft-mode/disable/route.ts` — The GET endpoint that exits Sanity Draft Mode has no auth check or CSRF token. Any page with an `<img src="/api/draft-mode/disable">` can silently kick a Sanity editor out of preview mode. Low severity but trivially fixed.
+
+**Input validation**
+- `features/scripts/actions.ts` (`applyScriptParse`) — Client-supplied role names and scene titles are stored with only `.trim()`. No max-length cap; no HTML sanitization. Role names are currently rendered as plain text so XSS is not immediately exploitable, but a 1MB role name would be accepted. Fix: add a 255-char cap and run through `sanitizeHtml`.
+- `features/scripts/parse.ts` (~line 368) — Director re-analysis notes are triple-quote-delimited in the AI prompt string but the note content is never checked for `"""`. A note containing `"""` closes the delimiter early, injecting arbitrary instruction text into the model. Fix: strip or escape `"""` from user-supplied notes before interpolation.
+- `features/reports/attachments.ts:123` + `features/documents/actions.ts:241` — `fileSize` and `contentType` are accepted verbatim from the client at finalize time. `fileSize` is used for quota accounting. Fix: stat the actual uploaded object from Supabase Storage at finalize time and use the real size and MIME type.
+- `features/notes/actions.ts` (`updateNote`) — `visibility` is stored without validation against the allowed enum values. Fix: validate against the allowed set before storing.
+
+**Data integrity / transactions**
+- `features/members/actions.ts` (`inviteMembers`) — Profile row is deleted (line ~931) before the Supabase Auth API call. If the API call fails, the profile is permanently lost with no rollback path. Fix: call the Auth API first; delete the profile only on success.
+- `features/productions/actions.ts` (`createProductionFull`) — Five sequential DB writes with no wrapping transaction. A mid-sequence failure leaves a partially-constructed production. Fix: wrap in a Drizzle transaction.
+- `features/billing/actions.ts` (`createCheckoutSession`) — Two concurrent clicks can both read `stripeCustomerId = null`, create two Stripe customers, and the second write overwrites the first, orphaning one. Fix: DB-level unique constraint or `INSERT ... ON CONFLICT DO NOTHING`.
+- `features/scripts/actions.ts` (`startScriptParse`) — Org monthly AI parse budget check and the insert are separate statements with no lock. N concurrent calls all pass the budget check simultaneously. Fix: atomic `INSERT ... SELECT ... WHERE count < LIMIT` or a Postgres advisory lock.
+- `db/schema/production-memberships.ts` — No unique constraint on `(userId, productionId)`. Application code prevents duplicates, but there's no DB-level safety net. Fix: add `uniqueIndex` on the pair. (Note: composite unique constraints previously caused `drizzle-kit push` to hang — see decision-log.md 2026-05-05; apply via direct SQL migration instead.)
+
+**Low severity**
+- `features/reports/send-report.ts` (~line 98) — All recipients are placed in a single `to:` field. Each recipient can see every other recipient's email. Fix: send individually per recipient or use `bcc:`.
+- `features/blocking/actions.ts` (`createBeatComment` mention notifications) — Notifications fire after the filtered mention list is stored, but the notification dispatch reads from the stored `mentionedUserIds` — now already filtered. No additional change needed here; this was resolved by the batch-2 fix.

@@ -12,6 +12,7 @@ import {
 import { formatReportAsHtml, type EmailAttachmentMeta } from "./email-html";
 import { formatReportAsEmail } from "./email-format";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getProductionMembers } from "@/features/members/queries";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
@@ -50,6 +51,17 @@ export async function sendReport(
 
   if (!report || report.productionId !== production.id) {
     return { error: "Report not found." };
+  }
+
+  // Only send to people who are actually members of this production — never
+  // to arbitrary external addresses supplied by the client.
+  const members = await getProductionMembers(production.id);
+  const memberEmails = new Set(members.map((m) => m.email.toLowerCase()));
+  const safeRecipients = recipientEmails.filter((e) =>
+    memberEmails.has(e.toLowerCase()),
+  );
+  if (safeRecipients.length === 0) {
+    return { error: "No valid recipients — only production members can receive reports." };
   }
 
   const authorName =
@@ -97,7 +109,7 @@ export async function sendReport(
 
   const { error } = await resend.emails.send({
     from: FROM,
-    to: recipientEmails,
+    to: safeRecipients,
     subject,
     html,
     text,

@@ -46,6 +46,13 @@ export function sanitizeHtml(html: string): string {
         tagName,
         attribs: { ...attribs, disabled: "disabled" },
       }),
+      a: (tagName, attribs) => ({
+        tagName,
+        attribs:
+          attribs.target === "_blank"
+            ? { ...attribs, rel: "noopener noreferrer" }
+            : attribs,
+      }),
     },
     allowedStyles: {
       "*": {

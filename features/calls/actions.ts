@@ -210,6 +210,9 @@ export async function deleteCall(formData: FormData): Promise<void> {
   const user = await requireCurrentUser();
   if (!can(user.role, "reports:create")) return;
 
+  const billing = await assertCanOperate(user.organizationId);
+  if (billing.error) return;
+
   const callId = trim(formData.get("call_id"));
   const productionId = trim(formData.get("production_id"));
   if (!callId || !productionId) return;

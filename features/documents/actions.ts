@@ -231,6 +231,9 @@ export async function finalizeDocumentUpload(input: {
   // The storage path was generated server-side under the production's
   // prefix; reject anything else so a caller cannot attach an arbitrary
   // stored object to a production.
+  if (/\.\.|\/\/|%2e|%2f/i.test(input.storagePath)) {
+    return { error: "Upload could not be verified." };
+  }
   if (!input.storagePath.startsWith(`documents/${input.productionId}/`)) {
     return { error: "Upload could not be verified." };
   }

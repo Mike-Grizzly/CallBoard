@@ -8,27 +8,33 @@ const MATRIX: Record<Role, Capability[]> = {
   admin: [...CAPABILITIES],
   producer: CAPABILITIES.filter((c) => c !== "settings:manage"),
   director: CAPABILITIES.filter(
-    (c) => c !== "settings:manage" && c !== "productions:manage",
+    (c) =>
+      c !== "settings:manage" &&
+      c !== "productions:manage" &&
+      c !== "reports:delete",
   ),
   choreographer: CAPABILITIES.filter(
     (c) =>
       c !== "settings:manage" &&
       c !== "productions:manage" &&
       c !== "announcements:create" &&
-      c !== "notes:manage_tags",
+      c !== "notes:manage_tags" &&
+      c !== "reports:delete",
   ),
   creative: CAPABILITIES.filter(
     (c) =>
       c !== "settings:manage" &&
       c !== "productions:manage" &&
       c !== "announcements:create" &&
-      c !== "notes:manage_tags",
+      c !== "notes:manage_tags" &&
+      c !== "reports:delete",
   ),
   stage_manager: CAPABILITIES.filter(
     (c) =>
       c !== "settings:manage" &&
       c !== "productions:manage" &&
-      c !== "announcements:create",
+      c !== "announcements:create" &&
+      c !== "reports:delete",
   ),
   cast: [
     "productions:view",

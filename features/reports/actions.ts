@@ -352,6 +352,9 @@ export async function deleteReport(
     return { error: "You don't have permission to delete reports." };
   }
 
+  const billingCheck = await assertCanOperate(user.organizationId);
+  if (billingCheck.error) return { error: billingCheck.error };
+
   const reportId = formData.get("report_id") as string;
   if (!reportId) return { error: "Missing report ID." };
 
@@ -377,6 +380,9 @@ export async function restoreReport(
     return { error: "You don't have permission to restore reports." };
   }
 
+  const billingCheck = await assertCanOperate(user.organizationId);
+  if (billingCheck.error) return { error: billingCheck.error };
+
   const reportId = formData.get("report_id") as string;
   if (!reportId) return { error: "Missing report ID." };
 
@@ -398,7 +404,7 @@ export async function permanentlyDeleteReport(
 ): Promise<DeleteReportResult> {
   const user = await requireCurrentUser();
 
-  if (!can(user.role, "reports:create")) {
+  if (!can(user.role, "reports:delete")) {
     return { error: "You don't have permission to permanently delete reports." };
   }
 

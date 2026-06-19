@@ -113,6 +113,9 @@ export async function finalizeReportAttachmentUpload(input: {
   if (!(await userCanAccessReport(user, input.reportId))) {
     return { error: "Report not found." };
   }
+  if (/\.\.|\/\/|%2e|%2f/i.test(input.storagePath)) {
+    return { error: "Upload could not be verified." };
+  }
   if (!input.storagePath.startsWith(`reports/${input.reportId}/`)) {
     return { error: "Upload could not be verified." };
   }

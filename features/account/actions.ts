@@ -130,6 +130,10 @@ export async function changePassword(
     return { error: "Could not update password. Try again." };
   }
 
+  // Revoke sessions on all OTHER devices so any stolen session cookies stop
+  // working. The current device stays signed in so the user isn't jarred.
+  await supabase.auth.signOut({ scope: "others" });
+
   return { success: true };
 }
 
