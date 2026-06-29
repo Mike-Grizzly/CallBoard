@@ -127,16 +127,16 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
   opens a new tab; in-viewer exports are blobs). Left OPEN for cross-device /
   cross-browser testing post-merge (Safari/Firefox/mobile are the likely
   variance). No code change made.
-- ◐ **"Enter" button black-on-black on stage setup** — CONFIRMED by owner; fix
-  requested with proper light/dark contrast. Investigated exhaustively: every
-  button in `blocking/setup/setup-wizard.tsx` (the default `<Button>` CTAs, page
-  numbers, Back/Cancel) uses theme-adaptive `--ink`/`--bg`-derived tokens whose
-  fg/bg are always opposite lightnesses, so they resolve to contrasting colors in
-  ALL four themes (light/dark/dusk/cool). Could not reproduce black-on-black from
-  the code — so it's a runtime/rendering quirk or a non-`<Button>` control
-  (candidates: native number-input spinners or the ground-plan `<select>`
-  rendering with OS-default colors). Awaiting a screenshot / exact location to
-  pin the precise element before changing anything.
+- ☑ **"Enter" button black-on-black on stage setup** — FIXED. Root cause was a
+  CSS cascade-layer bug, not the tokens: the global `button`/`input`/`select`
+  resets in `globals.css` were UNLAYERED, and in Tailwind v4 unlayered rules beat
+  layered utilities regardless of specificity. So `button { color: inherit }`
+  overrode the `text-[color:var(--primary-foreground)]` utility on the shadcn
+  `<Button>`, making the default CTA's label inherit the surrounding ink →
+  black-on-black in light mode (white-on-white in dark). Fix: wrapped those resets
+  in `@layer base` so utilities win again. This also corrects any other
+  utility-styled control that was hit by the same override. (Build verified;
+  worth a quick visual sanity-check on buttons app-wide on the preview deploy.)
 
 ## Already shipped (from this section)
 

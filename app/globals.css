@@ -224,15 +224,23 @@ body {
   font-size: 14px;
   line-height: 1.45;
 }
-button {
-  font-family: inherit;
-  color: inherit;
-}
-input,
-textarea,
-select {
-  font-family: inherit;
-  color: inherit;
+/* These element resets must live in @layer base — Tailwind v4 puts utilities
+   in the `utilities` layer, and UNLAYERED rules win over layered ones
+   regardless of specificity. Left unlayered, `color: inherit` here overrode
+   text-color utilities like `text-[color:var(--primary-foreground)]` on
+   <Button>, making labels inherit the surrounding ink (e.g. a black "Save &
+   Continue" label on a black button). In @layer base, utilities win. */
+@layer base {
+  button {
+    font-family: inherit;
+    color: inherit;
+  }
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+    color: inherit;
+  }
 }
 
 /* iOS Safari auto-zooms the page when the user focuses any form control
