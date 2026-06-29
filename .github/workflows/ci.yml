@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Typecheck, Lint, Build
+    name: Typecheck, Lint, Test, Build
     runs-on: ubuntu-latest
 
     # Placeholder, non-secret values. `next build` evaluates server modules
@@ -53,6 +53,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Test
+        run: npm test
 
       - name: Build
         run: npm run build

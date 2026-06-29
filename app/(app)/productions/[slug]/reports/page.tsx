@@ -9,6 +9,7 @@ import {
   getReportsByProduction,
   getReportStatusCounts,
 } from "@/features/reports/queries";
+import { canViewDraftReports } from "@/features/reports/visibility";
 import { MobileReportsList } from "./mobile-reports-list";
 
 type Filter = "all" | "draft" | "distributed";
@@ -109,24 +110,29 @@ export default async function ReportsPage({
   }
 
   const canCreate = can(user.role, "reports:create");
+  // Draft reports are visible only to report managers. Cast/crew-style viewers
+  // are pinned to distributed reports regardless of the requested ?status, and
+  // draft counts are never surfaced to them. Enforced server-side here; the
+  // detail page and attachment URLs apply the same gate.
+  const canViewDrafts = canViewDraftReports(user.role);
+  const effectiveFilter: Filter = canViewDrafts ? filter : "distributed";
 
-  const {
-    total,
-    draft: drafts,
-    distributed,
-  } = await getReportStatusCounts(production.id);
+  const counts = await getReportStatusCounts(production.id);
+  const distributed = counts.distributed;
+  const drafts = canViewDrafts ? counts.draft : 0;
+  const total = canViewDrafts ? counts.total : distributed;
 
   const filteredTotal =
-    filter === "draft"
+    effectiveFilter === "draft"
       ? drafts
-      : filter === "distributed"
+      : effectiveFilter === "distributed"
         ? distributed
         : total;
   const pageCount = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
   const page = Math.min(requestedPage, pageCount);
 
   const reports = await getReportsByProduction(production.id, {
-    status: filter === "all" ? undefined : filter,
+    status: effectiveFilter === "all" ? undefined : effectiveFilter,
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
   });
@@ -139,8 +145,10 @@ export default async function ReportsPage({
         <div>
           <h2 className="h-section">Rehearsal reports</h2>
           <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
-            {total} {total === 1 ? "report" : "reports"} · {drafts} draft
-            {drafts === 1 ? "" : "s"} · {distributed} distributed
+            {total} {total === 1 ? "report" : "reports"}
+            {canViewDrafts
+              ? ` · ${drafts} draft${drafts === 1 ? "" : "s"} · ${distributed} distributed`
+              : ""}
           </div>
         </div>
         {canCreate && (
@@ -153,23 +161,25 @@ export default async function ReportsPage({
         )}
       </div>
 
-      <div className="row" style={{ gap: 6 }}>
-        <FilterChip
-          href={base}
-          active={filter === "all"}
-          label={`All · ${total}`}
-        />
-        <FilterChip
-          href={`${base}?status=draft`}
-          active={filter === "draft"}
-          label={`Drafts · ${drafts}`}
-        />
-        <FilterChip
-          href={`${base}?status=distributed`}
-          active={filter === "distributed"}
-          label={`Distributed · ${distributed}`}
-        />
-      </div>
+      {canViewDrafts && (
+        <div className="row" style={{ gap: 6 }}>
+          <FilterChip
+            href={base}
+            active={effectiveFilter === "all"}
+            label={`All · ${total}`}
+          />
+          <FilterChip
+            href={`${base}?status=draft`}
+            active={effectiveFilter === "draft"}
+            label={`Drafts · ${drafts}`}
+          />
+          <FilterChip
+            href={`${base}?status=distributed`}
+            active={effectiveFilter === "distributed"}
+            label={`Distributed · ${distributed}`}
+          />
+        </div>
+      )}
 
       {filteredTotal === 0 ? (
         <div className="card card-pad" style={{ textAlign: "center", padding: "48px 16px" }}>
@@ -177,7 +187,7 @@ export default async function ReportsPage({
           <div style={{ marginTop: 10, fontSize: 14, fontWeight: 500, color: "var(--ink-2)" }}>
             {total === 0
               ? "No reports yet"
-              : filter === "draft"
+              : effectiveFilter === "draft"
                 ? "No drafts"
                 : "No distributed reports"}
           </div>
@@ -285,7 +295,7 @@ export default async function ReportsPage({
           <div className="row" style={{ gap: 6 }}>
             {page > 1 ? (
               <Link
-                href={pageHref(base, filter, page - 1)}
+                href={pageHref(base, effectiveFilter, page - 1)}
                 prefetch
                 className="btn"
               >
@@ -300,7 +310,7 @@ export default async function ReportsPage({
             )}
             {page < pageCount ? (
               <Link
-                href={pageHref(base, filter, page + 1)}
+                href={pageHref(base, effectiveFilter, page + 1)}
                 prefetch
                 className="btn"
               >
