@@ -2396,3 +2396,23 @@ Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject an
 `createBeatComment` now cross-references `mentionedUserIds` against `getProductionMembers(beat.productionId)` before storing. Only IDs that belong to the production's actual member list are persisted. This prevents cross-org user IDs from appearing in notification rows.
 
 **Verification:** `tsc --noEmit` clean; 152 permission tests pass (`npm run test`). Not browser-verified (all changes are server-action guards).
+
+---
+
+## 2026-06-29 — Auth rate limiter fails CLOSED in production
+
+**Decision:** When the auth rate limiter is unavailable (Upstash not configured) or errors at request time, `checkAuthRateLimit` now **blocks** the auth attempt in real production (`VERCEL_ENV === "production"`, else `NODE_ENV`), returning a generic "temporarily unavailable" message and logging an error. In every other environment (local dev, CI, Vercel previews) it still fails **open** so those stay usable without Redis. Previously it failed open everywhere.
+
+**Reason:** Failing open silently disables brute-force / credential-stuffing protection at exactly the moment it is needed, and a missing env var would degrade security with no signal. Failing closed turns that misconfiguration into a loud, visible availability problem instead of a silent security hole.
+
+**Impact / operational note:** In production, the auth flows that call `checkAuthRateLimit` (login, signup, password reset, resend verification) depend on Upstash being reachable. If `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` are missing or Redis is down, those flows return the unavailable message until it is restored — a deliberate trade of availability for security. The decision lives in a pure `decideRateLimit` function (`lib/rate-limit.ts`) with unit tests (`lib/rate-limit.test.ts`).
+
+---
+
+## 2026-06-29 — Draft rehearsal reports are manager-only (visibility = `reports:create`)
+
+**Decision:** Draft rehearsal reports are visible only to roles that hold `reports:create` (admin, producer, director, choreographer, creative, stage_manager). Cast and crew (who hold only `reports:view`) see a report once it is **distributed**. The rule is centralized in `canViewDraftReports(role)` (`features/reports/visibility.ts`) and applied at every report read path — list, detail, attachment signed-URLs, and dashboard/activity surfaces — server-side.
+
+**Reason:** Drafts routinely contain incomplete or sensitive stage-management information (attendance/absence notes, incident and injury notes, line notes) that has not yet been intentionally released. Tying visibility to the existing report-management capability keeps the rule consistent with the role model and means a report's own author is always covered (authoring requires `reports:create`).
+
+**Impact:** Any new surface that reads reports must call `canViewDraftReports` (or go through a query already scoped to distributed) before showing a report to a non-manager. Guarded by `features/reports/visibility.test.ts`.
