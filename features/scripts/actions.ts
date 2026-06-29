@@ -129,6 +129,22 @@ export async function saveAnnotations(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have access to that production." };
   }
+
+  // The script must belong to this production. Without this, a user with access
+  // to production A could write annotation rows referencing a document from
+  // production B by passing its ID — a cross-tenant integrity hole. Mirrors the
+  // document-ownership check in startScriptParse.
+  const [scriptDoc] = await db
+    .select({ id: documents.id })
+    .from(documents)
+    .where(
+      and(eq(documents.id, scriptId), eq(documents.productionId, productionId)),
+    )
+    .limit(1);
+  if (!scriptDoc) {
+    return { error: "Script not found." };
+  }
+
   const lock = await assertCanMutate(user.organizationId);
   if (lock.error) return { error: lock.error };
 
@@ -798,6 +814,17 @@ export async function ensureMemberBookmarks(
 ): Promise<Bookmark[] | null> {
   const user = await requireCurrentUser();
   if (!(await userCanAccessProduction(user, productionId))) return null;
+
+  // The script must belong to this production (see saveAnnotations) — don't
+  // seed bookmarks against a document from another production.
+  const [scriptDoc] = await db
+    .select({ id: documents.id })
+    .from(documents)
+    .where(
+      and(eq(documents.id, scriptId), eq(documents.productionId, productionId)),
+    )
+    .limit(1);
+  if (!scriptDoc) return null;
 
   // The applied parse is the canonical AI breakdown for this document.
   const [applied] = await db

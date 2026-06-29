@@ -4,6 +4,26 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
+## DB-level constraints + committed-migration workflow deferred (added 2026-06-29)
+
+- A security review recommended belt-and-suspenders **database uniqueness
+  constraints** as defense-in-depth — e.g. `(production_id, report_number)`,
+  org/production membership pairs, production slug per org, production department
+  key, and script-annotation `(script_id, user_id)` — plus a **committed SQL
+  migration workflow** to replace the current `db:push` approach (the repo has no
+  `db/migrations/` history).
+- **Status: intentionally deferred, lower urgency.** The bugs these would backstop
+  are already prevented in application code (this session): report numbering is
+  serialized with a per-production advisory lock, all production-creation paths are
+  transactional, and production-scoped actions verify child-resource ownership.
+  The constraints would guard against a *future* code regression, not a live issue.
+- **Why deferred:** they change the live database, and ideally a committed-migration
+  workflow is set up first (itself the governance gap above) — an owner decision
+  (see `decision-log.md`, 2026-06-29). When picked up: check for any existing
+  duplicate rows before applying each constraint, since an apply will fail on dupes.
+
+---
+
 ## Onboarding survey data is captured but unused (added 2026-06-15)
 
 - The create-workspace wizard (`/workspaces/new`) now stores `organizations.annual_shows`,

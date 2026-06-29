@@ -18,6 +18,9 @@ concurrency:
 
 jobs:
   verify:
+    # NOTE: this job name is the exact string required by the branch-protection
+    # rule on `main`. It also runs the Test step below — renaming the job would
+    # break the required status check, so keep the name and add steps inside.
     name: Typecheck, Lint, Build
     runs-on: ubuntu-latest
 
@@ -53,6 +56,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Test
+        run: npm test
 
       - name: Build
         run: npm run build
