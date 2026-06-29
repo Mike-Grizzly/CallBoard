@@ -441,6 +441,7 @@ export function DocumentsClient({
                         currentFolderId={doc.folderId}
                         folders={folders}
                         stopPropagation
+                        canEdit={canUpload}
                       />
                     </div>
                     <span

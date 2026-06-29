@@ -15,6 +15,13 @@ interface Props {
   folders: FolderOption[];
   /** Stop click events from bubbling (e.g. when inside a clickable row) */
   stopPropagation?: boolean;
+  /**
+   * When false, render a static label instead of an editable dropdown.
+   * Moving documents is gated server-side on `documents:upload`; without this
+   * a non-editor would see a working-looking control whose changes silently
+   * fail to persist.
+   */
+  canEdit?: boolean;
 }
 
 export function FolderSelect({
@@ -22,6 +29,7 @@ export function FolderSelect({
   currentFolderId,
   folders,
   stopPropagation = false,
+  canEdit = true,
 }: Props) {
   const [folderId, setFolderId] = useState(currentFolderId ?? "");
   const [isPending, startTransition] = useTransition();
@@ -37,6 +45,17 @@ export function FolderSelect({
       await moveDocument(formData);
       router.refresh();
     });
+  }
+
+  // Non-editors see the folder as read-only text, not an interactive control
+  // they can't actually use.
+  if (!canEdit) {
+    const current = folders.find((f) => f.id === (currentFolderId ?? ""));
+    return (
+      <span style={{ fontSize: 12, color: "var(--ink-3)" }}>
+        {current ? current.name : "No folder"}
+      </span>
+    );
   }
 
   return (

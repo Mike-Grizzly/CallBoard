@@ -71,14 +71,14 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 |---|---|---|---|---|
 | ◐ | PDF viewer fails on first click, recovers after tab switch | 🐞 | M | 1 |
 | ◐ | Script PDF download navigates away instead of new tab | 🐞 | S | 1 |
-| ◐ | Read-only doc/PDF controls look editable to non-editors (closes S3) | 🐞 | S–M | 1 |
+| ☑ | Read-only doc/PDF controls look editable to non-editors (closes S3) | 🐞 | S–M | 1 |
 | ☐ | Clearer file-selection control (the bare white square) | ✨ | S | 2 |
 
 ## C. Rehearsal Reports
 
 | Status | Item | Type | Effort | Batch |
 |---|---|---|---|---|
-| ◐ | New items don't appear until manual refresh after save/send | 🐞 | M | 1 |
+| ☑ | New items don't appear until manual refresh after save/send | 🐞 | M | 1 |
 | ☐ | Placeholder text should name the input type ("Scene Name") | ✨ | XS | 2 |
 | ☐ | Clearer line-note input guidance | ✨ | S | 2 |
 | ☐ | Reorderable department notes | 🏗️ | S–M | 3 |
@@ -105,6 +105,30 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 | ☐ | Blocking list = characters + uncast people, excl. admin/mgmt (Decision 2) | 🏗️ | M | 5 |
 
 ---
+
+## Batch 1 progress (2026-06-29)
+
+- ☑ **Report list/detail staleness** — `createReport`/`updateReport` now
+  `revalidatePath` the reports list, the report detail, and the production
+  overview. Fixed.
+- ☑ **Ungated folder dropdown** — `FolderSelect` is read-only for users without
+  `documents:upload`. Fixed. The script viewer's scene/song edit controls were
+  found to be *already* gated on `canManage = documents:upload`, so true
+  non-editors (cast/crew) don't see them — worth a browser confirm but no code
+  gap found there.
+- ◐ **PDF viewer fails on first click, recovers after tab switch** — likely a
+  first-mount canvas/render race. Needs a browser reproduction on a real deploy
+  to fix safely (the viewer is a large client component; a blind change is
+  risky). Proposed approach: re-run the page-render effect once the container
+  has non-zero layout (ResizeObserver / mount guard).
+- ❓ **"Script PDF download navigates away"** — not reproducible in current code:
+  document downloads use a signed URL with `{ download }` (attachment
+  disposition, downloads without navigating), "View" already opens a new tab,
+  and the in-viewer exports are client-side blobs. Likely already addressed;
+  awaiting a pointer to the exact control if it persists.
+- ❓ **"Enter" button is an unlabeled dark square** — could not locate this
+  control on the stage-setup page (all buttons there are labeled). Awaiting
+  clarification on the exact screen/control (a screenshot would pin it).
 
 ## Already shipped (from this section)
 
