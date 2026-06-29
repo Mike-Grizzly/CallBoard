@@ -242,6 +242,20 @@ export async function finalizeDocumentUpload(input: {
     return { error: "Unsupported file type." };
   }
 
+  // A folder, if supplied, must belong to this same production — otherwise the
+  // document (in this production) would be filed under another production's (or
+  // org's) folder, corrupting folder-based visibility. Mirrors moveDocument.
+  if (input.folderId) {
+    const [folder] = await db
+      .select({ productionId: documentFolders.productionId })
+      .from(documentFolders)
+      .where(eq(documentFolders.id, input.folderId))
+      .limit(1);
+    if (!folder || folder.productionId !== input.productionId) {
+      return { error: "Selected folder not found." };
+    }
+  }
+
   const supabase = createSupabaseAdminClient();
   const bytesOk = await verifyUploadMagicBytes(supabase, input.storagePath, input.contentType);
   if (!bytesOk) {
