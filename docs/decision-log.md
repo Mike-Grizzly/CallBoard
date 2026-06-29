@@ -2410,3 +2410,20 @@ Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject an
 **Discounts (still to wire):** Checkout already sends `allow_promotion_codes: true`, so any Stripe coupon surfaced as a promotion code works at checkout today with zero code change. Outstanding: the 15%-off day-30 nudge is still "reply for a code" (not self-serve); the 30% founding/beta discount is advertised on the marketing site but has no coupon behind it. Both are Stripe-dashboard coupons; making the day-30 nudge self-serve additionally needs a code change to mint a per-org, single-use promotion code and inject it into the day-30 lifecycle email.
 
 **Verification:** code change is the one-line flag flip (symmetric to the previously `tsc`-clean paused state); not re-run here (fresh clone, deps not installed).
+
+---
+
+## 2026-06-29 — Proscene Studio (designer-seat) billing implemented
+
+**Decision:** Built the per-user Studio subscription (feature 21) as an entitlement axis **separate from the org `plan`**, stored on `profiles` (`designer_plan`, `designer_tool`, `designer_subscription_status`, personal `designer_stripe_customer_id`/`designer_stripe_subscription_id`, `designer_current_period_end`; migration `add_designer_seat_columns_to_profiles`). A designer's personal workspace stays a normal free org; the **seat**, not that org's plan, governs their Focus access.
+
+**Key choices:**
+- **Billed to the person, shared Stripe webhook.** `createDesignerCheckoutSession` creates/reuses a personal Stripe customer on the profile and tags the subscription `metadata.kind="designer"` + `profileId`/`designerPlan`/`tool`. The existing `/api/stripe/webhook` gains a `routeSubscription()` splitter: designer-tagged (or designer-priced) subs sync to the profile entitlement; org subs are unchanged. One endpoint, no new webhook.
+- **Gate via delegation, not duplication.** The three org guards (`assertCanMutate`/`assertCanOperate`/`assertCanCreateProduction`) detect `accessMode="designer"` (cheap — `getCurrentUser` is request-cached) and delegate to `features/designer/entitlement.ts`. So every existing write path a designer hits in Focus is seat-governed with no per-action edits. Tool access (Single Tool = Script *or* Blocking) is gated at the Focus route entry.
+- **No designer trial (v1).** Seats charge on subscribe, cancel any time, read-only after the paid period — simpler than entangling with the org's first-production 60-day clock. (So the Stripe designer prices must NOT carry a trial.)
+- **Seatless entry point.** A new designer can't create a production (the gate needs a seat) and the per-production settings page needs a slug — so the `/focus` index itself hosts the subscribe UI for a seatless designer-only user.
+- **accessMode set at signup, not on payment.** A `designer` signup type stamps `profiles.access_mode="designer"`; it stays designer after cancel (so canceling never hands over the full app free). The entitlement governs actual editing.
+
+**Deferred (flagged in `open-questions.md`):** the designer→org referral incentive (a separate anti-fraud subsystem); per-write-action tool enforcement for Single Tool (currently route-gated — a low-severity billing-bypass hardening item); storage-cap enforcement (advisory, like the org caps).
+
+**Verification:** not typechecked (fresh clone, no `node_modules`); built close to the existing org-billing patterns. This is the slice for the planned Stripe-workflow security audit.

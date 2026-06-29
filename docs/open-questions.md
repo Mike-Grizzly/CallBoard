@@ -891,3 +891,12 @@ The 2026-06-19 hardening pass fixed the highest-severity confirmed issues. The f
 **Low severity**
 - `features/reports/send-report.ts` (~line 98) — All recipients are placed in a single `to:` field. Each recipient can see every other recipient's email. Fix: send individually per recipient or use `bcc:`.
 - `features/blocking/actions.ts` (`createBeatComment` mention notifications) — Notifications fire after the filtered mention list is stored, but the notification dispatch reads from the stored `mentionedUserIds` — now already filtered. No additional change needed here; this was resolved by the batch-2 fix.
+
+---
+
+## Proscene Studio (designer-seat) billing — follow-ups (added 2026-06-29)
+
+- **Per-write-action tool gating for Single Tool is not enforced (low severity).** A Single Tool subscriber is restricted to their bought tool at the Focus *route* (the other mode redirects), but the underlying write actions only check "active seat", not the specific tool — so a hand-crafted server-action call to the other tool's writes wouldn't be blocked. Worst case: a $5.99 Single Tool subscriber using the other tool they didn't pay for. Helper `assertDesignerCanUseTool(userId, tool)` already exists in `features/designer/entitlement.ts`; wire it into the blocking + script write chokepoints to close it.
+- **Referral incentive deferred.** The designer→org referral engine (3 free months per referred org, lockstep in-arrears vesting, clawback on refund) from this spec is not built. It needs real Stripe coupon/credit infrastructure (the same infra the 15%-off org nudge wants).
+- **No designer trial; storage cap advisory.** v1 designer seats have no free trial (charge on subscribe), and the 25 GB designer storage cap (`DESIGNER_STORAGE_GB`) is not enforced (parity with the org `STORAGE_LIMIT_GB`, also advisory). Revisit if abused.
+- **Studio billing not yet typechecked / audited.** Built in a deps-less clone across commits `f504b1f`→`22a4bca`; needs `npm run type-check` + the planned Stripe-workflow security audit before going live — focus areas: webhook trust + the designer/org `routeSubscription` split, personal-customer creation in `createDesignerCheckoutSession`, and the org-guard→designer delegation in `features/billing/guard.ts`.
