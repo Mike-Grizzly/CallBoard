@@ -116,19 +116,27 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
   found to be *already* gated on `canManage = documents:upload`, so true
   non-editors (cast/crew) don't see them — worth a browser confirm but no code
   gap found there.
-- ◐ **PDF viewer fails on first click, recovers after tab switch** — likely a
-  first-mount canvas/render race. Needs a browser reproduction on a real deploy
-  to fix safely (the viewer is a large client component; a blind change is
-  risky). Proposed approach: re-run the page-render effect once the container
-  has non-zero layout (ResizeObserver / mount guard).
-- ❓ **"Script PDF download navigates away"** — not reproducible in current code:
-  document downloads use a signed URL with `{ download }` (attachment
-  disposition, downloads without navigating), "View" already opens a new tab,
-  and the in-viewer exports are client-side blobs. Likely already addressed;
-  awaiting a pointer to the exact control if it persists.
-- ❓ **"Enter" button is an unlabeled dark square** — could not locate this
-  control on the stage-setup page (all buttons there are labeled). Awaiting
-  clarification on the exact screen/control (a screenshot would pin it).
+- ◐ **PDF viewer fails on first click, recovers after tab switch** — owner could
+  NOT reproduce (viewer rendered fine on first open). Suspected to be a
+  first-*upload* loading state rather than a navigation race; proposed follow-up
+  is loading indicators wherever the PDF/script is still fetching. Left OPEN to
+  revisit with fresh test accounts after merge. No code change made.
+- ◐ **"Script PDF download navigates away"** — owner could NOT reproduce on
+  desktop Chrome (PC + Mac): downloads fire immediately as intended. Consistent
+  with the code (signed URL with `{ download }` = attachment disposition; "View"
+  opens a new tab; in-viewer exports are blobs). Left OPEN for cross-device /
+  cross-browser testing post-merge (Safari/Firefox/mobile are the likely
+  variance). No code change made.
+- ◐ **"Enter" button black-on-black on stage setup** — CONFIRMED by owner; fix
+  requested with proper light/dark contrast. Investigated exhaustively: every
+  button in `blocking/setup/setup-wizard.tsx` (the default `<Button>` CTAs, page
+  numbers, Back/Cancel) uses theme-adaptive `--ink`/`--bg`-derived tokens whose
+  fg/bg are always opposite lightnesses, so they resolve to contrasting colors in
+  ALL four themes (light/dark/dusk/cool). Could not reproduce black-on-black from
+  the code — so it's a runtime/rendering quirk or a non-`<Button>` control
+  (candidates: native number-input spinners or the ground-plan `<select>`
+  rendering with OS-default colors). Awaiting a screenshot / exact location to
+  pin the precise element before changing anything.
 
 ## Already shipped (from this section)
 
