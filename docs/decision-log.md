@@ -2426,3 +2426,13 @@ Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject an
 **Reason:** The audit (all ~70 production-scoped actions) showed the pattern is already applied consistently — almost every action verifies both production access and that the child resource (report, document, folder, call, scene, beat, video, membership) belongs to the production. The residual risk was exactly three actions missing the resource-ownership leg: `saveAnnotations`, `ensureMemberBookmarks`, and `finalizeDocumentUpload` (its `folderId`), now fixed to mirror `startScriptParse` / `moveDocument`. A sweeping helper refactor would add churn and review risk disproportionate to the actual gap, against the review's own "targeted hardening, not a rewrite" guidance.
 
 **Impact:** New production-scoped actions must continue to (a) call `userCanAccessProduction` and (b) verify any child-resource ID belongs to that production — see `startScriptParse` / `moveDocument` for the pattern. The remaining structural risk (a future action could forget the resource-ownership leg) is accepted for now in favor of low-churn targeted fixes; revisit a shared resource-access helper if the codebase outgrows easy review.
+
+---
+
+## 2026-06-29 — Concurrency/transaction safety in app code; DB constraints deferred
+
+**Decision:** Report-number assignment and production creation were made safe in application code — a per-production advisory lock (`pg_advisory_xact_lock`) around report numbering in `createReport`, and a `db.transaction` around each production-creation path (`createProduction`, `createProductionFull`, `quickCreateProduction`) — without changing the database schema. The belt-and-suspenders DB uniqueness constraints (e.g. `(production_id, report_number)`, plus membership/slug/department uniqueness) are deferred pending a decision on the migration workflow (the repo has no committed migrations directory and uses `db:push`).
+
+**Reason:** The code-level fixes remove the actual race and partial-state bugs with zero risk to the live database. DB constraints are the correct backstop but require either direct production-schema changes or first establishing a committed-migration workflow (itself a flagged gap, R4) — a separate decision the owner should make.
+
+**Impact:** Concurrent report creation for one production now serializes (the advisory lock releases on commit); production setup is all-or-nothing for its local writes, with external invites/trial-start kept after commit so they can't be rolled back over network calls. Pattern for new multi-write flows: wrap local writes in `db.transaction`, keep external side effects after commit. If/when DB constraints land, these app-code guards remain as the friendly-error layer in front of them.
