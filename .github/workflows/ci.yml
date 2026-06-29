@@ -18,7 +18,10 @@ concurrency:
 
 jobs:
   verify:
-    name: Typecheck, Lint, Test, Build
+    # NOTE: this job name is the exact string required by the branch-protection
+    # rule on `main`. It also runs the Test step below — renaming the job would
+    # break the required status check, so keep the name and add steps inside.
+    name: Typecheck, Lint, Build
     runs-on: ubuntu-latest
 
     # Placeholder, non-secret values. `next build` evaluates server modules
