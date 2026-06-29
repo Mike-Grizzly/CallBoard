@@ -2416,3 +2416,13 @@ Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject an
 **Reason:** Drafts routinely contain incomplete or sensitive stage-management information (attendance/absence notes, incident and injury notes, line notes) that has not yet been intentionally released. Tying visibility to the existing report-management capability keeps the rule consistent with the role model and means a report's own author is always covered (authoring requires `reports:create`).
 
 **Impact:** Any new surface that reads reports must call `canViewDraftReports` (or go through a query already scoped to distributed) before showing a report to a non-manager. Guarded by `features/reports/visibility.test.ts`.
+
+---
+
+## 2026-06-29 — Production-scoped authorization: audit + targeted gap closure (not a rewrite)
+
+**Decision:** Rather than introduce a new mandatory access-helper layer across all ~20 feature modules (as the external review suggested for its "production-scoped access not consistently enforced" finding), we audited every production-scoped server action and closed only the specific resource-ownership gaps found. `userCanAccessProduction` (`lib/auth.ts`) remains the canonical production gate; actions verify child-resource ownership inline, matching the existing convention.
+
+**Reason:** The audit (all ~70 production-scoped actions) showed the pattern is already applied consistently — almost every action verifies both production access and that the child resource (report, document, folder, call, scene, beat, video, membership) belongs to the production. The residual risk was exactly three actions missing the resource-ownership leg: `saveAnnotations`, `ensureMemberBookmarks`, and `finalizeDocumentUpload` (its `folderId`), now fixed to mirror `startScriptParse` / `moveDocument`. A sweeping helper refactor would add churn and review risk disproportionate to the actual gap, against the review's own "targeted hardening, not a rewrite" guidance.
+
+**Impact:** New production-scoped actions must continue to (a) call `userCanAccessProduction` and (b) verify any child-resource ID belongs to that production — see `startScriptParse` / `moveDocument` for the pattern. The remaining structural risk (a future action could forget the resource-ownership leg) is accepted for now in favor of low-churn targeted fixes; revisit a shared resource-access helper if the codebase outgrows easy review.
