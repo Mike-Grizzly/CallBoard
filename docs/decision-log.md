@@ -2396,3 +2396,17 @@ Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject an
 `createBeatComment` now cross-references `mentionedUserIds` against `getProductionMembers(beat.productionId)` before storing. Only IDs that belong to the production's actual member list are persisted. This prevents cross-org user IDs from appearing in notification rows.
 
 **Verification:** `tsc --noEmit` clean; 152 permission tests pass (`npm run test`). Not browser-verified (all changes are server-action guards).
+
+---
+
+## 2026-06-29 — Billing re-enabled (flag → true); Studio billing scoped as not-yet-built
+
+**Decision:** Re-enabled the full trial + subscription system by flipping `BILLING_ENABLED` (`features/billing/constants.ts`) from `false` back to `true`, reversing the 2026-06-18 open-beta pause. No other code change — the system was kept warm behind the flag specifically so this would be a one-line restore. Stripe stays in **test/sandbox mode** until a dedicated security audit of the billing workflow is done.
+
+**To make Checkout work in sandbox:** set the eight `STRIPE_*` env vars (now in `.env.example`) with Stripe TEST keys; create three Products (Season/Repertory/Company), each with a monthly + annual recurring price; register the webhook at `/api/stripe/webhook` (events: `checkout.session.completed`, `customer.subscription.created/updated/deleted`). Do NOT put a trial on the Stripe price — `createCheckoutSession` passes `trial_end` derived from the org's app-managed 60-day clock, so a Stripe-side trial would double-count.
+
+**Scope correction — Proscene Studio (individual/designer) billing is NOT built.** The Focus/designer *product* (single-player Script + Blocking workspace, individual-vs-org signup, the Focus view) is built and merged. But the *billing* for it does not exist: `PLANS`/`PaidPlanId` only know `free | season | repertory | company`; there are no `studio`/`single_tool`/`studio_pro` plan ids, no `STRIPE_PRICE_STUDIO_*` slots in `lib/stripe.ts`, no `PRODUCTION_LIMIT`/`STORAGE_LIMIT_GB`/`PLAN_LABELS` rows for them, no entitlement path for a personal (non-org) subscriber, and the marketing Studio tiers are `data-noop` "Notify me" CTAs. **Adding Stripe prices alone does nothing.** Turning Studio on is a code build: add the plan ids + price-id slots; extend checkout/webhook/entitlement to bill an individual rather than an org; gate the Focus workspace on the personal subscription; wire the marketing CTAs to real checkout. Deferred pending owner go-ahead.
+
+**Discounts (still to wire):** Checkout already sends `allow_promotion_codes: true`, so any Stripe coupon surfaced as a promotion code works at checkout today with zero code change. Outstanding: the 15%-off day-30 nudge is still "reply for a code" (not self-serve); the 30% founding/beta discount is advertised on the marketing site but has no coupon behind it. Both are Stripe-dashboard coupons; making the day-30 nudge self-serve additionally needs a code change to mint a per-org, single-use promotion code and inject it into the day-30 lifecycle email.
+
+**Verification:** code change is the one-line flag flip (symmetric to the previously `tsc`-clean paused state); not re-run here (fresh clone, deps not installed).
