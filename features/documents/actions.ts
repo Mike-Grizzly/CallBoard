@@ -34,8 +34,13 @@ const ALLOWED_DOCUMENT_TYPES = [
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 ];
 
-export async function createDefaultFolders(productionId: string) {
-  await db.insert(documentFolders).values(
+export async function createDefaultFolders(
+  productionId: string,
+  // Accepts either the base db or a transaction handle, so callers can include
+  // the default folders in a larger atomic production-setup transaction.
+  executor: Pick<typeof db, "insert"> = db,
+) {
+  await executor.insert(documentFolders).values(
     DEFAULT_FOLDERS.map((name, i) => ({
       productionId,
       name,
