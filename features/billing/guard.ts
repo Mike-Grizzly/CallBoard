@@ -30,6 +30,11 @@ import {
   limitCountsArchived,
   type PlanId,
 } from "./constants";
+import { getCurrentUser, isDesignerOnly } from "@/lib/auth";
+import {
+  assertDesignerCanMutate,
+  assertDesignerCanCreateProduction,
+} from "@/features/designer/entitlement";
 
 const DAY = 86_400_000;
 
@@ -94,6 +99,12 @@ export async function assertCanMutate(
   orgId: string,
 ): Promise<{ error?: string }> {
   if (!BILLING_ENABLED) return {}; // open beta: no write gating
+  // Designer-only users are governed by their personal Studio seat, not the
+  // org plan (their workspace org is just a free container).
+  const designer = await getCurrentUser();
+  if (designer && isDesignerOnly(designer)) {
+    return assertDesignerCanMutate(designer.id);
+  }
   const org = await getOrgBilling(orgId);
   if (!org) return { error: "Organization not found." };
   const level = mutationLevel(org);
@@ -111,6 +122,11 @@ export async function assertCanOperate(
   orgId: string,
 ): Promise<{ error?: string }> {
   if (!BILLING_ENABLED) return {}; // open beta: no operational gating
+  // Designer-only users: gate on their personal Studio seat, not the org plan.
+  const designer = await getCurrentUser();
+  if (designer && isDesignerOnly(designer)) {
+    return assertDesignerCanMutate(designer.id);
+  }
   const org = await getOrgBilling(orgId);
   if (!org) return { error: "Organization not found." };
   if (mutationLevel(org) === "locked") return { error: READ_ONLY_MSG };
@@ -126,6 +142,11 @@ export async function assertCanCreateProduction(
   orgId: string,
 ): Promise<{ error?: string }> {
   if (!BILLING_ENABLED) return {}; // open beta: unlimited productions
+  // Designer-only users: the per-tier Studio seat cap governs, not the org plan.
+  const designer = await getCurrentUser();
+  if (designer && isDesignerOnly(designer)) {
+    return assertDesignerCanCreateProduction(designer.id, orgId);
+  }
   const org = await getOrgBilling(orgId);
   if (!org) return { error: "Organization not found." };
   if (org.grandfathered) return {}; // existing orgs: unlimited, never gated

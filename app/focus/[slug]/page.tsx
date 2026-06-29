@@ -46,6 +46,8 @@ import { FocusShell } from "./focus-shell";
 import { FocusScriptHost } from "./focus-script-host";
 import { FocusScriptUpload } from "./focus-script-upload";
 import { FocusDocUpload } from "./focus-doc-upload";
+import { getDesignerSeat } from "@/features/designer/entitlement";
+import type { DesignerTool } from "@/features/designer/constants";
 
 type CurrentUserLike = {
   firstName: string | null;
@@ -107,6 +109,30 @@ export default async function FocusPage({
     canCreateProjects: can(user.role, "productions:manage"),
     projects: visible.map((p) => ({ slug: p.slug, title: p.title })),
   };
+
+  // Studio (designer-seat) tool gate: a designer-only user can only open a tool
+  // their plan includes (Single Tool has just one). With no active seat both are
+  // locked, so they get a read-only prompt to subscribe. Full users (who use
+  // Focus as an optional toggle) are governed by org billing and skip this.
+  if (isDesignerOnly(user)) {
+    const seat = await getDesignerSeat(user.id);
+    const wantTool: DesignerTool = mode === "blocking" ? "blocking" : "script";
+    if (!seat.tools.includes(wantTool)) {
+      const otherTool: DesignerTool =
+        wantTool === "blocking" ? "script" : "blocking";
+      if (seat.tools.includes(otherTool)) {
+        redirect(`/focus/${slug}?mode=${otherTool}`);
+      }
+      return (
+        <FocusShell {...shellProps} mode="script">
+          <div className="fx-soon" style={{ height: "100vh" }}>
+            <p>Your Studio workspace is read-only.</p>
+            <a href={`/focus/${slug}/settings`}>Choose a plan to start editing →</a>
+          </div>
+        </FocusShell>
+      );
+    }
+  }
 
   // Blocking focus: the same Blocking tool, embedded chrome-free in the focus
   // shell. Data fetching mirrors the Blocking page so the canvas behaves
