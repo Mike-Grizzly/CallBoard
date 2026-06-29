@@ -159,10 +159,13 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     const { firstName, lastName } = deriveName(meta);
     const email = authUser.email ?? "";
     const accountType = (meta.account_type as string) || "organization";
+    // Designer-package signups become Focus-only (accessMode="designer") and,
+    // like participants, get a personal workspace named for them.
+    const isDesignerSignup = accountType === "designer";
     const requestedOrgName = ((meta.organization_name as string) || "").trim();
     const orgName =
       requestedOrgName ||
-      (accountType === "individual"
+      (accountType === "individual" || isDesignerSignup
         ? personalWorkspaceName(firstName, email)
         : fallbackOrgName(firstName, lastName, email));
 
@@ -174,6 +177,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       firstName,
       lastName,
       selectedOrganizationId: org.id,
+      accessMode: isDesignerSignup ? "designer" : "full",
     });
 
     await db.insert(organizationMemberships).values({
@@ -191,7 +195,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       organizationId: org.id,
       organizationName: org.name,
       organizationLogoUrl: org.logoUrl ?? null,
-      accessMode: "full",
+      accessMode: isDesignerSignup ? "designer" : "full",
     };
   }
 

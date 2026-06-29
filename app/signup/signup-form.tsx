@@ -1,18 +1,24 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signup, type AuthResult } from "@/app/actions/auth";
 
-type AccountType = "individual" | "organization";
+type AccountType = "individual" | "organization" | "designer";
 
 export function SignupForm() {
+  const params = useSearchParams();
+  const designerSignup = params.get("account") === "designer";
+
   const [state, formAction, pending] = useActionState<
     AuthResult | undefined,
     FormData
   >(signup, undefined);
 
-  const [accountType, setAccountType] = useState<AccountType>("organization");
+  const [accountType, setAccountType] = useState<AccountType>(
+    designerSignup ? "designer" : "organization",
+  );
 
   return (
     <form action={formAction} className="card card-pad">
@@ -36,6 +42,11 @@ export function SignupForm() {
         state?.error && <div className="auth-error">{state.error}</div>
       )}
 
+      {designerSignup && (
+        <input type="hidden" name="account_type" value="designer" />
+      )}
+
+      {!designerSignup && (
       <div className="auth-field">
         <span className="label">How will you use Proscene?</span>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}>
@@ -94,6 +105,7 @@ export function SignupForm() {
           </label>
         </div>
       </div>
+      )}
 
       <div
         style={{
@@ -150,6 +162,11 @@ export function SignupForm() {
             or production team. You can rename it later.
           </p>
         </div>
+      ) : designerSignup ? (
+        <p className="auth-hint" style={{ marginBottom: 14 }}>
+          This is your private Studio workspace — just your Script and Blocking.
+          You&apos;ll choose a plan right after you confirm your email.
+        </p>
       ) : (
         <p className="auth-hint" style={{ marginBottom: 14 }}>
           You&apos;ll join the productions you&apos;re invited to — no company to set up.
