@@ -1125,6 +1125,75 @@ export async function attachWizardScript(input: {
   return { success: true };
 }
 
+/**
+ * Carry a wizard-uploaded script over as the production's default script WITHOUT
+ * a parse — the "upload now, parse later" path when auto-fill is toggled off.
+ * Mirrors attachWizardScript but keyed by the uploaded storage path (no parse
+ * row exists). Owner-gated; the path must be this user's wizard upload; verifies
+ * PDF magic bytes before moving it into the production's documents.
+ */
+export async function attachWizardScriptByPath(input: {
+  storagePath: string;
+  slug: string;
+  fileName: string;
+  fileSize: number;
+}): Promise<{ error?: string; success?: boolean }> {
+  const user = await requireCurrentUser();
+  if (!can(user.role, "productions:manage")) {
+    return { error: "You don't have permission to do that." };
+  }
+  if (!input.storagePath.startsWith(`wizard-scripts/${user.id}/`)) {
+    return { error: "Upload could not be verified." };
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const bytesOk = await verifyUploadMagicBytes(
+    supabase,
+    input.storagePath,
+    "application/pdf",
+  );
+  if (!bytesOk) {
+    await supabase.storage.from("attachments").remove([input.storagePath]);
+    return { error: "File content does not match the declared type." };
+  }
+
+  const [prod] = await db
+    .select({ id: productions.id })
+    .from(productions)
+    .where(
+      and(
+        eq(productions.slug, input.slug),
+        eq(productions.organizationId, user.organizationId),
+      ),
+    )
+    .limit(1);
+  if (!prod) return { error: "Production not found." };
+
+  const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const newPath = `documents/${prod.id}/${Date.now()}-${safeName}`;
+  const { error: moveError } = await supabase.storage
+    .from("attachments")
+    .move(input.storagePath, newPath);
+  if (moveError) return { error: "Could not attach the script file." };
+
+  const title = input.fileName.replace(/\.[^.]+$/, "") || "Script";
+  await db.insert(documents).values({
+    productionId: prod.id,
+    uploadedBy: user.id,
+    title,
+    fileName: input.fileName,
+    fileSize: input.fileSize,
+    contentType: "application/pdf",
+    storagePath: newPath,
+    documentType: "script",
+    isDefaultScript: true,
+    processingStatus: "ready",
+  });
+
+  revalidatePath("/productions");
+  return { success: true };
+}
+
 export async function getScriptUrl(storagePath: string): Promise<string> {
   const user = await requireCurrentUser();
 
