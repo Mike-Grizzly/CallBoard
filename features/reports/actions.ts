@@ -131,54 +131,65 @@ export async function createReport(
     return { errors };
   }
 
-  const [{ next }] = await db
-    .select({
-      next: sql<number>`COALESCE(MAX(${rehearsalReports.reportNumber}), 0) + 1`,
-    })
-    .from(rehearsalReports)
-    .where(eq(rehearsalReports.productionId, productionId));
+  // Assign the next per-production report number and insert it atomically. A
+  // per-production advisory lock serializes concurrent creates so two reports
+  // can't read the same MAX and both claim the same number; it releases when
+  // the transaction commits. (A unique (production_id, report_number) DB
+  // constraint is the belt-and-suspenders follow-up — see decision log.)
+  const inserted = await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${productionId}))`,
+    );
 
-  const inserted = await db
-    .insert(rehearsalReports)
-    .values({
-      productionId,
-      createdBy: user.id,
-      reportNumber: Number(next),
-      reportDate: data!.reportDate,
-      status: data!.status,
-      generalNotes: data!.generalNotes,
-      scheduledCall: data!.scheduledCall,
-      actualStart: data!.actualStart,
-      endTime: data!.endTime,
-      nextRehearsalDate: data!.nextRehearsalDate,
-      nextRehearsalTime: data!.nextRehearsalTime,
-      nextRehearsalLocation: data!.nextRehearsalLocation,
-      nextRehearsalNotes: data!.nextRehearsalNotes,
-      deptScenery: data!.departments.deptScenery,
-      deptProps: data!.departments.deptProps,
-      deptCostumes: data!.departments.deptCostumes,
-      deptHairMakeup: data!.departments.deptHairMakeup,
-      deptLighting: data!.departments.deptLighting,
-      deptSound: data!.departments.deptSound,
-      deptSoundEffects: data!.departments.deptSoundEffects,
-      deptMusic: data!.departments.deptMusic,
-      deptChoreography: data!.departments.deptChoreography,
-      deptVideo: data!.departments.deptVideo,
-      deptCrew: data!.departments.deptCrew,
-      deptOther: data!.departments.deptOther,
-      deptNotes: cleanDeptNotes(data!.customDeptNotes),
-      attendancePresent: data!.attendancePresent,
-      attendanceAbsent: data!.attendanceAbsent,
-      attendanceLate: data!.attendanceLate,
-      breaks: data!.breaks,
-      scenesWorked: data!.scenesWorked,
-      scheduleChanges: data!.scheduleChanges,
-      attendanceNotes: data!.attendanceNotes,
-      lineNotes: data!.lineNotes,
-      injuries: data!.injuries,
-      distributedAt: data!.status === "distributed" ? new Date() : null,
-    })
-    .returning({ id: rehearsalReports.id });
+    const [{ next }] = await tx
+      .select({
+        next: sql<number>`COALESCE(MAX(${rehearsalReports.reportNumber}), 0) + 1`,
+      })
+      .from(rehearsalReports)
+      .where(eq(rehearsalReports.productionId, productionId));
+
+    return tx
+      .insert(rehearsalReports)
+      .values({
+        productionId,
+        createdBy: user.id,
+        reportNumber: Number(next),
+        reportDate: data!.reportDate,
+        status: data!.status,
+        generalNotes: data!.generalNotes,
+        scheduledCall: data!.scheduledCall,
+        actualStart: data!.actualStart,
+        endTime: data!.endTime,
+        nextRehearsalDate: data!.nextRehearsalDate,
+        nextRehearsalTime: data!.nextRehearsalTime,
+        nextRehearsalLocation: data!.nextRehearsalLocation,
+        nextRehearsalNotes: data!.nextRehearsalNotes,
+        deptScenery: data!.departments.deptScenery,
+        deptProps: data!.departments.deptProps,
+        deptCostumes: data!.departments.deptCostumes,
+        deptHairMakeup: data!.departments.deptHairMakeup,
+        deptLighting: data!.departments.deptLighting,
+        deptSound: data!.departments.deptSound,
+        deptSoundEffects: data!.departments.deptSoundEffects,
+        deptMusic: data!.departments.deptMusic,
+        deptChoreography: data!.departments.deptChoreography,
+        deptVideo: data!.departments.deptVideo,
+        deptCrew: data!.departments.deptCrew,
+        deptOther: data!.departments.deptOther,
+        deptNotes: cleanDeptNotes(data!.customDeptNotes),
+        attendancePresent: data!.attendancePresent,
+        attendanceAbsent: data!.attendanceAbsent,
+        attendanceLate: data!.attendanceLate,
+        breaks: data!.breaks,
+        scenesWorked: data!.scenesWorked,
+        scheduleChanges: data!.scheduleChanges,
+        attendanceNotes: data!.attendanceNotes,
+        lineNotes: data!.lineNotes,
+        injuries: data!.injuries,
+        distributedAt: data!.status === "distributed" ? new Date() : null,
+      })
+      .returning({ id: rehearsalReports.id });
+  });
 
   {
     await writeContextMentions({

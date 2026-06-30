@@ -2427,3 +2427,43 @@ Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject an
 **Deferred (flagged in `open-questions.md`):** the designer→org referral incentive (a separate anti-fraud subsystem); per-write-action tool enforcement for Single Tool (currently route-gated — a low-severity billing-bypass hardening item); storage-cap enforcement (advisory, like the org caps).
 
 **Verification:** not typechecked (fresh clone, no `node_modules`); built close to the existing org-billing patterns. This is the slice for the planned Stripe-workflow security audit.
+
+---
+
+## 2026-06-29 — Auth rate limiter fails CLOSED in production
+
+**Decision:** When the auth rate limiter is unavailable (Upstash not configured) or errors at request time, `checkAuthRateLimit` now **blocks** the auth attempt in real production (`VERCEL_ENV === "production"`, else `NODE_ENV`), returning a generic "temporarily unavailable" message and logging an error. In every other environment (local dev, CI, Vercel previews) it still fails **open** so those stay usable without Redis. Previously it failed open everywhere.
+
+**Reason:** Failing open silently disables brute-force / credential-stuffing protection at exactly the moment it is needed, and a missing env var would degrade security with no signal. Failing closed turns that misconfiguration into a loud, visible availability problem instead of a silent security hole.
+
+**Impact / operational note:** In production, the auth flows that call `checkAuthRateLimit` (login, signup, password reset, resend verification) depend on Upstash being reachable. If `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` are missing or Redis is down, those flows return the unavailable message until it is restored — a deliberate trade of availability for security. The decision lives in a pure `decideRateLimit` function (`lib/rate-limit.ts`) with unit tests (`lib/rate-limit.test.ts`).
+
+---
+
+## 2026-06-29 — Draft rehearsal reports are manager-only (visibility = `reports:create`)
+
+**Decision:** Draft rehearsal reports are visible only to roles that hold `reports:create` (admin, producer, director, choreographer, creative, stage_manager). Cast and crew (who hold only `reports:view`) see a report once it is **distributed**. The rule is centralized in `canViewDraftReports(role)` (`features/reports/visibility.ts`) and applied at every report read path — list, detail, attachment signed-URLs, and dashboard/activity surfaces — server-side.
+
+**Reason:** Drafts routinely contain incomplete or sensitive stage-management information (attendance/absence notes, incident and injury notes, line notes) that has not yet been intentionally released. Tying visibility to the existing report-management capability keeps the rule consistent with the role model and means a report's own author is always covered (authoring requires `reports:create`).
+
+**Impact:** Any new surface that reads reports must call `canViewDraftReports` (or go through a query already scoped to distributed) before showing a report to a non-manager. Guarded by `features/reports/visibility.test.ts`.
+
+---
+
+## 2026-06-29 — Production-scoped authorization: audit + targeted gap closure (not a rewrite)
+
+**Decision:** Rather than introduce a new mandatory access-helper layer across all ~20 feature modules (as the external review suggested for its "production-scoped access not consistently enforced" finding), we audited every production-scoped server action and closed only the specific resource-ownership gaps found. `userCanAccessProduction` (`lib/auth.ts`) remains the canonical production gate; actions verify child-resource ownership inline, matching the existing convention.
+
+**Reason:** The audit (all ~70 production-scoped actions) showed the pattern is already applied consistently — almost every action verifies both production access and that the child resource (report, document, folder, call, scene, beat, video, membership) belongs to the production. The residual risk was exactly three actions missing the resource-ownership leg: `saveAnnotations`, `ensureMemberBookmarks`, and `finalizeDocumentUpload` (its `folderId`), now fixed to mirror `startScriptParse` / `moveDocument`. A sweeping helper refactor would add churn and review risk disproportionate to the actual gap, against the review's own "targeted hardening, not a rewrite" guidance.
+
+**Impact:** New production-scoped actions must continue to (a) call `userCanAccessProduction` and (b) verify any child-resource ID belongs to that production — see `startScriptParse` / `moveDocument` for the pattern. The remaining structural risk (a future action could forget the resource-ownership leg) is accepted for now in favor of low-churn targeted fixes; revisit a shared resource-access helper if the codebase outgrows easy review.
+
+---
+
+## 2026-06-29 — Concurrency/transaction safety in app code; DB constraints deferred
+
+**Decision:** Report-number assignment and production creation were made safe in application code — a per-production advisory lock (`pg_advisory_xact_lock`) around report numbering in `createReport`, and a `db.transaction` around each production-creation path (`createProduction`, `createProductionFull`, `quickCreateProduction`) — without changing the database schema. The belt-and-suspenders DB uniqueness constraints (e.g. `(production_id, report_number)`, plus membership/slug/department uniqueness) are deferred pending a decision on the migration workflow (the repo has no committed migrations directory and uses `db:push`).
+
+**Reason:** The code-level fixes remove the actual race and partial-state bugs with zero risk to the live database. DB constraints are the correct backstop but require either direct production-schema changes or first establishing a committed-migration workflow (itself a flagged gap, R4) — a separate decision the owner should make.
+
+**Impact:** Concurrent report creation for one production now serializes (the advisory lock releases on commit); production setup is all-or-nothing for its local writes, with external invites/trial-start kept after commit so they can't be rolled back over network calls. Pattern for new multi-write flows: wrap local writes in `db.transaction`, keep external side effects after commit. If/when DB constraints land, these app-code guards remain as the friendly-error layer in front of them.

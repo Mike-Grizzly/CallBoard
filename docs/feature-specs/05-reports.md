@@ -4,9 +4,18 @@
 Rehearsal report creation, daily personal log per production, "import from log" into reports, and file attachments on reports.
 
 ## User story
-As a stage manager or director, I can keep a daily log of running notes, then create a rehearsal report (optionally importing from my log). I can attach files to reports. All team members can view reports.
+As a stage manager or director, I can keep a daily log of running notes, then create a rehearsal report (optionally importing from my log). I can attach files to reports. Team members can view reports once they are distributed; drafts stay visible only to report managers until then.
 
 ## Status: IMPLEMENTED
+- **Draft report visibility is manager-only (2026-06-29).** Draft rehearsal
+  reports are visible only to roles with `reports:create`; cast/crew see a report
+  once it is distributed. Enforced server-side at every read path via
+  `canViewDraftReports(role)` (`features/reports/visibility.ts`): the reports list
+  (viewers pinned to distributed), the detail page (`notFound()` on a draft for
+  non-managers), attachment signed-URLs (`userCanReadReport` in `attachments.ts`),
+  and the production overview activity feed. `sendReport` also requires
+  production access (`userCanAccessProduction`), not just the org-level
+  capability. See decision-log 2026-06-29 and `features/reports/visibility.test.ts`.
 - **Department sections are now per-production (2026-06-16).** The form, both detail
   views (desktop + mobile), and both email renderers iterate the production's
   resolved departments (`features/productions/departments.ts`,
@@ -41,7 +50,7 @@ As a stage manager or director, I can keep a daily log of running notes, then cr
 - `createReport(formData)` in `features/reports/actions.ts` — validates date + notes, inserts report, redirects to reports list; requires `reports:create`
 - `saveProductionLog(formData)` in `features/logs/actions.ts` — upsert: creates or updates the user's log for this production; requires `reports:create`
 - `uploadReportAttachment(formData)` in `features/reports/attachments.ts` — uploads to Supabase Storage (`reports/{reportId}/{timestamp}-{filename}`), max 10MB, records in DB; requires `reports:create`
-- `getAttachmentUrl(storagePath)` in `features/reports/attachments.ts` — returns signed URL (1-hour expiry); **no permission check**
+- `getAttachmentUrl(attachmentId)` in `features/reports/attachments.ts` — returns signed URL (1-hour expiry) after checking production access **and** draft visibility (`userCanReadReport`); returns `""` if the caller may not read the report
 
 ## Queries
 - `getReportsByProduction(productionId)` — reports with author info, ordered by date desc

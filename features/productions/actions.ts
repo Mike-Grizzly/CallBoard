@@ -67,20 +67,26 @@ export async function createProduction(
   const gate = await assertCanCreateProduction(user.organizationId);
   if (gate.error) return { error: gate.error };
 
-  const [newProduction] = await db
-    .insert(productions)
-    .values({
-      organizationId: user.organizationId,
-      title: data!.title,
-      slug: data!.slug,
-      status: data!.status,
-      color: data!.color,
-      openingDate: data!.openingDate,
-      closingDate: data!.closingDate,
-    })
-    .returning({ id: productions.id });
+  // Create the production and its default folders atomically so a folder
+  // failure can't leave a production with no folders. The trial clock starts
+  // after the transaction commits (it's an org-level side effect).
+  await db.transaction(async (tx) => {
+    const [newProduction] = await tx
+      .insert(productions)
+      .values({
+        organizationId: user.organizationId,
+        title: data!.title,
+        slug: data!.slug,
+        status: data!.status,
+        color: data!.color,
+        openingDate: data!.openingDate,
+        closingDate: data!.closingDate,
+      })
+      .returning({ id: productions.id });
 
-  await createDefaultFolders(newProduction.id);
+    await createDefaultFolders(newProduction.id, tx);
+  });
+
   await startTrialIfFirstProduction(user.organizationId);
 
   redirect("/productions");
@@ -181,37 +187,10 @@ export async function createProductionFull(
     rehearsalDays[day] = Boolean(input.rehearsalDays?.[day]);
   }
 
-  const [newProduction] = await db
-    .insert(productions)
-    .values({
-      organizationId: user.organizationId,
-      title,
-      slug,
-      status,
-      venue: (input.venue ?? "").trim() || null,
-      season: (input.season ?? "").trim() || null,
-      openingDate: opening,
-      closingDate: closing,
-      firstRehearsalDate: toDate(input.firstRehearsal),
-      techStartDate: toDate(input.techStart),
-      rehearsalDays,
-      rehearsalStart: (input.rehearsalStart ?? "").trim() || null,
-      rehearsalEnd: (input.rehearsalEnd ?? "").trim() || null,
-      color: isValidProductionColor(input.color) ? input.color : null,
-    })
-    .returning({ id: productions.id });
-
-  const productionId = newProduction.id;
-
   // Departments — map the wizard's selections onto the canonical catalog
   // (with labels + order) so they drive the board buckets and report sections.
   const enabledDepts = DEPT_KEYS.filter((key) => input.depts?.[key]);
   const deptRows = wizardDeptRows(enabledDepts);
-  if (deptRows.length > 0) {
-    await db
-      .insert(productionDepartments)
-      .values(deptRows.map((r) => ({ productionId, ...r })));
-  }
 
   // Character / role list — only rows with a name.
   const roles = (input.roles ?? [])
@@ -222,13 +201,52 @@ export async function createProductionFull(
       sortOrder: i,
     }))
     .filter((r) => r.name.length > 0);
-  if (roles.length > 0) {
-    await db
-      .insert(productionRoles)
-      .values(roles.map((r) => ({ productionId, ...r })));
-  }
 
-  await createDefaultFolders(productionId);
+  // Create the production and its scaffold (departments, roles, default
+  // folders) atomically, so a mid-setup failure can't leave a half-built
+  // production. External side effects (trial start, team invites) run AFTER
+  // the transaction commits — they can't take part in a DB rollback and
+  // shouldn't hold the transaction open while making network calls.
+  const productionId = await db.transaction(async (tx) => {
+    const [newProduction] = await tx
+      .insert(productions)
+      .values({
+        organizationId: user.organizationId,
+        title,
+        slug,
+        status,
+        venue: (input.venue ?? "").trim() || null,
+        season: (input.season ?? "").trim() || null,
+        openingDate: opening,
+        closingDate: closing,
+        firstRehearsalDate: toDate(input.firstRehearsal),
+        techStartDate: toDate(input.techStart),
+        rehearsalDays,
+        rehearsalStart: (input.rehearsalStart ?? "").trim() || null,
+        rehearsalEnd: (input.rehearsalEnd ?? "").trim() || null,
+        color: isValidProductionColor(input.color) ? input.color : null,
+      })
+      .returning({ id: productions.id });
+
+    const pid = newProduction.id;
+
+    if (deptRows.length > 0) {
+      await tx
+        .insert(productionDepartments)
+        .values(deptRows.map((r) => ({ productionId: pid, ...r })));
+    }
+    if (roles.length > 0) {
+      await tx
+        .insert(productionRoles)
+        .values(roles.map((r) => ({ productionId: pid, ...r })));
+    }
+    await createDefaultFolders(pid, tx);
+
+    return pid;
+  });
+
+  // Post-commit side effects (non-transactional): start the trial clock, then
+  // apply the wizard's team (the latter makes external Supabase Admin calls).
   const trialJustStarted = await startTrialIfFirstProduction(
     user.organizationId,
   );
@@ -459,18 +477,23 @@ export async function quickCreateProduction(
 
   const slug = await generateUniqueSlug(user.organizationId, title);
 
-  const [newProduction] = await db
-    .insert(productions)
-    .values({
-      organizationId: user.organizationId,
-      title,
-      slug,
-      status: "draft",
-      openingDate: toDate(input.opening),
-    })
-    .returning({ id: productions.id });
+  // Create the production and its default folders atomically; start the trial
+  // clock after commit (an org-level side effect, not part of the scaffold).
+  await db.transaction(async (tx) => {
+    const [newProduction] = await tx
+      .insert(productions)
+      .values({
+        organizationId: user.organizationId,
+        title,
+        slug,
+        status: "draft",
+        openingDate: toDate(input.opening),
+      })
+      .returning({ id: productions.id });
 
-  await createDefaultFolders(newProduction.id);
+    await createDefaultFolders(newProduction.id, tx);
+  });
+
   await startTrialIfFirstProduction(user.organizationId);
 
   revalidatePath("/", "layout");

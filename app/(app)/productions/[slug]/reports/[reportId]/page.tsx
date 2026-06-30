@@ -15,6 +15,7 @@ import {
   getProductionMembers,
 } from "@/features/members/queries";
 import { getReportById } from "@/features/reports/queries";
+import { canViewDraftReports } from "@/features/reports/visibility";
 import {
   getReportAttachments,
   getAttachmentUrl,
@@ -106,6 +107,13 @@ export default async function ReportDetailPage({
   const report = await getReportById(reportId);
 
   if (!report || report.productionId !== production.id) {
+    notFound();
+  }
+
+  // Draft reports are visible only to report managers. A cast/crew viewer who
+  // knows or guesses a draft's URL must not be able to open it — treat it as
+  // not found rather than leaking its existence. Mirrors the list-page gate.
+  if (report.status === "draft" && !canViewDraftReports(user.role)) {
     notFound();
   }
 

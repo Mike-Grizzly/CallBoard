@@ -2,17 +2,16 @@
 
 # Show Portal — Project Context for Claude Code
 
-This is a lightweight production portal for small theatre companies. MVP built in vertical slices. Steps 1-7 are implemented.
+This is a production portal for small theatre companies, built in vertical slices. It started as a 7-step MVP and has since grown substantially — treat `/docs/current-status.md` and `/docs/feature-specs/` as the authoritative status, not this header.
 
 ## Quick orientation
 
-- **Stack:** Next.js 16 App Router, React 19, TypeScript strict, Tailwind v4, Supabase (auth/DB/storage), Drizzle ORM, TipTap rich text
-- **DB:** 9 tables — organizations, profiles, organization_memberships, productions, production_memberships, rehearsal_reports, production_logs, report_attachments, documents
-- **Auth:** Supabase email/password + Google OAuth (`signInWithOAuth` in `app/actions/auth.ts`, buttons in `components/auth/oauth-buttons.tsx`), `proxy.ts` (NOT middleware.ts), auto-profile creation in `lib/auth.ts`
-- **Permissions:** `can(role, capability)` in `lib/permissions.ts` — 6 roles, 10 capabilities
+- **Stack:** Next.js 16 App Router, React 19, TypeScript strict, Tailwind v4, Supabase (auth/DB/storage), Drizzle ORM, TipTap rich text. Also: Stripe (billing/trials), web-push (notifications), pdf.js + Tesseract + Anthropic (AI script analysis), Sentry
+- **DB:** ~36 tables — `db/schema/` is the source of truth. Core: organizations, profiles, organization_memberships, productions, production_memberships. Plus production setup (production_departments, production_roles, production_scenes), reports (rehearsal_reports, report_attachments), documents (documents, document_folders, document_comments), notes & tags, calls/calendar (calls, call_templates, call_confirmations), blocking (stage_configurations, blocking_positions, scene_beats, beat_arrows, beat_comments, custom_set_pieces), scripts/AI (script_parses, script_annotations, script_ocr, script_cache), video (rehearsal_videos, video_timestamp_notes), announcements (+acks/+productions), notifications/push, and pins/mentions
+- **Auth:** Supabase email/password + Google OAuth (`signInWithOAuth` in `app/actions/auth.ts`, buttons in `components/auth/oauth-buttons.tsx`), `proxy.ts` (NOT middleware.ts), auto-profile creation in `lib/auth.ts`. Auth actions are rate-limited via `lib/rate-limit.ts` (fails **closed** in production)
+- **Permissions:** `can(role, capability)` in `lib/permissions.ts` — 8 roles (admin, producer, director, choreographer, creative, stage_manager, cast, crew), 18 capabilities
 - **Storage:** Single `attachments` bucket in Supabase Storage, signed URLs (1hr expiry)
-- **Features built:** Foundation, Auth, Roles/Permissions, Productions/Dashboard, Reports/Daily Log, Document Center, File Uploads
-- **Not built yet:** Announcements, Activity Log (scaffolded as placeholders)
+- **Scope:** Productions/dashboard, reports, documents & folders, file uploads, announcements, notes, calls & calendar, people directory, push notifications, billing/trials, AI script analysis, rehearsal video, blocking/stage setup, and designer seats. See `/docs/current-status.md` + `/docs/feature-specs/` for authoritative per-feature status
 
 ## Before working on features
 
@@ -53,6 +52,8 @@ docs closeout.
 6. **Constants must NOT be exported from `"use server"` files** — causes hydration errors. Use separate `constants.ts`
 7. **Supabase Storage** uses the **service-role admin client** (`lib/supabase/admin.ts`) for all object reads/writes/signed-URLs; browser uploads use signed upload tokens. Both bypass RLS, so access control lives **entirely** in the server actions (`requireCurrentUser` + `can()` + `userCanAccessProduction`). The `attachments` bucket RLS is intentionally **deny-all** (RLS enabled, no policies) as defense-in-depth — do NOT add broad `authenticated` policies back
 8. **`experimental.serverActions.bodySizeLimit: "64mb"`** in next.config.ts — required for file uploads
+9. **Production-scoped access** goes through `userCanAccessProduction(user, productionId)` (`lib/auth.ts`) — it enforces the tenant boundary (production belongs to the user's org), a `productions:manage` override, and production membership. Do NOT re-implement this check ad hoc; route production-scoped reads, mutations, and signed-URL issuance through it. (Several actions still inline the equivalent logic — prefer the helper, and treat consolidating them as ongoing hardening.)
+10. **Report draft visibility:** draft rehearsal reports are visible only to report managers (`reports:create` holders). Use `canViewDraftReports(role)` (`features/reports/visibility.ts`) at EVERY report read path — list, detail, attachment signed-URLs, and dashboard/activity surfaces. Cast/crew see a report only once it is distributed
 
 ## Known issues to not re-introduce
 

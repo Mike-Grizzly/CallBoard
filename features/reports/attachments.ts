@@ -5,6 +5,7 @@ import { reportAttachments, rehearsalReports } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { canViewDraftReports } from "./visibility";
 import { assertCanMutate } from "@/features/billing/guard";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { verifyUploadMagicBytes } from "@/lib/upload-security";
@@ -47,6 +48,31 @@ async function userCanAccessReport(
     .limit(1);
   if (!report) return false;
   return userCanAccessProduction(user, report.productionId);
+}
+
+/**
+ * Read access to a report's attachments. Beyond production access, a report
+ * that is still a draft is readable only by report managers
+ * (`canViewDraftReports`) — otherwise a plain viewer who guessed or retained a
+ * report/attachment ID could pull a signed URL for an unreleased draft. Mirrors
+ * the page-level draft gate so attachment access can't be reached around it.
+ */
+async function userCanReadReport(
+  user: Awaited<ReturnType<typeof requireCurrentUser>>,
+  reportId: string,
+): Promise<boolean> {
+  const [report] = await db
+    .select({
+      productionId: rehearsalReports.productionId,
+      status: rehearsalReports.status,
+    })
+    .from(rehearsalReports)
+    .where(eq(rehearsalReports.id, reportId))
+    .limit(1);
+  if (!report) return false;
+  if (!(await userCanAccessProduction(user, report.productionId))) return false;
+  if (report.status === "draft" && !canViewDraftReports(user.role)) return false;
+  return true;
 }
 
 export async function requestReportAttachmentUpload(
@@ -151,6 +177,7 @@ export async function getAttachmentUrl(attachmentId: string): Promise<string> {
     .select({
       storagePath: reportAttachments.storagePath,
       productionId: rehearsalReports.productionId,
+      status: rehearsalReports.status,
     })
     .from(reportAttachments)
     .innerJoin(
@@ -162,6 +189,9 @@ export async function getAttachmentUrl(attachmentId: string): Promise<string> {
 
   if (!row) return "";
   if (!(await userCanAccessProduction(user, row.productionId))) return "";
+  // Draft attachments follow the report's draft visibility — a plain viewer
+  // can't pull a signed URL for an unreleased draft even with the attachment ID.
+  if (row.status === "draft" && !canViewDraftReports(user.role)) return "";
 
   const supabase = createSupabaseAdminClient();
   const { data } = await supabase.storage
@@ -173,7 +203,7 @@ export async function getAttachmentUrl(attachmentId: string): Promise<string> {
 
 export async function getReportAttachments(reportId: string) {
   const user = await requireCurrentUser();
-  if (!(await userCanAccessReport(user, reportId))) return [];
+  if (!(await userCanReadReport(user, reportId))) return [];
   return db
     .select()
     .from(reportAttachments)

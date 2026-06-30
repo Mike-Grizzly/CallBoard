@@ -34,8 +34,13 @@ const ALLOWED_DOCUMENT_TYPES = [
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 ];
 
-export async function createDefaultFolders(productionId: string) {
-  await db.insert(documentFolders).values(
+export async function createDefaultFolders(
+  productionId: string,
+  // Accepts either the base db or a transaction handle, so callers can include
+  // the default folders in a larger atomic production-setup transaction.
+  executor: Pick<typeof db, "insert"> = db,
+) {
+  await executor.insert(documentFolders).values(
     DEFAULT_FOLDERS.map((name, i) => ({
       productionId,
       name,
@@ -240,6 +245,20 @@ export async function finalizeDocumentUpload(input: {
   }
   if (!ALLOWED_DOCUMENT_TYPES.includes(input.contentType)) {
     return { error: "Unsupported file type." };
+  }
+
+  // A folder, if supplied, must belong to this same production — otherwise the
+  // document (in this production) would be filed under another production's (or
+  // org's) folder, corrupting folder-based visibility. Mirrors moveDocument.
+  if (input.folderId) {
+    const [folder] = await db
+      .select({ productionId: documentFolders.productionId })
+      .from(documentFolders)
+      .where(eq(documentFolders.id, input.folderId))
+      .limit(1);
+    if (!folder || folder.productionId !== input.productionId) {
+      return { error: "Selected folder not found." };
+    }
   }
 
   const supabase = createSupabaseAdminClient();

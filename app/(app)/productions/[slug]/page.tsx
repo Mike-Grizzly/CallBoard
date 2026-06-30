@@ -10,6 +10,7 @@ import {
   getProductionMembership,
 } from "@/features/members/queries";
 import { getReportsByProduction } from "@/features/reports/queries";
+import { canViewDraftReports } from "@/features/reports/visibility";
 import { getDocumentsByProduction } from "@/features/documents/queries";
 import { getAnnouncementsByProduction } from "@/features/announcements/queries";
 import { getNextCall } from "@/features/calls/queries";
@@ -142,7 +143,12 @@ export default async function ProductionDetailPage({
   const [members, reports, documents, announcements, nextCall] =
     await Promise.all([
       getProductionMembers(production.id),
-      getReportsByProduction(production.id),
+      // Draft reports must not surface in the activity feed for cast/crew-style
+      // viewers — hide them at the query, same rule as the reports list/detail.
+      getReportsByProduction(
+        production.id,
+        canViewDraftReports(user.role) ? {} : { status: "distributed" },
+      ),
       getDocumentsByProduction(production.id),
       getAnnouncementsByProduction(production.id, user.organizationId),
       getNextCall(production.id),

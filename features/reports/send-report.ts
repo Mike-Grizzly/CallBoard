@@ -1,7 +1,7 @@
 "use server";
 
 import { Resend } from "resend";
-import { requireCurrentUser } from "@/lib/auth";
+import { requireCurrentUser, userCanAccessProduction } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getReportById } from "./queries";
 import { getReportAttachments } from "./attachments";
@@ -45,6 +45,14 @@ export async function sendReport(
 
   if (!production) {
     return { error: "Production not found." };
+  }
+
+  // Sending is a production-scoped action: the org-level reports:create
+  // capability is not enough — the sender must have access to THIS production
+  // (membership, or a manager/admin override). Without this, a user could send
+  // reports for any production in their org from just the slug + report ID.
+  if (!(await userCanAccessProduction(user, production.id))) {
+    return { error: "You don't have access to this production." };
   }
 
   const report = await getReportById(reportId);
