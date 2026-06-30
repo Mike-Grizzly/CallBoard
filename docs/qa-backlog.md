@@ -96,7 +96,7 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 |---|---|---|---|---|
 | ☑ | "Enter" button is an unlabeled dark square | 🐞 | S | 1 |
 | ☐ | Set pieces should start empty | ✨ | S | 2 |
-| ☑ | Ground-plan window should be larger (expand-canvas toggle) | ✨ | S | 2 |
+| ☑ | Ground-plan window should be larger (global rail collapse + Focus mode) | ✨ | S | 2 |
 | ☐ | Upload a ground plan directly from the blocking picker | 🏗️ | M | 5 |
 | ☐ | Ground-plan zoom | 🏗️ | M | 5 |
 | ☐ | Draggable proscenium left/right boundaries | 🏗️ | M | 5 |
@@ -186,21 +186,29 @@ Fixed directly (pushed):
 Confirmed working by owner: the black-on-black button fix (light + dark) and the
 report list refresh-on-save.
 
-Queued feature requests from this round (await owner go-ahead / scoping):
-- ✨/🏗️ **Script auto-parse should be an opt-out toggle** (on by default) in the
-  wizard — off = upload as the default script, parse later.
-- 🏗️ **Documents upload v2** — checkbox multi-select with bulk folder/type
-  assignment, pre-upload thumbnails, clearer scroll affordance, remove-row
-  animation.
-- ✨ **Setup-wizard department icons** — drop the muddy multicolor tints for a
-  monochrome (ink-on-surface) treatment.
-- 🏗️ **Blocking "more room" rethink** — likely remove the new expand-canvas
-  toggle and the local fullscreen button in favor of a global sidebar collapse +
-  making Focus mode the clear full-screen path.
-- 🛠️ **Cast-role test login** — create a cast test account for verifying
-  read-only gating (e.g. the ungated-control fix).
+Owner chose to hold the merge and build the feature requests into this branch.
+
+Built into the branch (owner-approved 2026-06-30):
+- ☑ ✨ **Script auto-parse opt-out toggle** — "Auto-fill cast from this script"
+  (on by default) in the wizard. Off = the PDF uploads as the default script,
+  no parse; run the AI read later from the Script tab. Added
+  `attachWizardScriptByPath` for the un-parsed attach.
+- ☑ 🏗️ **Documents upload v2** — checkbox multi-select + bulk folder/type
+  assignment, pre-upload thumbnails (image + PDF first page), scroll-count
+  header + bottom fade, remove-row slide/fade animation.
+- ☑ ✨ **Setup-wizard department icons** — now fully monochrome (neutral
+  surface, ink that strengthens when active); selection shown by card chrome.
+- ☑ 🏗️ **Blocking "more room" rework** — removed the expand-canvas toggle and
+  the blocking tool's local fullscreen button. Added a **global rail collapse**
+  (icon-strip, persisted, flash-free) and made **Focus mode** the clear
+  full-screen path (relabeled + accented entry button).
+
+Still open from this round:
+- 🛠️ **Cast-role test login** — owner approved creating one; awaiting the email
+  to use + which production, then it's a live-DB/auth write via Supabase.
 - 🏗️ **Choreographer team spot** — surfaces only when the Choreography
-  department is enabled; consider always-on or clearer discoverability.
+  department is enabled (off by default in the wizard). Open question: make it
+  always-on like Director/SM/Producer, or leave it department-driven.
 
 ## Drag-and-drop upload coverage (`<FileDropzone>`)
 
