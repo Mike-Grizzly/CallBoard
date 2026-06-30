@@ -261,7 +261,9 @@ export function DocumentUploadForm({
                     display: "grid",
                     gridTemplateColumns: "1.5fr 1fr 1fr auto",
                     gap: 8,
-                    alignItems: "center",
+                    // Top-align so the filename/size caption under the title
+                    // input doesn't shove the Type/Folder selects out of line.
+                    alignItems: "start",
                     padding: "8px 10px",
                     border: "1px solid var(--border)",
                     borderRadius: "var(--radius-s)",

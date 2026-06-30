@@ -41,7 +41,32 @@ function parseTyped(input: string): string | null {
     if (y < 100) y += 2000;
     return toIso(y, +m[1], +m[2]);
   }
+  // Bare digits with no separators — MMDDYYYY or MMDDYY (e.g. "01202027").
+  if (/^\d+$/.test(s)) {
+    if (s.length === 8) return toIso(+s.slice(4, 8), +s.slice(0, 2), +s.slice(2, 4));
+    if (s.length === 6) return toIso(2000 + +s.slice(4, 6), +s.slice(0, 2), +s.slice(2, 4));
+  }
   return null;
+}
+
+/**
+ * Mask raw typing into MM/DD/YYYY, inserting slashes as digits arrive so
+ * "01202027" shows as "01/20/2027". ISO-style input (containing "-") is left
+ * alone so a pasted "2026-12-25" survives until blur reformats it.
+ */
+function maskUS(input: string): string {
+  if (input.includes("-")) return input;
+  const d = input.replace(/\D/g, "").slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
+/** Clamp a date into the inclusive [min, max] window (either bound may be absent). */
+function clampDate(d: Date, min?: Date, max?: Date): Date {
+  if (min && d < min) return min;
+  if (max && d > max) return max;
+  return d;
 }
 
 /** ISO → "MM/DD/YYYY" for display. Empty/invalid → "". */
@@ -130,6 +155,12 @@ export function DateField({
   if (minDate) disabled.push({ before: minDate });
   if (maxDate) disabled.push({ after: maxDate });
 
+  // Open the calendar on the selected date, else today (clamped into range) —
+  // never the far-past minimum, which dumped users years in the past.
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const openMonth = selected ?? clampDate(today, minDate, maxDate);
+
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
       <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
@@ -142,7 +173,16 @@ export function DateField({
           value={text}
           placeholder={placeholder ?? "MM/DD/YYYY"}
           aria-invalid={invalid || undefined}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => setText(maskUS(e.target.value))}
+          onPaste={(e) => {
+            // Commit a fully-formed pasted date immediately (ISO or US), so it
+            // reformats to MM/DD/YYYY without waiting for blur.
+            const pasted = e.clipboardData.getData("text");
+            if (parseTyped(pasted)) {
+              e.preventDefault();
+              commit(pasted);
+            }
+          }}
           onBlur={(e) => commit(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -210,7 +250,7 @@ export function DateField({
           <DayPicker
             mode="single"
             selected={selected}
-            defaultMonth={selected ?? minDate}
+            defaultMonth={openMonth}
             startMonth={minDate}
             endMonth={maxDate}
             disabled={disabled.length ? disabled : undefined}
