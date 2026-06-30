@@ -54,7 +54,7 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 | ☑ | Date entry overall is cumbersome (DateField + react-day-picker) | ✨ | M | 2 |
 | ☑ | Drag-and-drop file upload (reusable `<FileDropzone>`) | ✨ | M | 2 |
 | ☑ | Role/character labels not capitalized (AI-parse data, not CSS) | ✨ | XS | 2 |
-| ☐ | Department thumbnails hard to read in dark mode | ✨ | S | 2 |
+| ☑ | Department thumbnails hard to read in dark mode | ✨ | S | 2 |
 | ☑ | Non-cast people show up during cast assignment → filter out | 🐞 | S–M | 2 |
 | ☐ | Configurable season options (workspace level) | 🏗️ | M | 6 |
 | ☐ | Production/name presets | 🏗️ | S–M | 6 |
@@ -94,9 +94,9 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 
 | Status | Item | Type | Effort | Batch |
 |---|---|---|---|---|
-| ◐ | "Enter" button is an unlabeled dark square | 🐞 | S | 1 |
+| ☑ | "Enter" button is an unlabeled dark square | 🐞 | S | 1 |
 | ☐ | Set pieces should start empty | ✨ | S | 2 |
-| ☐ | Ground-plan window should be larger | ✨ | S | 2 |
+| ☑ | Ground-plan window should be larger (expand-canvas toggle) | ✨ | S | 2 |
 | ☐ | Upload a ground plan directly from the blocking picker | 🏗️ | M | 5 |
 | ☐ | Ground-plan zoom | 🏗️ | M | 5 |
 | ☐ | Draggable proscenium left/right boundaries | 🏗️ | M | 5 |
@@ -137,6 +137,37 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
   in `@layer base` so utilities win again. This also corrects any other
   utility-styled control that was hit by the same override. (Build verified;
   worth a quick visual sanity-check on buttons app-wide on the preview deploy.)
+
+## Batch 2 progress (polish sweep, 2026-06-30)
+
+- ☑ **Date entry** — new `<DateField>` (`components/ui/date-field.tsx`): typeable
+  /pasteable MM/DD/YYYY committed on blur/Enter, calendar popover
+  (react-day-picker), weekday hint, min/max bounds. Wired into the new-production
+  wizard's four date fields.
+- ☑ **Absurd-year validation** — `yearOutOfRange()` rejects typos (year outside
+  now-5…now+10) on all four production dates; enforced server-side in
+  `validateProductionForm` and client-side via the DateField bounds.
+- ☑ **Drag-and-drop uploads** — see the coverage section below.
+- ☑ **Role/character capitalization** — AI-parse role names and scene titles are
+  title-cased on apply (`capitalizeWords` in `features/scripts/actions.ts`); the
+  parser stores verbatim, so this is a display fix at apply-time, not CSS.
+- ☑ **Non-cast filtered from cast assignment** — the slot picker on the
+  cast/crew board lists only `role === "cast"` people (Decision 4).
+- ☑ **Report placeholder text** — empty-state inputs now name the field
+  ("Scene name", etc.) instead of generic prompts.
+- ☑ **Department thumbnails in dark mode** — the dark `-soft` department tokens
+  were too close to the page ink to read. Bumped lightness/chroma on the six
+  `--c-*-soft` tokens in `globals.css` (dark block only) so the chips read
+  against the dark surface. Light mode unchanged.
+- ☑ **Ground-plan window too small** — added an **expand-canvas** toggle to the
+  blocking toolbar (`blocking-canvas.tsx`). It collapses both side panels
+  (off-stage cast + set pieces/comments) and drops the shell to a single `1fr`
+  column so the ground plan gets the full width. Independent of the existing
+  fullscreen toggle, so the two compose (fullscreen + expanded = maximum room).
+  Available in the standalone page and Focus View; off by default.
+
+Still open in Batch 2: **Set pieces should start empty** (✨) and **clearer
+line-note input guidance** (✨) — small, not blocking the merge; carry forward.
 
 ## Drag-and-drop upload coverage (`<FileDropzone>`)
 

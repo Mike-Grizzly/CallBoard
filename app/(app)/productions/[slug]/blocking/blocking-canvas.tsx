@@ -29,7 +29,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, X, Maximize2, Minimize2, Route, Layers, Pencil } from "lucide-react";
+import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, X, Maximize2, Minimize2, Route, Layers, Pencil, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { BeatCommentSection } from "@/components/blocking/beat-comment-section";
 import { BeatNotesSection } from "@/components/blocking/beat-notes-section";
 import type { ProductionMember } from "@/features/members/queries";
@@ -748,6 +748,7 @@ export function BlockingCanvas({
   const [commentsOpen, setCommentsOpen] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [expandCanvas, setExpandCanvas] = useState(false);
   const [customPieces, setCustomPieces] = useState<CustomSetPieceClient[]>(initialCustomSetPieces);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -1562,7 +1563,7 @@ export function BlockingCanvas({
               // Fill the Focus View stage (a flex child with a definite height).
               height: "100%",
               display: "grid",
-              gridTemplateColumns: "240px 1fr 260px",
+              gridTemplateColumns: expandCanvas ? "1fr" : "240px 1fr 260px",
               overflow: "hidden",
               background: "var(--bg)",
             }
@@ -1573,7 +1574,7 @@ export function BlockingCanvas({
               zIndex: 9999,
               height: "100vh",
               display: "grid",
-              gridTemplateColumns: "240px 1fr 260px",
+              gridTemplateColumns: expandCanvas ? "1fr" : "240px 1fr 260px",
               overflow: "hidden",
               background: "var(--bg)",
             }
@@ -1581,7 +1582,7 @@ export function BlockingCanvas({
               margin: "-24px calc(-1 * var(--pad-x))",
               height: "calc(100vh - 133px)",
               display: "grid",
-              gridTemplateColumns: "220px 1fr 240px",
+              gridTemplateColumns: expandCanvas ? "1fr" : "220px 1fr 240px",
               overflow: "hidden",
             }
       }
@@ -1591,7 +1592,7 @@ export function BlockingCanvas({
       <div
         className="bk-side-left"
         style={{
-          display: "flex",
+          display: expandCanvas ? "none" : "flex",
           flexDirection: "column",
           height: "100%",
           overflow: "hidden",
@@ -2080,6 +2081,22 @@ export function BlockingCanvas({
                 <Settings className="h-3.5 w-3.5" /><span>Stage Setup</span>
               </button>
             )}
+            <button
+              onClick={() => setExpandCanvas((v) => !v)}
+              className="btn ghost"
+              style={{
+                height: 28, padding: "0 10px", fontSize: 12,
+                background: expandCanvas ? "var(--accent-soft)" : undefined,
+                color: expandCanvas ? "var(--accent-ink)" : undefined,
+              }}
+              title={expandCanvas
+                ? "Show the side panels"
+                : "Hide the side panels for a wider ground plan"}
+            >
+              {expandCanvas
+                ? <PanelLeftOpen className="h-3.5 w-3.5" />
+                : <PanelLeftClose className="h-3.5 w-3.5" />}
+            </button>
             {!embedded && (
               <button
                 onClick={() => setFullscreen((v) => !v)}
@@ -2546,7 +2563,7 @@ export function BlockingCanvas({
         style={{
           height: "100%",
           padding: "14px 12px 14px 0",
-          display: "flex",
+          display: expandCanvas ? "none" : "flex",
           flexDirection: "column",
           minWidth: 0,
         }}
