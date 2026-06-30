@@ -48,6 +48,7 @@ import { FocusScriptUpload } from "./focus-script-upload";
 import { FocusDocUpload } from "./focus-doc-upload";
 import { getDesignerSeat } from "@/features/designer/entitlement";
 import type { DesignerTool } from "@/features/designer/constants";
+import { DesignerToolLock } from "@/features/designer/tool-lock";
 
 type CurrentUserLike = {
   firstName: string | null;
@@ -111,17 +112,21 @@ export default async function FocusPage({
   };
 
   // Studio (designer-seat) tool gate: a designer-only user can only open a tool
-  // their plan includes (Single Tool has just one). With no active seat both are
-  // locked, so they get a read-only prompt to subscribe. Full users (who use
-  // Focus as an optional toggle) are governed by org billing and skip this.
+  // their plan includes (Single Tool has just one). If they open the tool their
+  // seat lacks, show it LOCKED behind an upgrade modal — staying on the
+  // requested mode so the toggle reflects the switch. With no active seat at
+  // all, it's a read-only "choose a plan" prompt. Full users (who use Focus as
+  // an optional toggle) are governed by org billing and skip this.
   if (isDesignerOnly(user)) {
     const seat = await getDesignerSeat(user.id);
     const wantTool: DesignerTool = mode === "blocking" ? "blocking" : "script";
     if (!seat.tools.includes(wantTool)) {
-      const otherTool: DesignerTool =
-        wantTool === "blocking" ? "script" : "blocking";
-      if (seat.tools.includes(otherTool)) {
-        redirect(`/focus/${slug}?mode=${otherTool}`);
+      if (seat.hasSeat) {
+        return (
+          <FocusShell {...shellProps} mode={wantTool}>
+            <DesignerToolLock tool={wantTool} slug={slug} />
+          </FocusShell>
+        );
       }
       return (
         <FocusShell {...shellProps} mode="script">
