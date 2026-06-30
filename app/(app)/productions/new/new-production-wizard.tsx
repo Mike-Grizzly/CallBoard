@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
+import { FileDropzone } from "@/components/ui/file-dropzone";
 import { createProductionFull } from "@/features/productions/actions";
 import {
   requestWizardScriptUpload,
@@ -1056,6 +1057,16 @@ function StepRoles({
                 the cast manually below.
               </div>
             )}
+            <div style={{ marginBottom: 10 }}>
+              <FileDropzone
+                accept="application/pdf"
+                onFile={(f) => {
+                  if (f) onUploadScript(f);
+                }}
+                disabled={busy}
+                hint="Drag your script PDF here, or click to browse"
+              />
+            </div>
             <button
               className="btn sm primary"
               onClick={() => fileRef.current?.click()}

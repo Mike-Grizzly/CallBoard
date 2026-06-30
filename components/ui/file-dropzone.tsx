@@ -94,7 +94,11 @@ export function FileDropzone({
         accept={accept}
         multiple={multiple}
         disabled={disabled}
-        onChange={(e) => emit(e.target.files)}
+        onChange={(e) => {
+          emit(e.target.files);
+          // Reset so picking the same file again still fires onChange.
+          e.currentTarget.value = "";
+        }}
         style={{ display: "none" }}
       />
       <Upload size={16} aria-hidden style={{ flexShrink: 0 }} />

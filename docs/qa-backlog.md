@@ -52,7 +52,7 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 | ◐ | Reject absurd/invalid years in date validation | 🐞 | XS | 1 |
 | ☐ | Copy/paste dates between fields | ✨ | S | 2 |
 | ☐ | Date entry overall is cumbersome | ✨ | M | 2 |
-| ◐ | Drag-and-drop file upload (reusable `<FileDropzone>`) | ✨ | M | 2 |
+| ☑ | Drag-and-drop file upload (reusable `<FileDropzone>`) | ✨ | M | 2 |
 | ☑ | Role/character labels not capitalized (AI-parse data, not CSS) | ✨ | XS | 2 |
 | ☐ | Department thumbnails hard to read in dark mode | ✨ | S | 2 |
 | ☑ | Non-cast people show up during cast assignment → filter out | 🐞 | S–M | 2 |
@@ -137,6 +137,22 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
   in `@layer base` so utilities win again. This also corrects any other
   utility-styled control that was hit by the same override. (Build verified;
   worth a quick visual sanity-check on buttons app-wide on the preview deploy.)
+
+## Drag-and-drop upload coverage (`<FileDropzone>`)
+
+Reusable component in `components/ui/file-dropzone.tsx` (drag-or-click,
+single/multi, accept filter, theme-correct). Wired in:
+- **Documents** — multi-file with per-file rows (Title/Type/Folder + remove),
+  caps (20 files / 64MB each / 200MB total), scrollable list.
+- **New-production wizard** — single-file script (drop box added; the existing
+  button is kept for people who prefer it).
+- **Focus/Studio doc/floorplan upload** (`focus-doc-upload.tsx`) — single-file.
+- **Focus/Studio script upload** already had its own drag-drop, left as is.
+
+Remaining surfaces that still use plain file inputs (can adopt `<FileDropzone>`
+incrementally; not script/floorplan so lower priority): workspace logo, the
+onboarding/setup logo, report attachments, blocking custom set-piece upload,
+and the people-import modal.
 
 ## Already shipped (from this section)
 
