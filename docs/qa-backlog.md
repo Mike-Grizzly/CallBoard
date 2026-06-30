@@ -208,6 +208,21 @@ Built into the branch (owner-approved 2026-06-30):
   verifying read-only gating. Credentials shared privately with the owner, not
   stored here. Delete it after testing (or ask and it'll be removed).
 
+Second test pass (2026-06-30):
+- ☑ 🐞 **Test login "Database error querying schema"** — the manually-created
+  auth user had NULL token columns (confirmation_token, recovery_token,
+  email_change, email_change_token_new); GoTrue scans those as non-null
+  strings, so login failed. Set them to '' — login works. (Lesson: when
+  creating Supabase users by SQL, default those columns to '', not NULL.)
+- ☑ 🐞 **Upload rows collapsed to slivers** — rows carry `overflow:hidden` for
+  the remove animation, which drops a flex item's min-height floor to 0, so the
+  capped-height list squeezed them instead of scrolling. Added `flex-shrink:0`.
+- ☑ ✨ **Smoother rail collapse** — animated `grid-template-columns` on `.app`
+  (reduced-motion-gated); labels nowrap so they don't reflow mid-slide.
+- ☑ ✨ **Doc-list delete animation** — the documents list now plays the same
+  slide/fade-out as the upload rows when a doc is deleted (list owns the delete
+  via `onRequestDelete`).
+
 Still open from this round:
 - 🏗️ **Choreographer team spot** — surfaces only when the Choreography
   department is enabled (off by default in the wizard). Open question: make it
