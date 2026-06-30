@@ -519,6 +519,11 @@ export function DocumentUploadForm({
                       maxHeight: isRemoving ? 0 : 200,
                       transform: isRemoving ? "translateX(24px)" : "none",
                       overflow: "hidden",
+                      // Don't let the flex column compress rows to fit its
+                      // max-height — `overflow: hidden` drops the min-content
+                      // floor, so without this the rows collapse to slivers
+                      // instead of the list scrolling.
+                      flexShrink: 0,
                       transition:
                         "opacity .2s ease, transform .2s ease, max-height .2s ease, padding .2s ease",
                     }}
