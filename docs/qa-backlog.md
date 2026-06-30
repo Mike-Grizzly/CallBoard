@@ -203,9 +203,12 @@ Built into the branch (owner-approved 2026-06-30):
   (icon-strip, persisted, flash-free) and made **Focus mode** the clear
   full-screen path (relabeled + accented entry button).
 
+- ☑ 🛠️ **Cast-role test login** — created a dedicated `cast` account (email
+  confirmed) in the Default Organization, cast on *The Color Purple*, for
+  verifying read-only gating. Credentials shared privately with the owner, not
+  stored here. Delete it after testing (or ask and it'll be removed).
+
 Still open from this round:
-- 🛠️ **Cast-role test login** — owner approved creating one; awaiting the email
-  to use + which production, then it's a live-DB/auth write via Supabase.
 - 🏗️ **Choreographer team spot** — surfaces only when the Choreography
   department is enabled (off by default in the wizard). Open question: make it
   always-on like Director/SM/Producer, or leave it department-driven.
