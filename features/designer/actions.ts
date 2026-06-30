@@ -131,3 +131,64 @@ export async function createDesignerPortalSession(): Promise<{
   });
   return { url: session.url };
 }
+
+/**
+ * Change the caller's Studio seat to a different tier in place (e.g. Single
+ * Tool -> Studio to unlock the other tool). Swaps the subscription's price
+ * (prorated) and syncs the entitlement immediately so the tool unlocks without
+ * waiting on the webhook. Requires a live subscription; a lapsed/absent one is
+ * directed to checkout/portal instead.
+ */
+export async function changeDesignerPlan(
+  plan: DesignerPlanId,
+  interval: BillingInterval = "monthly",
+): Promise<{ ok?: boolean; error?: string }> {
+  if (!BILLING_ENABLED) return { error: BETA_PAUSED_MSG };
+  const user = await requireCurrentUser();
+  if (!stripe) return { error: "Billing isn't set up yet." };
+  if (!isDesignerPlanId(plan)) return { error: "Unknown plan." };
+
+  const [row] = await db
+    .select({
+      subId: profiles.designerStripeSubscriptionId,
+      status: profiles.designerSubscriptionStatus,
+      currentPlan: profiles.designerPlan,
+    })
+    .from(profiles)
+    .where(eq(profiles.id, user.id))
+    .limit(1);
+  if (!row) return { error: "Profile not found." };
+  if (row.currentPlan === plan) return { ok: true };
+
+  if (
+    !row.subId ||
+    !["active", "trialing", "past_due"].includes(row.status ?? "")
+  ) {
+    return {
+      error:
+        "We couldn't find an active subscription to change — open billing to manage your plan.",
+    };
+  }
+
+  const newPriceId = designerPriceIdFor(plan, interval);
+  if (!newPriceId) return { error: "That plan isn't available yet." };
+
+  const sub = await stripe.subscriptions.retrieve(row.subId);
+  const itemId = sub.items?.data?.[0]?.id;
+  if (!itemId) return { error: "Couldn't read your subscription." };
+
+  await stripe.subscriptions.update(row.subId, {
+    items: [{ id: itemId, price: newPriceId }],
+    proration_behavior: "always_invoice",
+    metadata: { kind: "designer", profileId: user.id, designerPlan: plan },
+  });
+
+  // Sync now so the unlock is instant (the webhook will also confirm). Bundles
+  // include both tools, so clear any single-tool choice.
+  await db
+    .update(profiles)
+    .set({ designerPlan: plan, designerTool: null, updatedAt: new Date() })
+    .where(eq(profiles.id, user.id));
+
+  return { ok: true };
+}
