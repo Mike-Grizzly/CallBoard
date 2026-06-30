@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type Stripe from "stripe";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { organizations, profiles } from "@/db/schema";
 import { stripe, planForPriceId, designerPlanForPriceId } from "@/lib/stripe";
@@ -50,8 +50,19 @@ export async function POST(req: NextRequest) {
     const activeish = ["active", "trialing", "past_due"].includes(sub.status);
     const plan = activeish ? (mapped?.plan ?? metaPlan ?? "free") : "free";
 
+    // Defense in depth: only write the org the event's customer actually owns.
+    // If metadata names an org whose stripeCustomerId is a DIFFERENT customer,
+    // the row won't match (0 rows updated) instead of a confused-deputy write.
+    // The legit flow always passes — the customer id is stamped on the org at
+    // checkout, before this event fires.
     const where = orgId
-      ? eq(organizations.id, orgId)
+      ? and(
+          eq(organizations.id, orgId),
+          or(
+            isNull(organizations.stripeCustomerId),
+            eq(organizations.stripeCustomerId, customerId),
+          ),
+        )
       : eq(organizations.stripeCustomerId, customerId);
 
     await db
@@ -94,8 +105,18 @@ export async function POST(req: NextRequest) {
     const tool =
       plan === "single_tool" && isDesignerTool(metaTool) ? metaTool : null;
 
+    // Defense in depth: only write the profile the event's customer actually
+    // owns (or one not yet linked). A metadata/customer mismatch updates 0 rows
+    // instead of granting the wrong profile a seat. The legit flow always
+    // passes — the customer id is stamped on the profile at checkout first.
     const where = profileId
-      ? eq(profiles.id, profileId)
+      ? and(
+          eq(profiles.id, profileId),
+          or(
+            isNull(profiles.designerStripeCustomerId),
+            eq(profiles.designerStripeCustomerId, customerId),
+          ),
+        )
       : eq(profiles.designerStripeCustomerId, customerId);
 
     await db

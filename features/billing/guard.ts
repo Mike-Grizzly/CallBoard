@@ -33,8 +33,10 @@ import {
 import { getCurrentUser, isDesignerOnly } from "@/lib/auth";
 import {
   assertDesignerCanMutate,
+  assertDesignerCanUseTool,
   assertDesignerCanCreateProduction,
 } from "@/features/designer/entitlement";
+import type { DesignerTool } from "@/features/designer/constants";
 
 const DAY = 86_400_000;
 
@@ -97,13 +99,19 @@ const READ_ONLY_MSG =
  */
 export async function assertCanMutate(
   orgId: string,
+  tool?: DesignerTool,
 ): Promise<{ error?: string }> {
   if (!BILLING_ENABLED) return {}; // open beta: no write gating
   // Designer-only users are governed by their personal Studio seat, not the
-  // org plan (their workspace org is just a free container).
+  // org plan (their workspace org is just a free container). When the write
+  // belongs to a specific tool, enforce that the seat includes it — the Single
+  // Tool tier buys only one of Script / Blocking. Calls without a `tool` (shared
+  // surfaces like documents/scenes) fall back to the active-seat check.
   const designer = await getCurrentUser();
   if (designer && isDesignerOnly(designer)) {
-    return assertDesignerCanMutate(designer.id);
+    return tool
+      ? assertDesignerCanUseTool(designer.id, tool)
+      : assertDesignerCanMutate(designer.id);
   }
   const org = await getOrgBilling(orgId);
   if (!org) return { error: "Organization not found." };

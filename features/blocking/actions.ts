@@ -65,7 +65,7 @@ export async function requestGroundPlanImageUpload(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have permission to configure the stage." };
   }
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "blocking");
   if (lock.error) return { error: lock.error };
 
   const storagePath = `ground-plans/${productionId}/${Date.now()}.jpg`;
@@ -150,7 +150,7 @@ export async function saveStageConfiguration(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have permission to configure the stage." };
   }
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "blocking");
   if (lock.error) return { error: lock.error };
 
   const existing = await db
@@ -219,7 +219,7 @@ export async function saveBlockingPosition(
   if (!(await userCanAccessProduction(user, beat.productionId))) {
     return { error: "You don't have permission to edit blocking." };
   }
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "blocking");
   if (lock.error) return { error: lock.error };
 
   const existing = await db
@@ -264,7 +264,7 @@ export async function removeBlockingPosition(
     return { error: "You don't have permission to edit blocking." };
   }
 
-  const billing = await assertCanMutate(user.organizationId);
+  const billing = await assertCanMutate(user.organizationId, "blocking");
   if (billing.error) return { error: billing.error };
 
   const [beat] = await db
@@ -512,7 +512,7 @@ export async function requestCustomSetPieceUpload(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have permission to upload set pieces." };
   }
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "blocking");
   if (lock.error) return { error: lock.error };
   if (!fileName || fileSize <= 0) return { error: "No file selected." };
 
@@ -657,7 +657,7 @@ export async function createBeatArrow(
   if (!can(user.role, "blocking:edit")) {
     return { error: "You don't have permission to add arrows." };
   }
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "blocking");
   if (lock.error) return { error: lock.error };
   const [beat] = await db
     .select({ productionId: productionScenes.productionId })

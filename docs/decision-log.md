@@ -2467,3 +2467,15 @@ Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject an
 **Reason:** The code-level fixes remove the actual race and partial-state bugs with zero risk to the live database. DB constraints are the correct backstop but require either direct production-schema changes or first establishing a committed-migration workflow (itself a flagged gap, R4) — a separate decision the owner should make.
 
 **Impact:** Concurrent report creation for one production now serializes (the advisory lock releases on commit); production setup is all-or-nothing for its local writes, with external invites/trial-start kept after commit so they can't be rolled back over network calls. Pattern for new multi-write flows: wrap local writes in `db.transaction`, keep external side effects after commit. If/when DB constraints land, these app-code guards remain as the friendly-error layer in front of them.
+
+---
+
+## 2026-06-30 — Studio/Stripe billing security review + hardening
+
+**Review.** Focused security review of the billing money path (identification pass + three parallel adversarial verification passes), per the "anything financial must be airtight" bar. **No presently-exploitable HIGH/MEDIUM vulnerability.** Signature verification holds (`constructEvent`); checkout/portal customers are bound to `requireCurrentUser`; `metadata.profileId`/`organizationId` are server-set with no untrusted path; the two billing axes mint separate Stripe customers and designer subs are always tagged `kind="designer"`.
+
+**Fixed — Single Tool per-tool bypass (LOW, confirmed 8/10).** Tool restriction was enforced only at the Focus page route; the per-tool write server-actions checked active-seat only (`assertDesignerCanUseTool` was dead code), so a hand-crafted action call let a $5.99 Single Tool seat use the other tool inside its own workspace. Fix: `assertCanMutate(orgId, tool?)` delegates to `assertDesignerCanUseTool` for designer-only users when a `tool` is supplied. Every `features/blocking/actions.ts` write passes `"blocking"`; every `features/scripts/{actions,ocr-actions}.ts` write passes `"script"`. Shared surfaces (documents, scenes) intentionally stay on the active-seat check (both tools legitimately use them). Org users are unaffected — the `tool` arg is ignored outside the designer branch.
+
+**Hardened — webhook confused-deputy / cross-axis misroute (both verified NOT exploitable, 2/10; hardened as defense-in-depth).** `syncSubscription` and `syncDesignerSubscription` now add a customer cross-check to their `where`: the resolved row's stored Stripe customer id must be `null` or equal the event's `customer`, else 0 rows update. Any future metadata/customer mismatch (or cross-axis misroute) fails safe instead of writing the wrong org/profile. The legit flow always passes — the customer id is stamped on the org/profile at checkout, before the event fires.
+
+**Verification:** code-only; not locally typechecked (deps-less clone) — PR #66 runs CI (typecheck/lint/build/tests). Not browser-verified.
