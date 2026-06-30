@@ -153,14 +153,14 @@ export function LineNotesEditor({
             <input
               type="text"
               value={l.who}
-              placeholder="Frederic"
+              placeholder="Character"
               onChange={(e) => update(i, { who: e.target.value })}
               className="field"
             />
             <input
               type="text"
               value={l.line}
-              placeholder='"…line text"'
+              placeholder="Line / cue"
               onChange={(e) => update(i, { line: e.target.value })}
               className="field"
               style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}
@@ -169,7 +169,7 @@ export function LineNotesEditor({
               value={l.issue}
               onChange={(v) => update(i, { issue: v })}
               members={members}
-              placeholder="Paraphrased / dropped / clean"
+              placeholder="Note (e.g. dropped, paraphrased)"
               singleLine
             />
             <button

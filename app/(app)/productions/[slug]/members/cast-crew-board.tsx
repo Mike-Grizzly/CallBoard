@@ -752,16 +752,21 @@ function AssignSheet({
   const [last, setLast] = useState("");
   const [email, setEmail] = useState("");
 
+  // When casting a CHARACTER (pickSlot), only offer cast members so
+  // production/management/crew/designers don't clutter the list. Team-bucket
+  // assignment (crew, designers, etc.) still shows everyone.
   // Unassigned people first, so casting from an empty target is quick.
-  const sortedPeople = useMemo(
-    () =>
-      [...people].sort(
-        (a, b) =>
-          (assignedIds.has(a.userId) ? 1 : 0) -
-          (assignedIds.has(b.userId) ? 1 : 0),
-      ),
-    [people, assignedIds],
-  );
+  const sortedPeople = useMemo(() => {
+    const base =
+      sheet.mode === "pickSlot"
+        ? people.filter((p) => p.role === "cast")
+        : people;
+    return [...base].sort(
+      (a, b) =>
+        (assignedIds.has(a.userId) ? 1 : 0) -
+        (assignedIds.has(b.userId) ? 1 : 0),
+    );
+  }, [people, assignedIds, sheet.mode]);
 
   return (
     <div

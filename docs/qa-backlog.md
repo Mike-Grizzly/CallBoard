@@ -55,7 +55,7 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 | ☐ | Drag-and-drop script upload | ✨ | S | 2 |
 | ☐ | Role-assignment labels not capitalized | ✨ | XS | 2 |
 | ☐ | Department thumbnails hard to read in dark mode | ✨ | S | 2 |
-| ☐ | Non-cast people show up during cast assignment → filter out | 🐞 | S–M | 2 |
+| ☑ | Non-cast people show up during cast assignment → filter out | 🐞 | S–M | 2 |
 | ☐ | Configurable season options (workspace level) | 🏗️ | M | 6 |
 | ☐ | Production/name presets | 🏗️ | S–M | 6 |
 | ☐ | Department-based dropdowns for role creation | 🏗️ | M | 6 |
@@ -79,7 +79,7 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 | Status | Item | Type | Effort | Batch |
 |---|---|---|---|---|
 | ☑ | New items don't appear until manual refresh after save/send | 🐞 | M | 1 |
-| ☐ | Placeholder text should name the input type ("Scene Name") | ✨ | XS | 2 |
+| ☑ | Placeholder text should name the input type ("Scene Name") | ✨ | XS | 2 |
 | ☐ | Clearer line-note input guidance | ✨ | S | 2 |
 | ☐ | Reorderable department notes | 🏗️ | S–M | 3 |
 | ☐ | Scenes-worked autofill from the show's scenes | 🏗️ | M | 3 |
