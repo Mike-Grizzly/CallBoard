@@ -52,6 +52,10 @@ export const viewport: Viewport = {
 // light-mode flash on load (the server can't know the OS preference).
 const THEME_INIT_SCRIPT = `(function(){try{var m=document.cookie.match(/(?:^|;\\s*)proscene-theme=([^;]+)/);var p=m?decodeURIComponent(m[1]):"system";var e=p==="dark"?"dark":p==="dusk"?"dusk":p==="light"?"warm":(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"warm");document.body.dataset.theme=e;var c=e==="dark"?"#1d1b18":e==="dusk"?"#3b3632":"#fbf8f3";var t=document.querySelector('meta[name="theme-color"]');if(t)t.setAttribute("content",c);}catch(e){}})();`;
 
+// Runs before paint: restores the collapsed-rail preference so the sidebar
+// doesn't flash full-width before the client toggle mounts.
+const RAIL_INIT_SCRIPT = `(function(){try{if(localStorage.getItem("rail-collapsed")==="1"){document.body.dataset.railCollapsed="1";}}catch(e){}})();`;
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -90,6 +94,7 @@ export default async function RootLayout({
           </noscript>
         )}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: RAIL_INIT_SCRIPT }} />
         {children}
       </body>
     </html>

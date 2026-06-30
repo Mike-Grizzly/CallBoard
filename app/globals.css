@@ -1641,7 +1641,8 @@ textarea.field {
   .rail-item span:not(.ico),
   .prod-item span:not(.prod-dot):not(.prod-meta),
   .rail-item .badge,
-  .prod-meta {
+  .prod-meta,
+  .rail-collapse-label {
     display: none;
   }
   .rail-brand {
@@ -1649,9 +1650,63 @@ textarea.field {
     justify-content: center;
   }
   .rail-item,
-  .prod-item {
+  .prod-item,
+  .rail-collapse {
     justify-content: center;
     padding: 8px;
+  }
+}
+
+/* ─── Manual rail collapse (user toggle) ───────────────────────────────
+   Slims the rail to an icon strip on demand so any page gets more width.
+   Phones keep their slide-in drawer, so the collapse is gated above the
+   phone breakpoint. For true full-screen work, Focus mode is the path. */
+.rail-collapse {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 20px);
+  margin: 8px 10px 0;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-3);
+  font-size: 12px;
+  cursor: pointer;
+}
+.rail-collapse:hover {
+  background: var(--bg-sunken);
+  color: var(--ink);
+}
+
+@media (min-width: 721px) {
+  body[data-rail-collapsed="1"] .app {
+    grid-template-columns: 64px 1fr;
+  }
+  body[data-rail-collapsed="1"] .rail-name,
+  body[data-rail-collapsed="1"] .rail-section-h,
+  body[data-rail-collapsed="1"] .rail-foot-meta,
+  body[data-rail-collapsed="1"] .rail-item span:not(.ico),
+  body[data-rail-collapsed="1"] .prod-item span:not(.prod-dot):not(.prod-meta),
+  body[data-rail-collapsed="1"] .rail-item .badge,
+  body[data-rail-collapsed="1"] .prod-meta,
+  body[data-rail-collapsed="1"] .rail-collapse-label {
+    display: none;
+  }
+  body[data-rail-collapsed="1"] .rail-brand {
+    padding: 14px;
+    justify-content: center;
+  }
+  body[data-rail-collapsed="1"] .rail-item,
+  body[data-rail-collapsed="1"] .prod-item {
+    justify-content: center;
+    padding: 8px;
+  }
+  body[data-rail-collapsed="1"] .rail-collapse {
+    justify-content: center;
+    width: auto;
+    margin: 8px auto 0;
   }
 }
 
@@ -12810,6 +12865,17 @@ body[data-theme="dusk"] .fx-brand .mark .brand-badge.is-dark { display: block; }
 
 /* Entry button in the production toolbar (self-hides off script/blocking) */
 .fx-entry .ico { width: 14px; height: 14px; }
+/* Focus mode is the full-screen path for Script/Blocking now that those tools
+   no longer carry their own fullscreen button — give it a quiet accent so it
+   reads as the primary "expand" action in the toolbar. */
+.fx-entry {
+  border-color: color-mix(in oklch, var(--accent) 40%, var(--border-strong));
+  color: var(--accent-ink, var(--accent));
+}
+.fx-entry:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
 
 /* Focus View enter/exit transition — gentle fade + subtle zoom. Skipped
    entirely for prefers-reduced-motion. Origin is screen centre so the shell
