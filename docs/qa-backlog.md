@@ -169,6 +169,39 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 Still open in Batch 2: **Set pieces should start empty** (✨) and **clearer
 line-note input guidance** (✨) — small, not blocking the merge; carry forward.
 
+## Owner test round (2026-06-30)
+
+Owner tested the batch-2 work in light mode. Bugs found were fixed directly;
+feature-shaped requests are written up for approval before coding (per process).
+
+Fixed directly (pushed):
+- 🐞 **Date field didn't auto-format / calendar opened in the past** — typing
+  bare digits now masks to MM/DD/YYYY live; pasted ISO/US dates commit on paste;
+  the calendar opens on today (clamped to range), not the year-5 minimum.
+- 🐞 **Upload row misalignment** — the per-file row top-aligns so the
+  filename/size caption no longer pushes the Type/Folder selects off the title.
+- 🐞 **"Save draft" stayed on the report** — draft save now returns to the
+  reports list; distribute / save-changes still open the report.
+
+Confirmed working by owner: the black-on-black button fix (light + dark) and the
+report list refresh-on-save.
+
+Queued feature requests from this round (await owner go-ahead / scoping):
+- ✨/🏗️ **Script auto-parse should be an opt-out toggle** (on by default) in the
+  wizard — off = upload as the default script, parse later.
+- 🏗️ **Documents upload v2** — checkbox multi-select with bulk folder/type
+  assignment, pre-upload thumbnails, clearer scroll affordance, remove-row
+  animation.
+- ✨ **Setup-wizard department icons** — drop the muddy multicolor tints for a
+  monochrome (ink-on-surface) treatment.
+- 🏗️ **Blocking "more room" rethink** — likely remove the new expand-canvas
+  toggle and the local fullscreen button in favor of a global sidebar collapse +
+  making Focus mode the clear full-screen path.
+- 🛠️ **Cast-role test login** — create a cast test account for verifying
+  read-only gating (e.g. the ungated-control fix).
+- 🏗️ **Choreographer team spot** — surfaces only when the Choreography
+  department is enabled; consider always-on or clearer discoverability.
+
 ## Drag-and-drop upload coverage (`<FileDropzone>`)
 
 Reusable component in `components/ui/file-dropzone.tsx` (drag-or-click,
