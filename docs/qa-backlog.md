@@ -52,7 +52,7 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 | ◐ | Reject absurd/invalid years in date validation | 🐞 | XS | 1 |
 | ☐ | Copy/paste dates between fields | ✨ | S | 2 |
 | ☐ | Date entry overall is cumbersome | ✨ | M | 2 |
-| ☐ | Drag-and-drop script upload | ✨ | S | 2 |
+| ◐ | Drag-and-drop file upload (reusable `<FileDropzone>`) | ✨ | M | 2 |
 | ☑ | Role/character labels not capitalized (AI-parse data, not CSS) | ✨ | XS | 2 |
 | ☐ | Department thumbnails hard to read in dark mode | ✨ | S | 2 |
 | ☑ | Non-cast people show up during cast assignment → filter out | 🐞 | S–M | 2 |
@@ -72,7 +72,7 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 | ◐ | PDF viewer fails on first click, recovers after tab switch | 🐞 | M | 1 |
 | ◐ | Script PDF download navigates away instead of new tab | 🐞 | S | 1 |
 | ☑ | Read-only doc/PDF controls look editable to non-editors (closes S3) | 🐞 | S–M | 1 |
-| ☐ | Clearer file-selection control (the bare white square) | ✨ | S | 2 |
+| ☑ | Clearer file-selection control (the bare white square) | ✨ | S | 2 |
 
 ## C. Rehearsal Reports
 

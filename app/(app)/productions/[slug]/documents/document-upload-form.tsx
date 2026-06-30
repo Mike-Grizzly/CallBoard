@@ -16,6 +16,7 @@ import {
 } from "@/lib/install-searchable-script";
 import { DOCUMENT_TYPES } from "@/features/documents/constants";
 import type { DocumentFolder } from "@/features/documents/queries";
+import { FileDropzone } from "@/components/ui/file-dropzone";
 
 export function DocumentUploadForm({
   productionId,
@@ -29,6 +30,7 @@ export function DocumentUploadForm({
   const [success, setSuccess] = useState(false);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  const [file, setFile] = useState<File | null>(null);
 
   // After a scanned script is uploaded, we offer to OCR it into a searchable
   // PDF (set as the default script). This holds that pending offer.
@@ -48,7 +50,6 @@ export function DocumentUploadForm({
     const title = ((formData.get("title") as string) ?? "").trim();
     const documentType = (formData.get("document_type") as string) || "general";
     const folderId = (formData.get("folder_id") as string) || null;
-    const file = formData.get("file") as File | null;
 
     if (!file || file.size === 0) {
       setError("Please select a file to upload.");
@@ -97,6 +98,7 @@ export function DocumentUploadForm({
       }
 
       formRef.current?.reset();
+      setFile(null);
       // A scanned script (image-only PDF or a bare image) has no text layer —
       // offer to make it searchable now, the way Adobe prompts for OCR.
       if (documentType === "script" && (await needsScriptOcr(file))) {
@@ -144,7 +146,7 @@ export function DocumentUploadForm({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr 1fr",
+          gridTemplateColumns: "1fr 1fr 1fr",
           gap: 10,
         }}
       >
@@ -243,25 +245,24 @@ export function DocumentUploadForm({
             ))}
           </select>
         </div>
-        <div>
-          <label
-            style={{
-              display: "block",
-              fontSize: 12,
-              fontWeight: 500,
-              color: "var(--ink-3)",
-              marginBottom: 4,
-            }}
-          >
-            File (max 64MB)
-          </label>
-          <input
-            type="file"
-            name="file"
-            required
-            className="w-full text-sm file:mr-2 file:rounded-md file:border-0 file:bg-[color:var(--muted)] file:px-3 file:py-1.5 file:text-sm file:font-medium"
-          />
-        </div>
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <label
+          style={{
+            display: "block",
+            fontSize: 12,
+            fontWeight: 500,
+            color: "var(--ink-3)",
+            marginBottom: 4,
+          }}
+        >
+          File (max 64MB)
+        </label>
+        <FileDropzone
+          onFile={setFile}
+          selectedLabel={file?.name ?? null}
+          disabled={isPending}
+        />
       </div>
       <div className="row" style={{ gap: 10, marginTop: 10 }}>
         <Button type="submit" disabled={isPending} size="sm">
