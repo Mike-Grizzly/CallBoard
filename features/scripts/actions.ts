@@ -594,9 +594,16 @@ export async function applyScriptParse(
       .where(eq(productionRoles.productionId, productionId));
     const haveRole = new Set(manualRoles.map((r) => r.name.trim().toLowerCase()));
 
+    // Uppercase the first letter of each word so lowercase parse output
+    // ("celie") displays as a proper name ("Celie"). Existing internal caps
+    // ("McTavish", "O'Brien") are preserved. The model returns names verbatim,
+    // and some scripts/cues come back lowercase.
+    const capitalizeWords = (s: string) =>
+      s.replace(/\b\w/g, (c) => c.toUpperCase());
+
     const roles = result.roles
       .map((r, i) => ({
-        name: (r.name ?? "").trim(),
+        name: capitalizeWords((r.name ?? "").trim()),
         type: (PARSE_ROLE_TYPES as readonly string[]).includes(r.type)
           ? r.type
           : "Principal",
@@ -663,7 +670,7 @@ export async function applyScriptParse(
       .map((s, i) => ({
         actNumber: Math.max(1, Math.trunc(s.actNumber) || 1),
         sceneNumber: Math.max(1, Math.trunc(s.sceneNumber) || 1),
-        title: (s.title ?? "").trim() || `Scene ${i + 1}`,
+        title: capitalizeWords((s.title ?? "").trim()) || `Scene ${i + 1}`,
         orderIndex: i,
       }))
       .filter(

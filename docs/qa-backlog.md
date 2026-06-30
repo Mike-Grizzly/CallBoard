@@ -53,7 +53,7 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 | ☐ | Copy/paste dates between fields | ✨ | S | 2 |
 | ☐ | Date entry overall is cumbersome | ✨ | M | 2 |
 | ☐ | Drag-and-drop script upload | ✨ | S | 2 |
-| ☐ | Role-assignment labels not capitalized | ✨ | XS | 2 |
+| ☑ | Role/character labels not capitalized (AI-parse data, not CSS) | ✨ | XS | 2 |
 | ☐ | Department thumbnails hard to read in dark mode | ✨ | S | 2 |
 | ☑ | Non-cast people show up during cast assignment → filter out | 🐞 | S–M | 2 |
 | ☐ | Configurable season options (workspace level) | 🏗️ | M | 6 |
