@@ -49,9 +49,9 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 
 | Status | Item | Type | Effort | Batch |
 |---|---|---|---|---|
-| ◐ | Reject absurd/invalid years in date validation | 🐞 | XS | 1 |
-| ☐ | Copy/paste dates between fields | ✨ | S | 2 |
-| ☐ | Date entry overall is cumbersome | ✨ | M | 2 |
+| ☑ | Reject absurd/invalid years in date validation | 🐞 | XS | 1 |
+| ☑ | Copy/paste dates between fields | ✨ | S | 2 |
+| ☑ | Date entry overall is cumbersome (DateField + react-day-picker) | ✨ | M | 2 |
 | ☑ | Drag-and-drop file upload (reusable `<FileDropzone>`) | ✨ | M | 2 |
 | ☑ | Role/character labels not capitalized (AI-parse data, not CSS) | ✨ | XS | 2 |
 | ☐ | Department thumbnails hard to read in dark mode | ✨ | S | 2 |

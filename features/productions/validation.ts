@@ -35,6 +35,18 @@ export function closingDateBeyondCap(
   return new Date(closingDate).getTime() > cap.getTime();
 }
 
+/**
+ * Reject obviously invalid years (typos like 0202 or 9999). Productions sit a
+ * few years either side of "now" — pure typo protection, not policy. Reads the
+ * year straight from the "YYYY-MM-DD" string to avoid timezone drift.
+ */
+export function yearOutOfRange(date: string | null): boolean {
+  if (!date) return false;
+  const y = Number.parseInt(date.slice(0, 4), 10);
+  const now = new Date().getFullYear();
+  return !Number.isFinite(y) || y < now - 5 || y > now + 10;
+}
+
 export type ProductionFormData = {
   title: string;
   slug: string;
@@ -63,7 +75,16 @@ export function validateProductionForm(formData: FormData): {
     errors.title = "Title must be under 200 characters.";
   }
 
-  if (openingDate && closingDate && openingDate > closingDate) {
+  if (yearOutOfRange(openingDate)) {
+    errors.opening_date = "Enter a realistic opening date.";
+  }
+  if (yearOutOfRange(closingDate)) {
+    errors.closing_date = "Enter a realistic closing date.";
+  }
+
+  if (errors.opening_date || errors.closing_date) {
+    // Year typos take precedence over the ordering/cap messages below.
+  } else if (openingDate && closingDate && openingDate > closingDate) {
     errors.closing_date = "Closing date cannot be before opening date.";
   } else if (closingDateBeyondCap(openingDate, closingDate)) {
     errors.closing_date = `Closing date can't be more than ${MAX_RUN_MONTHS} months after opening.`;

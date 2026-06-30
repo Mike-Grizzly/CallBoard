@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { FileDropzone } from "@/components/ui/file-dropzone";
+import { DateField } from "@/components/ui/date-field";
 import { createProductionFull } from "@/features/productions/actions";
 import {
   requestWizardScriptUpload,
@@ -35,6 +36,11 @@ import {
   castTeamLabelForType,
   type WizardOrgUser,
 } from "@/features/productions/wizard-constants";
+
+// Sane date bounds for the setup wizard so a typo like year 0202 or 9999 is
+// rejected — productions sit a few years either side of today.
+const DATE_MIN = `${new Date().getFullYear() - 5}-01-01`;
+const DATE_MAX = `${new Date().getFullYear() + 10}-12-31`;
 
 type AiParseState = {
   status: "idle" | "uploading" | "processing" | "done" | "error";
@@ -797,40 +803,40 @@ function StepCalendar({ data, set }: { data: WizardData; set: (p: Partial<Wizard
       <div className="grid grid-2">
         <div className="field-group">
           <label className="label">First rehearsal</label>
-          <input
-            className="field"
-            type="date"
+          <DateField
             value={data.firstRehearsal}
-            onChange={(e) => set({ firstRehearsal: e.target.value })}
+            onChange={(v) => set({ firstRehearsal: v })}
+            min={DATE_MIN}
+            max={DATE_MAX}
           />
         </div>
         <div className="field-group">
           <label className="label">Tech week starts</label>
-          <input
-            className="field"
-            type="date"
+          <DateField
             value={data.techStart}
-            onChange={(e) => set({ techStart: e.target.value })}
+            onChange={(v) => set({ techStart: v })}
+            min={DATE_MIN}
+            max={DATE_MAX}
           />
         </div>
         <div className="field-group">
           <label className="label">
             Opening night<span className="req">*</span>
           </label>
-          <input
-            className="field"
-            type="date"
+          <DateField
             value={data.opening}
-            onChange={(e) => set({ opening: e.target.value })}
+            onChange={(v) => set({ opening: v })}
+            min={DATE_MIN}
+            max={DATE_MAX}
           />
         </div>
         <div className="field-group">
           <label className="label">Closing</label>
-          <input
-            className="field"
-            type="date"
+          <DateField
             value={data.closing}
-            onChange={(e) => set({ closing: e.target.value })}
+            onChange={(v) => set({ closing: v })}
+            min={DATE_MIN}
+            max={DATE_MAX}
           />
         </div>
       </div>
