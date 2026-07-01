@@ -18,8 +18,8 @@ export function FocusEntryButton() {
   return (
     <Link
       href={`/focus/${slug}?mode=${mode}`}
-      className="btn ghost fx-entry"
-      title="Open full-screen focus view"
+      className="btn fx-entry"
+      title="Focus mode — the full screen, just this tool and nothing else"
     >
       <svg
         className="ico"
@@ -33,7 +33,7 @@ export function FocusEntryButton() {
       >
         <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
       </svg>
-      <span>Focus view</span>
+      <span>Focus mode</span>
     </Link>
   );
 }

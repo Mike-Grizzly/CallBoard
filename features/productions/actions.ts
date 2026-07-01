@@ -36,7 +36,7 @@ import {
   startTrialIfFirstProduction,
   firstProductionTrialNotice,
 } from "@/features/billing/guard";
-import { closingDateBeyondCap, MAX_RUN_MONTHS } from "./validation";
+import { closingDateBeyondCap, MAX_RUN_MONTHS, yearOutOfRange } from "./validation";
 
 export type ProductionMutationResult = {
   error?: string;
@@ -166,6 +166,16 @@ export async function createProductionFull(
 
   const opening = toDate(input.opening);
   const closing = toDate(input.closing);
+  for (const d of [
+    opening,
+    closing,
+    toDate(input.firstRehearsal),
+    toDate(input.techStart),
+  ]) {
+    if (yearOutOfRange(d)) {
+      return { error: "Please enter realistic dates (check the year)." };
+    }
+  }
   if (opening && closing && opening > closing) {
     return { error: "Closing date cannot be before opening date." };
   }

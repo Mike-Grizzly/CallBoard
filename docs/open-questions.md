@@ -911,3 +911,38 @@ The 2026-06-19 hardening pass fixed the highest-severity confirmed issues. The f
 **Low severity**
 - `features/reports/send-report.ts` (~line 98) — All recipients are placed in a single `to:` field. Each recipient can see every other recipient's email. Fix: send individually per recipient or use `bcc:`.
 - `features/blocking/actions.ts` (`createBeatComment` mention notifications) — Notifications fire after the filtered mention list is stored, but the notification dispatch reads from the stored `mentionedUserIds` — now already filtered. No additional change needed here; this was resolved by the batch-2 fix.
+
+---
+
+## Accounts & entitlements model — paid orgs vs free personal users (added 2026-06-30)
+
+- Owner wants the **Canva/Monday.com model**: a personal user account is **free**
+  (view/basic only); an **organization** is the **paid** entity carrying the full
+  feature set; an org invite grants an existing user paid features **while in that
+  org's context**; switching back to a personal workspace drops to free.
+- Motivating concern: **creating a new org is currently frictionless** and isn't
+  treated as the significant, billable action it is (it effectively provisions a
+  new paid/trial account).
+- **Status: deferred to its own scoping pass** (after the QA batches). It's a
+  billing + entitlement architecture change — gate features on "active paid org
+  context" not role alone, define what the free tier unlocks, add org-creation
+  guardrails, and reconcile with the existing trial logic (`assertCanMutate`,
+  trial anchoring at first-production creation). Full context in `qa-backlog.md`.
+  Do NOT fold into a QA batch.
+
+## Two batch-1 bugs not reproducible on desktop Chrome (added 2026-06-30)
+
+- **PDF viewer fails on first click / recovers after a tab switch**, and **script
+  PDF download navigates away instead of opening a new tab** — owner could not
+  reproduce either on desktop Chrome (PC + Mac); the code paths look correct
+  (signed URL with attachment disposition; "View" opens a new tab; in-viewer
+  exports are blobs). Left OPEN for cross-browser/device testing (Safari /
+  Firefox / mobile are the likely variance). No code change made.
+
+## "Set pieces should start empty" — interpretation to confirm (added 2026-06-30)
+
+- Implemented as a **collapsed "Basic shapes" disclosure** in the blocking
+  set-piece panel: a fresh palette leads with custom uploads + the upload button,
+  and the built-in generic shapes stay one click away rather than being deleted.
+  If the reviewer meant removing the built-ins entirely, that's a small
+  follow-up.

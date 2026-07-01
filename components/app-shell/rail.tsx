@@ -14,6 +14,7 @@ import { RailLink } from "./rail-link";
 import { LogoutButton } from "./logout-button";
 import { WorkspaceRailBadge } from "./workspace-rail-badge";
 import { ThemeControl } from "./theme-control";
+import { RailCollapseToggle } from "./rail-collapse-toggle";
 import { getThemePref } from "@/lib/theme-server";
 
 function initialsFor(firstName: string, lastName: string, email: string) {
@@ -68,6 +69,8 @@ export async function Rail() {
           Pro<em>scene</em>
         </div>
       </Link>
+
+      <RailCollapseToggle />
 
       {user && (
         <WorkspaceRailBadge

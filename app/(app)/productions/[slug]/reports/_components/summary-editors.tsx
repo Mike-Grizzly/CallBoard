@@ -316,7 +316,7 @@ export function ScenesWorkedEditor({
             <input
               type="text"
               value={s.label}
-              placeholder="Act II, Sc. 1 — Title"
+              placeholder="Scene name (e.g. Act II, Sc. 1)"
               onChange={(e) => update(i, { label: e.target.value })}
               style={{
                 width: "100%",
@@ -334,7 +334,7 @@ export function ScenesWorkedEditor({
               <input
                 type="text"
                 value={s.pages}
-                placeholder="42–48"
+                placeholder="Pages (e.g. 42–48)"
                 onChange={(e) => update(i, { pages: e.target.value })}
                 className="field"
                 style={{ width: 90, fontSize: 12 }}
@@ -342,7 +342,7 @@ export function ScenesWorkedEditor({
               <input
                 type="text"
                 value={s.time}
-                placeholder="55m"
+                placeholder="Duration (e.g. 55m)"
                 onChange={(e) => update(i, { time: e.target.value })}
                 className="field"
                 style={{ width: 80, fontSize: 12 }}

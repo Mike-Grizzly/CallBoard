@@ -204,6 +204,12 @@ export async function createReport(
     });
   }
 
+  // Invalidate the cached report views so a newly created report shows up
+  // immediately on navigation instead of only after a manual page refresh.
+  revalidatePath(`/productions/${production[0].slug}/reports`);
+  revalidatePath(`/productions/${production[0].slug}/reports/${inserted[0].id}`);
+  revalidatePath(`/productions/${production[0].slug}`);
+
   return {
     reportId: inserted[0].id,
     slug: production[0].slug,
@@ -345,6 +351,13 @@ export async function updateReport(
   // report don't re-prompt.
   const justDistributed =
     nextStatus === "distributed" && previousStatus === "draft";
+
+  // Invalidate the cached report views so edits (and draft → distributed
+  // transitions) show immediately instead of only after a manual refresh.
+  revalidatePath(`/productions/${production[0].slug}/reports`);
+  revalidatePath(`/productions/${production[0].slug}/reports/${reportId}`);
+  revalidatePath(`/productions/${production[0].slug}`);
+
   return {
     reportId,
     slug: production[0].slug,
