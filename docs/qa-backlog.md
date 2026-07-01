@@ -80,7 +80,7 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 |---|---|---|---|---|
 | ☑ | New items don't appear until manual refresh after save/send | 🐞 | M | 1 |
 | ☑ | Placeholder text should name the input type ("Scene Name") | ✨ | XS | 2 |
-| ☐ | Clearer line-note input guidance | ✨ | S | 2 |
+| ☑ | Clearer line-note input guidance | ✨ | S | 2 |
 | ☐ | Reorderable department notes | 🏗️ | S–M | 3 |
 | ☐ | Scenes-worked autofill from the show's scenes | 🏗️ | M | 3 |
 | ☐ | Scenes-worked: duration + timestamp ranges | 🏗️ | S–M | 3 |
@@ -95,7 +95,7 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 | Status | Item | Type | Effort | Batch |
 |---|---|---|---|---|
 | ☑ | "Enter" button is an unlabeled dark square | 🐞 | S | 1 |
-| ☐ | Set pieces should start empty | ✨ | S | 2 |
+| ☑ | Set pieces should start empty (built-ins behind "Basic shapes") | ✨ | S | 2 |
 | ☑ | Ground-plan window should be larger (global rail collapse + Focus mode) | ✨ | S | 2 |
 | ☐ | Upload a ground plan directly from the blocking picker | 🏗️ | M | 5 |
 | ☐ | Ground-plan zoom | 🏗️ | M | 5 |
@@ -166,8 +166,10 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
   fullscreen toggle, so the two compose (fullscreen + expanded = maximum room).
   Available in the standalone page and Focus View; off by default.
 
-Still open in Batch 2: **Set pieces should start empty** (✨) and **clearer
-line-note input guidance** (✨) — small, not blocking the merge; carry forward.
+Batch 2 fully closed: **Set pieces start empty** (built-in generic shapes moved
+behind a collapsed "Basic shapes" disclosure so a fresh palette isn't
+pre-populated; custom uploads + the upload button lead) and **clearer line-note
+guidance** (explanatory hint + sharper placeholders) both landed before merge.
 
 ## Owner test round (2026-06-30)
 

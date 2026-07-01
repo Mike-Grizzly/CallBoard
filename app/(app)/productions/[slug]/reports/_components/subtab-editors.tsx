@@ -122,6 +122,13 @@ export function LineNotesEditor({
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <div
+          className="muted"
+          style={{ fontSize: 12.5, lineHeight: 1.5, padding: "0 12px 2px" }}
+        >
+          Flag line issues from the run — dropped, paraphrased, added, or a
+          called line. One row per note; the line/cue is optional.
+        </div>
+        <div
           style={{
             display: "grid",
             gridTemplateColumns: "160px 220px 1fr 32px",
@@ -160,7 +167,7 @@ export function LineNotesEditor({
             <input
               type="text"
               value={l.line}
-              placeholder="Line / cue"
+              placeholder="Scripted line or cue"
               onChange={(e) => update(i, { line: e.target.value })}
               className="field"
               style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}
@@ -169,7 +176,7 @@ export function LineNotesEditor({
               value={l.issue}
               onChange={(v) => update(i, { issue: v })}
               members={members}
-              placeholder="Note (e.g. dropped, paraphrased)"
+              placeholder="What happened — dropped, paraphrased, called…"
               singleLine
             />
             <button
