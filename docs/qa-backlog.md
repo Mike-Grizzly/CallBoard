@@ -223,10 +223,35 @@ Second test pass (2026-06-30):
   slide/fade-out as the upload rows when a doc is deleted (list owns the delete
   via `onRequestDelete`).
 
+Third test pass (2026-06-30, cast test account):
+- ☑ 🐞 **Cast (and every returning login) forced to org "setup" screen** —
+  `login()` redirected to `/setup`, which only bounces to `/dashboard` when the
+  org's `onboardedAt` is set; the Default Organization was never onboarded, so
+  everyone landed on the setup form. Login now goes to `/dashboard`; `/setup` is
+  guarded to `settings:manage` (admins) so members never see it. (New-org
+  onboarding still runs via the email-confirm callback.)
+- ☑ 🐞 **Document drawer folder control ungated** — the drawer's folder
+  `<select>` wasn't gated, so cast saw an editable control whose change silently
+  no-ops (`moveDocument` is `documents:upload`-only). Now read-only for
+  non-editors (canManage threaded through).
+- ☑ ✨ **Document drawer animation** — now uses the app's side-drawer
+  slide+fade (pp-slide / pp-fade) instead of the generic fade-up.
+- ✔️ **Cast personal bookmarks** — confirmed working: the "Bookmark" button is
+  ungated and bookmarks are per-user (saved on a production-access check, not
+  `documents:upload`). Manager-only gating is only the SHARED cue/scene/AI
+  structure. No change needed.
+
 Still open from this round:
 - 🏗️ **Choreographer team spot** — surfaces only when the Choreography
   department is enabled (off by default in the wizard). Open question: make it
   always-on like Director/SM/Producer, or leave it department-driven.
+- 🤔🏗️ **Org = paid account model (Canva/Monday style)** — owner wants org
+  creation treated as a deliberate, billable action, and a clearer free (personal
+  user) vs paid (org member) entitlement split. Personal accounts get view/basic
+  only; an org invite grants paid features while in that org; switching back to a
+  personal workspace drops to free. This is a billing/entitlement architecture
+  piece — needs its own scoping pass, not a quick fix. Deferred for a dedicated
+  write-up.
 
 ## Drag-and-drop upload coverage (`<FileDropzone>`)
 
