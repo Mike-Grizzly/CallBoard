@@ -245,13 +245,30 @@ Still open from this round:
 - 🏗️ **Choreographer team spot** — surfaces only when the Choreography
   department is enabled (off by default in the wizard). Open question: make it
   always-on like Director/SM/Producer, or leave it department-driven.
-- 🤔🏗️ **Org = paid account model (Canva/Monday style)** — owner wants org
-  creation treated as a deliberate, billable action, and a clearer free (personal
-  user) vs paid (org member) entitlement split. Personal accounts get view/basic
-  only; an org invite grants paid features while in that org; switching back to a
-  personal workspace drops to free. This is a billing/entitlement architecture
-  piece — needs its own scoping pass, not a quick fix. Deferred for a dedicated
-  write-up.
+- 🤔🏗️ **Accounts & entitlements model (Canva/Monday style)** — DEFERRED until
+  after the QA batches; capturing full context here so it isn't lost.
+
+  Owner's target model (explicitly the Canva / Monday.com pattern):
+  - A **user's personal account** is **free** — view/basic only (today "free" is
+    essentially just viewing).
+  - An **organization** is the **paid entity** — it carries the full paid feature
+    set (the trial/subscription lives at the org level).
+  - An org can **invite an existing user**; while that user is acting **in the
+    org's context**, they get the org's paid features.
+  - When the user **switches back to their own personal workspace**, they drop to
+    the **free** tier.
+
+  Owner concern that motivated this: **creating a new org is currently
+  frictionless and isn't treated as significant**, even though it effectively
+  provisions a new paid/trial account. Org creation should be a deliberate,
+  billable action with appropriate guardrails.
+
+  Why it's not a quick fix — it's a billing + entitlement **architecture**
+  change: gate features on "active paid org context," not role alone; define what
+  the free personal tier actually unlocks; add intent/guardrails to org creation;
+  reconcile with the existing trial logic (`assertCanMutate`, trial anchoring at
+  first-production creation). Needs its own scoping write-up + likely schema/flow
+  work. Do NOT fold into a QA batch.
 
 ## Drag-and-drop upload coverage (`<FileDropzone>`)
 
