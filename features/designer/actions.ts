@@ -17,9 +17,7 @@ import {
   type DesignerPlanId,
   type DesignerTool,
 } from "./constants";
-
-const siteUrl = () =>
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.proscene.app";
+import { requestSiteUrl } from "@/lib/site-url";
 
 const BETA_PAUSED_MSG =
   "Proscene is free during our open beta, so there's nothing to pay right now.";
@@ -85,7 +83,7 @@ export async function createDesignerCheckoutSession(
       .where(eq(profiles.id, user.id));
   }
 
-  const base = siteUrl();
+  const base = await requestSiteUrl();
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
@@ -127,7 +125,7 @@ export async function createDesignerPortalSession(): Promise<{
 
   const session = await stripe.billingPortal.sessions.create({
     customer: row.stripeCustomerId,
-    return_url: `${siteUrl()}/focus`,
+    return_url: `${await requestSiteUrl()}/focus`,
   });
   return { url: session.url };
 }
