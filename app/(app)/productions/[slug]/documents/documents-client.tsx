@@ -584,6 +584,7 @@ export function DocumentsClient({
           members={members}
           folders={folders}
           initialPinned={pinnedDocIds.includes(openDoc.id)}
+          canManage={canUpload}
           onClose={() => setOpenDoc(null)}
         />
       )}

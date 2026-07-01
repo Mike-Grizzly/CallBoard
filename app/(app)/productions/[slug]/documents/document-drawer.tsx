@@ -79,10 +79,12 @@ interface Props {
   members: ProductionMember[];
   folders: FolderOption[];
   initialPinned: boolean;
+  /** Can this user move documents (documents:upload)? Gates the folder control. */
+  canManage: boolean;
   onClose: () => void;
 }
 
-export function DocumentDrawer({ doc, members, folders, initialPinned, onClose }: Props) {
+export function DocumentDrawer({ doc, members, folders, initialPinned, canManage, onClose }: Props) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loadingUrl, setLoadingUrl] = useState(true);
   const [showComments, setShowComments] = useState(true);
@@ -196,6 +198,7 @@ export function DocumentDrawer({ doc, members, folders, initialPinned, onClose }
           inset: 0,
           zIndex: 200,
           background: "rgba(0,0,0,0.4)",
+          animation: "pp-fade 0.15s ease both",
         }}
       />
 
@@ -264,7 +267,6 @@ export function DocumentDrawer({ doc, members, folders, initialPinned, onClose }
 
       {/* Drawer panel */}
       <div
-        className="anim-in"
         style={{
           position: "fixed",
           top: 0,
@@ -276,6 +278,9 @@ export function DocumentDrawer({ doc, members, folders, initialPinned, onClose }
           boxShadow: "-8px 0 40px rgba(0,0,0,.18)",
           display: "flex",
           flexDirection: "column",
+          // Match the app's other side drawers (pp-slide): a right-to-left
+          // slide with a slight pop, instead of the generic fade-up.
+          animation: "pp-slide 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.05) both",
         }}
       >
         {/* Header */}
@@ -323,6 +328,7 @@ export function DocumentDrawer({ doc, members, folders, initialPinned, onClose }
                 documentId={doc.id}
                 currentFolderId={doc.folderId}
                 folders={folders}
+                canEdit={canManage}
               />
               <span>
                 {doc.fileName} · {formatFileSize(doc.fileSize)}
