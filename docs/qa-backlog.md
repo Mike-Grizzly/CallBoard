@@ -241,10 +241,13 @@ Third test pass (2026-06-30, cast test account):
   `documents:upload`). Manager-only gating is only the SHARED cue/scene/AI
   structure. No change needed.
 
+Resolved:
+- ✔️ **Choreographer team spot** — owner chose **department-driven** (2026-06-30):
+  the Choreographer spot appears when the Choreography department is enabled;
+  not always-on. This is already the behavior, so no code change.
+
 Still open from this round:
-- 🏗️ **Choreographer team spot** — surfaces only when the Choreography
-  department is enabled (off by default in the wizard). Open question: make it
-  always-on like Director/SM/Producer, or leave it department-driven.
+- (none blocking) — see "Carried forward" below.
 - 🤔🏗️ **Accounts & entitlements model (Canva/Monday style)** — DEFERRED until
   after the QA batches; capturing full context here so it isn't lost.
 
