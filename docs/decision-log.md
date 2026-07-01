@@ -2436,3 +2436,24 @@ Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject an
 **Reason:** The code-level fixes remove the actual race and partial-state bugs with zero risk to the live database. DB constraints are the correct backstop but require either direct production-schema changes or first establishing a committed-migration workflow (itself a flagged gap, R4) — a separate decision the owner should make.
 
 **Impact:** Concurrent report creation for one production now serializes (the advisory lock releases on commit); production setup is all-or-nothing for its local writes, with external invites/trial-start kept after commit so they can't be rolled back over network calls. Pattern for new multi-write flows: wrap local writes in `db.transaction`, keep external side effects after commit. If/when DB constraints land, these app-code guards remain as the friendly-error layer in front of them.
+
+---
+
+## 2026-06-30 — QA batches 1–2 product/workflow decisions
+
+**Decisions (owner, during QA of `claude/qa-workflow-fixes`, PR #67):**
+- **Casting multi-character tracks** approved (one person → multiple character slots) — to be modeled later; not in this branch.
+- **Blocking list membership** = characters + uncast people, excluding admin/crew/designers/management, but including performer-adjacent roles (e.g. Dance Captain).
+- **Union productions** are a target market (implementation TBD — likely a production-level union flag + per-person union status feeding break/attendance/report rules).
+- **Non-cast people filtered** out of character-slot casting (crew/team buckets still accept anyone).
+- **Choreographer team spot: department-driven** — it appears when the Choreography department is enabled, not always-on. Already the behavior; no code change.
+- **Setup-wizard department icons: monochrome** (ink-on-neutral; selection carried by the card's accent border/toggle), dropping the per-department tints that read muddy in dark mode.
+- **Blocking "more room": a global rail collapse + Focus mode**, removing the per-tool fullscreen button and the short-lived expand-canvas toggle. Focus mode is the full-screen path for every tier.
+- **Script auto-parse** becomes an opt-out toggle (on by default); off = the PDF still becomes the default script, parse later.
+- **"Set pieces should start empty"** implemented as a collapsed "Basic shapes" disclosure — the built-in generic shapes are kept (one click away), not deleted. Flagged for owner confirmation in case removal was intended.
+- **Org onboarding** left un-onboarded for the owner's org (owner chose to complete org details from Settings later, not via a forced setup screen).
+- **Accounts/entitlements model** (Canva/Monday paid-org vs free-personal user) explicitly **deferred** to its own scoped effort — see `open-questions.md`.
+
+**Reason:** Owner-driven product direction gathered during hands-on QA; each polish/feature item was written up and approved before coding, per the agreed process.
+
+**Impact:** Batches 1–2 of `qa-backlog.md` are closed and merged. Batch 3+ (report inputs wired to real data — scenes/characters/people; attendance model; blocking enhancements; setup presets; union status) remains pending. The accounts/entitlements model must NOT be folded into a QA batch.
