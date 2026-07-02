@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import Script from "next/script";
 import "./globals.css";
+import { SITE_URL } from "@/lib/site";
 
 // Google Tag Manager. Container ID is public (visible in page source). Loads
 // site-wide; all tracking tags / ad pixels / conversions are then managed in
@@ -22,6 +23,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Proscene — Production Hub",
   description:
     "A lightweight production portal for small theatre companies.",

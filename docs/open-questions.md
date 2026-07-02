@@ -4,6 +4,31 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 
 ---
 
+## SEO / docs-manual follow-ups (added 2026-07-02)
+
+- **Docs content can drift from the product.** The 27 manual pages under
+  `app/(marketing)/docs/content/` describe the app as of 2026-07-02, verified
+  against code at authoring time. Any feature/UI change now needs the matching
+  content file updated in the same session, or the public manual quietly lies.
+- **No screenshots on docs pages yet.** The strategy calls for a screenshot per
+  how-to step; pages ship text-only until a stable demo production exists to
+  screenshot from. (Framework renders fine without them.)
+- **Owner-side SEO setup not done in code:** Google Search Console + Bing
+  Webmaster verification, sitemap submission, Google Business Profile. Also:
+  paste the four Phase 1 drafts (`docs/seo/blog-drafts/`) into Sanity Studio,
+  ideally filling the new SEO title/meta/tags fields from each draft's header.
+- **No default Open Graph image.** Blog posts use their Sanity cover image;
+  everything else has no `og:image`. A branded default OG asset would improve
+  link sharing (and the `Organization.sameAs` array in the homepage schema is
+  empty until social profiles exist).
+- **Spec docs found stale while writing the manual:** `03-roles-permissions.md`
+  says 6 roles / 10 capabilities (reality: 8 / 18, per `lib/permissions.ts`);
+  spec 05's "import from daily log" no longer exists; spec 10's calendar UI
+  details predate the shared `CalendarClient`. The manual follows the code; the
+  specs themselves were not rewritten this session.
+
+---
+
 ## DB-level constraints + committed-migration workflow deferred (added 2026-06-29)
 
 - A security review recommended belt-and-suspenders **database uniqueness

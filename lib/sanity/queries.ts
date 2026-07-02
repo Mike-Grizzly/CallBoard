@@ -40,6 +40,9 @@ export type PostCard = {
 
 export type Post = PostCard & {
   body?: PortableTextBlock[];
+  seoTitle?: string;
+  metaDescription?: string;
+  tags?: string[];
 };
 
 const CARD_FIELDS = `
@@ -70,7 +73,7 @@ export async function getAllPosts(): Promise<PostCard[]> {
 export async function getPostBySlug(slug: string): Promise<Post | null> {
   try {
     const post = await loadQuery<Post | null>(
-      `*[_type == "post" && slug.current == $slug][0] {${CARD_FIELDS}, body}`,
+      `*[_type == "post" && slug.current == $slug][0] {${CARD_FIELDS}, body, seoTitle, metaDescription, tags}`,
       { slug },
     );
     return post ?? null;
