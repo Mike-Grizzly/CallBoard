@@ -2500,3 +2500,17 @@ Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject an
 **Reason:** Owner-driven product direction gathered during hands-on QA; each polish/feature item was written up and approved before coding, per the agreed process.
 
 **Impact:** Batches 1–2 of `qa-backlog.md` are closed and merged. Batch 3+ (report inputs wired to real data — scenes/characters/people; attendance model; blocking enhancements; setup presets; union status) remains pending. The accounts/entitlements model must NOT be folded into a QA batch.
+
+---
+
+## 2026-07-02 — In-app plan changes require priced consent; `ended_at` is the effective end of a canceled subscription
+
+**Decision (1) — no one-click charges, ever.** Any in-app subscription change that bills immediately must be two-step: a server-priced preview (`previewDesignerPlanChange` → `stripe.invoices.createPreview`, returning the exact prorated amount due today plus the new recurring price on the subscriber's KEPT billing interval) followed by a separate, explicit confirm click ("Confirm upgrade — pay $X") that alone executes `changeDesignerPlan`. The preview and the execution share one resolver (`resolveDesignerPlanChange`) so the number confirmed is the number charged.
+
+**Reason:** Owner call during sandbox testing: the lock-modal tier buttons charged the card the instant they were clicked — an accidental-purchase trap that would erode exactly the "anything financial is airtight" trust the product is selling. Interval preservation came out of the same review (the upgrade previously silently moved annual subscribers to monthly pricing).
+
+**Impact:** This is the pattern for every future in-app plan-change surface (including org tier switching if it's ever brought in-app): preview → explicit consent showing real dollars → charge. The Stripe-hosted surfaces (Checkout, Customer Portal) already carry their own consent screens and are unaffected.
+
+**Decision (2) — `ended_at` wins once a subscription has ended.** Both webhook syncs (org `syncSubscription` + designer `syncDesignerSubscription`) now store `sub.ended_at` (when set) as the effective period end. An immediate cancel therefore ends access immediately — Stripe's own semantics for that path, which is typically refund-adjacent or administrative — while a normal cancel-at-period-end is unchanged (`ended_at` equals the period end there). The canceled-in-grace state remains supported: checkout accepts a `canceled` seat, and `DesignerBillingButtons` shows resubscribe cards + an "access through <date>" note instead of only the portal button (which is a dead end once no live subscription exists).
+
+**Reason:** Found live in sandbox: an immediately-canceled Studio sub kept its paid-through date, so the grace branch granted up to a month of access that Stripe considered ended — and the seat-holding UI hid every resubscribe path behind a portal with nothing left to manage.

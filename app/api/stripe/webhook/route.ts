@@ -32,7 +32,13 @@ export async function POST(req: NextRequest) {
     const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
 
     // current_period_end has moved across API versions — read defensively.
+    // Once the subscription has actually ENDED, `ended_at` is the real cutoff:
+    // an immediate cancel (usually refund-adjacent) ends access now, while a
+    // period-end cancel has ended_at == the period end, so nothing changes.
+    // Without this, an immediately-canceled sub would keep its paid-through
+    // date and coast on the canceled-but-in-period grace it shouldn't have.
     const periodEnd =
+      sub.ended_at ??
       (sub as unknown as { current_period_end?: number | null }).current_period_end ??
       sub.items?.data?.[0]?.current_period_end ??
       null;
@@ -86,7 +92,10 @@ export async function POST(req: NextRequest) {
     const customerId =
       typeof sub.customer === "string" ? sub.customer : sub.customer.id;
 
+    // Same ended_at-first read as the org sync above: an immediate cancel cuts
+    // the seat off now instead of gifting the rest of the paid-through period.
     const periodEnd =
+      sub.ended_at ??
       (sub as unknown as { current_period_end?: number | null }).current_period_end ??
       sub.items?.data?.[0]?.current_period_end ??
       null;

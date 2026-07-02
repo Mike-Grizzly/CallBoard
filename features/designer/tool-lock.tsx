@@ -4,11 +4,14 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   changeDesignerPlan,
+  previewDesignerPlanChange,
   createDesignerPortalSession,
+  type DesignerPlanChangePreview,
 } from "@/features/designer/actions";
 import {
   DESIGNER_PRICES,
   DESIGNER_PLANS,
+  DESIGNER_PLAN_LABELS,
   type DesignerTool,
   type DesignerPlanId,
 } from "@/features/designer/constants";
@@ -18,12 +21,23 @@ const TOOL_LABEL: Record<DesignerTool, string> = {
   blocking: "Blocking",
 };
 
+const dollars = (cents: number) =>
+  (cents / 100).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
 /**
  * Shown inside the Focus shell when a Single Tool designer opens the tool their
  * seat does NOT include. The requested tool renders as a blurred, inert TEASE
  * (a populated stage / a populated script) with an upgrade modal on top — the
  * toggle still reflects the switch, but the tool stays locked until they pick a
  * plan. Symmetric for script-only -> Blocking and blocking-only -> Script.
+ *
+ * Upgrading is deliberately TWO steps: picking a tier only fetches a Stripe
+ * proration preview; the card then shows the exact amount due today and the
+ * new recurring price, and only the explicit confirm button charges. Never
+ * charge a card off a single click.
  */
 export function DesignerToolLock({
   tool,
@@ -35,23 +49,40 @@ export function DesignerToolLock({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pendingPlan, setPendingPlan] = useState<DesignerPlanId | null>(null);
+  const [confirming, setConfirming] = useState<DesignerPlanChangePreview | null>(
+    null,
+  );
   const [pending, startTransition] = useTransition();
 
   const label = TOOL_LABEL[tool];
   const otherTool: DesignerTool = tool === "blocking" ? "script" : "blocking";
 
+  // Step 1 — price the change (no charge): fetch the prorated preview.
   const choose = (plan: DesignerPlanId) =>
     startTransition(async () => {
       setError(null);
       setPendingPlan(plan);
+      const res = await previewDesignerPlanChange(plan);
+      if (res.preview) setConfirming(res.preview);
+      else setError(res.error ?? "Couldn't price that change.");
+      setPendingPlan(null);
+    });
+
+  // Step 2 — the explicit consent click: this is the one that charges.
+  const confirm = () => {
+    if (!confirming) return;
+    const plan = confirming.plan;
+    startTransition(async () => {
+      setError(null);
       const res = await changeDesignerPlan(plan);
       if (res.ok) {
         router.refresh(); // gate re-evaluates → the tool unlocks
         return;
       }
       setError(res.error ?? "Couldn't change your plan.");
-      setPendingPlan(null);
+      setConfirming(null);
     });
+  };
 
   const manage = () =>
     startTransition(async () => {
@@ -140,54 +171,120 @@ export function DesignerToolLock({
             {label} is locked
           </span>
 
-          <div>
-            <h2 id="fx-lock-title" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>
-              Unlock {label}
-            </h2>
-            <p className="muted" style={{ fontSize: 14, marginTop: 8, lineHeight: 1.55 }}>
-              {`Your plan includes ${TOOL_LABEL[otherTool]} only. Add ${label} by moving up — everything you've already done stays exactly as it is.`}
-            </p>
-          </div>
+          {confirming ? (
+            <>
+              <div>
+                <h2 id="fx-lock-title" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>
+                  Confirm your upgrade
+                </h2>
+                <p className="muted" style={{ fontSize: 14, marginTop: 8, lineHeight: 1.55 }}>
+                  {`Moving to ${DESIGNER_PLAN_LABELS[confirming.plan]} unlocks ${label} right away.`}
+                </p>
+              </div>
 
-          <div style={{ display: "flex", gap: 10 }}>
-            <TierButton
-              name="Studio"
-              blurb="Script + Blocking"
-              price={DESIGNER_PRICES.studio.monthly}
-              highlight
-              pending={pendingPlan === DESIGNER_PLANS.STUDIO}
-              disabled={pending}
-              onClick={() => choose(DESIGNER_PLANS.STUDIO)}
-            />
-            <TierButton
-              name="Studio Pro"
-              blurb="Both tools · every show at once"
-              price={DESIGNER_PRICES.studio_pro.monthly}
-              pending={pendingPlan === DESIGNER_PLANS.STUDIO_PRO}
-              disabled={pending}
-              onClick={() => choose(DESIGNER_PLANS.STUDIO_PRO)}
-            />
-          </div>
+              <div
+                style={{
+                  border: "1.5px solid var(--border-strong)",
+                  borderRadius: "var(--radius-m, 10px)",
+                  background: "var(--bg-elev)",
+                  padding: "12px 14px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                  textAlign: "left",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5 }}>
+                  <span className="muted">Charged to your card today</span>
+                  <b>${dollars(confirming.dueTodayCents)}</b>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5 }}>
+                  <span className="muted">{`${DESIGNER_PLAN_LABELS[confirming.plan]} from next period`}</span>
+                  <b>
+                    ${dollars(confirming.recurringCents)}
+                    <span className="muted" style={{ fontWeight: 400 }}>
+                      {confirming.interval === "annual" ? "/yr" : "/mo"}
+                    </span>
+                  </b>
+                </div>
+                <p className="muted" style={{ fontSize: 12, margin: "4px 0 0", lineHeight: 1.5 }}>
+                  Today&apos;s amount is prorated — you only pay the difference
+                  for the rest of this billing period.
+                </p>
+              </div>
 
-          <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 2 }}>
-            <button
-              type="button"
-              className="btn-link"
-              onClick={() => router.push(`/focus/${slug}?mode=${otherTool}`)}
-              style={{ fontSize: 13 }}
-            >
-              Back to {TOOL_LABEL[otherTool]}
-            </button>
-            <button
-              type="button"
-              className="btn-link"
-              onClick={manage}
-              disabled={pending}
-              style={{ fontSize: 13 }}
-            >
-              Manage billing
-            </button>
-          </div>
+              <button
+                type="button"
+                className="btn primary"
+                onClick={confirm}
+                disabled={pending}
+              >
+                {pending
+                  ? "Upgrading…"
+                  : `Confirm upgrade — pay $${dollars(confirming.dueTodayCents)}`}
+              </button>
+              <button
+                type="button"
+                className="btn-link"
+                onClick={() => setConfirming(null)}
+                disabled={pending}
+                style={{ fontSize: 13 }}
+              >
+                Back to plans
+              </button>
+            </>
+          ) : (
+            <>
+              <div>
+                <h2 id="fx-lock-title" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>
+                  Unlock {label}
+                </h2>
+                <p className="muted" style={{ fontSize: 14, marginTop: 8, lineHeight: 1.55 }}>
+                  {`Your plan includes ${TOOL_LABEL[otherTool]} only. Add ${label} by moving up — everything you've already done stays exactly as it is. You'll see the exact price before anything is charged.`}
+                </p>
+              </div>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <TierButton
+                  name="Studio"
+                  blurb="Script + Blocking"
+                  price={DESIGNER_PRICES.studio.monthly}
+                  highlight
+                  pending={pendingPlan === DESIGNER_PLANS.STUDIO}
+                  disabled={pending}
+                  onClick={() => choose(DESIGNER_PLANS.STUDIO)}
+                />
+                <TierButton
+                  name="Studio Pro"
+                  blurb="Both tools · every show at once"
+                  price={DESIGNER_PRICES.studio_pro.monthly}
+                  pending={pendingPlan === DESIGNER_PLANS.STUDIO_PRO}
+                  disabled={pending}
+                  onClick={() => choose(DESIGNER_PLANS.STUDIO_PRO)}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 2 }}>
+                <button
+                  type="button"
+                  className="btn-link"
+                  onClick={() => router.push(`/focus/${slug}?mode=${otherTool}`)}
+                  style={{ fontSize: 13 }}
+                >
+                  Back to {TOOL_LABEL[otherTool]}
+                </button>
+                <button
+                  type="button"
+                  className="btn-link"
+                  onClick={manage}
+                  disabled={pending}
+                  style={{ fontSize: 13 }}
+                >
+                  Manage billing
+                </button>
+              </div>
+            </>
+          )}
           {error && (
             <p style={{ color: "var(--accent-ink)", fontSize: 13, margin: 0 }}>
               {error}

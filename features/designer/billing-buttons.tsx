@@ -60,10 +60,16 @@ export function DesignerBillingButtons({
   plans,
   hasSeat,
   currentPlan,
+  canceledInGrace = false,
+  accessThrough = null,
 }: {
   plans: DesignerPlanOption[];
   hasSeat: boolean;
   currentPlan: DesignerPlanId | null;
+  /** Seat is canceled but still inside its paid period — offer resubscribe. */
+  canceledInGrace?: boolean;
+  /** Preformatted "access runs through" date for the canceled note. */
+  accessThrough?: string | null;
 }) {
   const [interval, setIntervalState] = useState<BillingInterval>("monthly");
   const [tool, setTool] = useState<DesignerTool>("script");
@@ -95,7 +101,11 @@ export function DesignerBillingButtons({
       else setError(res.error ?? "Something went wrong.");
     });
 
-  if (hasSeat) {
+  // A live (not canceled) seat is managed via the portal. A canceled-in-grace
+  // seat still has access but NO subscription left in Stripe to manage — the
+  // portal is a dead end for it — so fall through to the plan cards with a
+  // "resubscribe" note instead of hiding them.
+  if (hasSeat && !canceledInGrace) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
         <p className="muted" style={{ fontSize: 13.5, margin: 0 }}>
@@ -116,6 +126,30 @@ export function DesignerBillingButtons({
 
   return (
     <div style={{ marginTop: 16 }}>
+      {canceledInGrace && (
+        <p
+          style={{
+            fontSize: 13.5,
+            lineHeight: 1.5,
+            margin: "0 0 14px",
+            padding: "10px 12px",
+            borderRadius: "var(--radius-m, 10px)",
+            border: "1px solid var(--border-strong)",
+            background: "var(--accent-soft)",
+          }}
+        >
+          Your{" "}
+          <b>{currentPlan ? DESIGNER_PLAN_LABELS[currentPlan] : "Studio"}</b>{" "}
+          plan is canceled
+          {accessThrough ? (
+            <>
+              {" "}
+              — you keep access through <b>{accessThrough}</b>
+            </>
+          ) : null}
+          . Pick a plan below to resubscribe.
+        </p>
+      )}
       <div
         role="group"
         aria-label="Billing period"

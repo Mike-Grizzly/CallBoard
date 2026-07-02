@@ -29,6 +29,8 @@ export type DesignerSeat = {
   productionLimit: number | null;
   /** Raw Stripe subscription status, for display. */
   status: string | null;
+  /** When the paid period runs out (drives "access through <date>" notes). */
+  periodEnd: Date | null;
 };
 
 type DesignerRow = {
@@ -44,6 +46,7 @@ const NO_SEAT: DesignerSeat = {
   tools: [],
   productionLimit: 0,
   status: null,
+  periodEnd: null,
 };
 
 /** Pure: turn the stored designer subscription into a live seat state. */
@@ -54,13 +57,12 @@ export function designerSeatState(
   const plan = isDesignerPlanId(row.designerPlan) ? row.designerPlan : null;
   const tool = isDesignerTool(row.designerTool) ? row.designerTool : null;
   const status = row.designerSubscriptionStatus;
+  const periodEnd = row.designerCurrentPeriodEnd;
   if (!plan) return { ...NO_SEAT, status };
 
   const activeish = ["active", "trialing", "past_due"].includes(status ?? "");
   const inGrace =
-    status === "canceled" &&
-    !!row.designerCurrentPeriodEnd &&
-    row.designerCurrentPeriodEnd.getTime() > now;
+    status === "canceled" && !!periodEnd && periodEnd.getTime() > now;
   if (!activeish && !inGrace) return { ...NO_SEAT, plan, status };
 
   return {
@@ -69,6 +71,7 @@ export function designerSeatState(
     tools: designerToolsFor(plan, tool),
     productionLimit: DESIGNER_PRODUCTION_LIMIT[plan],
     status,
+    periodEnd,
   };
 }
 

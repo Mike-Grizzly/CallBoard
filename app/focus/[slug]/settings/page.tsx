@@ -162,6 +162,8 @@ export default async function FocusSettingsPage({
     currentPlan: DesignerPlanId | null;
     plans: DesignerPlanOption[];
     available: boolean;
+    canceledInGrace: boolean;
+    accessThrough: string | null;
   } | null = null;
   if (BILLING_ENABLED && designerOnly) {
     const seat = await getDesignerSeat(user.id);
@@ -170,11 +172,23 @@ export default async function FocusSettingsPage({
       hasMonthly: !!STRIPE_DESIGNER_PRICE_IDS[id].monthly,
       hasAnnual: !!STRIPE_DESIGNER_PRICE_IDS[id].annual,
     }));
+    // Canceled-but-paid-through seats can't use the portal (no live sub left),
+    // so the buttons show the plan cards with a resubscribe note instead.
+    const canceledInGrace = seat.hasSeat && seat.status === "canceled";
     designerBilling = {
       hasSeat: seat.hasSeat,
       currentPlan: seat.plan,
       plans,
       available: stripeConfigured && (plans.length > 0 || seat.hasSeat),
+      canceledInGrace,
+      accessThrough:
+        canceledInGrace && seat.periodEnd
+          ? seat.periodEnd.toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })
+          : null,
     };
   }
 
@@ -246,6 +260,8 @@ export default async function FocusSettingsPage({
                     plans={designerBilling.plans}
                     hasSeat={designerBilling.hasSeat}
                     currentPlan={designerBilling.currentPlan}
+                    canceledInGrace={designerBilling.canceledInGrace}
+                    accessThrough={designerBilling.accessThrough}
                   />
                 ) : (
                   <p className="muted" style={{ fontSize: 13, marginTop: 12 }}>

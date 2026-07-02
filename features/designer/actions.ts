@@ -131,18 +131,27 @@ export async function createDesignerPortalSession(): Promise<{
 }
 
 /**
- * Change the caller's Studio seat to a different tier in place (e.g. Single
- * Tool -> Studio to unlock the other tool). Swaps the subscription's price
- * (prorated) and syncs the entitlement immediately so the tool unlocks without
- * waiting on the webhook. Requires a live subscription; a lapsed/absent one is
- * directed to checkout/portal instead.
+ * Resolve everything a plan change needs: the caller's LIVE subscription, its
+ * single item, and the target price — keeping the subscriber's current billing
+ * interval (an annual subscriber moves to the annual price of the new tier,
+ * monthly to monthly). Shared by the preview and the actual change so the
+ * numbers the user confirms are exactly what runs.
  */
-export async function changeDesignerPlan(
+async function resolveDesignerPlanChange(
+  userId: string,
   plan: DesignerPlanId,
-  interval: BillingInterval = "monthly",
-): Promise<{ ok?: boolean; error?: string }> {
-  if (!BILLING_ENABLED) return { error: BETA_PAUSED_MSG };
-  const user = await requireCurrentUser();
+): Promise<
+  | { error: string; samePlan?: boolean }
+  | {
+      error?: undefined;
+      samePlan?: boolean;
+      subId: string;
+      itemId: string;
+      customerId: string;
+      newPriceId: string;
+      interval: BillingInterval;
+    }
+> {
   if (!stripe) return { error: "Billing isn't set up yet." };
   if (!isDesignerPlanId(plan)) return { error: "Unknown plan." };
 
@@ -153,10 +162,12 @@ export async function changeDesignerPlan(
       currentPlan: profiles.designerPlan,
     })
     .from(profiles)
-    .where(eq(profiles.id, user.id))
+    .where(eq(profiles.id, userId))
     .limit(1);
   if (!row) return { error: "Profile not found." };
-  if (row.currentPlan === plan) return { ok: true };
+  if (row.currentPlan === plan) {
+    return { error: "You're already on that plan.", samePlan: true };
+  }
 
   if (
     !row.subId ||
@@ -168,15 +179,88 @@ export async function changeDesignerPlan(
     };
   }
 
+  const sub = await stripe.subscriptions.retrieve(row.subId);
+  const item = sub.items?.data?.[0];
+  if (!item?.id) return { error: "Couldn't read your subscription." };
+
+  const interval: BillingInterval =
+    item.price?.recurring?.interval === "year" ? "annual" : "monthly";
   const newPriceId = designerPriceIdFor(plan, interval);
   if (!newPriceId) return { error: "That plan isn't available yet." };
 
-  const sub = await stripe.subscriptions.retrieve(row.subId);
-  const itemId = sub.items?.data?.[0]?.id;
-  if (!itemId) return { error: "Couldn't read your subscription." };
+  const customerId =
+    typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+  return { subId: row.subId, itemId: item.id, customerId, newPriceId, interval };
+}
 
-  await stripe.subscriptions.update(row.subId, {
-    items: [{ id: itemId, price: newPriceId }],
+export type DesignerPlanChangePreview = {
+  plan: DesignerPlanId;
+  interval: BillingInterval;
+  /** Prorated amount charged the moment they confirm, in cents (can be 0). */
+  dueTodayCents: number;
+  /** The new tier's recurring price in cents, on the kept interval. */
+  recurringCents: number;
+};
+
+/**
+ * Price a plan change WITHOUT executing it — the confirmation step. Returns the
+ * exact prorated amount Stripe would invoice today plus the new recurring
+ * price, so the user consents to a real number before any charge happens.
+ */
+export async function previewDesignerPlanChange(
+  plan: DesignerPlanId,
+): Promise<{ preview?: DesignerPlanChangePreview; error?: string }> {
+  if (!BILLING_ENABLED) return { error: BETA_PAUSED_MSG };
+  const user = await requireCurrentUser();
+  const resolved = await resolveDesignerPlanChange(user.id, plan);
+  if (resolved.error !== undefined || !stripe) {
+    return { error: resolved.error ?? "Billing isn't set up yet." };
+  }
+
+  const [upcoming, price] = await Promise.all([
+    stripe.invoices.createPreview({
+      customer: resolved.customerId,
+      subscription: resolved.subId,
+      subscription_details: {
+        items: [{ id: resolved.itemId, price: resolved.newPriceId }],
+        proration_behavior: "always_invoice",
+      },
+    }),
+    stripe.prices.retrieve(resolved.newPriceId),
+  ]);
+
+  return {
+    preview: {
+      plan,
+      interval: resolved.interval,
+      dueTodayCents: Math.max(0, upcoming.amount_due),
+      recurringCents: price.unit_amount ?? 0,
+    },
+  };
+}
+
+/**
+ * Change the caller's Studio seat to a different tier in place (e.g. Single
+ * Tool -> Studio to unlock the other tool). Swaps the subscription's price
+ * (prorated, keeping the current billing interval) and syncs the entitlement
+ * immediately so the tool unlocks without waiting on the webhook. Requires a
+ * live subscription; a lapsed/absent one is directed to checkout/portal
+ * instead. Callers must show `previewDesignerPlanChange` and get explicit
+ * confirmation BEFORE calling this — it charges the card on the spot.
+ */
+export async function changeDesignerPlan(
+  plan: DesignerPlanId,
+): Promise<{ ok?: boolean; error?: string }> {
+  if (!BILLING_ENABLED) return { error: BETA_PAUSED_MSG };
+  const user = await requireCurrentUser();
+  const resolved = await resolveDesignerPlanChange(user.id, plan);
+  if (resolved.samePlan) return { ok: true };
+  if (resolved.error !== undefined || !stripe) {
+    return { error: resolved.error ?? "Billing isn't set up yet." };
+  }
+
+  await stripe.subscriptions.update(resolved.subId, {
+    items: [{ id: resolved.itemId, price: resolved.newPriceId }],
     proration_behavior: "always_invoice",
     metadata: { kind: "designer", profileId: user.id, designerPlan: plan },
   });
