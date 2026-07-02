@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -31,6 +30,7 @@ import {
 } from "@/app/(app)/(default)/settings/billing/billing-buttons";
 import { FocusShell } from "../focus-shell";
 import { getDesignerSeat } from "@/features/designer/entitlement";
+import { FullAppCallout } from "@/features/designer/full-app-callout";
 import {
   DesignerBillingButtons,
   type DesignerPlanOption,
@@ -269,12 +269,7 @@ export default async function FocusSettingsPage({
                     Online billing isn&apos;t available yet — check back soon.
                   </p>
                 )}
-                <p className="muted" style={{ fontSize: 12.5, marginTop: 14, marginBottom: 0 }}>
-                  Running a company?{" "}
-                  <Link href="/focus/full-app" className="btn-link" style={{ fontSize: 12.5 }}>
-                    Get the full app — free for 60 days
-                  </Link>
-                </p>
+                <FullAppCallout />
               </div>
             </section>
           )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import {
   changeDesignerPlan,
@@ -15,10 +15,25 @@ import {
   type DesignerTool,
   type DesignerPlanId,
 } from "@/features/designer/constants";
+import { FullAppCallout } from "@/features/designer/full-app-callout";
 
 const TOOL_LABEL: Record<DesignerTool, string> = {
   script: "Script",
   blocking: "Blocking",
+};
+
+// `.btn-link` only exists in the marketing stylesheet — in the app it renders
+// as unstyled, low-contrast text. Quiet links here style themselves instead so
+// they read as clickable in both color modes.
+const quietLink: CSSProperties = {
+  fontSize: 13,
+  color: "var(--accent-ink)",
+  textDecoration: "underline",
+  textUnderlineOffset: 3,
+  background: "none",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
 };
 
 const dollars = (cents: number) =>
@@ -225,10 +240,9 @@ export function DesignerToolLock({
               </button>
               <button
                 type="button"
-                className="btn-link"
                 onClick={() => setConfirming(null)}
                 disabled={pending}
-                style={{ fontSize: 13 }}
+                style={{ ...quietLink, alignSelf: "center" }}
               >
                 Back to plans
               </button>
@@ -267,33 +281,21 @@ export function DesignerToolLock({
               <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 2 }}>
                 <button
                   type="button"
-                  className="btn-link"
                   onClick={() => router.push(`/focus/${slug}?mode=${otherTool}`)}
-                  style={{ fontSize: 13 }}
+                  style={quietLink}
                 >
                   Back to {TOOL_LABEL[otherTool]}
                 </button>
                 <button
                   type="button"
-                  className="btn-link"
                   onClick={manage}
                   disabled={pending}
-                  style={{ fontSize: 13 }}
+                  style={quietLink}
                 >
                   Manage billing
                 </button>
               </div>
-              <p className="muted" style={{ fontSize: 12.5, margin: 0 }}>
-                Running a company?{" "}
-                <button
-                  type="button"
-                  className="btn-link"
-                  onClick={() => router.push("/focus/full-app")}
-                  style={{ fontSize: 12.5 }}
-                >
-                  Get the full app — free for 60 days
-                </button>
-              </p>
+              <FullAppCallout compact />
             </>
           )}
           {error && (

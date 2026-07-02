@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireCurrentUser, isDesignerOnly } from "@/lib/auth";
 import { getVisibleProductions } from "@/features/productions/queries";
 import { getDesignerSeat } from "@/features/designer/entitlement";
 import { availableDesignerPlans, STRIPE_DESIGNER_PRICE_IDS } from "@/lib/stripe";
 import { DesignerBillingButtons } from "@/features/designer/billing-buttons";
+import { FullAppCallout } from "@/features/designer/full-app-callout";
 
 /**
  * Focus View entry resolver. Designer-package subscribers are routed here (they
@@ -53,12 +53,7 @@ export default async function FocusIndexPage() {
                 Online billing isn&apos;t available yet — check back soon.
               </p>
             )}
-            <p className="muted" style={{ fontSize: 12.5, marginTop: 16 }}>
-              Running a company?{" "}
-              <Link href="/focus/full-app" className="btn-link" style={{ fontSize: 12.5 }}>
-                Get the full app — free for 60 days
-              </Link>
-            </p>
+            <FullAppCallout />
           </div>
         </div>
       );

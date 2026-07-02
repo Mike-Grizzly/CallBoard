@@ -89,8 +89,14 @@ export default async function FullAppUpgradePage() {
         <div>
           <Link
             href="/focus"
-            className="btn-link"
-            style={{ fontSize: 13, display: "inline-block", marginBottom: 18 }}
+            style={{
+              fontSize: 13,
+              display: "inline-block",
+              marginBottom: 18,
+              color: "var(--accent-ink)",
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
+            }}
           >
             ← Back to your studio
           </Link>
