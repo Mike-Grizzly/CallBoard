@@ -2,8 +2,9 @@
 
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { profiles } from "@/db/schema";
-import { requireCurrentUser } from "@/lib/auth";
+import { profiles, organizations } from "@/db/schema";
+import { requireCurrentUser, isDesignerOnly } from "@/lib/auth";
+import { newTrialEnd } from "@/lib/billing";
 import {
   stripe,
   designerPriceIdFor,
@@ -270,6 +271,92 @@ export async function changeDesignerPlan(
   await db
     .update(profiles)
     .set({ designerPlan: plan, designerTool: null, updatedAt: new Date() })
+    .where(eq(profiles.id, user.id));
+
+  return { ok: true };
+}
+
+/**
+ * Convert a designer-only account to the FULL app — no re-signup, no charge.
+ * Their personal workspace is already an organization (they're its admin), so
+ * everything they've built carries over; this just (1) stops the Studio seat
+ * from billing again (cancel at period end — they keep what they paid for),
+ * (2) grants the org the standard 60-day trial FROM TODAY (a designer's
+ * production may have silently started the org trial clock earlier — the
+ * conversion is the org's real day one as a company workspace, and this flip
+ * is one-way per account, so the re-stamp can't be farmed), and (3) flips
+ * accessMode to "full" so the dashboard opens up.
+ */
+export async function upgradeToFullApp(): Promise<{
+  ok?: boolean;
+  error?: string;
+}> {
+  const user = await requireCurrentUser();
+  if (!isDesignerOnly(user)) return { ok: true }; // already full — nothing to do
+
+  // Stop the seat's next renewal FIRST (it's the only step touching Stripe):
+  // the full app includes both tools, so the seat would be double-paying.
+  // cancel_at_period_end keeps their remaining paid time and is reversible
+  // from the portal. If Stripe fails, abort before any DB change — the user
+  // simply retries; nothing is half-converted.
+  if (stripe) {
+    const [row] = await db
+      .select({
+        subId: profiles.designerStripeSubscriptionId,
+        status: profiles.designerSubscriptionStatus,
+      })
+      .from(profiles)
+      .where(eq(profiles.id, user.id))
+      .limit(1);
+    if (
+      row?.subId &&
+      ["active", "trialing", "past_due"].includes(row.status ?? "")
+    ) {
+      try {
+        await stripe.subscriptions.update(row.subId, {
+          cancel_at_period_end: true,
+        });
+      } catch {
+        return {
+          error:
+            "We couldn't wind down your Studio seat — try again in a moment.",
+        };
+      }
+    }
+  }
+
+  // Fresh 60-day trial from conversion day — unless the org is grandfathered
+  // or already carries a live subscription. Skipped while billing is paused
+  // (beta), matching startTrialIfFirstProduction: stamping during the free
+  // beta would hand converts an already-burning clock.
+  if (BILLING_ENABLED) {
+    const [org] = await db
+      .select({
+        grandfathered: organizations.grandfathered,
+        subscriptionStatus: organizations.subscriptionStatus,
+      })
+      .from(organizations)
+      .where(eq(organizations.id, user.organizationId))
+      .limit(1);
+    const subscribed = ["active", "trialing", "past_due"].includes(
+      org?.subscriptionStatus ?? "",
+    );
+    if (org && !org.grandfathered && !subscribed) {
+      const now = new Date();
+      await db
+        .update(organizations)
+        .set({
+          trialStartedAt: now,
+          trialEndsAt: newTrialEnd(now),
+          updatedAt: now,
+        })
+        .where(eq(organizations.id, user.organizationId));
+    }
+  }
+
+  await db
+    .update(profiles)
+    .set({ accessMode: "full", updatedAt: new Date() })
     .where(eq(profiles.id, user.id));
 
   return { ok: true };

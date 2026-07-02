@@ -283,6 +283,17 @@ export function DesignerToolLock({
                   Manage billing
                 </button>
               </div>
+              <p className="muted" style={{ fontSize: 12.5, margin: 0 }}>
+                Running a company?{" "}
+                <button
+                  type="button"
+                  className="btn-link"
+                  onClick={() => router.push("/focus/full-app")}
+                  style={{ fontSize: 12.5 }}
+                >
+                  Get the full app — free for 60 days
+                </button>
+              </p>
             </>
           )}
           {error && (

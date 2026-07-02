@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireCurrentUser, isDesignerOnly } from "@/lib/auth";
 import { getVisibleProductions } from "@/features/productions/queries";
@@ -52,6 +53,12 @@ export default async function FocusIndexPage() {
                 Online billing isn&apos;t available yet — check back soon.
               </p>
             )}
+            <p className="muted" style={{ fontSize: 12.5, marginTop: 16 }}>
+              Running a company?{" "}
+              <Link href="/focus/full-app" className="btn-link" style={{ fontSize: 12.5 }}>
+                Get the full app — free for 60 days
+              </Link>
+            </p>
           </div>
         </div>
       );

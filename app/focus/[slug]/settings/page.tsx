@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -268,6 +269,12 @@ export default async function FocusSettingsPage({
                     Online billing isn&apos;t available yet — check back soon.
                   </p>
                 )}
+                <p className="muted" style={{ fontSize: 12.5, marginTop: 14, marginBottom: 0 }}>
+                  Running a company?{" "}
+                  <Link href="/focus/full-app" className="btn-link" style={{ fontSize: 12.5 }}>
+                    Get the full app — free for 60 days
+                  </Link>
+                </p>
               </div>
             </section>
           )}
