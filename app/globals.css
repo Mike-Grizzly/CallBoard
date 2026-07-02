@@ -137,12 +137,15 @@ body[data-theme="dark"] {
   --accent-ink: oklch(0.85 0.14 25);
   /* Deeper than --accent so white button labels clear AA in dark mode. */
   --accent-strong: oklch(0.585 0.17 25);
-  --c-sage-soft: oklch(0.28 0.05 145);
-  --c-amber-soft: oklch(0.3 0.07 80);
-  --c-dusk-soft: oklch(0.28 0.05 260);
-  --c-clay-soft: oklch(0.3 0.07 35);
-  --c-sand-soft: oklch(0.28 0.04 90);
-  --c-plum-soft: oklch(0.28 0.05 320);
+  /* Department/category soft tints — bumped lightness + chroma so department
+     thumbnails, pills, and report note cards stay vibrant and legible on dark
+     surfaces (was too dim/desaturated). */
+  --c-sage-soft: oklch(0.33 0.08 145);
+  --c-amber-soft: oklch(0.35 0.1 80);
+  --c-dusk-soft: oklch(0.33 0.08 260);
+  --c-clay-soft: oklch(0.35 0.1 35);
+  --c-sand-soft: oklch(0.33 0.07 90);
+  --c-plum-soft: oklch(0.33 0.08 320);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.25);
   --shadow-3: 0 20px 60px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -224,15 +227,23 @@ body {
   font-size: 14px;
   line-height: 1.45;
 }
-button {
-  font-family: inherit;
-  color: inherit;
-}
-input,
-textarea,
-select {
-  font-family: inherit;
-  color: inherit;
+/* These element resets must live in @layer base — Tailwind v4 puts utilities
+   in the `utilities` layer, and UNLAYERED rules win over layered ones
+   regardless of specificity. Left unlayered, `color: inherit` here overrode
+   text-color utilities like `text-[color:var(--primary-foreground)]` on
+   <Button>, making labels inherit the surrounding ink (e.g. a black "Save &
+   Continue" label on a black button). In @layer base, utilities win. */
+@layer base {
+  button {
+    font-family: inherit;
+    color: inherit;
+  }
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+    color: inherit;
+  }
 }
 
 /* iOS Safari auto-zooms the page when the user focuses any form control
@@ -259,6 +270,13 @@ select {
   grid-template-columns: var(--rail-w) 1fr;
   min-height: 100vh;
   width: 100%;
+}
+/* Animate the rail collapse/expand (the grid column slides; the centered
+   icons glide as the width recomputes each frame). Skipped for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .app {
+    transition: grid-template-columns 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
 }
 
 /* ─── Left rail ──────────────────────────────────────────────────────── */
@@ -473,6 +491,9 @@ body[data-theme="dusk"] .brand-badge.is-dark {
   position: relative;
   transition: background 0.12s, color 0.12s;
   text-decoration: none;
+  /* Keep labels on one line so they don't wrap-reflow while the rail width
+     animates during collapse/expand. */
+  white-space: nowrap;
 }
 .rail-item:hover {
   background: var(--bg-muted);
@@ -1630,7 +1651,8 @@ textarea.field {
   .rail-item span:not(.ico),
   .prod-item span:not(.prod-dot):not(.prod-meta),
   .rail-item .badge,
-  .prod-meta {
+  .prod-meta,
+  .rail-collapse-label {
     display: none;
   }
   .rail-brand {
@@ -1638,9 +1660,63 @@ textarea.field {
     justify-content: center;
   }
   .rail-item,
-  .prod-item {
+  .prod-item,
+  .rail-collapse {
     justify-content: center;
     padding: 8px;
+  }
+}
+
+/* ─── Manual rail collapse (user toggle) ───────────────────────────────
+   Slims the rail to an icon strip on demand so any page gets more width.
+   Phones keep their slide-in drawer, so the collapse is gated above the
+   phone breakpoint. For true full-screen work, Focus mode is the path. */
+.rail-collapse {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 20px);
+  margin: 8px 10px 0;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-3);
+  font-size: 12px;
+  cursor: pointer;
+}
+.rail-collapse:hover {
+  background: var(--bg-sunken);
+  color: var(--ink);
+}
+
+@media (min-width: 721px) {
+  body[data-rail-collapsed="1"] .app {
+    grid-template-columns: 64px 1fr;
+  }
+  body[data-rail-collapsed="1"] .rail-name,
+  body[data-rail-collapsed="1"] .rail-section-h,
+  body[data-rail-collapsed="1"] .rail-foot-meta,
+  body[data-rail-collapsed="1"] .rail-item span:not(.ico),
+  body[data-rail-collapsed="1"] .prod-item span:not(.prod-dot):not(.prod-meta),
+  body[data-rail-collapsed="1"] .rail-item .badge,
+  body[data-rail-collapsed="1"] .prod-meta,
+  body[data-rail-collapsed="1"] .rail-collapse-label {
+    display: none;
+  }
+  body[data-rail-collapsed="1"] .rail-brand {
+    padding: 14px;
+    justify-content: center;
+  }
+  body[data-rail-collapsed="1"] .rail-item,
+  body[data-rail-collapsed="1"] .prod-item {
+    justify-content: center;
+    padding: 8px;
+  }
+  body[data-rail-collapsed="1"] .rail-collapse {
+    justify-content: center;
+    width: auto;
+    margin: 8px auto 0;
   }
 }
 
@@ -12799,6 +12875,17 @@ body[data-theme="dusk"] .fx-brand .mark .brand-badge.is-dark { display: block; }
 
 /* Entry button in the production toolbar (self-hides off script/blocking) */
 .fx-entry .ico { width: 14px; height: 14px; }
+/* Focus mode is the full-screen path for Script/Blocking now that those tools
+   no longer carry their own fullscreen button — give it a quiet accent so it
+   reads as the primary "expand" action in the toolbar. */
+.fx-entry {
+  border-color: color-mix(in oklch, var(--accent) 40%, var(--border-strong));
+  color: var(--accent-ink, var(--accent));
+}
+.fx-entry:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
 
 /* Focus View enter/exit transition — gentle fade + subtle zoom. Skipped
    entirely for prefers-reduced-motion. Origin is screen centre so the shell

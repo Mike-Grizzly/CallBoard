@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   File,
   Upload as UploadIcon,
@@ -11,6 +12,7 @@ import {
   Lock,
   Pencil,
 } from "lucide-react";
+import { deleteDocument } from "@/features/documents/actions";
 import { DocumentUploadForm } from "./document-upload-form";
 import { DocumentRowMenu } from "./document-row-menu";
 import { DocumentDrawer } from "./document-drawer";
@@ -65,6 +67,7 @@ interface Props {
 
 const ALL_FILES = "All files";
 const UNFILED = "__unfiled__";
+const REMOVE_MS = 200;
 
 export function DocumentsClient({
   documents,
@@ -77,6 +80,10 @@ export function DocumentsClient({
   initialDocId,
   pinnedDocIds,
 }: Props) {
+  const router = useRouter();
+  const [, startDeleteTransition] = useTransition();
+  // Docs animating out before their server delete + refresh lands.
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const [activeFolder, setActiveFolder] = useState(ALL_FILES);
   const [view, setView] = useState<"list" | "grid">("list");
   const [openDoc, setOpenDoc] = useState<DocumentWithUploader | null>(() =>
@@ -104,6 +111,21 @@ export function DocumentsClient({
   const totalBytes = documents.reduce((sum, d) => sum + d.fileSize, 0);
   const limitGb = 10;
   const pct = Math.min(100, (totalBytes / (limitGb * 1024 ** 3)) * 100);
+
+  // Animate the row/card out, then delete + refresh (which removes it from
+  // props). The id stays in `removingIds` after that — harmless, since the row
+  // unmounts — and avoids an un-collapse flicker if the refresh lags.
+  function requestDelete(id: string) {
+    setRemovingIds((prev) => new Set(prev).add(id));
+    window.setTimeout(() => {
+      const fd = new FormData();
+      fd.set("document_id", id);
+      startDeleteTransition(async () => {
+        await deleteDocument(fd);
+        router.refresh();
+      });
+    }, REMOVE_MS);
+  }
 
   return (
     <>
@@ -348,6 +370,7 @@ export function DocumentsClient({
                 const color = doc.folderName
                   ? folderColor(doc.folderName)
                   : "";
+                const isRemoving = removingIds.has(doc.id);
                 const uploaderName =
                   doc.uploadedByFirstName || doc.uploadedByLastName
                     ? `${doc.uploadedByFirstName ?? ""} ${doc.uploadedByLastName ?? ""}`.trim()
@@ -362,12 +385,20 @@ export function DocumentsClient({
                       gridTemplateColumns: canUpload
                         ? "40px 1fr 150px 130px 130px 40px"
                         : "40px 1fr 150px 130px 130px",
-                      padding: "12px 16px",
-                      borderBottom: "1px solid var(--border)",
+                      padding: isRemoving ? "0 16px" : "12px 16px",
+                      borderBottom: isRemoving
+                        ? "1px solid transparent"
+                        : "1px solid var(--border)",
                       alignItems: "center",
                       fontSize: 13,
                       cursor: "pointer",
-                      transition: "background .1s",
+                      maxHeight: isRemoving ? 0 : 200,
+                      opacity: isRemoving ? 0 : 1,
+                      transform: isRemoving ? "translateX(24px)" : "none",
+                      overflow: "hidden",
+                      pointerEvents: isRemoving ? "none" : "auto",
+                      transition:
+                        "background .1s, max-height .2s ease, opacity .2s ease, transform .2s ease, padding .2s ease",
                     }}
                     onMouseEnter={(e) => {
                       (e.currentTarget as HTMLDivElement).style.background =
@@ -441,6 +472,7 @@ export function DocumentsClient({
                         currentFolderId={doc.folderId}
                         folders={folders}
                         stopPropagation
+                        canEdit={canUpload}
                       />
                     </div>
                     <span
@@ -466,6 +498,7 @@ export function DocumentsClient({
                           productionId={productionId}
                           documentType={doc.documentType}
                           isDefaultScript={doc.isDefaultScript}
+                          onRequestDelete={requestDelete}
                         />
                       </div>
                     )}
@@ -480,6 +513,7 @@ export function DocumentsClient({
                 const color = doc.folderName
                   ? folderColor(doc.folderName)
                   : "";
+                const isRemoving = removingIds.has(doc.id);
 
                 return (
                   <div
@@ -490,6 +524,10 @@ export function DocumentsClient({
                       padding: 0,
                       overflow: "hidden",
                       cursor: "pointer",
+                      opacity: isRemoving ? 0 : 1,
+                      transform: isRemoving ? "scale(0.92)" : "none",
+                      pointerEvents: isRemoving ? "none" : "auto",
+                      transition: "opacity .2s ease, transform .2s ease",
                     }}
                   >
                     <div
@@ -546,6 +584,7 @@ export function DocumentsClient({
           members={members}
           folders={folders}
           initialPinned={pinnedDocIds.includes(openDoc.id)}
+          canManage={canUpload}
           onClose={() => setOpenDoc(null)}
         />
       )}

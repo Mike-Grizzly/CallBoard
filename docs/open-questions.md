@@ -929,3 +929,38 @@ The 2026-06-19 hardening pass fixed the highest-severity confirmed issues. The f
 - **Known instance:** the Focus locked-tool teaser (`features/designer/tool-lock.tsx`) is currently a stylized approximation (a generic stage with actor tokens for Blocking, character cues + dialogue for Script). The **Blocking** teaser especially should be brought closer to the actual blocking-canvas UI (ground plan, real piece/marker styling). Cross-cutting design polish — deferred, address as a batch.
 - **No designer trial; storage cap advisory.** v1 designer seats have no free trial (charge on subscribe), and the 25 GB designer storage cap (`DESIGNER_STORAGE_GB`) is not enforced (parity with the org `STORAGE_LIMIT_GB`, also advisory). Revisit if abused.
 - **Studio billing — security-reviewed 2026-06-30; still needs a typecheck/build.** A focused billing review (identification + three adversarial verification passes) found **no presently-exploitable HIGH/MEDIUM** issue. Only confirmed finding: the Single Tool per-tool bypass (LOW, now fixed above). Two webhook trust-boundary candidates verified as **not exploitable** (event signature-verified; `profileId`/`organizationId` are server-set to the authenticated user at checkout; the two axes mint separate Stripe customers and designer subs are always tagged `kind="designer"`) but were hardened regardless: `syncSubscription`/`syncDesignerSubscription` now require the resolved row's stored Stripe customer id to be null-or-equal to the event's `customer`, so any mismatch is a 0-row no-op. Built in a deps-less clone → **still not typechecked**; run `npm run type-check && npm run build` (CI on PR #66) before going live.
+
+---
+
+## Accounts & entitlements model — paid orgs vs free personal users (added 2026-06-30)
+
+- Owner wants the **Canva/Monday.com model**: a personal user account is **free**
+  (view/basic only); an **organization** is the **paid** entity carrying the full
+  feature set; an org invite grants an existing user paid features **while in that
+  org's context**; switching back to a personal workspace drops to free.
+- Motivating concern: **creating a new org is currently frictionless** and isn't
+  treated as the significant, billable action it is (it effectively provisions a
+  new paid/trial account).
+- **Status: deferred to its own scoping pass** (after the QA batches). It's a
+  billing + entitlement architecture change — gate features on "active paid org
+  context" not role alone, define what the free tier unlocks, add org-creation
+  guardrails, and reconcile with the existing trial logic (`assertCanMutate`,
+  trial anchoring at first-production creation). Full context in `qa-backlog.md`.
+  Do NOT fold into a QA batch.
+
+## Two batch-1 bugs not reproducible on desktop Chrome (added 2026-06-30)
+
+- **PDF viewer fails on first click / recovers after a tab switch**, and **script
+  PDF download navigates away instead of opening a new tab** — owner could not
+  reproduce either on desktop Chrome (PC + Mac); the code paths look correct
+  (signed URL with attachment disposition; "View" opens a new tab; in-viewer
+  exports are blobs). Left OPEN for cross-browser/device testing (Safari /
+  Firefox / mobile are the likely variance). No code change made.
+
+## "Set pieces should start empty" — interpretation to confirm (added 2026-06-30)
+
+- Implemented as a **collapsed "Basic shapes" disclosure** in the blocking
+  set-piece panel: a fresh palette leads with custom uploads + the upload button,
+  and the built-in generic shapes stay one click away rather than being deleted.
+  If the reviewer meant removing the built-ins entirely, that's a small
+  follow-up.

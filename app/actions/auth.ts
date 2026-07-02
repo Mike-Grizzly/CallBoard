@@ -115,7 +115,10 @@ export async function login(
     return { error: error.message };
   }
 
-  redirect("/setup");
+  // Returning users land on the dashboard. First-time org setup is reached via
+  // the email-confirmation callback (next=/setup), not this login path, so we
+  // don't force every returning login through the setup screen.
+  redirect("/dashboard");
 }
 
 export async function signup(

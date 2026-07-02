@@ -14,6 +14,9 @@ interface Props {
   productionId: string;
   documentType: string;
   isDefaultScript: boolean;
+  /** When provided, the parent owns deletion (so it can animate the row out
+   *  before the server call); the menu just confirms and hands off. */
+  onRequestDelete?: (documentId: string) => void;
 }
 
 interface MenuPos {
@@ -28,6 +31,7 @@ export function DocumentRowMenu({
   productionId,
   documentType,
   isDefaultScript,
+  onRequestDelete,
 }: Props) {
   const [pos, setPos] = useState<MenuPos | null>(null);
   const [copied, setCopied] = useState(false);
@@ -155,6 +159,11 @@ export function DocumentRowMenu({
     e.stopPropagation();
     setPos(null);
     if (!confirm("Delete this document? This cannot be undone.")) return;
+    // Hand off to the parent when it wants to animate the row out first.
+    if (onRequestDelete) {
+      onRequestDelete(documentId);
+      return;
+    }
     const formData = new FormData();
     formData.set("document_id", documentId);
     startTransition(async () => {

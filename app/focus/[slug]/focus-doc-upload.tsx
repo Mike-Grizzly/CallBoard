@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   requestDocumentUpload,
   finalizeDocumentUpload,
 } from "@/features/documents/actions";
 import { uploadFileToSignedUrl } from "@/lib/storage-upload";
+import { FileDropzone } from "@/components/ui/file-dropzone";
 
 /**
  * Minimal PDF uploader for Focus empty-states (e.g. adding a ground plan in the
@@ -23,7 +24,6 @@ export function FocusDocUpload({
   label?: string;
 }) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -65,28 +65,18 @@ export function FocusDocUpload({
         setError(fin.error);
         return;
       }
-      if (inputRef.current) inputRef.current.value = "";
       router.refresh();
     });
   }
 
   return (
     <div className="fx-docupload">
-      <input
-        ref={inputRef}
-        type="file"
+      <FileDropzone
         accept="application/pdf"
-        hidden
-        onChange={(e) => onFile(e.target.files?.[0] ?? null)}
-      />
-      <button
-        type="button"
-        className="btn"
-        onClick={() => inputRef.current?.click()}
+        onFile={onFile}
         disabled={pending}
-      >
-        {pending ? "Uploading…" : label}
-      </button>
+        hint={pending ? "Uploading…" : `${label} — or drop a PDF here`}
+      />
       {error && <span className="fx-docupload-err">{error}</span>}
     </div>
   );

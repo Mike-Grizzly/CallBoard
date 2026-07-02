@@ -16,12 +16,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
+import { FileDropzone } from "@/components/ui/file-dropzone";
+import { DateField } from "@/components/ui/date-field";
 import { createProductionFull } from "@/features/productions/actions";
 import {
   requestWizardScriptUpload,
   startWizardScriptParse,
   fetchScriptParseById,
   attachWizardScript,
+  attachWizardScriptByPath,
 } from "@/features/scripts/actions";
 import { uploadFileToSignedUrl } from "@/lib/storage-upload";
 import { PRODUCTION_COLOR_PALETTE } from "@/features/productions/constants";
@@ -35,9 +38,18 @@ import {
   type WizardOrgUser,
 } from "@/features/productions/wizard-constants";
 
+// Sane date bounds for the setup wizard so a typo like year 0202 or 9999 is
+// rejected — productions sit a few years either side of today.
+const DATE_MIN = `${new Date().getFullYear() - 5}-01-01`;
+const DATE_MAX = `${new Date().getFullYear() + 10}-12-31`;
+
 type AiParseState = {
-  status: "idle" | "uploading" | "processing" | "done" | "error";
+  // "uploaded" = file is in storage but no parse ran (auto-fill toggled off);
+  // it still gets attached as the default script at launch.
+  status: "idle" | "uploading" | "processing" | "uploaded" | "done" | "error";
   parseId?: string;
+  /** Wizard upload path, kept so an un-parsed script can still be attached. */
+  storagePath?: string;
   fileName?: string;
   fileSize?: number;
   count?: number;
@@ -171,6 +183,9 @@ export default function NewProductionWizard({
   // Lives at wizard level (not in StepRoles, which unmounts on step change) so
   // the parse keeps running and pre-fills even if the user moves on.
   const [aiParse, setAiParse] = useState<AiParseState>({ status: "idle" });
+  // Auto-fill the cast from the uploaded script. On by default; off = upload
+  // the file as the default script now and run the AI read later.
+  const [autoFill, setAutoFill] = useState(true);
 
   const startAiParse = async (file: File) => {
     if (file.type !== "application/pdf") {
@@ -188,6 +203,18 @@ export default function NewProductionWizard({
       setAiParse({ status: "error", error: sent.error });
       return;
     }
+
+    // Auto-fill off: keep the uploaded file for attach-at-launch, skip parsing.
+    if (!autoFill) {
+      setAiParse({
+        status: "uploaded",
+        storagePath: up.path,
+        fileName: file.name,
+        fileSize: file.size,
+      });
+      return;
+    }
+
     const started = await startWizardScriptParse(up.path);
     if (started.error || !started.parseId) {
       setAiParse({ status: "error", error: started.error ?? "Could not start analysis." });
@@ -197,6 +224,7 @@ export default function NewProductionWizard({
     setAiParse({
       status: "processing",
       parseId: started.parseId,
+      storagePath: up.path,
       fileName: file.name,
       fileSize: file.size,
     });
@@ -348,14 +376,25 @@ export default function NewProductionWizard({
       return;
     }
 
-    // Carry an AI-uploaded script over as the new production's default script.
-    if (aiParse.parseId && aiParse.fileName && aiParse.fileSize && result.slug) {
-      await attachWizardScript({
-        parseId: aiParse.parseId,
-        slug: result.slug,
-        fileName: aiParse.fileName,
-        fileSize: aiParse.fileSize,
-      });
+    // Carry the uploaded script over as the new production's default script.
+    // A parsed script attaches via its parse row; an un-parsed one (auto-fill
+    // off) attaches by its storage path.
+    if (result.slug && aiParse.fileName && aiParse.fileSize) {
+      if (aiParse.parseId) {
+        await attachWizardScript({
+          parseId: aiParse.parseId,
+          slug: result.slug,
+          fileName: aiParse.fileName,
+          fileSize: aiParse.fileSize,
+        });
+      } else if (aiParse.storagePath) {
+        await attachWizardScriptByPath({
+          storagePath: aiParse.storagePath,
+          slug: result.slug,
+          fileName: aiParse.fileName,
+          fileSize: aiParse.fileSize,
+        });
+      }
     }
 
     if (status === "draft") {
@@ -441,6 +480,8 @@ export default function NewProductionWizard({
                 set={set}
                 orgUsers={orgUsers}
                 aiParse={aiParse}
+                autoFill={autoFill}
+                setAutoFill={setAutoFill}
                 onUploadScript={startAiParse}
               />
             )}
@@ -796,40 +837,40 @@ function StepCalendar({ data, set }: { data: WizardData; set: (p: Partial<Wizard
       <div className="grid grid-2">
         <div className="field-group">
           <label className="label">First rehearsal</label>
-          <input
-            className="field"
-            type="date"
+          <DateField
             value={data.firstRehearsal}
-            onChange={(e) => set({ firstRehearsal: e.target.value })}
+            onChange={(v) => set({ firstRehearsal: v })}
+            min={DATE_MIN}
+            max={DATE_MAX}
           />
         </div>
         <div className="field-group">
           <label className="label">Tech week starts</label>
-          <input
-            className="field"
-            type="date"
+          <DateField
             value={data.techStart}
-            onChange={(e) => set({ techStart: e.target.value })}
+            onChange={(v) => set({ techStart: v })}
+            min={DATE_MIN}
+            max={DATE_MAX}
           />
         </div>
         <div className="field-group">
           <label className="label">
             Opening night<span className="req">*</span>
           </label>
-          <input
-            className="field"
-            type="date"
+          <DateField
             value={data.opening}
-            onChange={(e) => set({ opening: e.target.value })}
+            onChange={(v) => set({ opening: v })}
+            min={DATE_MIN}
+            max={DATE_MAX}
           />
         </div>
         <div className="field-group">
           <label className="label">Closing</label>
-          <input
-            className="field"
-            type="date"
+          <DateField
             value={data.closing}
-            onChange={(e) => set({ closing: e.target.value })}
+            onChange={(v) => set({ closing: v })}
+            min={DATE_MIN}
+            max={DATE_MAX}
           />
         </div>
       </div>
@@ -914,8 +955,12 @@ function StepDepts({ data, set }: { data: WizardData; set: (p: Partial<WizardDat
               <div
                 className="dept-ico"
                 style={{
-                  background: on ? `var(--c-${d.c}-soft, var(--bg-sunken))` : "var(--bg-sunken)",
-                  color: on && d.c ? `color-mix(in oklch, var(--c-${d.c}) 45%, var(--ink))` : "var(--ink-3)",
+                  // Monochrome: neutral surface, ink that strengthens when the
+                  // department is on. Selection is carried by the card chrome
+                  // (border + toggle), not a colored tint — the old per-dept
+                  // tints read muddy, especially in dark mode.
+                  background: "var(--bg-sunken)",
+                  color: on ? "var(--ink)" : "var(--ink-3)",
                 }}
               >
                 <Icon name={d.icon} size={16} />
@@ -955,12 +1000,16 @@ function StepRoles({
   set,
   orgUsers,
   aiParse,
+  autoFill,
+  setAutoFill,
   onUploadScript,
 }: {
   data: WizardData;
   set: (p: Partial<WizardData>) => void;
   orgUsers: WizardOrgUser[];
   aiParse: AiParseState;
+  autoFill: boolean;
+  setAutoFill: (v: boolean) => void;
   onUploadScript: (file: File) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1021,13 +1070,43 @@ function StepRoles({
           <Icon name="Sparkles" size={18} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 14 }}>
-              Auto-fill your cast from the script
+              {autoFill
+                ? "Auto-fill your cast from the script"
+                : "Add your script"}
             </div>
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                margin: "8px 0 4px",
+                cursor: busy ? "default" : "pointer",
+                fontSize: 13,
+                opacity: busy ? 0.6 : 1,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={autoFill}
+                disabled={busy}
+                onChange={(e) => setAutoFill(e.target.checked)}
+              />
+              <span>Auto-fill cast from this script</span>
+            </label>
             {aiParse.status === "idle" && (
               <div className="hint" style={{ margin: "4px 0 12px" }}>
-                Upload your script (PDF) and AI will read out the characters for
-                you. Optional — you can skip this and add the cast by hand, or do
-                it later from the production&apos;s Script tab anytime.
+                {autoFill
+                  ? "Upload your script (PDF) and AI reads out the characters for you. Optional — add the cast by hand, or run it later from the production's Script tab."
+                  : "Upload your script (PDF) and it becomes this production's default script. The AI cast read stays off — run it anytime later from the Script tab."}
+              </div>
+            )}
+            {aiParse.status === "uploaded" && (
+              <div
+                className="hint"
+                style={{ margin: "4px 0 12px", color: "var(--accent)" }}
+              >
+                Uploaded {aiParse.fileName}. It&apos;ll be your default script —
+                run the AI cast read anytime from the Script tab.
               </div>
             )}
             {busy && (
@@ -1056,6 +1135,16 @@ function StepRoles({
                 the cast manually below.
               </div>
             )}
+            <div style={{ marginBottom: 10 }}>
+              <FileDropzone
+                accept="application/pdf"
+                onFile={(f) => {
+                  if (f) onUploadScript(f);
+                }}
+                disabled={busy}
+                hint="Drag your script PDF here, or click to browse"
+              />
+            </div>
             <button
               className="btn sm primary"
               onClick={() => fileRef.current?.click()}
@@ -1064,14 +1153,18 @@ function StepRoles({
               {busy ? (
                 <span className="pdf-spinner" style={{ width: 13, height: 13 }} />
               ) : (
-                <Icon name="Sparkles" size={12} />
+                <Icon name={autoFill ? "Sparkles" : "Upload"} size={12} />
               )}
               <span>
                 {busy
-                  ? "Reading…"
-                  : aiParse.status === "done"
+                  ? autoFill
+                    ? "Reading…"
+                    : "Uploading…"
+                  : aiParse.status === "done" || aiParse.status === "uploaded"
                     ? "Upload a different script"
-                    : "Upload script & auto-fill"}
+                    : autoFill
+                      ? "Upload script & auto-fill"
+                      : "Upload script"}
               </span>
             </button>
           </div>

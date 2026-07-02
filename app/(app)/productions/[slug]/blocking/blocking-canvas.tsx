@@ -29,7 +29,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, X, Maximize2, Minimize2, Route, Layers, Pencil } from "lucide-react";
+import { Settings, Plus, Trash2, ChevronRight, ChevronDown, RotateCcw, Aperture, Download, RotateCw, ChevronLeft, X, Route, Layers, Pencil } from "lucide-react";
 import { BeatCommentSection } from "@/components/blocking/beat-comment-section";
 import { BeatNotesSection } from "@/components/blocking/beat-notes-section";
 import type { ProductionMember } from "@/features/members/queries";
@@ -745,9 +745,11 @@ export function BlockingCanvas({
   const [addingBeatForScene, setAddingBeatForScene] = useState<string | null>(null);
   const [newBeatLabel, setNewBeatLabel] = useState("");
   const [setPiecesOpen, setSetPiecesOpen] = useState(true);
+  // The built-in generic shapes start collapsed so a fresh stage's palette is
+  // empty (custom uploads first); the shapes stay one click away.
+  const [showBasicShapes, setShowBasicShapes] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [fullscreen, setFullscreen] = useState(false);
   const [customPieces, setCustomPieces] = useState<CustomSetPieceClient[]>(initialCustomSetPieces);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -780,7 +782,6 @@ export function BlockingCanvas({
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        setFullscreen(false);
         setSelectedActorIds(new Set());
       }
     }
@@ -1566,17 +1567,6 @@ export function BlockingCanvas({
               overflow: "hidden",
               background: "var(--bg)",
             }
-          : fullscreen
-          ? {
-              position: "fixed",
-              inset: 0,
-              zIndex: 9999,
-              height: "100vh",
-              display: "grid",
-              gridTemplateColumns: "240px 1fr 260px",
-              overflow: "hidden",
-              background: "var(--bg)",
-            }
           : {
               margin: "-24px calc(-1 * var(--pad-x))",
               height: "calc(100vh - 133px)",
@@ -2080,18 +2070,6 @@ export function BlockingCanvas({
                 <Settings className="h-3.5 w-3.5" /><span>Stage Setup</span>
               </button>
             )}
-            {!embedded && (
-              <button
-                onClick={() => setFullscreen((v) => !v)}
-                className="btn ghost"
-                style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-                title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
-              >
-                {fullscreen
-                  ? <Minimize2 className="h-3.5 w-3.5" />
-                  : <Maximize2 className="h-3.5 w-3.5" />}
-              </button>
-            )}
           </div>
         </div>
 
@@ -2593,45 +2571,36 @@ export function BlockingCanvas({
           {setPiecesOpen && (
             <div className="scroll overflow-y-auto" style={{ padding: "0 12px 10px", maxHeight: 260 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                {SET_PIECES.map((piece) => {
-                  const key = `set_piece:${piece.key}`;
+                {/* The production's own set pieces come first. A fresh stage has
+                    none, so the palette starts empty. */}
+                {customPieces.map((piece) => {
+                  const key = `set_piece:${piece.id}`;
                   const isOnCanvas = !!positions[key];
                   return (
                     <OffstageSetPieceTile
-                      key={piece.key}
-                      piece={piece}
+                      key={piece.id}
+                      piece={{ key: piece.id, label: piece.name, imageUrl: piece.imageUrl }}
                       isOnCanvas={isOnCanvas}
                       isDisabled={!canEdit || !currentBeatId}
-                      onClickPlace={() => placeOnCanvas("set_piece", piece.key)}
+                      onClickPlace={() => placeOnCanvas("set_piece", piece.id)}
+                      canDelete={canEdit}
+                      onDelete={() => handleDeleteCustomPiece(piece.id)}
                     />
                   );
                 })}
 
-                {/* Custom uploaded pieces */}
-                {customPieces.length > 0 && (
-                  <div style={{ borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 6 }}>
-                    <div className="h-eyebrow" style={{ marginBottom: 6, paddingLeft: 2 }}>Custom</div>
-                    {customPieces.map((piece) => {
-                      const key = `set_piece:${piece.id}`;
-                      const isOnCanvas = !!positions[key];
-                      return (
-                        <OffstageSetPieceTile
-                          key={piece.id}
-                          piece={{ key: piece.id, label: piece.name, imageUrl: piece.imageUrl }}
-                          isOnCanvas={isOnCanvas}
-                          isDisabled={!canEdit || !currentBeatId}
-                          onClickPlace={() => placeOnCanvas("set_piece", piece.id)}
-                          canDelete={canEdit}
-                          onDelete={() => handleDeleteCustomPiece(piece.id)}
-                        />
-                      );
-                    })}
+                {customPieces.length === 0 && (
+                  <div
+                    className="muted"
+                    style={{ fontSize: 11.5, lineHeight: 1.5, padding: "2px 2px 0" }}
+                  >
+                    No set pieces yet. Upload your own, or open Basic shapes below.
                   </div>
                 )}
 
                 {/* Upload button */}
                 {canEdit && (
-                  <div style={{ marginTop: customPieces.length > 0 ? 4 : 6 }}>
+                  <div style={{ marginTop: 6 }}>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -2655,6 +2624,43 @@ export function BlockingCanvas({
                     )}
                   </div>
                 )}
+
+                {/* Built-in generic shapes — collapsed by default so a fresh
+                    palette isn't pre-populated, but they're one click away. */}
+                <div style={{ borderTop: "1px solid var(--border)", marginTop: 6, paddingTop: 6 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowBasicShapes((v) => !v)}
+                    className="btn ghost"
+                    style={{ width: "100%", height: 26, fontSize: 12, justifyContent: "space-between", padding: "0 4px" }}
+                  >
+                    <span style={{ fontWeight: 500 }}>Basic shapes</span>
+                    <ChevronRight
+                      className="h-3.5 w-3.5"
+                      style={{
+                        transform: showBasicShapes ? "rotate(90deg)" : "none",
+                        transition: "transform .15s",
+                      }}
+                    />
+                  </button>
+                  {showBasicShapes && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+                      {SET_PIECES.map((piece) => {
+                        const key = `set_piece:${piece.key}`;
+                        const isOnCanvas = !!positions[key];
+                        return (
+                          <OffstageSetPieceTile
+                            key={piece.key}
+                            piece={piece}
+                            isOnCanvas={isOnCanvas}
+                            isDisabled={!canEdit || !currentBeatId}
+                            onClickPlace={() => placeOnCanvas("set_piece", piece.key)}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

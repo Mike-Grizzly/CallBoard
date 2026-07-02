@@ -94,6 +94,9 @@ export function ReportForm({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const handledRef = useRef<string | null>(null);
+  // Which submit button was pressed, so post-save navigation can differ: a
+  // draft returns to the reports list; distribute/save-changes opens the report.
+  const submittedStatusRef = useRef<"draft" | "distributed" | null>(null);
 
   useEffect(() => {
     const id = state?.reportId;
@@ -102,9 +105,14 @@ export function ReportForm({
 
     const justDistributed = state?.justDistributed ?? false;
     const targetSlug = state?.slug ?? slug;
-    const dest = `/productions/${targetSlug}/reports/${id}${
-      justDistributed ? "?email=1" : ""
-    }`;
+    // A saved draft drops back on the reports list (you're done for now);
+    // distributing or saving a live report opens it (email prompt on send).
+    const dest =
+      submittedStatusRef.current === "draft"
+        ? `/productions/${targetSlug}/reports`
+        : `/productions/${targetSlug}/reports/${id}${
+            justDistributed ? "?email=1" : ""
+          }`;
 
     if (stagedFiles.length === 0) {
       router.push(dest);
@@ -334,6 +342,9 @@ export function ReportForm({
                 value="distributed"
                 className="btn primary"
                 disabled={pending || uploading}
+                onClick={() => {
+                  submittedStatusRef.current = "distributed";
+                }}
               >
                 <Icon name="Check" size={14} aria-hidden />
                 <span>
@@ -352,6 +363,9 @@ export function ReportForm({
                   value="draft"
                   className="btn"
                   disabled={pending || uploading}
+                  onClick={() => {
+                    submittedStatusRef.current = "draft";
+                  }}
                 >
                   <Icon name="Check" size={14} aria-hidden />
                   <span>
@@ -368,6 +382,9 @@ export function ReportForm({
                   value="distributed"
                   className="btn primary"
                   disabled={pending || uploading}
+                  onClick={() => {
+                    submittedStatusRef.current = "distributed";
+                  }}
                 >
                   <Icon name="Send" size={14} aria-hidden />
                   <span>
