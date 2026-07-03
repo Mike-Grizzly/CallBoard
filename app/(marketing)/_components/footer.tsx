@@ -14,8 +14,8 @@ const COLS = [
   {
     h: "Resources",
     links: [
-      ["Help center", "/docs"],
-      ["Getting started", "/docs/get-started"],
+      ["Help center", "/help"],
+      ["Getting started", "/help/get-started"],
       ["Walkthroughs", "/blog"],
       ["FAQ", "/faq"],
     ],

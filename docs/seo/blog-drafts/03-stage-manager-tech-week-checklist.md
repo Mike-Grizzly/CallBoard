@@ -6,7 +6,7 @@
 - **Excerpt:** A week-by-week stage manager tech week checklist, from pre-tech paperwork through cue to cue, dress, opening, and closing night. Printable.
 - **Tags:** tech week, stage manager checklist, cue to cue, dress rehearsal, tech rehearsal, load-in, stage management, opening night
 - **Read time:** 6 min
-- **Internal links used:** /docs/scheduling/creating-calls (CTA), /docs/script/cue-markers, /docs/reports/creating-a-rehearsal-report, /features#calls
+- **Internal links used:** /help/scheduling/creating-calls (CTA), /help/script/cue-markers, /help/reports/creating-a-rehearsal-report, /features#calls
 
 ---
 
@@ -48,7 +48,7 @@ The long day. Your job splits in two: call the room, and build the show.
 - [ ] **Run the sign-in sheet** and start every session on time, even when you are the only one ready.
 - [ ] **Call the holds**: "Hold please" stops everything; only you say "moving on." Protect this convention from minute one.
 - [ ] **Jump between cues** ruthlessly. You are teching transitions, not running scenes. The director who wants to "just run this bit" gets a gentle reminder of the clock.
-- [ ] **Mark every cue placement** in the calling script as it is set, in pencil, with the standard "warning, standby, go" spacing worked out. If your script lives digitally, drop [cue markers](/docs/script/cue-markers) as you go instead of retyping tonight's pencil scrawl later.
+- [ ] **Mark every cue placement** in the calling script as it is set, in pencil, with the standard "warning, standby, go" spacing worked out. If your script lives digitally, drop [cue markers](/help/script/cue-markers) as you go instead of retyping tonight's pencil scrawl later.
 - [ ] **Track the changes**: every "make that a five count" and "move that shift a page earlier" goes in the book and in tonight's report.
 - [ ] **Enforce breaks.** Equity or not, ten out of ninety keeps a volunteer cast human. Nobody techs well at hour four without one.
 - [ ] **Send a rehearsal report every night of tech**, same as the rehearsal room. Tech reports are the busiest of the run; the shop reads them at 8am. The format is the same one covered in our [rehearsal report guide](/blog/how-to-write-a-rehearsal-report).
@@ -87,4 +87,4 @@ Look back through the list and notice how many items are really one item: everyo
 
 That workflow, publishing calls and collecting one-tap confirmations instead of chasing thumbs-up emojis, is exactly what Proscene's scheduling was built for.
 
-**Set up your tech week calls, with confirmations you can actually see: [Creating calls](/docs/scheduling/creating-calls), part of [Proscene's calls feature](/features#calls). Free during open beta.**
+**Set up your tech week calls, with confirmations you can actually see: [Creating calls](/help/scheduling/creating-calls), part of [Proscene's calls feature](/features#calls). Free during open beta.**

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import "../docs.css";
+import "../help.css";
 import { DOC_SECTIONS, getSection } from "../content";
 import { JsonLd } from "../../_components/json-ld";
 import { SITE_URL } from "@/lib/site";
@@ -23,7 +23,7 @@ export async function generateMetadata({
   return {
     title: `${s.title} · Proscene Help`,
     description: s.description,
-    alternates: { canonical: `/docs/${s.slug}` },
+    alternates: { canonical: `/help/${s.slug}` },
   };
 }
 
@@ -40,8 +40,8 @@ export default async function DocsSectionPage({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Docs", item: `${SITE_URL}/docs` },
-      { "@type": "ListItem", position: 2, name: s.title, item: `${SITE_URL}/docs/${s.slug}` },
+      { "@type": "ListItem", position: 1, name: "Help", item: `${SITE_URL}/help` },
+      { "@type": "ListItem", position: 2, name: s.title, item: `${SITE_URL}/help/${s.slug}` },
     ],
   };
 
@@ -50,7 +50,7 @@ export default async function DocsSectionPage({
       <JsonLd data={breadcrumb} />
       <div className="wrap docs-article-wrap">
         <nav className="docs-breadcrumb" aria-label="Breadcrumb">
-          <Link href="/docs">Docs</Link>
+          <Link href="/help">Help</Link>
           <span aria-hidden>/</span>
           <span aria-current="page">{s.title}</span>
         </nav>
@@ -69,7 +69,7 @@ export default async function DocsSectionPage({
           <h2>Guides in this section</h2>
           <div className="docs-toc">
             {s.pages.map((p) => (
-              <Link className="docs-toc-item" key={p.slug} href={`/docs/${s.slug}/${p.slug}`}>
+              <Link className="docs-toc-item" key={p.slug} href={`/help/${s.slug}/${p.slug}`}>
                 <strong>{p.title}</strong>
                 <span>{p.description}</span>
               </Link>

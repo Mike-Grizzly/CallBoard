@@ -1,4 +1,4 @@
-// Typed content model for the public help manual at /docs.
+// Typed content model for the public help manual at /help.
 // Content is static, first-party HTML authored in this repo (same pattern as
 // the other marketing `content.ts` files) — it never contains user input, so
 // it renders via dangerouslySetInnerHTML without the app's sanitize path.

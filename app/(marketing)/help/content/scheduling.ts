@@ -20,7 +20,7 @@ export const scheduling: DocSection = {
     },
     {
       heading: "Who can schedule",
-      body: `<p>Creating, editing, and deleting calls, plus templates and repeating schedules, is limited to the production staff roles: <strong>admin, producer, director, choreographer, creative, and stage manager</strong>. Cast and crew see the full calendar and every call's details, and can confirm they will be there, but they cannot change the schedule.</p><p>For the full breakdown of what each role can do, see <a href="/docs/people/roles-and-permissions">roles and permissions</a>.</p>`,
+      body: `<p>Creating, editing, and deleting calls, plus templates and repeating schedules, is limited to the production staff roles: <strong>admin, producer, director, choreographer, creative, and stage manager</strong>. Cast and crew see the full calendar and every call's details, and can confirm they will be there, but they cannot change the schedule.</p><p>For the full breakdown of what each role can do, see <a href="/help/people/roles-and-permissions">roles and permissions</a>.</p>`,
     },
   ],
   pages: [
@@ -62,40 +62,40 @@ export const scheduling: DocSection = {
         },
         {
           title: "Check what the company sees",
-          body: `<p>The call now shows on the production's Rehearsal Schedule, on each member's personal <a href="/docs/scheduling/personal-calendar">Calendar</a>, and on the dashboard as the next call with a countdown. Anyone can click the call to open its details drawer: when, where, scenes, who is called, the breakdown, and notes. Calls do not fire an automatic notification, so the calendar and dashboard are the source of truth.</p>`,
+          body: `<p>The call now shows on the production's Rehearsal Schedule, on each member's personal <a href="/help/scheduling/personal-calendar">Calendar</a>, and on the dashboard as the next call with a countdown. Anyone can click the call to open its details drawer: when, where, scenes, who is called, the breakdown, and notes. Calls do not fire an automatic notification, so the calendar and dashboard are the source of truth.</p>`,
         },
       ],
       tip: `<p>Made a mistake, or plans changed? Open the call from any calendar and click <strong>Edit</strong> in its details drawer. Staff can change every field or delete the call entirely; the update appears everywhere at once.</p>`,
       nextSteps: [
         {
           label: "Generate a repeating rehearsal schedule",
-          href: "/docs/scheduling/bulk-schedule-generation",
+          href: "/help/scheduling/bulk-schedule-generation",
         },
         {
           label: "How call confirmations work",
-          href: "/docs/scheduling/rsvp-and-confirmations",
+          href: "/help/scheduling/rsvp-and-confirmations",
         },
         {
           label: "Run your first rehearsal",
-          href: "/docs/get-started/your-first-rehearsal",
+          href: "/help/get-started/your-first-rehearsal",
         },
       ],
       related: [
         {
           label: "See every call in one personal calendar",
-          href: "/docs/scheduling/personal-calendar",
+          href: "/help/scheduling/personal-calendar",
         },
         {
           label: "Invite your company",
-          href: "/docs/get-started/invite-your-company",
+          href: "/help/get-started/invite-your-company",
         },
         {
           label: "Roles and permissions",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
         {
           label: "Create a rehearsal report",
-          href: "/docs/reports/creating-a-rehearsal-report",
+          href: "/help/reports/creating-a-rehearsal-report",
         },
       ],
     },
@@ -144,33 +144,33 @@ export const scheduling: DocSection = {
       nextSteps: [
         {
           label: "Create and send a single rehearsal call",
-          href: "/docs/scheduling/creating-calls",
+          href: "/help/scheduling/creating-calls",
         },
         {
           label: "How call confirmations work",
-          href: "/docs/scheduling/rsvp-and-confirmations",
+          href: "/help/scheduling/rsvp-and-confirmations",
         },
         {
           label: "See every call in one personal calendar",
-          href: "/docs/scheduling/personal-calendar",
+          href: "/help/scheduling/personal-calendar",
         },
       ],
       related: [
         {
           label: "Set up your first production",
-          href: "/docs/get-started/set-up-your-first-production",
+          href: "/help/get-started/set-up-your-first-production",
         },
         {
           label: "The production setup wizard",
-          href: "/docs/productions/setup-wizard",
+          href: "/help/productions/setup-wizard",
         },
         {
           label: "Import your cast from a CSV",
-          href: "/docs/people/importing-cast-csv",
+          href: "/help/people/importing-cast-csv",
         },
         {
           label: "Roles and permissions",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
       ],
     },
@@ -203,37 +203,37 @@ export const scheduling: DocSection = {
           body: `<p>Below the countdown, everyone sees the same rollup: a stack of avatars for the people who have confirmed, a progress bar, and a count like <strong>7 of 12 confirmed</strong>. Before anyone responds it reads <strong>No confirmations yet</strong>. The total is everyone on the production, so a stage manager can glance at the dashboard the day of a call and know who still needs a nudge.</p>`,
         },
       ],
-      tip: `<p>Confirmations live on the dashboard's next-call panel, so they naturally cover the call that matters right now. There is no per-call RSVP roster page yet; if you need a formal sign-in record, take attendance in that day's <a href="/docs/reports/creating-a-rehearsal-report">rehearsal report</a>.</p>`,
+      tip: `<p>Confirmations live on the dashboard's next-call panel, so they naturally cover the call that matters right now. There is no per-call RSVP roster page yet; if you need a formal sign-in record, take attendance in that day's <a href="/help/reports/creating-a-rehearsal-report">rehearsal report</a>.</p>`,
       nextSteps: [
         {
           label: "See every call in one personal calendar",
-          href: "/docs/scheduling/personal-calendar",
+          href: "/help/scheduling/personal-calendar",
         },
         {
           label: "Create a rehearsal report",
-          href: "/docs/reports/creating-a-rehearsal-report",
+          href: "/help/reports/creating-a-rehearsal-report",
         },
         {
           label: "Set up notifications",
-          href: "/docs/troubleshooting/notifications",
+          href: "/help/troubleshooting/notifications",
         },
       ],
       related: [
         {
           label: "Create and send a rehearsal call",
-          href: "/docs/scheduling/creating-calls",
+          href: "/help/scheduling/creating-calls",
         },
         {
           label: "Invite your company",
-          href: "/docs/get-started/invite-your-company",
+          href: "/help/get-started/invite-your-company",
         },
         {
           label: "Roles and permissions",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
         {
           label: "Trouble getting into a production?",
-          href: "/docs/troubleshooting/invites-and-access",
+          href: "/help/troubleshooting/invites-and-access",
         },
       ],
     },
@@ -270,29 +270,29 @@ export const scheduling: DocSection = {
       nextSteps: [
         {
           label: "How call confirmations work",
-          href: "/docs/scheduling/rsvp-and-confirmations",
+          href: "/help/scheduling/rsvp-and-confirmations",
         },
         {
           label: "Run your first rehearsal",
-          href: "/docs/get-started/your-first-rehearsal",
+          href: "/help/get-started/your-first-rehearsal",
         },
         {
           label: "Create and send a rehearsal call",
-          href: "/docs/scheduling/creating-calls",
+          href: "/help/scheduling/creating-calls",
         },
       ],
       related: [
         {
           label: "Generate a repeating rehearsal schedule",
-          href: "/docs/scheduling/bulk-schedule-generation",
+          href: "/help/scheduling/bulk-schedule-generation",
         },
         {
           label: "The people directory",
-          href: "/docs/people/people-directory",
+          href: "/help/people/people-directory",
         },
         {
           label: "Set up notifications",
-          href: "/docs/troubleshooting/notifications",
+          href: "/help/troubleshooting/notifications",
         },
         {
           label: "Calendar on the features tour",

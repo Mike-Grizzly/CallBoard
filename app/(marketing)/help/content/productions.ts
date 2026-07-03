@@ -14,11 +14,11 @@ export const productions: DocSection = {
     },
     {
       heading: "What lives inside one",
-      body: `<p>Inside a production you will find rehearsal reports with per-department note sections, the rehearsal schedule and calls, a document library, announcements, the script (with optional AI analysis), blocking, and rehearsal video. The show's people live there too: a cast list of characters with the performers cast in them, and a production team built from leadership roles and departments. Team management happens on the <a href="/docs/productions/cast-crew-board">Cast &amp; Crew board</a>, reached from the button in the production header.</p>`,
+      body: `<p>Inside a production you will find rehearsal reports with per-department note sections, the rehearsal schedule and calls, a document library, announcements, the script (with optional AI analysis), blocking, and rehearsal video. The show's people live there too: a cast list of characters with the performers cast in them, and a production team built from leadership roles and departments. Team management happens on the <a href="/help/productions/cast-crew-board">Cast &amp; Crew board</a>, reached from the button in the production header.</p>`,
     },
     {
       heading: "Who can create and manage productions",
-      body: `<p>Creating a production, editing its settings, and assigning people all require the manage-productions permission, which admins and producers hold. Everyone in your organization can see the production list, but shows you are not assigned to appear dimmed with a lock, and you cannot open them until someone adds you. Once you are cast or added to the team, the production unlocks for you. See <a href="/docs/people/roles-and-permissions">roles and permissions</a> for the full breakdown.</p>`,
+      body: `<p>Creating a production, editing its settings, and assigning people all require the manage-productions permission, which admins and producers hold. Everyone in your organization can see the production list, but shows you are not assigned to appear dimmed with a lock, and you cannot open them until someone adds you. Once you are cast or added to the team, the production unlocks for you. See <a href="/help/people/roles-and-permissions">roles and permissions</a> for the full breakdown.</p>`,
     },
   ],
   pages: [
@@ -44,11 +44,11 @@ export const productions: DocSection = {
         },
         {
           title: "Choose your departments",
-          body: `<p>On <strong>Departments</strong>, tap the cards to turn areas on or off. Director / Production and Stage Management are always on. Each enabled department becomes a note section in your rehearsal reports and a team bucket on the Cast &amp; Crew board. You can change all of this later from the production's Settings tab; see <a href="/docs/productions/departments">departments</a>.</p>`,
+          body: `<p>On <strong>Departments</strong>, tap the cards to turn areas on or off. Director / Production and Stage Management are always on. Each enabled department becomes a note section in your rehearsal reports and a team bucket on the Cast &amp; Crew board. You can change all of this later from the production's Settings tab; see <a href="/help/productions/departments">departments</a>.</p>`,
         },
         {
           title: "Upload the script to auto-fill your cast (optional)",
-          body: `<p>On <strong>Roles &amp; characters</strong>, drag a PDF of your script into the upload box, or click <strong>Upload script &amp; auto-fill</strong>. With <strong>Auto-fill cast from this script</strong> checked (it is on by default), the AI reads the script and drops the characters into your roles list, usually within a minute or two, even if you have moved on to the next step. Untick the box to opt out: the file still uploads and becomes the production's default script, and you can run the AI read later from the Script tab. See <a href="/docs/script/ai-script-analysis">AI script analysis</a>.</p>`,
+          body: `<p>On <strong>Roles &amp; characters</strong>, drag a PDF of your script into the upload box, or click <strong>Upload script &amp; auto-fill</strong>. With <strong>Auto-fill cast from this script</strong> checked (it is on by default), the AI reads the script and drops the characters into your roles list, usually within a minute or two, even if you have moved on to the next step. Untick the box to opt out: the file still uploads and becomes the production's default script, and you can run the AI read later from the Script tab. See <a href="/help/script/ai-script-analysis">AI script analysis</a>.</p>`,
         },
         {
           title: "Add roles by hand or in bulk",
@@ -67,33 +67,33 @@ export const productions: DocSection = {
       nextSteps: [
         {
           label: "Cast your show on the Cast & Crew board",
-          href: "/docs/productions/cast-crew-board",
+          href: "/help/productions/cast-crew-board",
         },
         {
           label: "Schedule your first rehearsal calls",
-          href: "/docs/scheduling/creating-calls",
+          href: "/help/scheduling/creating-calls",
         },
         {
           label: "See what the AI script read extracts",
-          href: "/docs/script/ai-script-analysis",
+          href: "/help/script/ai-script-analysis",
         },
       ],
       related: [
         {
           label: "How departments shape reports and casting",
-          href: "/docs/productions/departments",
+          href: "/help/productions/departments",
         },
         {
           label: "Set up your first production (getting started)",
-          href: "/docs/get-started/set-up-your-first-production",
+          href: "/help/get-started/set-up-your-first-production",
         },
         {
           label: "Invite your company",
-          href: "/docs/get-started/invite-your-company",
+          href: "/help/get-started/invite-your-company",
         },
         {
           label: "Uploading a script",
-          href: "/docs/script/uploading-a-script",
+          href: "/help/script/uploading-a-script",
         },
       ],
     },
@@ -123,7 +123,7 @@ export const productions: DocSection = {
         },
         {
           title: "Build the production team",
-          body: `<p>The <strong>Production team</strong> card always offers Director, Stage Manager, and Producer buckets, plus one bucket for each of the production's departments (Lighting, Sound, Props, and so on). Drag a person into a bucket and they appear as a chip with that position, with access to match. Which buckets you see is driven by your <a href="/docs/productions/departments">department setup</a>.</p>`,
+          body: `<p>The <strong>Production team</strong> card always offers Director, Stage Manager, and Producer buckets, plus one bucket for each of the production's departments (Lighting, Sound, Props, and so on). Drag a person into a bucket and they appear as a chip with that position, with access to match. Which buckets you see is driven by your <a href="/help/productions/departments">department setup</a>.</p>`,
         },
         {
           title: "Move or remove people",
@@ -142,33 +142,33 @@ export const productions: DocSection = {
       nextSteps: [
         {
           label: "Understand what each role can see and do",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
         {
           label: "Schedule calls for your new cast",
-          href: "/docs/scheduling/creating-calls",
+          href: "/help/scheduling/creating-calls",
         },
         {
           label: "Invite the rest of your company",
-          href: "/docs/get-started/invite-your-company",
+          href: "/help/get-started/invite-your-company",
         },
       ],
       related: [
         {
           label: "The New Production setup wizard",
-          href: "/docs/productions/setup-wizard",
+          href: "/help/productions/setup-wizard",
         },
         {
           label: "Departments and team buckets",
-          href: "/docs/productions/departments",
+          href: "/help/productions/departments",
         },
         {
           label: "The people directory",
-          href: "/docs/people/people-directory",
+          href: "/help/people/people-directory",
         },
         {
           label: "Trouble with invites or access",
-          href: "/docs/troubleshooting/invites-and-access",
+          href: "/help/troubleshooting/invites-and-access",
         },
       ],
     },
@@ -182,7 +182,7 @@ export const productions: DocSection = {
       blocks: [
         {
           heading: "What departments drive",
-          body: `<p>A production's department list feeds two things at once:</p><ul><li><strong>Rehearsal report sections.</strong> Every enabled department gets its own notes section on the report form, so your lighting notes, props notes, and costume notes each land where their team will look. See <a href="/docs/reports/department-notes">department notes</a>.</li><li><strong>Cast &amp; Crew board team buckets.</strong> Each department becomes a drop target on the <a href="/docs/productions/cast-crew-board">casting board</a>, so you can place a person on, say, Sound, and the board reflects the same structure the reports use.</li></ul><p>Director, Stage Manager, and Producer are not departments; they are leadership roles that always have buckets on the board regardless of your department list.</p>`,
+          body: `<p>A production's department list feeds two things at once:</p><ul><li><strong>Rehearsal report sections.</strong> Every enabled department gets its own notes section on the report form, so your lighting notes, props notes, and costume notes each land where their team will look. See <a href="/help/reports/department-notes">department notes</a>.</li><li><strong>Cast &amp; Crew board team buckets.</strong> Each department becomes a drop target on the <a href="/help/productions/cast-crew-board">casting board</a>, so you can place a person on, say, Sound, and the board reflects the same structure the reports use.</li></ul><p>Director, Stage Manager, and Producer are not departments; they are leadership roles that always have buckets on the board regardless of your department list.</p>`,
         },
         {
           heading: "The 12 standard departments",
@@ -194,7 +194,7 @@ export const productions: DocSection = {
         },
         {
           heading: "Where departments come from",
-          body: `<p>The <a href="/docs/productions/setup-wizard">setup wizard</a> seeds the list from its Departments step when you create the show. After that, the production's <strong>Settings</strong> tab is the single place to manage them; changes apply to the report form and the board together. Removing a department never erases notes already written on past reports; those reports keep their sections.</p>`,
+          body: `<p>The <a href="/help/productions/setup-wizard">setup wizard</a> seeds the list from its Departments step when you create the show. After that, the production's <strong>Settings</strong> tab is the single place to manage them; changes apply to the report form and the board together. Removing a department never erases notes already written on past reports; those reports keep their sections.</p>`,
         },
       ],
       steps: [
@@ -215,29 +215,29 @@ export const productions: DocSection = {
       nextSteps: [
         {
           label: "Write department notes in a rehearsal report",
-          href: "/docs/reports/department-notes",
+          href: "/help/reports/department-notes",
         },
         {
           label: "Create your first rehearsal report",
-          href: "/docs/reports/creating-a-rehearsal-report",
+          href: "/help/reports/creating-a-rehearsal-report",
         },
         {
           label: "Place people into department buckets",
-          href: "/docs/productions/cast-crew-board",
+          href: "/help/productions/cast-crew-board",
         },
       ],
       related: [
         {
           label: "The New Production setup wizard",
-          href: "/docs/productions/setup-wizard",
+          href: "/help/productions/setup-wizard",
         },
         {
           label: "Distributing reports to your team",
-          href: "/docs/reports/distributing-reports",
+          href: "/help/reports/distributing-reports",
         },
         {
           label: "Roles and permissions",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
       ],
     },

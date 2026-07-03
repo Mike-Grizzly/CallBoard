@@ -16,11 +16,11 @@ export const blocking: DocSection = {
     },
     {
       heading: "Who can edit, who can view",
-      body: `<p>Everyone on a production can open the Blocking tab and step through beats. Editing, which covers stage setup, placing performers, capturing beats, arrows, and notes, is limited to admins, producers, directors, choreographers, creative team members, and stage managers. Cast and crew get a live, view-only copy, including on their phones. See <a href="/docs/people/roles-and-permissions">roles and permissions</a> for the full breakdown.</p>`,
+      body: `<p>Everyone on a production can open the Blocking tab and step through beats. Editing, which covers stage setup, placing performers, capturing beats, arrows, and notes, is limited to admins, producers, directors, choreographers, creative team members, and stage managers. Cast and crew get a live, view-only copy, including on their phones. See <a href="/help/people/roles-and-permissions">roles and permissions</a> for the full breakdown.</p>`,
     },
     {
       heading: "What you need before you start",
-      body: `<p>Two things make blocking sing: cast assigned on the <a href="/docs/productions/cast-crew-board">cast and crew board</a>, since performer tokens pull names and characters from there, and a ground plan PDF uploaded to the production's documents. Neither is strictly required. Proscene will happily give you a blank stage and a seeded first scene and beat so you can start dragging right away.</p>`,
+      body: `<p>Two things make blocking sing: cast assigned on the <a href="/help/productions/cast-crew-board">cast and crew board</a>, since performer tokens pull names and characters from there, and a ground plan PDF uploaded to the production's documents. Neither is strictly required. Proscene will happily give you a blank stage and a seeded first scene and beat so you can start dragging right away.</p>`,
     },
   ],
   pages: [
@@ -65,33 +65,33 @@ export const blocking: DocSection = {
       nextSteps: [
         {
           label: "Capture your first blocking beats",
-          href: "/docs/blocking/capturing-blocking-beats",
+          href: "/help/blocking/capturing-blocking-beats",
         },
         {
           label: "Get your cast onto the board",
-          href: "/docs/people/importing-cast-csv",
+          href: "/help/people/importing-cast-csv",
         },
         {
           label: "Upload the script",
-          href: "/docs/script/uploading-a-script",
+          href: "/help/script/uploading-a-script",
         },
       ],
       related: [
         {
           label: "The production setup wizard",
-          href: "/docs/productions/setup-wizard",
+          href: "/help/productions/setup-wizard",
         },
         {
           label: "Cast and crew board",
-          href: "/docs/productions/cast-crew-board",
+          href: "/help/productions/cast-crew-board",
         },
         {
           label: "AI script analysis can seed your scene list",
-          href: "/docs/script/ai-script-analysis",
+          href: "/help/script/ai-script-analysis",
         },
         {
           label: "Roles and permissions",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
       ],
     },
@@ -146,33 +146,33 @@ export const blocking: DocSection = {
       nextSteps: [
         {
           label: "Present blocking in Focus mode",
-          href: "/docs/blocking/presenting-blocking-in-focus-mode",
+          href: "/help/blocking/presenting-blocking-in-focus-mode",
         },
         {
           label: "Write up the rehearsal report",
-          href: "/docs/reports/creating-a-rehearsal-report",
+          href: "/help/reports/creating-a-rehearsal-report",
         },
         {
           label: "Set up your ground plan",
-          href: "/docs/blocking/setting-up-your-ground-plan",
+          href: "/help/blocking/setting-up-your-ground-plan",
         },
       ],
       related: [
         {
           label: "Cast and crew board",
-          href: "/docs/productions/cast-crew-board",
+          href: "/help/productions/cast-crew-board",
         },
         {
           label: "Script annotations and highlights",
-          href: "/docs/script/annotations-and-highlights",
+          href: "/help/script/annotations-and-highlights",
         },
         {
           label: "Not getting mention notifications?",
-          href: "/docs/troubleshooting/notifications",
+          href: "/help/troubleshooting/notifications",
         },
         {
           label: "Department notes in reports",
-          href: "/docs/reports/department-notes",
+          href: "/help/reports/department-notes",
         },
       ],
     },
@@ -219,33 +219,33 @@ export const blocking: DocSection = {
       nextSteps: [
         {
           label: "Write up the rehearsal report",
-          href: "/docs/reports/creating-a-rehearsal-report",
+          href: "/help/reports/creating-a-rehearsal-report",
         },
         {
           label: "Distribute the report to the company",
-          href: "/docs/reports/distributing-reports",
+          href: "/help/reports/distributing-reports",
         },
         {
           label: "Back to capturing beats",
-          href: "/docs/blocking/capturing-blocking-beats",
+          href: "/help/blocking/capturing-blocking-beats",
         },
       ],
       related: [
         {
           label: "Set up your ground plan",
-          href: "/docs/blocking/setting-up-your-ground-plan",
+          href: "/help/blocking/setting-up-your-ground-plan",
         },
         {
           label: "Your first rehearsal with Proscene",
-          href: "/docs/get-started/your-first-rehearsal",
+          href: "/help/get-started/your-first-rehearsal",
         },
         {
           label: "Script annotations and highlights",
-          href: "/docs/script/annotations-and-highlights",
+          href: "/help/script/annotations-and-highlights",
         },
         {
           label: "Roles and permissions",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
       ],
     },

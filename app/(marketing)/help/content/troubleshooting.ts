@@ -10,7 +10,7 @@ export const troubleshooting: DocSection = {
   overview: [
     {
       heading: "How to use this section",
-      body: `<p>Each page here is organized by symptom, not by feature. Find the question closest to what you are seeing, and the answer walks through what usually causes it and the fastest way out. Most of these problems are self-service: expired invite links, missing notifications, and stalled script analyses can all be recovered without waiting on anyone.</p><p>If the problem is really a "how do I" question, the how-to guides in the rest of the <a href="/docs">help manual</a> are a better starting point, and the <a href="/faq">FAQ</a> covers product and pricing questions.</p>`,
+      body: `<p>Each page here is organized by symptom, not by feature. Find the question closest to what you are seeing, and the answer walks through what usually causes it and the fastest way out. Most of these problems are self-service: expired invite links, missing notifications, and stalled script analyses can all be recovered without waiting on anyone.</p><p>If the problem is really a "how do I" question, the how-to guides in the rest of the <a href="/help">help manual</a> are a better starting point, and the <a href="/faq">FAQ</a> covers product and pricing questions.</p>`,
     },
     {
       heading: "Still stuck?",
@@ -38,44 +38,44 @@ export const troubleshooting: DocSection = {
         },
         {
           question: "I can't see a production I should be on",
-          answer: `<p>Membership in Proscene has two layers, and this symptom is nearly always the gap between them. Being invited to the company puts you in the workspace, but each production has its own member list. Admins and producers can see every show in the workspace; everyone else sees only the productions they have been added to.</p><p>The fix is to ask an admin or producer to add you to the show itself. They can do it from that production's <a href="/docs/productions/cast-crew-board">Cast &amp; Crew board</a>: casting you in a character, dropping you into a team bucket, or adding you to the production team all grant access. If you belong to more than one company on Proscene, also check that you are looking at the right workspace before assuming you are missing.</p>`,
+          answer: `<p>Membership in Proscene has two layers, and this symptom is nearly always the gap between them. Being invited to the company puts you in the workspace, but each production has its own member list. Admins and producers can see every show in the workspace; everyone else sees only the productions they have been added to.</p><p>The fix is to ask an admin or producer to add you to the show itself. They can do it from that production's <a href="/help/productions/cast-crew-board">Cast &amp; Crew board</a>: casting you in a character, dropping you into a team bucket, or adding you to the production team all grant access. If you belong to more than one company on Proscene, also check that you are looking at the right workspace before assuming you are missing.</p>`,
         },
         {
           question: "Why can't I see a rehearsal report",
-          answer: `<p>Draft rehearsal reports are intentionally hidden from most of the company. Drafts routinely hold attendance notes, line notes, and incident details that the stage manager has not finished or chosen to share yet, so only report managers (admins, producers, directors, choreographers, creative team, and stage managers) can see a report before it is distributed. Cast and crew see a report once it has been sent out.</p><p>If you are cast or crew and a report you expect is missing, it most likely has not been distributed yet: ask your stage manager. If you are on the management side and cannot see drafts, your role does not include report writing; ask an admin to check it. See <a href="/docs/reports/distributing-reports">Distributing reports</a> for how sending works.</p>`,
+          answer: `<p>Draft rehearsal reports are intentionally hidden from most of the company. Drafts routinely hold attendance notes, line notes, and incident details that the stage manager has not finished or chosen to share yet, so only report managers (admins, producers, directors, choreographers, creative team, and stage managers) can see a report before it is distributed. Cast and crew see a report once it has been sent out.</p><p>If you are cast or crew and a report you expect is missing, it most likely has not been distributed yet: ask your stage manager. If you are on the management side and cannot see drafts, your role does not include report writing; ask an admin to check it. See <a href="/help/reports/distributing-reports">Distributing reports</a> for how sending works.</p>`,
         },
         {
           question: "I have the wrong role",
-          answer: `<p>Your role controls what you can do, from writing reports to editing blocking, and it is set by whoever invited you, so a mis-click at invite time follows you around. You cannot change your own role; Proscene refuses with "You cannot change your own role." even for admins, so someone else has to fix it.</p><p>There are two roles to check. Your <strong>workspace role</strong> is what an admin sees in the company member list under Settings; ask an admin to update it there. Your <strong>per-production role</strong> is set on each show's <a href="/docs/productions/cast-crew-board">Cast &amp; Crew board</a>; an admin or producer can move you to the right bucket. One guard to know about: the last remaining admin of a workspace cannot be demoted or removed until another admin is promoted first. The full role list is in <a href="/docs/people/roles-and-permissions">Roles and permissions</a>.</p>`,
+          answer: `<p>Your role controls what you can do, from writing reports to editing blocking, and it is set by whoever invited you, so a mis-click at invite time follows you around. You cannot change your own role; Proscene refuses with "You cannot change your own role." even for admins, so someone else has to fix it.</p><p>There are two roles to check. Your <strong>workspace role</strong> is what an admin sees in the company member list under Settings; ask an admin to update it there. Your <strong>per-production role</strong> is set on each show's <a href="/help/productions/cast-crew-board">Cast &amp; Crew board</a>; an admin or producer can move you to the right bucket. One guard to know about: the last remaining admin of a workspace cannot be demoted or removed until another admin is promoted first. The full role list is in <a href="/help/people/roles-and-permissions">Roles and permissions</a>.</p>`,
         },
       ],
       tip: `<p>A failed sign-in also offers a way out: the login form includes a <strong>set / reset password</strong> link for anyone who was invited or never set a password. When in doubt, that reset flow is the universal recovery path into an account.</p>`,
       nextSteps: [
         {
           label: "Invite your company",
-          href: "/docs/get-started/invite-your-company",
+          href: "/help/get-started/invite-your-company",
         },
         {
           label: "Roles and permissions",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
         {
           label: "The Cast & Crew board",
-          href: "/docs/productions/cast-crew-board",
+          href: "/help/productions/cast-crew-board",
         },
       ],
       related: [
         {
           label: "People directory",
-          href: "/docs/people/people-directory",
+          href: "/help/people/people-directory",
         },
         {
           label: "Distributing reports",
-          href: "/docs/reports/distributing-reports",
+          href: "/help/reports/distributing-reports",
         },
         {
           label: "Notification problems",
-          href: "/docs/troubleshooting/notifications",
+          href: "/help/troubleshooting/notifications",
         },
         { label: "FAQ", href: "/faq" },
       ],
@@ -102,22 +102,22 @@ export const troubleshooting: DocSection = {
         },
         {
           question: "Which events send notifications",
-          answer: `<p>Not everything in Proscene notifies, so it helps to know what to expect.</p><ul><li><strong>Announcements</strong> notify their audience in-app, by email, and by push, according to each person's preferences.</li><li><strong>@Mentions</strong> in rehearsal reports, notes, announcements, blocking comments, and document comments appear in the Mentions list on your dashboard and send a push if you have it enabled. Several mentions in one save are batched into a single alert.</li><li><strong>Being added to a company</strong> notifies you in-app and by email if you already had a Proscene account; brand-new invitees get the invite email instead.</li><li><strong>AI script analysis</strong> notifies the person who requested it, in-app and by push, when results are ready.</li><li><strong>Rehearsal reports</strong> arrive as email, sent deliberately by a report manager to chosen recipients; they do not push.</li></ul><p>Scheduled calls do not send alerts when they are created or changed, so make checking your <a href="/docs/scheduling/personal-calendar">personal calendar</a> a habit and confirm calls through <a href="/docs/scheduling/rsvp-and-confirmations">RSVP</a>.</p>`,
+          answer: `<p>Not everything in Proscene notifies, so it helps to know what to expect.</p><ul><li><strong>Announcements</strong> notify their audience in-app, by email, and by push, according to each person's preferences.</li><li><strong>@Mentions</strong> in rehearsal reports, notes, announcements, blocking comments, and document comments appear in the Mentions list on your dashboard and send a push if you have it enabled. Several mentions in one save are batched into a single alert.</li><li><strong>Being added to a company</strong> notifies you in-app and by email if you already had a Proscene account; brand-new invitees get the invite email instead.</li><li><strong>AI script analysis</strong> notifies the person who requested it, in-app and by push, when results are ready.</li><li><strong>Rehearsal reports</strong> arrive as email, sent deliberately by a report manager to chosen recipients; they do not push.</li></ul><p>Scheduled calls do not send alerts when they are created or changed, so make checking your <a href="/help/scheduling/personal-calendar">personal calendar</a> a habit and confirm calls through <a href="/help/scheduling/rsvp-and-confirmations">RSVP</a>.</p>`,
         },
       ],
       tip: `<p>In-app notifications are always on and cannot be disabled, so the bell in the app is the one channel that never misses. If push and email both fail you mid-tech, the notification list in the app still has everything.</p>`,
       nextSteps: [
         {
           label: "Your personal calendar",
-          href: "/docs/scheduling/personal-calendar",
+          href: "/help/scheduling/personal-calendar",
         },
         {
           label: "RSVP and confirmations",
-          href: "/docs/scheduling/rsvp-and-confirmations",
+          href: "/help/scheduling/rsvp-and-confirmations",
         },
         {
           label: "Distributing reports",
-          href: "/docs/reports/distributing-reports",
+          href: "/help/reports/distributing-reports",
         },
       ],
       related: [
@@ -127,11 +127,11 @@ export const troubleshooting: DocSection = {
         },
         {
           label: "Creating calls",
-          href: "/docs/scheduling/creating-calls",
+          href: "/help/scheduling/creating-calls",
         },
         {
           label: "Invite and sign-in problems",
-          href: "/docs/troubleshooting/invites-and-access",
+          href: "/help/troubleshooting/invites-and-access",
         },
         { label: "Contact support", href: "/contact" },
       ],
@@ -165,25 +165,25 @@ export const troubleshooting: DocSection = {
       nextSteps: [
         {
           label: "Uploading a script",
-          href: "/docs/script/uploading-a-script",
+          href: "/help/script/uploading-a-script",
         },
         {
           label: "AI script analysis",
-          href: "/docs/script/ai-script-analysis",
+          href: "/help/script/ai-script-analysis",
         },
         {
           label: "The production setup wizard",
-          href: "/docs/productions/setup-wizard",
+          href: "/help/productions/setup-wizard",
         },
       ],
       related: [
         {
           label: "Annotations and highlights",
-          href: "/docs/script/annotations-and-highlights",
+          href: "/help/script/annotations-and-highlights",
         },
         {
           label: "Cue markers",
-          href: "/docs/script/cue-markers",
+          href: "/help/script/cue-markers",
         },
         {
           label: "The script tool",

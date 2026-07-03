@@ -15,7 +15,7 @@ export const reports: DocSection = {
     },
     {
       heading: "Who can create and send reports",
-      body: `<p>Creating, editing, and sending reports takes the report manager capability. In Proscene that belongs to admins, producers, directors, choreographers, creative team members, and stage managers. Everyone on a production, cast and crew included, can read a report once it has been distributed. See <a href="/docs/people/roles-and-permissions">roles and permissions</a> for the full breakdown.</p>`,
+      body: `<p>Creating, editing, and sending reports takes the report manager capability. In Proscene that belongs to admins, producers, directors, choreographers, creative team members, and stage managers. Everyone on a production, cast and crew included, can read a report once it has been distributed. See <a href="/help/people/roles-and-permissions">roles and permissions</a> for the full breakdown.</p>`,
     },
     {
       heading: "The draft to distributed lifecycle",
@@ -64,33 +64,33 @@ export const reports: DocSection = {
           body: `<p>Click <strong>Save draft</strong> to keep the report private to report managers; you land back on the reports list with a Draft pill on the new report. Click <strong>Distribute</strong> when it is ready for the company: the report becomes visible to everyone on the production and Proscene opens the email dialog so you can send it out.</p>`,
         },
       ],
-      tip: `<p>Missing a department card? The sections come from your production's department list, not a fixed set. Add or remove departments on the production's <strong>Settings</strong> tab, then come back to the form. See <a href="/docs/reports/department-notes">how department notes work</a>.</p>`,
+      tip: `<p>Missing a department card? The sections come from your production's department list, not a fixed set. Add or remove departments on the production's <strong>Settings</strong> tab, then come back to the form. See <a href="/help/reports/department-notes">how department notes work</a>.</p>`,
       nextSteps: [
         {
           label: "Distribute the report to your company",
-          href: "/docs/reports/distributing-reports",
+          href: "/help/reports/distributing-reports",
         },
         {
           label: "Shape the department sections for your show",
-          href: "/docs/reports/department-notes",
+          href: "/help/reports/department-notes",
         },
         {
           label: "Schedule the next rehearsal",
-          href: "/docs/scheduling/creating-calls",
+          href: "/help/scheduling/creating-calls",
         },
       ],
       related: [
         {
           label: "Departments on a production",
-          href: "/docs/productions/departments",
+          href: "/help/productions/departments",
         },
         {
           label: "Roles and permissions",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
         {
           label: "Your first rehearsal",
-          href: "/docs/get-started/your-first-rehearsal",
+          href: "/help/get-started/your-first-rehearsal",
         },
         { label: "Rehearsal reports feature tour", href: "/features#reports" },
       ],
@@ -117,7 +117,7 @@ export const reports: DocSection = {
         },
         {
           heading: "Managing the list",
-          body: `<p>Open your production's <strong>Settings</strong> tab and find the <strong>Departments</strong> panel. From there you can add departments from the standard catalog, add a custom one, remove departments the show does not use, and save. The <a href="/docs/productions/setup-wizard">setup wizard</a> seeds this list when the production is created, so most shows only come back here when something changes.</p>`,
+          body: `<p>Open your production's <strong>Settings</strong> tab and find the <strong>Departments</strong> panel. From there you can add departments from the standard catalog, add a custom one, remove departments the show does not use, and save. The <a href="/help/productions/setup-wizard">setup wizard</a> seeds this list when the production is created, so most shows only come back here when something changes.</p>`,
         },
         {
           heading: "Notes route to the right team, and history is safe",
@@ -127,29 +127,29 @@ export const reports: DocSection = {
       nextSteps: [
         {
           label: "Create a rehearsal report",
-          href: "/docs/reports/creating-a-rehearsal-report",
+          href: "/help/reports/creating-a-rehearsal-report",
         },
         {
           label: "Manage departments on a production",
-          href: "/docs/productions/departments",
+          href: "/help/productions/departments",
         },
         {
           label: "See the Cast & Crew board",
-          href: "/docs/productions/cast-crew-board",
+          href: "/help/productions/cast-crew-board",
         },
       ],
       related: [
         {
           label: "Distribute a rehearsal report",
-          href: "/docs/reports/distributing-reports",
+          href: "/help/reports/distributing-reports",
         },
         {
           label: "The production setup wizard",
-          href: "/docs/productions/setup-wizard",
+          href: "/help/productions/setup-wizard",
         },
         {
           label: "Roles and permissions",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
         { label: "Rehearsal reports feature tour", href: "/features#reports" },
       ],
@@ -191,29 +191,29 @@ export const reports: DocSection = {
       nextSteps: [
         {
           label: "Create the next rehearsal report",
-          href: "/docs/reports/creating-a-rehearsal-report",
+          href: "/help/reports/creating-a-rehearsal-report",
         },
         {
           label: "Get everyone onto the production",
-          href: "/docs/get-started/invite-your-company",
+          href: "/help/get-started/invite-your-company",
         },
         {
           label: "Check who holds which role",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
       ],
       related: [
         {
           label: "Department notes in rehearsal reports",
-          href: "/docs/reports/department-notes",
+          href: "/help/reports/department-notes",
         },
         {
           label: "The people directory",
-          href: "/docs/people/people-directory",
+          href: "/help/people/people-directory",
         },
         {
           label: "Troubleshooting notifications",
-          href: "/docs/troubleshooting/notifications",
+          href: "/help/troubleshooting/notifications",
         },
         { label: "Rehearsal reports feature tour", href: "/features#reports" },
       ],

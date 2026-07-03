@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import "./docs.css";
+import "./help.css";
 import { DOC_SECTIONS, POPULAR_PAGES } from "./content";
 
 export const metadata: Metadata = {
   title: "Proscene Help & Manual · Setup guides, how-tos, and troubleshooting",
   description:
     "The Proscene manual: setup guides, feature how-tos, and troubleshooting for stage managers, directors, and theatre companies.",
-  alternates: { canonical: "/docs" },
+  alternates: { canonical: "/help" },
 };
 
 export default function DocsHubPage() {
@@ -31,7 +31,7 @@ export default function DocsHubPage() {
         <div className="wrap">
           <div className="docs-grid">
             {DOC_SECTIONS.map((s) => (
-              <Link className="docs-card" key={s.slug} href={`/docs/${s.slug}`}>
+              <Link className="docs-card" key={s.slug} href={`/help/${s.slug}`}>
                 <h2>{s.title}</h2>
                 <p>{s.blurb}</p>
                 <ul>

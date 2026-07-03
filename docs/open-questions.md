@@ -7,7 +7,7 @@ Unresolved questions, risks, and concerns. Organized by area. Do not decide answ
 ## SEO / docs-manual follow-ups (added 2026-07-02)
 
 - **Docs content can drift from the product.** The 27 manual pages under
-  `app/(marketing)/docs/content/` describe the app as of 2026-07-02, verified
+  `app/(marketing)/help/content/` describe the app as of 2026-07-02, verified
   against code at authoring time. Any feature/UI change now needs the matching
   content file updated in the same session, or the public manual quietly lies.
 - **No screenshots on docs pages yet.** The strategy calls for a screenshot per

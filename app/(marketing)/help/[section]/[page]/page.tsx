@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import "../../docs.css";
+import "../../help.css";
 import { DOC_SECTIONS, getPage } from "../../content";
 import { JsonLd } from "../../../_components/json-ld";
 import { SITE_URL } from "@/lib/site";
@@ -25,7 +25,7 @@ export async function generateMetadata({
   return {
     title: `${found.page.title} · Proscene Help`,
     description: found.page.description,
-    alternates: { canonical: `/docs/${section}/${page}` },
+    alternates: { canonical: `/help/${section}/${page}` },
   };
 }
 
@@ -44,14 +44,14 @@ export default async function DocsArticlePage({
   if (!found) notFound();
   const { section, page } = found;
 
-  const url = `${SITE_URL}/docs/${section.slug}/${page.slug}`;
+  const url = `${SITE_URL}/help/${section.slug}/${page.slug}`;
 
   const breadcrumb = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Docs", item: `${SITE_URL}/docs` },
-      { "@type": "ListItem", position: 2, name: section.title, item: `${SITE_URL}/docs/${section.slug}` },
+      { "@type": "ListItem", position: 1, name: "Help", item: `${SITE_URL}/help` },
+      { "@type": "ListItem", position: 2, name: section.title, item: `${SITE_URL}/help/${section.slug}` },
       { "@type": "ListItem", position: 3, name: page.title, item: url },
     ],
   };
@@ -94,9 +94,9 @@ export default async function DocsArticlePage({
 
       <div className="wrap docs-article-wrap">
         <nav className="docs-breadcrumb" aria-label="Breadcrumb">
-          <Link href="/docs">Docs</Link>
+          <Link href="/help">Help</Link>
           <span aria-hidden>/</span>
-          <Link href={`/docs/${section.slug}`}>{section.title}</Link>
+          <Link href={`/help/${section.slug}`}>{section.title}</Link>
           <span aria-hidden>/</span>
           <span aria-current="page">{page.title}</span>
         </nav>

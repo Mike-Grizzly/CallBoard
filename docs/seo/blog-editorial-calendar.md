@@ -31,7 +31,7 @@
 - Timing and distribution: send within the hour, same format every night
 - CTA: see how Proscene auto-assembles and routes the report
 
-**Internal links:** `/docs/reports/creating-a-rehearsal-report` (CTA), `/docs/reports/department-notes`, `/docs/reports/distributing-reports`, `/features#reports`. Cross-links once live: Post 3, Post 4, Post 12.
+**Internal links:** `/help/reports/creating-a-rehearsal-report` (CTA), `/help/reports/department-notes`, `/help/reports/distributing-reports`, `/features#reports`. Cross-links once live: Post 3, Post 4, Post 12.
 
 ---
 
@@ -58,7 +58,7 @@
 - Paper vs digital blocking: honest comparison table (cost, speed, legibility, sharing, revisions)
 - CTA: set up a digital ground plan in Proscene
 
-**Internal links:** `/docs/blocking/setting-up-your-ground-plan` (CTA), `/docs/blocking/capturing-blocking-beats`, `/features#blocking`. Cross-links: Post 1, Post 3.
+**Internal links:** `/help/blocking/setting-up-your-ground-plan` (CTA), `/help/blocking/capturing-blocking-beats`, `/features#blocking`. Cross-links: Post 1, Post 3.
 
 ---
 
@@ -85,7 +85,7 @@
 - The run and closing: performance reports, brush-up notes, strike prep
 - CTA: build and send the tech schedule as calls in Proscene
 
-**Internal links:** `/docs/scheduling/creating-calls` (CTA), `/docs/script/cue-markers`, `/docs/reports/creating-a-rehearsal-report`, `/features#calls`. Cross-links: Post 1, Post 2, Post 4.
+**Internal links:** `/help/scheduling/creating-calls` (CTA), `/help/script/cue-markers`, `/help/reports/creating-a-rehearsal-report`, `/features#calls`. Cross-links: Post 1, Post 2, Post 4.
 
 ---
 
@@ -112,7 +112,7 @@
 - Getting confirmations without chasing people through three group chats
 - CTA: generate the whole backbone in one pass with Proscene bulk schedule generation
 
-**Internal links:** `/docs/scheduling/bulk-schedule-generation` (CTA), `/docs/scheduling/creating-calls`, `/docs/scheduling/rsvp-and-confirmations`, `/features#calendar`. Cross-links: Post 1, Post 3.
+**Internal links:** `/help/scheduling/bulk-schedule-generation` (CTA), `/help/scheduling/creating-calls`, `/help/scheduling/rsvp-and-confirmations`, `/features#calendar`. Cross-links: Post 1, Post 3.
 
 ---
 
@@ -141,7 +141,7 @@
 - Recommendations by segment: community, educational, regional, touring
 - CTA: try Proscene free during open beta
 
-**Internal links:** `/pricing`, `/signup` (CTA), `/docs/get-started/create-your-workspace`, `/features#reports`, `/features#blocking`. Cross-links: Posts 1, 2, 4, 9.
+**Internal links:** `/pricing`, `/signup` (CTA), `/help/get-started/create-your-workspace`, `/features#reports`, `/features#blocking`. Cross-links: Posts 1, 2, 4, 9.
 
 ---
 
@@ -168,7 +168,7 @@
 - Prep week checklist (printable)
 - CTA: run the Proscene setup wizard
 
-**Internal links:** `/docs/productions/setup-wizard` (CTA), `/docs/get-started/set-up-your-first-production`, `/docs/people/importing-cast-csv`, `/features#people`. Cross-links: Posts 1, 4, 10.
+**Internal links:** `/help/productions/setup-wizard` (CTA), `/help/get-started/set-up-your-first-production`, `/help/people/importing-cast-csv`, `/features#people`. Cross-links: Posts 1, 4, 10.
 
 ---
 
@@ -194,7 +194,7 @@
 - Distributing action items and closing the loop before next week
 - CTA: route department notes automatically with Proscene reports
 
-**Internal links:** `/docs/reports/distributing-reports` (CTA), `/docs/productions/departments`, `/features#reports`. Cross-links: Posts 1, 12.
+**Internal links:** `/help/reports/distributing-reports` (CTA), `/help/productions/departments`, `/features#reports`. Cross-links: Posts 1, 12.
 
 ---
 
@@ -221,7 +221,7 @@
 - Which of these can live in one place digitally (brief, honest)
 - CTA: see how Proscene keeps reports, blocking, and calls in one production hub
 
-**Internal links:** `/docs/reports/creating-a-rehearsal-report` (CTA), `/docs/blocking/capturing-blocking-beats`, `/docs/scheduling/creating-calls`, `/features#reports`. Cross-links: Posts 1, 2, 3, 6.
+**Internal links:** `/help/reports/creating-a-rehearsal-report` (CTA), `/help/blocking/capturing-blocking-beats`, `/help/scheduling/creating-calls`, `/features#reports`. Cross-links: Posts 1, 2, 3, 6.
 
 ---
 
@@ -249,7 +249,7 @@
 - A worksheet: questions to ask before your company pays for anything
 - CTA: start free during the open beta
 
-**Internal links:** `/pricing`, `/signup` (CTA), `/docs/get-started/create-your-workspace`, `/features#reports`. Cross-links: Posts 5, 13.
+**Internal links:** `/pricing`, `/signup` (CTA), `/help/get-started/create-your-workspace`, `/features#reports`. Cross-links: Posts 5, 13.
 
 ---
 
@@ -275,7 +275,7 @@
 - Troubleshooting: duplicates, bounced invites, people who never check email
 - CTA: full import reference in the docs
 
-**Internal links:** `/docs/people/importing-cast-csv` (CTA), `/docs/people/people-directory`, `/docs/troubleshooting/invites-and-access`, `/features#people`. Cross-links: Posts 6, 13.
+**Internal links:** `/help/people/importing-cast-csv` (CTA), `/help/people/people-directory`, `/help/troubleshooting/invites-and-access`, `/features#people`. Cross-links: Posts 6, 13.
 
 ---
 
@@ -301,7 +301,7 @@
 - Tool selection for schools: budget, device access, privacy, adoption by teenagers
 - CTA: set up a class production and invite students with one link
 
-**Internal links:** `/docs/get-started/invite-your-company` (CTA), `/docs/people/roles-and-permissions`, `/features#people`, `/pricing`. Cross-links: Posts 1, 3, 9.
+**Internal links:** `/help/get-started/invite-your-company` (CTA), `/help/people/roles-and-permissions`, `/features#people`, `/pricing`. Cross-links: Posts 1, 3, 9.
 
 ---
 
@@ -327,7 +327,7 @@
 - The department-routing model: why notes should land in the right inbox, not one long email
 - CTA: see department-routed reports in Proscene
 
-**Internal links:** `/docs/reports/department-notes` (CTA), `/docs/reports/distributing-reports`, `/features#reports`. Cross-links: Posts 1, 7.
+**Internal links:** `/help/reports/department-notes` (CTA), `/help/reports/distributing-reports`, `/features#reports`. Cross-links: Posts 1, 7.
 
 ---
 
@@ -354,7 +354,7 @@
 - Troubleshooting the first-week issues before they become resentment
 - CTA: invite your company with one link
 
-**Internal links:** `/docs/get-started/invite-your-company` (CTA), `/docs/scheduling/rsvp-and-confirmations`, `/docs/troubleshooting/invites-and-access`, `/features#people`, `/signup`. Cross-links: Posts 4, 9, 10.
+**Internal links:** `/help/get-started/invite-your-company` (CTA), `/help/scheduling/rsvp-and-confirmations`, `/help/troubleshooting/invites-and-access`, `/features#people`, `/signup`. Cross-links: Posts 4, 9, 10.
 
 ---
 

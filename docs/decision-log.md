@@ -2492,3 +2492,20 @@ fixed in passing). The app itself should never be indexed.
 every docs page, and Sanity blog posts (degrading silently if the CMS is
 unreachable). Canonical host stays `https://www.proscene.app` via
 `NEXT_PUBLIC_SITE_URL` (`lib/site.ts`, also used for `metadataBase`).
+
+## 2026-07-02 — Help center URL is /help, not /docs
+
+**Decision:** The public manual moved from `/docs` to `/help` (same session,
+before any deploy or indexing). Permanent redirects `/docs/:path*` →
+`/help/:path*` live in `next.config.ts`. Nav label is "Help"; the hub keeps
+its "The manual." branding.
+
+**Reason:** Owner call, matching end-user SaaS convention (Notion, Canva,
+Slack use `/help`); `/docs` is a developer-product convention and reads wrong
+for stage managers and theatre companies. The SEO strategy only requires
+same-domain placement, which is preserved.
+
+**Impact:** All internal links (manual cross-links, footer, editorial
+calendar, blog drafts) now use `/help/...`. If the slug ever changes again,
+`app/(marketing)/help/` content files, `proxy.ts` PUBLIC_ROUTES, the sitemap,
+and the redirect map are the touchpoints.

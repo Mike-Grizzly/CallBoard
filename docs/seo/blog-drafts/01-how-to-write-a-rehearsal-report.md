@@ -6,7 +6,7 @@
 - **Excerpt:** Learn how to write a rehearsal report stage managers actually read, with a free USITT-standard rehearsal report template and a filled-in sample.
 - **Tags:** rehearsal report, rehearsal report template, stage management, USITT, production paperwork, department notes, stage manager
 - **Read time:** 8 min
-- **Internal links used:** /docs/reports/creating-a-rehearsal-report (CTA), /docs/reports/department-notes, /docs/reports/distributing-reports, /features#reports
+- **Internal links used:** /help/reports/creating-a-rehearsal-report (CTA), /help/reports/department-notes, /help/reports/distributing-reports, /features#reports
 
 ---
 
@@ -46,7 +46,7 @@ A brief factual account: which scenes or numbers were worked, whether it was blo
 
 This is the heart of the report and the reason it exists. One section per department, and every department gets a line even if the line is "No notes today, thank you!" A department that never sees its name stops reading, and the night you finally have a note for them, they miss it.
 
-Typical sections: Scenic, Props, Costumes, Lighting, Sound, Music, Choreography, Production/Stage Management, and General. Adjust to your show. A good breakdown of how to write notes each department can act on lives in [department notes](/docs/reports/department-notes), but the short version is in the tips below.
+Typical sections: Scenic, Props, Costumes, Lighting, Sound, Music, Choreography, Production/Stage Management, and General. Adjust to your show. A good breakdown of how to write notes each department can act on lives in [department notes](/help/reports/department-notes), but the short version is in the tips below.
 
 ### General notes and questions
 
@@ -198,7 +198,7 @@ Notice what the sample does. Every note names a page, a deadline, or a decision-
 
 Send the report the same night, within an hour of the end of rehearsal if you can manage it. A report that arrives at noon the next day has already cost the shop a morning. Send it from the same address, with the same subject line format ("Rehearsal Report #17: The 39 Steps"), to a list you maintain deliberately. Every designer, every department head, the director, the producer. When in doubt, include them.
 
-The traditional workflow is the painful part: you keep notes on paper or in your phone all night, then rebuild them into a formatted email at 10:30pm while the building manager waits to lock up. This is the part worth automating. Proscene assembles the report as you go and routes each note to the right department when you [distribute it](/docs/reports/distributing-reports), so the 10:30pm rebuild disappears. But whether you use software or a template in an email, the discipline is the same: every night, every department, no exceptions.
+The traditional workflow is the painful part: you keep notes on paper or in your phone all night, then rebuild them into a formatted email at 10:30pm while the building manager waits to lock up. This is the part worth automating. Proscene assembles the report as you go and routes each note to the right department when you [distribute it](/help/reports/distributing-reports), so the 10:30pm rebuild disappears. But whether you use software or a template in an email, the discipline is the same: every night, every department, no exceptions.
 
 ## The habit is the skill
 
@@ -206,4 +206,4 @@ Nobody remembers a merely adequate rehearsal report, and that is the point. A re
 
 Copy the template above, put it somewhere you can reach at 10pm, and send report #1 after your next rehearsal.
 
-**See how Proscene builds the report for you as you take notes: [Creating a rehearsal report](/docs/reports/creating-a-rehearsal-report), part of [Proscene's reports feature](/features#reports). Free during open beta.**
+**See how Proscene builds the report for you as you take notes: [Creating a rehearsal report](/help/reports/creating-a-rehearsal-report), part of [Proscene's reports feature](/features#reports). Free during open beta.**

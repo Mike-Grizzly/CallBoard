@@ -6,7 +6,7 @@
 - **Excerpt:** How to build a rehearsal schedule that survives contact with real life: a rehearsal schedule template, example call tables, and conflict tips.
 - **Tags:** rehearsal schedule template, call schedule, rehearsal calls, theatre scheduling, daily call, conflict calendar, stage management
 - **Read time:** 7 min
-- **Internal links used:** /docs/scheduling/bulk-schedule-generation (CTA), /docs/scheduling/creating-calls, /docs/scheduling/rsvp-and-confirmations, /features#calendar
+- **Internal links used:** /help/scheduling/bulk-schedule-generation (CTA), /help/scheduling/creating-calls, /help/scheduling/rsvp-and-confirmations, /features#calendar
 
 ---
 
@@ -98,7 +98,7 @@ Here is the workflow that saves the most time in practice:
 2. **Layer the content in as you go.** Two weeks out, each skeleton call gets its scenes and its cast list, informed by where the work actually is rather than where you guessed it would be in week zero.
 3. **Break the pattern deliberately.** Added Saturday calls before a stumble run, a shifted start for a space conflict. Exceptions read as exceptions when the backbone is steady.
 
-If you are doing this in a spreadsheet, the backbone is an hour of copy-paste. This is also the step where scheduling software earns its keep: in Proscene you set the pattern (which weekdays, what times, what date range) and [bulk schedule generation](/docs/scheduling/bulk-schedule-generation) creates every call in one pass, each one individually editable afterward, with saved templates for your standard rehearsal setups.
+If you are doing this in a spreadsheet, the backbone is an hour of copy-paste. This is also the step where scheduling software earns its keep: in Proscene you set the pattern (which weekdays, what times, what date range) and [bulk schedule generation](/help/scheduling/bulk-schedule-generation) creates every call in one pass, each one individually editable afterward, with saved templates for your standard rehearsal setups.
 
 ## Getting confirmations without chasing people
 
@@ -111,7 +111,7 @@ Whatever your tools, the fix is the same discipline:
 - **Re-confirm anything that changes.** A changed call inherits zero confirmations.
 - **Close the loop the same day.** Chase the two holdouts while the change is fresh, not the night before.
 
-One-tap confirmations tied to each call (the model behind [RSVP and confirmations](/docs/scheduling/rsvp-and-confirmations)) exist precisely because "seen by 14" is not the same as "confirmed by 14."
+One-tap confirmations tied to each call (the model behind [RSVP and confirmations](/help/scheduling/rsvp-and-confirmations)) exist precisely because "seen by 14" is not the same as "confirmed by 14."
 
 ## Publish early, revise honestly
 
@@ -119,4 +119,4 @@ The last rule is temperamental, not technical. Publish the master schedule as ea
 
 Build the backbone, cross-reference the conflicts, call people to be used, and confirm everything twice. That is the whole craft of how to make a call schedule, and it is 90 percent discipline, 10 percent template.
 
-**Skip the copy-paste hour: generate your whole rehearsal backbone in one pass with [bulk schedule generation](/docs/scheduling/bulk-schedule-generation) on [Proscene's production calendar](/features#calendar). Free during open beta.**
+**Skip the copy-paste hour: generate your whole rehearsal backbone in one pass with [bulk schedule generation](/help/scheduling/bulk-schedule-generation) on [Proscene's production calendar](/features#calendar). Free during open beta.**

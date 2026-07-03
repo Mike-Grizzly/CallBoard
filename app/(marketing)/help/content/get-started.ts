@@ -37,7 +37,7 @@ export const getStarted: DocSection = {
 <tr><td><strong>Cast, Crew</strong></td><td>See the schedule and confirm calls, read distributed reports and announcements, view documents and blocking, and keep their own notes.</td></tr>
 </tbody>
 </table>
-<p>One rule worth knowing on day one: a rehearsal report stays private to the report-writing roles while it is a draft. Cast and crew only see it once you distribute it. The full breakdown is in <a href="/docs/people/roles-and-permissions">Roles and permissions</a>.</p>`,
+<p>One rule worth knowing on day one: a rehearsal report stays private to the report-writing roles while it is a draft. Cast and crew only see it once you distribute it. The full breakdown is in <a href="/help/people/roles-and-permissions">Roles and permissions</a>.</p>`,
     },
   ],
   pages: [
@@ -71,7 +71,7 @@ export const getStarted: DocSection = {
         },
         {
           title: "Invite your first teammates (optional)",
-          body: `<p>Under <strong>Invite your team</strong>, add a row per person with first name, last name, email, and a role, and click <strong>Add another</strong> for more. Each person gets an email inviting them to join your workspace. If you would rather do this later with the full tooling (CSV import, bulk paste), skip it and see <a href="/docs/get-started/invite-your-company">Invite your company</a>.</p>`,
+          body: `<p>Under <strong>Invite your team</strong>, add a row per person with first name, last name, email, and a role, and click <strong>Add another</strong> for more. Each person gets an email inviting them to join your workspace. If you would rather do this later with the full tooling (CSV import, bulk paste), skip it and see <a href="/help/get-started/invite-your-company">Invite your company</a>.</p>`,
         },
         {
           title: "Finish setup",
@@ -82,25 +82,25 @@ export const getStarted: DocSection = {
       nextSteps: [
         {
           label: "Set up your first production",
-          href: "/docs/get-started/set-up-your-first-production",
+          href: "/help/get-started/set-up-your-first-production",
         },
         {
           label: "Invite your company",
-          href: "/docs/get-started/invite-your-company",
+          href: "/help/get-started/invite-your-company",
         },
       ],
       related: [
         {
           label: "Roles and permissions",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
         {
           label: "Troubleshooting invites and access",
-          href: "/docs/troubleshooting/invites-and-access",
+          href: "/help/troubleshooting/invites-and-access",
         },
         {
           label: "Run your first rehearsal",
-          href: "/docs/get-started/your-first-rehearsal",
+          href: "/help/get-started/your-first-rehearsal",
         },
         { label: "People features", href: "/features#people" },
       ],
@@ -127,7 +127,7 @@ export const getStarted: DocSection = {
         },
         {
           title: "Pick your departments",
-          body: `<p>Choose which teams this show needs (scenery, props, costumes, lighting, sound, and so on), and add custom ones if your company runs differently. Departments shape two things downstream: the sections of every rehearsal report and the team buckets on the Cast &amp; Crew board. You can change them later in the production's Settings tab; see <a href="/docs/productions/departments">Departments</a>.</p>`,
+          body: `<p>Choose which teams this show needs (scenery, props, costumes, lighting, sound, and so on), and add custom ones if your company runs differently. Departments shape two things downstream: the sections of every rehearsal report and the team buckets on the Cast &amp; Crew board. You can change them later in the production's Settings tab; see <a href="/help/productions/departments">Departments</a>.</p>`,
         },
         {
           title: "Build the cast list",
@@ -146,26 +146,26 @@ export const getStarted: DocSection = {
       nextSteps: [
         {
           label: "Invite your company",
-          href: "/docs/get-started/invite-your-company",
+          href: "/help/get-started/invite-your-company",
         },
         {
           label: "Run your first rehearsal",
-          href: "/docs/get-started/your-first-rehearsal",
+          href: "/help/get-started/your-first-rehearsal",
         },
       ],
       related: [
         {
           label: "The production setup wizard in depth",
-          href: "/docs/productions/setup-wizard",
+          href: "/help/productions/setup-wizard",
         },
         {
           label: "The Cast & Crew board",
-          href: "/docs/productions/cast-crew-board",
+          href: "/help/productions/cast-crew-board",
         },
-        { label: "Departments", href: "/docs/productions/departments" },
+        { label: "Departments", href: "/help/productions/departments" },
         {
           label: "Importing a cast from CSV",
-          href: "/docs/people/importing-cast-csv",
+          href: "/help/people/importing-cast-csv",
         },
       ],
     },
@@ -183,7 +183,7 @@ export const getStarted: DocSection = {
         },
         {
           title: "Choose how to add them",
-          body: `<p>Type one person in manually, upload a CSV (you map the columns and preview before anything imports), or paste a list of names and emails. For a whole season's worth of people, CSV or paste is the fast path; see <a href="/docs/people/importing-cast-csv">Importing a cast from CSV</a>.</p>`,
+          body: `<p>Type one person in manually, upload a CSV (you map the columns and preview before anything imports), or paste a list of names and emails. For a whole season's worth of people, CSV or paste is the fast path; see <a href="/help/people/importing-cast-csv">Importing a cast from CSV</a>.</p>`,
         },
         {
           title: "Give each person a role",
@@ -191,7 +191,7 @@ export const getStarted: DocSection = {
         },
         {
           title: "Assign productions in the same pass (optional)",
-          body: `<p>You can attach people to a production as you add them, so an invited actor lands with their show already on their dashboard. You can also do this later by multi-selecting rows in the People table or by dragging on the <a href="/docs/productions/cast-crew-board">Cast &amp; Crew board</a>.</p>`,
+          body: `<p>You can attach people to a production as you add them, so an invited actor lands with their show already on their dashboard. You can also do this later by multi-selecting rows in the People table or by dragging on the <a href="/help/productions/cast-crew-board">Cast &amp; Crew board</a>.</p>`,
         },
         {
           title: "Send the invites",
@@ -210,29 +210,29 @@ export const getStarted: DocSection = {
       nextSteps: [
         {
           label: "Run your first rehearsal",
-          href: "/docs/get-started/your-first-rehearsal",
+          href: "/help/get-started/your-first-rehearsal",
         },
         {
           label: "Roles and permissions",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
       ],
       related: [
         {
           label: "The People directory",
-          href: "/docs/people/people-directory",
+          href: "/help/people/people-directory",
         },
         {
           label: "Importing a cast from CSV",
-          href: "/docs/people/importing-cast-csv",
+          href: "/help/people/importing-cast-csv",
         },
         {
           label: "Troubleshooting invites and access",
-          href: "/docs/troubleshooting/invites-and-access",
+          href: "/help/troubleshooting/invites-and-access",
         },
         {
           label: "The Cast & Crew board",
-          href: "/docs/productions/cast-crew-board",
+          href: "/help/productions/cast-crew-board",
         },
       ],
     },
@@ -258,7 +258,7 @@ export const getStarted: DocSection = {
         },
         {
           title: "Watch the confirmations come in",
-          body: `<p>Company members see the call on their dashboard with a <strong>Confirm you'll be there</strong> button (tapping again undoes it). Your dashboard shows a running count, "3 of 12 confirmed", with the confirmed faces, so you know before you leave for the theatre who has seen the call. More in <a href="/docs/scheduling/rsvp-and-confirmations">RSVP and confirmations</a>.</p>`,
+          body: `<p>Company members see the call on their dashboard with a <strong>Confirm you'll be there</strong> button (tapping again undoes it). Your dashboard shows a running count, "3 of 12 confirmed", with the confirmed faces, so you know before you leave for the theatre who has seen the call. More in <a href="/help/scheduling/rsvp-and-confirmations">RSVP and confirmations</a>.</p>`,
         },
         {
           title: "Start the rehearsal report",
@@ -270,37 +270,37 @@ export const getStarted: DocSection = {
         },
         {
           title: "Distribute the report",
-          body: `<p>When it is ready, click <strong>Distribute</strong>. The report becomes visible to the whole production, and the email picker opens so you can send it out: choose <strong>Entire production</strong> or tick individual recipients. Full details in <a href="/docs/reports/distributing-reports">Distributing reports</a>.</p>`,
+          body: `<p>When it is ready, click <strong>Distribute</strong>. The report becomes visible to the whole production, and the email picker opens so you can send it out: choose <strong>Entire production</strong> or tick individual recipients. Full details in <a href="/help/reports/distributing-reports">Distributing reports</a>.</p>`,
         },
         {
           title: "Set up the rest of the run (optional)",
-          body: `<p>Once the first call feels right, stop scheduling one night at a time: in the Schedule a call tray, flip the toggle from <strong>One call</strong> to <strong>Repeating</strong> to generate a whole block of rehearsals across a date range and chosen weekdays. See <a href="/docs/scheduling/bulk-schedule-generation">Bulk schedule generation</a>.</p>`,
+          body: `<p>Once the first call feels right, stop scheduling one night at a time: in the Schedule a call tray, flip the toggle from <strong>One call</strong> to <strong>Repeating</strong> to generate a whole block of rehearsals across a date range and chosen weekdays. See <a href="/help/scheduling/bulk-schedule-generation">Bulk schedule generation</a>.</p>`,
         },
       ],
       tip: `<p><strong>Cast says they cannot see the report?</strong> It is almost always still a draft. Draft reports are hidden from cast and crew on every surface (the list, the report page, even the dashboard feed) until you click <strong>Distribute</strong>. Open the report and check the pill next to its title: amber Draft means only report writers can see it, sage Distributed means the company can.</p>`,
       nextSteps: [
         {
           label: "Bulk schedule generation",
-          href: "/docs/scheduling/bulk-schedule-generation",
+          href: "/help/scheduling/bulk-schedule-generation",
         },
         {
           label: "Distributing reports",
-          href: "/docs/reports/distributing-reports",
+          href: "/help/reports/distributing-reports",
         },
       ],
       related: [
-        { label: "Creating calls", href: "/docs/scheduling/creating-calls" },
+        { label: "Creating calls", href: "/help/scheduling/creating-calls" },
         {
           label: "RSVP and confirmations",
-          href: "/docs/scheduling/rsvp-and-confirmations",
+          href: "/help/scheduling/rsvp-and-confirmations",
         },
         {
           label: "Creating a rehearsal report",
-          href: "/docs/reports/creating-a-rehearsal-report",
+          href: "/help/reports/creating-a-rehearsal-report",
         },
         {
           label: "Department notes",
-          href: "/docs/reports/department-notes",
+          href: "/help/reports/department-notes",
         },
       ],
     },

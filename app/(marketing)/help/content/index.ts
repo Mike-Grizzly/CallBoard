@@ -37,26 +37,26 @@ export function getPage(
 export const POPULAR_PAGES: DocLink[] = [
   {
     label: "Set up your first production",
-    href: "/docs/get-started/set-up-your-first-production",
+    href: "/help/get-started/set-up-your-first-production",
   },
   {
     label: "Create a rehearsal report",
-    href: "/docs/reports/creating-a-rehearsal-report",
+    href: "/help/reports/creating-a-rehearsal-report",
   },
   {
     label: "Create and send a rehearsal call",
-    href: "/docs/scheduling/creating-calls",
+    href: "/help/scheduling/creating-calls",
   },
   {
     label: "Import a cast list from a spreadsheet",
-    href: "/docs/people/importing-cast-csv",
+    href: "/help/people/importing-cast-csv",
   },
   {
     label: "Capture blocking beat by beat",
-    href: "/docs/blocking/capturing-blocking-beats",
+    href: "/help/blocking/capturing-blocking-beats",
   },
   {
     label: "Invite and sign-in problems",
-    href: "/docs/troubleshooting/invites-and-access",
+    href: "/help/troubleshooting/invites-and-access",
   },
 ];

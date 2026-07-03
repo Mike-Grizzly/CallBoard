@@ -69,33 +69,33 @@ export const people: DocSection = {
       nextSteps: [
         {
           label: "Assign people to productions in the directory",
-          href: "/docs/people/people-directory",
+          href: "/help/people/people-directory",
         },
         {
           label: "Build your cast & crew board",
-          href: "/docs/productions/cast-crew-board",
+          href: "/help/productions/cast-crew-board",
         },
         {
           label: "Understand roles and permissions",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
       ],
       related: [
         {
           label: "Invite your company",
-          href: "/docs/get-started/invite-your-company",
+          href: "/help/get-started/invite-your-company",
         },
         {
           label: "Fix invite and access problems",
-          href: "/docs/troubleshooting/invites-and-access",
+          href: "/help/troubleshooting/invites-and-access",
         },
         {
           label: "The production setup wizard",
-          href: "/docs/productions/setup-wizard",
+          href: "/help/productions/setup-wizard",
         },
         {
           label: "Creating rehearsal calls",
-          href: "/docs/scheduling/creating-calls",
+          href: "/help/scheduling/creating-calls",
         },
       ],
     },
@@ -167,29 +167,29 @@ export const people: DocSection = {
       nextSteps: [
         {
           label: "Invite your company",
-          href: "/docs/get-started/invite-your-company",
+          href: "/help/get-started/invite-your-company",
         },
         {
           label: "Add people in bulk from a spreadsheet",
-          href: "/docs/people/importing-cast-csv",
+          href: "/help/people/importing-cast-csv",
         },
         {
           label: "Manage people in the directory",
-          href: "/docs/people/people-directory",
+          href: "/help/people/people-directory",
         },
       ],
       related: [
         {
           label: "The cast & crew board",
-          href: "/docs/productions/cast-crew-board",
+          href: "/help/productions/cast-crew-board",
         },
         {
           label: "Distributing rehearsal reports",
-          href: "/docs/reports/distributing-reports",
+          href: "/help/reports/distributing-reports",
         },
         {
           label: "Fix invite and access problems",
-          href: "/docs/troubleshooting/invites-and-access",
+          href: "/help/troubleshooting/invites-and-access",
         },
       ],
     },
@@ -238,33 +238,33 @@ export const people: DocSection = {
       nextSteps: [
         {
           label: "Build your cast & crew board",
-          href: "/docs/productions/cast-crew-board",
+          href: "/help/productions/cast-crew-board",
         },
         {
           label: "Schedule your first calls",
-          href: "/docs/scheduling/creating-calls",
+          href: "/help/scheduling/creating-calls",
         },
         {
           label: "Distribute a rehearsal report",
-          href: "/docs/reports/distributing-reports",
+          href: "/help/reports/distributing-reports",
         },
       ],
       related: [
         {
           label: "Import a cast list from a spreadsheet",
-          href: "/docs/people/importing-cast-csv",
+          href: "/help/people/importing-cast-csv",
         },
         {
           label: "Roles and permissions in Proscene",
-          href: "/docs/people/roles-and-permissions",
+          href: "/help/people/roles-and-permissions",
         },
         {
           label: "Fix invite and access problems",
-          href: "/docs/troubleshooting/invites-and-access",
+          href: "/help/troubleshooting/invites-and-access",
         },
         {
           label: "Invite your company",
-          href: "/docs/get-started/invite-your-company",
+          href: "/help/get-started/invite-your-company",
         },
       ],
     },

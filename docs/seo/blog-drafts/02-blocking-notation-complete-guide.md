@@ -6,7 +6,7 @@
 - **Excerpt:** A complete guide to blocking notation for theatre: stage geography, shorthand symbols, mini ground plans, and paper vs digital blocking methods.
 - **Tags:** blocking notation, how to notate blocking, blocking symbols, prompt book, ground plan, stage management, blocking documentation, staging
 - **Read time:** 10 min
-- **Internal links used:** /docs/blocking/setting-up-your-ground-plan (CTA), /docs/blocking/capturing-blocking-beats, /features#blocking
+- **Internal links used:** /help/blocking/setting-up-your-ground-plan (CTA), /help/blocking/capturing-blocking-beats, /features#blocking
 
 ---
 
@@ -111,7 +111,7 @@ The honest summary: paper is unbeatable for speed of scribble and needs no batte
 
 Plenty of SMs run a hybrid: pencil in the moment, transfer to digital at the end of the night, the same way rehearsal notes become a rehearsal report.
 
-If you want to see the digital version of the workflow in this guide, it maps almost one to one: you upload your ground plan and calibrate it, then capture positions beat by beat with movement arrows drawn between them. Proscene's blocking tool works exactly this way, with drag-and-drop actor tokens and per-beat notes; the beat-by-beat method is covered in [capturing blocking beats](/docs/blocking/capturing-blocking-beats).
+If you want to see the digital version of the workflow in this guide, it maps almost one to one: you upload your ground plan and calibrate it, then capture positions beat by beat with movement arrows drawn between them. Proscene's blocking tool works exactly this way, with drag-and-drop actor tokens and per-beat notes; the beat-by-beat method is covered in [capturing blocking beats](/help/blocking/capturing-blocking-beats).
 
 ## A worked example
 
@@ -133,4 +133,4 @@ The shorthand and the thumbnail together take under fifteen seconds to record an
 
 Blocking notation is a system you set up once per show and then trust under pressure. Before first rehearsal: assign character abbreviations, print your facing pages or thumbnail strips, write your symbol key, and sharpen more pencils than you think you need. The SMs whose books can save an understudy's night are not the ones with the fanciest shorthand. They are the ones who notated every rehearsal, legibly, in a system someone else could read.
 
-**Going digital, or just curious what it looks like? Start with [setting up your ground plan](/docs/blocking/setting-up-your-ground-plan) in [Proscene's blocking tool](/features#blocking). Free during open beta.**
+**Going digital, or just curious what it looks like? Start with [setting up your ground plan](/help/blocking/setting-up-your-ground-plan) in [Proscene's blocking tool](/features#blocking). Free during open beta.**
