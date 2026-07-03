@@ -1142,6 +1142,10 @@ export async function attachWizardScriptByPath(input: {
   if (!can(user.role, "productions:manage")) {
     return { error: "You don't have permission to do that." };
   }
+  // Billing gate, matching the wizard upload/parse actions: don't file a script
+  // for a read-only/lapsed org or a designer seat that doesn't include Script.
+  const lock = await assertCanMutate(user.organizationId, "script");
+  if (lock.error) return { error: lock.error };
   if (!input.storagePath.startsWith(`wizard-scripts/${user.id}/`)) {
     return { error: "Upload could not be verified." };
   }

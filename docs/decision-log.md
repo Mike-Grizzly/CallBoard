@@ -2524,3 +2524,17 @@ Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject an
 **Reason:** Owner rejected the concierge/deferred path ("cancel and then relog/setup... seems tedious") and set the terms: a linkable splash page with feature highlights, upgrade in place, keep the 60-day trial. The personal workspace already being an `organizations` row (with the designer as admin) makes in-place conversion the cheap, correct move — no data migration at all.
 
 **Impact:** Converts keep all Focus work (same org). The seat and org axes never overlap billing-wise beyond the already-paid seat period. Reverse conversion (full → designer-only) intentionally does not exist. The deeper free-user/paid-org entitlement model stays a separate scoping effort (`open-questions.md`).
+
+---
+
+## 2026-07-02 — Final billing security pass (manual) + two hardening fixes
+
+**Review.** Full security pass over the complete branch diff (webhook, checkout/portal, `changeDesignerPlan`/`previewDesignerPlanChange`, `upgradeToFullApp`, `requestSiteUrl`, per-tool guards, and the merged-in `attachWizardScriptByPath`), against the money + tenant-boundary threat model. **No HIGH/MEDIUM exploitable finding.** Confirmed: webhook signature-verified + customer cross-check (no confused deputy); all new actions caller-scoped via `requireCurrentUser` and operate only on the caller's own profile/org/subscription (no IDOR); prices resolved server-side from plan enums (no arbitrary/zero price); `upgradeToFullApp` is one-way (`isDesignerOnly` guard) so the trial re-stamp can't be farmed; no unsafe rendering / no raw SQL. (The automated multi-agent review harness hit a session budget limit mid-run; the pass was completed manually with all files in context — offered a re-run after budget reset for extra independence.)
+
+**Fixed — two LOW / defense-in-depth items:**
+1. `changeDesignerPlan` (`features/designer/actions.ts`) previously wrote the new tier to the DB right after `stripe.subscriptions.update`, so a declined proration charge would still grant the higher tier through the dunning window. Now `payment_behavior:"error_if_incomplete"` — Stripe fails the update (leaving the sub on its current price) if the charge can't be collected immediately, wrapped in try/catch to return a "check your card" error and skip the DB write. Fail-closed on money. Tradeoff: a card requiring 3-D Secure is refused rather than prompted (acceptable for an in-app off-session upgrade).
+2. `attachWizardScriptByPath` (`features/scripts/actions.ts`, from the PR #67 merge) filed a script with a role check but no billing gate. Added `assertCanMutate(user.organizationId, "script")` to match its sibling wizard actions (impact was already marginal — the upload that produced the file is itself gated).
+
+**Not changed (below reporting bar):** `requestSiteUrl` builds Stripe return URLs from request headers, but only affects the attacker's own post-checkout redirect (no cross-user path, no tokens in the URL).
+
+**Impact:** Branch is security-cleared for merge. Live-Stripe go-live steps (live keys/webhook, portal plan-switching, discounts) remain on the checklist.

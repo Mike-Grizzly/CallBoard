@@ -260,14 +260,26 @@ export async function changeDesignerPlan(
     return { error: resolved.error ?? "Billing isn't set up yet." };
   }
 
-  await stripe.subscriptions.update(resolved.subId, {
-    items: [{ id: resolved.itemId, price: resolved.newPriceId }],
-    proration_behavior: "always_invoice",
-    metadata: { kind: "designer", profileId: user.id, designerPlan: plan },
-  });
+  try {
+    await stripe.subscriptions.update(resolved.subId, {
+      items: [{ id: resolved.itemId, price: resolved.newPriceId }],
+      proration_behavior: "always_invoice",
+      // Fail-closed on money: if the prorated charge can't be collected right
+      // now, Stripe errors and leaves the subscription on its current price
+      // (no partial change) — so we never grant the higher tier on a declined
+      // card. The user is directed to fix billing and retry.
+      payment_behavior: "error_if_incomplete",
+      metadata: { kind: "designer", profileId: user.id, designerPlan: plan },
+    });
+  } catch {
+    return {
+      error:
+        "We couldn't complete the payment for that upgrade — check your card in billing and try again.",
+    };
+  }
 
-  // Sync now so the unlock is instant (the webhook will also confirm). Bundles
-  // include both tools, so clear any single-tool choice.
+  // The charge succeeded, so grant now for an instant unlock (the webhook also
+  // confirms). Bundles include both tools, so clear any single-tool choice.
   await db
     .update(profiles)
     .set({ designerPlan: plan, designerTool: null, updatedAt: new Date() })
