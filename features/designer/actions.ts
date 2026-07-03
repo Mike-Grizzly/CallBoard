@@ -305,9 +305,11 @@ export async function changeDesignerPlan(
  * (`trial_started_at IS NULL`), the same idempotency `startTrialIfFirstProduction`
  * enforces, so an already-started or expired trial can never be RESET — which
  * would otherwise let disposable free designer accounts farm rolling free
- * trials for a shared org. Designer production-creates no longer start the org
- * clock (see `startTrialIfFirstProduction` call sites), so a genuine convert's
- * org is still `NULL` here and gets its full 60 days from today.
+ * trials for a shared org. A personal workspace never starts the org clock
+ * (`startTrialIfFirstProduction` skips `is_personal_workspace` orgs), so a
+ * genuine convert's org is still `NULL` here and gets its full 60 days from
+ * today; the workspace is also flipped to a company (`is_personal_workspace`
+ * false) so it is henceforth gated by org billing.
  */
 export async function upgradeToFullApp(): Promise<{
   ok?: boolean;
@@ -354,12 +356,20 @@ export async function upgradeToFullApp(): Promise<{
     }
   }
 
-  // Start the org's 60-day trial at conversion — SET-ONCE. The
-  // `trial_started_at IS NULL` guard in the WHERE (the same idempotency
-  // startTrialIfFirstProduction uses) means this can only ever START a trial,
-  // never RESET an existing or expired one, so it can't be farmed to roll a
-  // shared org's trial forward. Skipped for grandfathered / already-subscribed
-  // orgs, and while billing is paused (beta).
+  // The personal workspace becomes a COMPANY workspace on conversion — flip the
+  // axis flag so it is henceforth gated by org billing, not the (now winding
+  // down) Studio seat.
+  await db
+    .update(organizations)
+    .set({ isPersonalWorkspace: false, updatedAt: new Date() })
+    .where(eq(organizations.id, user.organizationId));
+
+  // Start the org's 60-day trial at conversion — SET-ONCE (the
+  // `trial_started_at IS NULL` guard means it can only ever START a trial, never
+  // RESET an existing/expired one, so it can't be farmed). A personal workspace
+  // never ran the org clock (startTrialIfFirstProduction skips them), so a
+  // genuine convert gets a full 60 days from today. Skipped for grandfathered /
+  // already-subscribed orgs, and while billing is paused (beta).
   if (BILLING_ENABLED) {
     const [org] = await db
       .select({

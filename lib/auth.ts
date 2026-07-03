@@ -169,7 +169,14 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
         ? personalWorkspaceName(firstName, email)
         : fallbackOrgName(firstName, lastName, email));
 
-    const org = await createOrganization(orgName);
+    // Only a DESIGNER signup gets a seat-gated personal workspace. This flag is
+    // the axis switch in features/billing/guard.ts (seat vs org billing) AND
+    // suppresses the org trial clock — so it must NOT be set for "individual"
+    // full-access accounts, which are org-billing gated and DO run a normal
+    // 60-day org trial like any company.
+    const org = await createOrganization(orgName, undefined, {
+      isPersonalWorkspace: isDesignerSignup,
+    });
 
     await db.insert(profiles).values({
       id: authUser.id,
@@ -236,6 +243,10 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
         existing[0].lastName,
         existing[0].email,
       ),
+      undefined,
+      // A designer recovering a lost membership gets their personal workspace
+      // back (seat-gated), not a company org.
+      { isPersonalWorkspace: existing[0].accessMode === "designer" },
     );
 
     await db.insert(organizationMemberships).values({
