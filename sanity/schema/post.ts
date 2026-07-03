@@ -64,6 +64,31 @@ export const post = defineType({
       type: "array",
       of: [{ type: "block" }, { type: "image", options: { hotspot: true } }],
     }),
+    defineField({
+      name: "seoTitle",
+      title: "SEO title",
+      type: "string",
+      description:
+        "Overrides the title tag in search results. Include the primary keyword; keep under 60 characters. Falls back to the post title.",
+      validation: (rule) => rule.max(70).warning("Keep under 60 characters"),
+    }),
+    defineField({
+      name: "metaDescription",
+      title: "Meta description",
+      type: "text",
+      rows: 2,
+      description:
+        "Search-result snippet, 120–155 characters, primary keyword + value statement. Falls back to the excerpt.",
+      validation: (rule) => rule.max(160).warning("Keep under 155 characters"),
+    }),
+    defineField({
+      name: "tags",
+      title: "Tags / target keywords",
+      type: "array",
+      of: [{ type: "string" }],
+      options: { layout: "tags" },
+      description: "Target keywords for this post (used as article keywords).",
+    }),
   ],
   preview: {
     select: { title: "title", subtitle: "category", media: "coverImage" },

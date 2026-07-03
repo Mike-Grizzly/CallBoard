@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "Blog & Walkthroughs · Proscene",
   description:
     "Notes from the prompt desk: walkthroughs, stage-management craft, and product updates, written by people who've held the book.",
+  alternates: { canonical: "/blog" },
 };
 
 // Sanity-backed once posts exist; falls back to the static demo content until

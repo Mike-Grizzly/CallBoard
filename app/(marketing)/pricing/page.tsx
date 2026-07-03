@@ -12,11 +12,31 @@ import { PricingInteractions } from "./pricing-interactions";
 import { getPricingTiers } from "@/lib/sanity/queries";
 import { SanityTiers } from "./sanity-tiers";
 import { BILLING_ENABLED } from "@/features/billing/constants";
+import { JsonLd } from "../_components/json-ld";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Pricing · Proscene",
   description:
     "Pay for the shows you run, never for the people in them. Unlimited cast and crew on every plan. Season, Repertory, and Company tiers for organizations, plus Proscene Studio for freelance designers and discounted school pricing.",
+  alternates: { canonical: "/pricing" },
+};
+
+const PRICING_APP_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Proscene",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  url: `${SITE_URL}/pricing`,
+  description:
+    "Stage management and theatre production software priced per show, with unlimited cast and crew on every plan.",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+    description: "Free during open beta",
+  },
 };
 
 export const revalidate = 60;
@@ -27,6 +47,7 @@ export default async function PricingPage() {
   return (
     <>
       <div data-page="pricing" data-aud="designers">
+        <JsonLd data={PRICING_APP_SCHEMA} />
         {!BILLING_ENABLED && (
           <div className="wrap" style={{ paddingTop: "clamp(24px,4vw,40px)" }}>
             <div className="beta-notice" role="note">
