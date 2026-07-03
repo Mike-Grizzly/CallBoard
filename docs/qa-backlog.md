@@ -34,10 +34,10 @@ so the owner understands what is changing.
 
 ## Execution order
 
-1. **Batch 1 — Real bugs** ← in progress
-2. **Batch 2 — Polish sweep**
-3. **Batch 3 — Report inputs wired to real data** (scenes, characters, people)
-4. **Batch 4 — Attendance model** (schema change)
+1. ☑ **Batch 1 — Real bugs** (done, merged PR #67)
+2. ☑ **Batch 2 — Polish sweep** (done, merged PR #67)
+3. ☑ **Batch 3 — Report inputs wired to real data** (scenes, characters, people) — branch `claude/qa-batch3-report-inputs`
+4. **Batch 4 — Attendance model** (schema change) ← next
 5. **Batch 5 — Blocking enhancements** (model now decided — see Decision 2)
 6. **Batch 6 — Setup/config & presets**
 
@@ -81,11 +81,11 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 | ☑ | New items don't appear until manual refresh after save/send | 🐞 | M | 1 |
 | ☑ | Placeholder text should name the input type ("Scene Name") | ✨ | XS | 2 |
 | ☑ | Clearer line-note input guidance | ✨ | S | 2 |
-| ☐ | Reorderable department notes | 🏗️ | S–M | 3 |
-| ☐ | Scenes-worked autofill from the show's scenes | 🏗️ | M | 3 |
-| ☐ | Scenes-worked: duration + timestamp ranges | 🏗️ | S–M | 3 |
-| ☐ | Line-note character dropdowns | 🏗️ | M | 3 |
-| ☐ | Incident person dropdown + free-text option | 🏗️ | M | 3 |
+| ☑ | Reorderable department notes | 🏗️ | S–M | 3 |
+| ☑ | Scenes-worked autofill from the show's scenes | 🏗️ | M | 3 |
+| ☑ | Scenes-worked: duration + timestamp ranges (already free text; clarified) | 🏗️ | S–M | 3 |
+| ☑ | Line-note character dropdowns | 🏗️ | M | 3 |
+| ☑ | Incident person dropdown + free-text option | 🏗️ | M | 3 |
 | ☐ | Richer attendance states (excused/unexcused absence + late) | 🏗️ | M–L | 4 |
 | ☐ | SM toggle for excused/unexcused visibility | 🏗️ | M | 4 |
 | ☐ | Union/non-union status per person (Decision 3) | 🏗️ | M | 4 |
@@ -247,6 +247,26 @@ Resolved:
 - ✔️ **Choreographer team spot** — owner chose **department-driven** (2026-06-30):
   the Choreographer spot appears when the Choreography department is enabled;
   not always-on. This is already the behavior, so no code change.
+
+## Batch 3 progress (2026-07-01) — report inputs wired to real data
+
+Branch `claude/qa-batch3-report-inputs`. No schema change — the report still
+stores plain strings/JSON; the real data is autofill only, free text always
+allowed (guests, understudies, ensemble).
+- ☑ **Reusable "pick or type" combobox** — `components/ui/combo-field.tsx`
+  (native input + `<datalist>`). Powers the scene/character/person fields.
+- ☑ **Scenes-worked autofill** from the production's scenes (Act/Sc — Title).
+- ☑ **Scenes-worked duration/time** — was already a free-text box; placeholder
+  widened to make clear it takes a duration *or* a time range ("45m" / "8:15–9:00").
+- ☑ **Line-note character** field suggests the show's characters.
+- ☑ **Incident person** field suggests production people.
+- ☑ **Reorderable department notes** — up/down controls in the report form
+  persist to `production_departments.sortOrder` via a report-manager-scoped
+  `reorderProductionDepartments` (reorders only; labels re-derived server-side).
+  The order sticks across reports and drives the distributed report's section
+  order.
+- Options loaded in the new + edit report pages via
+  `features/reports/input-options.ts`.
 
 Still open from this round:
 - (none blocking) — see "Carried forward" below.
