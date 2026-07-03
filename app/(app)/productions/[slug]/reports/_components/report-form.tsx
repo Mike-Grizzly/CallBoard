@@ -1,6 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,6 +15,7 @@ import {
   updateReport,
   type ReportActionResult,
 } from "@/features/reports/actions";
+import { reorderProductionDepartments } from "@/features/productions/department-actions";
 import {
   requestReportAttachmentUpload,
   finalizeReportAttachmentUpload,
@@ -212,6 +220,28 @@ export function ReportForm({
   });
   const [editingDept, setEditingDept] = useState<string | null>(null);
   const editingDeptDef = departments.find((d) => d.key === editingDept) ?? null;
+  // Department note order — reorderable in-form and persisted to the production
+  // (so it sticks for future reports and drives the distributed report's order).
+  const [deptOrder, setDeptOrder] = useState<string[]>(() =>
+    departments.map((d) => d.key),
+  );
+  const deptByKey = useMemo(
+    () => new Map(departments.map((d) => [d.key, d])),
+    [departments],
+  );
+  const [, startDeptReorder] = useTransition();
+
+  function moveDept(key: string, dir: -1 | 1) {
+    const i = deptOrder.indexOf(key);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= deptOrder.length) return;
+    const next = [...deptOrder];
+    [next[i], next[j]] = [next[j], next[i]];
+    setDeptOrder(next);
+    startDeptReorder(() => {
+      void reorderProductionDepartments(productionId, next);
+    });
+  }
   const [breaks, setBreaks] = useState<Break[]>(initial?.breaks ?? []);
   const [scenesWorked, setScenesWorked] = useState<SceneWorked[]>(
     initial?.scenesWorked ?? [],
@@ -519,7 +549,9 @@ export function ReportForm({
         <div style={{ padding: 20 }}>
           <div style={{ display: activeTab === "notes" ? "block" : "none" }}>
             <div className="grid grid-2" style={{ gap: 14 }}>
-              {departments.map((d) => {
+              {deptOrder.map((deptKey, deptIdx) => {
+                const d = deptByKey.get(deptKey);
+                if (!d) return null;
                 const html = deptNotes[d.key];
                 const empty = !html || !html.replace(/<[^>]+>/g, "").trim();
                 return (
@@ -546,19 +578,68 @@ export function ReportForm({
                         <Icon name={d.icon} size={13} aria-hidden />
                       </div>
                       <b style={{ fontSize: 13, fontWeight: 600 }}>{d.label}</b>
-                      <span
-                        className="dept-note-edit-hint muted"
+                      <div
                         style={{
                           marginLeft: "auto",
-                          fontSize: 11,
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: 4,
+                          gap: 2,
                         }}
                       >
-                        <Icon name="PenLine" size={11} aria-hidden />
-                        <span>Edit</span>
-                      </span>
+                        <button
+                          type="button"
+                          className="btn ghost btn-icon"
+                          aria-label={`Move ${d.label} up`}
+                          title="Move up"
+                          disabled={deptIdx === 0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            moveDept(d.key, -1);
+                          }}
+                          style={{
+                            width: 22,
+                            height: 22,
+                            opacity: deptIdx === 0 ? 0.3 : 1,
+                          }}
+                        >
+                          <span
+                            style={{ display: "inline-flex", transform: "rotate(180deg)" }}
+                          >
+                            <Icon name="ChevronDown" size={13} aria-hidden />
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn ghost btn-icon"
+                          aria-label={`Move ${d.label} down`}
+                          title="Move down"
+                          disabled={deptIdx === deptOrder.length - 1}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            moveDept(d.key, 1);
+                          }}
+                          style={{
+                            width: 22,
+                            height: 22,
+                            opacity: deptIdx === deptOrder.length - 1 ? 0.3 : 1,
+                          }}
+                        >
+                          <Icon name="ChevronDown" size={13} aria-hidden />
+                        </button>
+                        <span
+                          className="dept-note-edit-hint muted"
+                          style={{
+                            fontSize: 11,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            marginLeft: 4,
+                          }}
+                        >
+                          <Icon name="PenLine" size={11} aria-hidden />
+                          <span>Edit</span>
+                        </span>
+                      </div>
                     </div>
                     {empty ? (
                       <div
