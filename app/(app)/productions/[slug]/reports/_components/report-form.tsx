@@ -66,6 +66,9 @@ export function ReportForm({
   departments,
   existingAttachments = [],
   members,
+  sceneOptions = [],
+  characterOptions = [],
+  personOptions = [],
 }: {
   mode: Mode;
   productionId: string;
@@ -75,6 +78,10 @@ export function ReportForm({
   departments: ResolvedDepartment[];
   existingAttachments?: ExistingAttachment[];
   members?: MentionMember[];
+  /** Real-data autofill for report inputs (scenes / characters / people). */
+  sceneOptions?: readonly string[];
+  characterOptions?: readonly string[];
+  personOptions?: readonly string[];
 }) {
   const router = useRouter();
   const action = mode === "edit" ? updateReport : createReport;
@@ -444,6 +451,7 @@ export function ReportForm({
         <ScenesWorkedEditor
           scenes={scenesWorked}
           onChange={setScenesWorked}
+          sceneOptions={sceneOptions}
         />
       </div>
 
@@ -583,6 +591,7 @@ export function ReportForm({
               lines={lineNotes}
               onChange={setLineNotes}
               members={members}
+              characterOptions={characterOptions}
             />
           </div>
           <div style={{ display: activeTab === "injuries" ? "block" : "none" }}>
@@ -590,6 +599,7 @@ export function ReportForm({
               injuries={injuries}
               onChange={setInjuries}
               members={members}
+              personOptions={personOptions}
             />
           </div>
           <div style={{ display: activeTab === "general" ? "block" : "none" }}>

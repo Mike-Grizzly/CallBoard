@@ -6,6 +6,10 @@ import {
   getResolvedDepartments,
 } from "@/features/productions/queries";
 import { getProductionMembers } from "@/features/members/queries";
+import {
+  getReportAutofillOptions,
+  personOptionsFromMembers,
+} from "@/features/reports/input-options";
 import { ReportForm } from "../_components/report-form";
 
 export default async function NewReportPage({
@@ -26,9 +30,10 @@ export default async function NewReportPage({
     notFound();
   }
 
-  const [members, departments] = await Promise.all([
+  const [members, departments, autofill] = await Promise.all([
     getProductionMembers(production.id),
     getResolvedDepartments(production.id),
+    getReportAutofillOptions(production.id),
   ]);
 
   const mentionMembers = members.map((m) => ({
@@ -47,6 +52,9 @@ export default async function NewReportPage({
       slug={slug}
       departments={departments}
       members={mentionMembers}
+      sceneOptions={autofill.sceneOptions}
+      characterOptions={autofill.characterOptions}
+      personOptions={personOptionsFromMembers(members)}
     />
   );
 }

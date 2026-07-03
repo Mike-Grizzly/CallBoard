@@ -2,6 +2,7 @@
 
 import { Icon } from "@/components/ui/icon";
 import { MentionInput } from "@/components/ui/mention-input";
+import { ComboField } from "@/components/ui/combo-field";
 import type { MentionMember } from "@/components/ui/mention-textarea";
 import type {
   Break,
@@ -291,9 +292,12 @@ function NumberStat({
 export function ScenesWorkedEditor({
   scenes,
   onChange,
+  sceneOptions = [],
 }: {
   scenes: SceneWorked[];
   onChange: (next: SceneWorked[]) => void;
+  /** The show's scenes, for autofill; free-typing is still allowed. */
+  sceneOptions?: readonly string[];
 }) {
   const update = (i: number, patch: Partial<SceneWorked>) =>
     onChange(scenes.map((s, j) => (j === i ? { ...s, ...patch } : s)));
@@ -313,11 +317,13 @@ export function ScenesWorkedEditor({
               borderRadius: 6,
             }}
           >
-            <input
-              type="text"
+            <ComboField
               value={s.label}
-              placeholder="Scene name (e.g. Act II, Sc. 1)"
-              onChange={(e) => update(i, { label: e.target.value })}
+              onChange={(v) => update(i, { label: v })}
+              options={sceneOptions}
+              placeholder="Scene (pick from the show, or type one)"
+              ariaLabel="Scene"
+              className=""
               style={{
                 width: "100%",
                 border: 0,
@@ -328,6 +334,7 @@ export function ScenesWorkedEditor({
                 marginBottom: 6,
                 outline: "none",
                 color: "var(--ink)",
+                fontFamily: "inherit",
               }}
             />
             <div className="row" style={{ gap: 8 }}>
@@ -342,10 +349,10 @@ export function ScenesWorkedEditor({
               <input
                 type="text"
                 value={s.time}
-                placeholder="Duration (e.g. 55m)"
+                placeholder="Duration or time (45m or 8:15–9:00)"
                 onChange={(e) => update(i, { time: e.target.value })}
                 className="field"
-                style={{ width: 80, fontSize: 12 }}
+                style={{ flex: 1, minWidth: 150, fontSize: 12 }}
               />
               <button
                 type="button"
