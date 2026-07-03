@@ -46,5 +46,6 @@ These docs **must** be updated whenever:
 | `decision-log.md` | Record of durable project decisions |
 | `admin-playbook.md` | Owner ops: comp/grandfather an org, recover an admin, extend a trial, lifetime deals, discounts (SQL + Stripe) |
 | `open-questions.md` | Unresolved questions, risks, and concerns |
+| `ux-backlog.md` | Actionable UX/IA/design-system tasks from the 2026-07-03 full-surface UI/UX review (companion to `qa-backlog.md`) |
 | `design-handoffs.md` | Standard for design drop-offs: `handoff/<feature>/` folders, status markers, how sessions process them |
 | `feature-specs/` | Per-feature specifications (one file per vertical slice) |
