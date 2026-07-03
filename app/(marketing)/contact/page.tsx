@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Contact · Proscene",
   description:
     "Questions, feedback, a demo, or student verification: get in touch. We're former stage managers and we answer fast.",
+  alternates: { canonical: "/contact" },
 };
 
 const COPY: Record<string, { eyebrow: string; title: string; lede: string }> = {

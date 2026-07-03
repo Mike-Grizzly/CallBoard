@@ -37,6 +37,13 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // The help center briefly shipped at /docs before moving to /help.
+  async redirects() {
+    return [
+      { source: "/docs", destination: "/help", permanent: true },
+      { source: "/docs/:path*", destination: "/help/:path*", permanent: true },
+    ];
+  },
 };
 
 export default process.env.NEXT_PUBLIC_SENTRY_DSN

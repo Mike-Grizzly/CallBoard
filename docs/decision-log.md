@@ -2457,3 +2457,55 @@ Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject an
 **Reason:** Owner-driven product direction gathered during hands-on QA; each polish/feature item was written up and approved before coding, per the agreed process.
 
 **Impact:** Batches 1–2 of `qa-backlog.md` are closed and merged. Batch 3+ (report inputs wired to real data — scenes/characters/people; attendance model; blocking enhancements; setup presets; union status) remains pending. The accounts/entitlements model must NOT be folded into a QA batch.
+
+## 2026-07-02 — SEO integration: /docs manual is in-repo typed content, same domain
+
+**Decision:** The public product manual lives at `proscene.app/docs` (same
+domain, per the SEO strategy's subdomain warning) and its content is static,
+typed TypeScript in `app/(marketing)/docs/content/` — not Sanity. Blog remains
+the Sanity-backed channel and gained per-post SEO fields (`seoTitle`,
+`metaDescription`, `tags`) instead of a new document type.
+
+**Reason:** Manual pages document the product and must change in lockstep with
+code, be reviewable in PRs, and never depend on CMS availability; the strategy
+only requires that docs be crawlable on the main domain. Sanity stays the home
+for marketing-editable content (blog, FAQ, pricing, hero).
+
+**Impact:** Feature changes now include updating the matching
+`docs/content/*.ts` file. Section overviews render at `/docs/<section>`
+(no separate `/overview/` URL, avoiding thin duplicate pages — a deliberate
+deviation from the strategy document's URL sketch). Docs metadata titles use
+the site's `·` separator, not the strategy's em-dash format.
+
+## 2026-07-02 — SEO endpoints are proxy-public; robots disallows the app
+
+**Decision:** `app/robots.ts` + `app/sitemap.ts` generate robots/sitemap;
+`/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest`, and `/docs` were added
+to `PUBLIC_ROUTES` in `proxy.ts`. Robots disallows all auth-gated app routes.
+
+**Reason:** These are Next routes, so the auth proxy was redirecting them to
+/login for logged-out crawlers — robots/sitemap would have been invisible to
+Google, and the PWA manifest broken for logged-out visitors (pre-existing bug
+fixed in passing). The app itself should never be indexed.
+
+**Impact:** Crawlers see robots + sitemap; sitemap includes marketing routes,
+every docs page, and Sanity blog posts (degrading silently if the CMS is
+unreachable). Canonical host stays `https://www.proscene.app` via
+`NEXT_PUBLIC_SITE_URL` (`lib/site.ts`, also used for `metadataBase`).
+
+## 2026-07-02 — Help center URL is /help, not /docs
+
+**Decision:** The public manual moved from `/docs` to `/help` (same session,
+before any deploy or indexing). Permanent redirects `/docs/:path*` →
+`/help/:path*` live in `next.config.ts`. Nav label is "Help"; the hub keeps
+its "The manual." branding.
+
+**Reason:** Owner call, matching end-user SaaS convention (Notion, Canva,
+Slack use `/help`); `/docs` is a developer-product convention and reads wrong
+for stage managers and theatre companies. The SEO strategy only requires
+same-domain placement, which is preserved.
+
+**Impact:** All internal links (manual cross-links, footer, editorial
+calendar, blog drafts) now use `/help/...`. If the slug ever changes again,
+`app/(marketing)/help/` content files, `proxy.ts` PUBLIC_ROUTES, the sitemap,
+and the redirect map are the touchpoints.
