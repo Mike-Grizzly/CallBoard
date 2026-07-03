@@ -926,6 +926,13 @@ The 2026-06-19 hardening pass fixed the highest-severity confirmed issues. The f
 
 ---
 
+## OPEN (security-adjacent): billing guards ignore the resource org for designer callers (added 2026-07-03)
+
+- **What:** `assertCanMutate`/`assertCanOperate`/`assertCanCreateProduction` (`features/billing/guard.ts`) choose the billing axis from the caller's global `accessMode`, not the org that owns the resource. A designer-mode account that is a member of a company org (possible: `inviteMembers` doesn't reset `accessMode`; `switchOrganization` is membership-only) is gated on their personal Studio seat for that company's writes.
+- **Two faces:** (a) a designer with an active seat could write into a **lapsed** company (paywall softening); (b) a designer legitimately invited to a **paid** company is wrongly blocked. Not reachable via normal UI (designers are routed to `/focus`) but reachable via direct server-action calls.
+- **Needs a product decision before fixing** — is "a designer-mode account working inside a separate company org" supported? No `is_personal_workspace` flag exists to distinguish the designer's own workspace from a joined company. Options: (i) gate a designer caller by the RESOURCE org's billing when that org has its own footprint (grandfathered / subscription / started-trial), else the seat; (ii) add a personal-workspace flag and gate by it; (iii) forbid designer-mode accounts from acting in other orgs (matches today's solo-designer model). See `decision-log.md` 2026-07-03.
+- **Related, same root cause, ALREADY FIXED:** `upgradeToFullApp` trial-farming (admin check + set-once guard). That was the exploitable one; this guard-axis item is the residual design question.
+
 ## Replace mock UI with accurate representations (added 2026-06-30)
 
 - **Owner goal:** swap stylized/mock product imagery for faithful representations of the *real* UI everywhere — the marketing site's product mockups/screenshots and in-app placeholders alike, so what people see matches the actual app.

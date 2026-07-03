@@ -13,7 +13,7 @@ import {
   profiles,
 } from "@/db/schema";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { requireCurrentUser } from "@/lib/auth";
+import { requireCurrentUser, isDesignerOnly } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
   validateProductionForm,
@@ -87,7 +87,12 @@ export async function createProduction(
     await createDefaultFolders(newProduction.id, tx);
   });
 
-  await startTrialIfFirstProduction(user.organizationId);
+  // Designers are gated by their per-seat entitlement, not the org trial, so a
+  // designer's personal org shouldn't burn its 60-day org trial on create — the
+  // org clock starts only if/when they convert to the full app (upgradeToFullApp).
+  if (!isDesignerOnly(user)) {
+    await startTrialIfFirstProduction(user.organizationId);
+  }
 
   redirect("/productions");
 }
@@ -257,9 +262,11 @@ export async function createProductionFull(
 
   // Post-commit side effects (non-transactional): start the trial clock, then
   // apply the wizard's team (the latter makes external Supabase Admin calls).
-  const trialJustStarted = await startTrialIfFirstProduction(
-    user.organizationId,
-  );
+  // Designer personal orgs are seat-gated, not org-trial-gated — don't start
+  // the org clock on their create (it starts at full-app conversion instead).
+  const trialJustStarted = isDesignerOnly(user)
+    ? false
+    : await startTrialIfFirstProduction(user.organizationId);
   const trialWarning = trialJustStarted
     ? (await firstProductionTrialNotice(user.organizationId, closing)) ??
       undefined
@@ -504,7 +511,10 @@ export async function quickCreateProduction(
     await createDefaultFolders(newProduction.id, tx);
   });
 
-  await startTrialIfFirstProduction(user.organizationId);
+  // See createProduction: designer orgs don't start the org trial on create.
+  if (!isDesignerOnly(user)) {
+    await startTrialIfFirstProduction(user.organizationId);
+  }
 
   revalidatePath("/", "layout");
   revalidatePath("/productions");

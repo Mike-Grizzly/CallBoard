@@ -1,9 +1,10 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { profiles, organizations } from "@/db/schema";
 import { requireCurrentUser, isDesignerOnly } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { newTrialEnd } from "@/lib/billing";
 import {
   stripe,
@@ -293,11 +294,20 @@ export async function changeDesignerPlan(
  * Their personal workspace is already an organization (they're its admin), so
  * everything they've built carries over; this just (1) stops the Studio seat
  * from billing again (cancel at period end — they keep what they paid for),
- * (2) grants the org the standard 60-day trial FROM TODAY (a designer's
- * production may have silently started the org trial clock earlier — the
- * conversion is the org's real day one as a company workspace, and this flip
- * is one-way per account, so the re-stamp can't be farmed), and (3) flips
- * accessMode to "full" so the dashboard opens up.
+ * (2) starts the org's standard 60-day trial, and (3) flips accessMode to
+ * "full" so the dashboard opens up.
+ *
+ * SECURITY: the trial start is the sensitive step (it re-provisions paid
+ * access for a whole org). Two guards make it un-farmable: (a) the caller must
+ * be an ADMIN of the currently-selected org (`settings:manage`), so a
+ * designer-mode account that is merely a member of someone else's org can't
+ * select it and re-provision it; and (b) the trial write is SET-ONCE
+ * (`trial_started_at IS NULL`), the same idempotency `startTrialIfFirstProduction`
+ * enforces, so an already-started or expired trial can never be RESET — which
+ * would otherwise let disposable free designer accounts farm rolling free
+ * trials for a shared org. Designer production-creates no longer start the org
+ * clock (see `startTrialIfFirstProduction` call sites), so a genuine convert's
+ * org is still `NULL` here and gets its full 60 days from today.
  */
 export async function upgradeToFullApp(): Promise<{
   ok?: boolean;
@@ -305,6 +315,13 @@ export async function upgradeToFullApp(): Promise<{
 }> {
   const user = await requireCurrentUser();
   if (!isDesignerOnly(user)) return { ok: true }; // already full — nothing to do
+  // Only an admin of the currently-selected workspace may convert it (the org
+  // trial write below re-provisions that org). A designer is admin of their own
+  // personal workspace, so the legit flow passes; this blocks a designer-mode
+  // account that is only a member of another org from re-provisioning it.
+  if (!can(user.role, "settings:manage")) {
+    return { error: "Only a workspace admin can switch to the full app." };
+  }
 
   // Stop the seat's next renewal FIRST (it's the only step touching Stripe):
   // the full app includes both tools, so the seat would be double-paying.
@@ -337,10 +354,12 @@ export async function upgradeToFullApp(): Promise<{
     }
   }
 
-  // Fresh 60-day trial from conversion day — unless the org is grandfathered
-  // or already carries a live subscription. Skipped while billing is paused
-  // (beta), matching startTrialIfFirstProduction: stamping during the free
-  // beta would hand converts an already-burning clock.
+  // Start the org's 60-day trial at conversion — SET-ONCE. The
+  // `trial_started_at IS NULL` guard in the WHERE (the same idempotency
+  // startTrialIfFirstProduction uses) means this can only ever START a trial,
+  // never RESET an existing or expired one, so it can't be farmed to roll a
+  // shared org's trial forward. Skipped for grandfathered / already-subscribed
+  // orgs, and while billing is paused (beta).
   if (BILLING_ENABLED) {
     const [org] = await db
       .select({
@@ -362,7 +381,12 @@ export async function upgradeToFullApp(): Promise<{
           trialEndsAt: newTrialEnd(now),
           updatedAt: now,
         })
-        .where(eq(organizations.id, user.organizationId));
+        .where(
+          and(
+            eq(organizations.id, user.organizationId),
+            isNull(organizations.trialStartedAt),
+          ),
+        );
     }
   }
 
