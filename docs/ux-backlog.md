@@ -1,8 +1,28 @@
 # UX Backlog — actionable fixes from the 2026-07-03 UI/UX review
 
-**Status:** Active working doc — check items off as they land, note the branch/PR next to each.
+**Status:** Active working doc. Tracking convention: when a task lands, append `— ✅ DONE (branch/PR, date)` to its heading; if a task is rejected or superseded, append `— ❌ WON'T DO (reason, date)` instead of deleting it.
 **Source:** Full-surface UI/UX review (2026-07-03): four code-inspection passes (marketing site, app shell/IA, key flows, cross-surface consistency) plus live browser verification of all nine public pages at 1440px and 390px. Companion to `qa-backlog.md` (functional bugs); this doc is UX/IA/design-system work.
 **How to use:** Tasks are grouped into phases (M/R/N/B/S) and sized XS–L. Each task has acceptance criteria and, where relevant, a security note. Suggested batching into PRs is at the bottom.
+
+---
+
+## Execution guide for a fresh session (read this first)
+
+This doc assumes no memory of the review session that produced it. Before starting any task:
+
+1. **Read, in order:** `CLAUDE.md` (repo root), `docs/session-start.md`, `docs/architecture.md`, `docs/dev-rules.md`, then the **Security ground rules** below. Do not skip these — several tasks touch surfaces with documented invariants.
+2. **Line numbers in this doc drift.** File paths are reliable; line refs were accurate on 2026-07-03. When a `file:line` doesn't match, grep the same file for the quoted identifier/string (e.g. `data-noop`, `btn ghost lg`, `PARSE_LIMIT_PER_PRODUCTION`) rather than trusting the number.
+3. **Owner-decision tasks — do not guess on money or brand.**
+   - **M1 (school pricing): ASK THE OWNER before editing.** It's a pricing promise; either answer changes real copy on three pages. Do not pick a side yourself.
+   - Tasks with a stated recommendation (R3 → option b or c, R7 → unmark the asterisk, N9 → delete dead CSS, M7 → remove social icons) may be implemented as recommended if the owner is unavailable — say so explicitly in the PR description and log it in `decision-log.md`.
+   - M12/M13 are decision-only: produce a written recommendation, don't restyle the brand unprompted.
+4. **Marketing content model:** the marketing pages are big HTML template-literal strings in typed TS files (`app/(marketing)/home-content.ts`, `features/content.ts`, `pricing/content.ts`, `faq/content.ts`, `blog/content.ts`) injected via `dangerouslySetInnerHTML` — this is authored static content, not user input; edit the HTML strings directly. Sanity can *override* some sections at runtime (hero, pricing tiers, FAQ items, blog posts) — the static files are the always-present fallback, so copy fixes go in the static files AND, where a Sanity document exists for the same content, flag in the PR that the CMS copy needs the same edit (owner does that in Sanity Studio).
+5. **Running the app in a sandbox (no real env):** copy `.env.example` → `.env.local` with placeholder values (keep the real public `NEXT_PUBLIC_SANITY_PROJECT_ID` that's already in the example). Marketing pages, `/login`, and `/signup` render without a database; `(app)` pages need a live `DATABASE_URL` and will not render — review app surfaces by code inspection or on a preview deploy.
+   **Known gotcha:** in a network-restricted sandbox, server-side Sanity fetches hang for minutes (the connection blackholes instead of refusing) and every marketing page blocks on them. Workaround until M10 lands: start the dev server with a dead proxy so CMS fetches fail instantly and fall back to static content:
+   `HTTPS_PROXY=http://127.0.0.1:9 HTTP_PROXY=http://127.0.0.1:9 NO_PROXY=localhost,127.0.0.1 npm run dev`
+6. **Visual verification** (required for anything user-visible, per `dev-rules.md`): headless Chromium is preinstalled in Claude Code web sandboxes at `/opt/pw-browsers/chromium-*/chrome-linux/chrome`; use `playwright-core` with `executablePath` pointed there (do NOT run `playwright install`). Screenshot at **1440×900 and 390×844**, `waitUntil: "domcontentloaded"` plus a short fixed wait — `networkidle` never settles while Sanity fetches dangle. First hit per route in dev compiles on demand and can take ~30s; use generous timeouts.
+7. **Checks before every commit:** `npm run type-check`, `npm run lint`, `npm test`, `npm run build` (build works with placeholder env; it fails only at page-data collection needing `DATABASE_URL`, which is a known, acceptable condition documented in `current-status.md`).
+8. **Scope discipline:** one batch (see table at bottom) per branch/PR. Don't mix marketing copy with app behavior changes. Update `current-status.md` + this doc's checkboxes at session end per the closeout workflow in `dev-rules.md`.
 
 ---
 
@@ -69,7 +89,7 @@ Initial state is `data-aud="designers"` (`pricing/page.tsx:49`), so the first th
 **Accept:** at 390px a visitor can reach `/login` in ≤2 taps from any marketing page.
 
 ### M5 · Home hero "Book a demo" is invisible on the night hero — **P0 · XS**
-`home-content.ts:247` uses `class="btn ghost lg"` — ghost = transparent bg + `--ink-2` dark-gray text (`marketing.css:170`) on the dark hero. Verified illegible in screenshot. The fix exists: `.btn.on-night` (`marketing.css:174`).
+`home-content.ts:247` uses `class="btn ghost lg"` — ghost = transparent bg + `--ink-2` dark-gray text (`marketing.css:170`) on the dark hero. Verified illegible in screenshot. The fix exists: change the class to `btn on-night lg` — `.btn.on-night` (`marketing.css:174`) is the dark-surface variant built for exactly this (the features-page hero at `features/content.ts:16` uses plain `btn lg` and is legible; matching that is also acceptable).
 **Accept:** secondary hero CTA meets WCAG AA contrast on the night background in a screenshot check.
 
 ### M6 · One coherent beta story — **P1 · S**
@@ -113,7 +133,7 @@ Marketing is deliberately always-light (scoped `.ps-site`); the app has three th
 The single most consequential action in the product (distributing a report to the whole company) has less friction than deleting a call template, while several irreversible removals have none at all. All fixes below are client-side friction wiring existing gated server actions.
 
 ### R1 · Preview + confirm before "Distribute" — **P0 · M**
-"Distribute" (`reports/_components/report-form.tsx:358-398`) flips a draft to distributed in one click; the auto-opened recipient picker previews *who*, never *what*. Add a preview step: render the report exactly as recipients will see it (reuse the existing detail/email rendering) inside a confirm surface ("Distribute to N people").
+"Distribute" (`reports/_components/report-form.tsx:358-398`) flips a draft to distributed in one click; the auto-opened recipient picker previews *who*, never *what*. Add a preview step: render the report exactly as recipients will see it inside a confirm surface ("Distribute to N people"). Two existing render paths to reuse — the report detail page components under `app/(app)/productions/[slug]/reports/[reportId]/` (what in-app recipients see) and the email HTML builder in `features/reports/send-report.ts` (what inboxes get); the in-app rendering is the sensible preview. The recipient picker itself is `email-report-button.tsx` in the same `[reportId]` folder.
 **Accept:** distributing requires seeing the rendered report + an explicit confirm; "Save draft" stays one click.
 **Security note:** preview must reuse the existing sanitized render path (`sanitizeHtml` — ground rule 4) and existing queries; the author already holds `reports:create` so no visibility change. No new server action needed.
 
@@ -156,7 +176,7 @@ Free-text "7:00 PM" strings (`new-production-wizard.tsx:905-918`) while the call
 ## Phase N — Navigation & IA
 
 ### N1 · Mount the notification bell — **P1 · S**
-`components/app-shell/notification-bell.tsx` is complete (loading/empty/populated, mark-read, per-row links) and referenced nowhere. There is no persistent notification inbox in the shell. Mount it in the rail (desktop) and surface an equivalent entry on mobile (e.g. dashboard header or More).
+`components/app-shell/notification-bell.tsx` is complete (loading/empty/populated, mark-read, per-row links) and referenced nowhere — confirm with grep before assuming it still works; it may have drifted since it was built. There is no persistent notification inbox in the shell. Mount it in the rail (`components/app-shell/rail.tsx` — the footer row next to `ThemeControl` is the natural spot) and surface an equivalent entry on mobile (e.g. dashboard header or the More page, `app/(app)/(default)/more/page.tsx`).
 **Accept:** unread notifications reachable from every app screen; mark-read works; count badge visible.
 **Security note:** bell queries are already per-user; mounting adds no new data exposure. Verify the dropdown links respect production access (they link to items the user was notified about, which are membership-gated at the target page anyway).
 
