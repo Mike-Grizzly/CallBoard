@@ -129,10 +129,13 @@ export async function signup(
   const password = formData.get("password") as string;
   const firstName = formData.get("first_name") as string;
   const lastName = formData.get("last_name") as string;
+  const accountTypeRaw = (formData.get("account_type") as string) || "";
   const accountType =
-    (formData.get("account_type") as string) === "individual"
+    accountTypeRaw === "individual"
       ? "individual"
-      : "organization";
+      : accountTypeRaw === "designer"
+        ? "designer"
+        : "organization";
   const organizationName = (
     (formData.get("organization_name") as string) || ""
   ).trim();

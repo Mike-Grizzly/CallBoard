@@ -26,6 +26,26 @@ export const profiles = pgTable("profiles", {
     () => organizations.id,
     { onDelete: "set null" },
   ),
+
+  // ─── Designer seat (Proscene Studio) — per-user subscription ───────────────
+  // The individual "designer package" entitlement, orthogonal to org plans
+  // (which live on organizations.*). Synced from Stripe webhooks keyed on the
+  // subscription's profileId metadata. Null designerPlan = no active seat.
+  // 'single_tool' | 'studio' | 'studio_pro'.
+  designerPlan: text("designer_plan"),
+  // For 'single_tool' only: which tool they bought — 'script' | 'blocking'.
+  designerTool: text("designer_tool"),
+  // 'trialing' | 'active' | 'past_due' | 'canceled' | null (mirrors Stripe).
+  designerSubscriptionStatus: text("designer_subscription_status"),
+  // Personal Stripe customer/subscription for the seat — separate from any
+  // org's stripeCustomerId, since a designer may also belong to paid orgs.
+  designerStripeCustomerId: text("designer_stripe_customer_id"),
+  designerStripeSubscriptionId: text("designer_stripe_subscription_id"),
+  // End of the current paid period (from Stripe), for access-after-cancel.
+  designerCurrentPeriodEnd: timestamp("designer_current_period_end", {
+    withTimezone: true,
+  }),
+
   lastActiveAt: timestamp("last_active_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

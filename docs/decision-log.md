@@ -2399,6 +2399,37 @@ Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject an
 
 ---
 
+## 2026-06-29 — Billing re-enabled (flag → true); Studio billing scoped as not-yet-built
+
+**Decision:** Re-enabled the full trial + subscription system by flipping `BILLING_ENABLED` (`features/billing/constants.ts`) from `false` back to `true`, reversing the 2026-06-18 open-beta pause. No other code change — the system was kept warm behind the flag specifically so this would be a one-line restore. Stripe stays in **test/sandbox mode** until a dedicated security audit of the billing workflow is done.
+
+**To make Checkout work in sandbox:** set the eight `STRIPE_*` env vars (now in `.env.example`) with Stripe TEST keys; create three Products (Season/Repertory/Company), each with a monthly + annual recurring price; register the webhook at `/api/stripe/webhook` (events: `checkout.session.completed`, `customer.subscription.created/updated/deleted`). Do NOT put a trial on the Stripe price — `createCheckoutSession` passes `trial_end` derived from the org's app-managed 60-day clock, so a Stripe-side trial would double-count.
+
+**Scope correction — Proscene Studio (individual/designer) billing is NOT built.** The Focus/designer *product* (single-player Script + Blocking workspace, individual-vs-org signup, the Focus view) is built and merged. But the *billing* for it does not exist: `PLANS`/`PaidPlanId` only know `free | season | repertory | company`; there are no `studio`/`single_tool`/`studio_pro` plan ids, no `STRIPE_PRICE_STUDIO_*` slots in `lib/stripe.ts`, no `PRODUCTION_LIMIT`/`STORAGE_LIMIT_GB`/`PLAN_LABELS` rows for them, no entitlement path for a personal (non-org) subscriber, and the marketing Studio tiers are `data-noop` "Notify me" CTAs. **Adding Stripe prices alone does nothing.** Turning Studio on is a code build: add the plan ids + price-id slots; extend checkout/webhook/entitlement to bill an individual rather than an org; gate the Focus workspace on the personal subscription; wire the marketing CTAs to real checkout. Deferred pending owner go-ahead.
+
+**Discounts (still to wire):** Checkout already sends `allow_promotion_codes: true`, so any Stripe coupon surfaced as a promotion code works at checkout today with zero code change. Outstanding: the 15%-off day-30 nudge is still "reply for a code" (not self-serve); the 30% founding/beta discount is advertised on the marketing site but has no coupon behind it. Both are Stripe-dashboard coupons; making the day-30 nudge self-serve additionally needs a code change to mint a per-org, single-use promotion code and inject it into the day-30 lifecycle email.
+
+**Verification:** code change is the one-line flag flip (symmetric to the previously `tsc`-clean paused state); not re-run here (fresh clone, deps not installed).
+
+---
+
+## 2026-06-29 — Proscene Studio (designer-seat) billing implemented
+
+**Decision:** Built the per-user Studio subscription (feature 21) as an entitlement axis **separate from the org `plan`**, stored on `profiles` (`designer_plan`, `designer_tool`, `designer_subscription_status`, personal `designer_stripe_customer_id`/`designer_stripe_subscription_id`, `designer_current_period_end`; migration `add_designer_seat_columns_to_profiles`). A designer's personal workspace stays a normal free org; the **seat**, not that org's plan, governs their Focus access.
+
+**Key choices:**
+- **Billed to the person, shared Stripe webhook.** `createDesignerCheckoutSession` creates/reuses a personal Stripe customer on the profile and tags the subscription `metadata.kind="designer"` + `profileId`/`designerPlan`/`tool`. The existing `/api/stripe/webhook` gains a `routeSubscription()` splitter: designer-tagged (or designer-priced) subs sync to the profile entitlement; org subs are unchanged. One endpoint, no new webhook.
+- **Gate via delegation, not duplication.** The three org guards (`assertCanMutate`/`assertCanOperate`/`assertCanCreateProduction`) detect `accessMode="designer"` (cheap — `getCurrentUser` is request-cached) and delegate to `features/designer/entitlement.ts`. So every existing write path a designer hits in Focus is seat-governed with no per-action edits. Tool access (Single Tool = Script *or* Blocking) is gated at the Focus route entry.
+- **No designer trial (v1).** Seats charge on subscribe, cancel any time, read-only after the paid period — simpler than entangling with the org's first-production 60-day clock. (So the Stripe designer prices must NOT carry a trial.)
+- **Seatless entry point.** A new designer can't create a production (the gate needs a seat) and the per-production settings page needs a slug — so the `/focus` index itself hosts the subscribe UI for a seatless designer-only user.
+- **accessMode set at signup, not on payment.** A `designer` signup type stamps `profiles.access_mode="designer"`; it stays designer after cancel (so canceling never hands over the full app free). The entitlement governs actual editing.
+
+**Deferred (flagged in `open-questions.md`):** the designer→org referral incentive (a separate anti-fraud subsystem); per-write-action tool enforcement for Single Tool (currently route-gated — a low-severity billing-bypass hardening item); storage-cap enforcement (advisory, like the org caps).
+
+**Verification:** not typechecked (fresh clone, no `node_modules`); built close to the existing org-billing patterns. This is the slice for the planned Stripe-workflow security audit.
+
+---
+
 ## 2026-06-29 — Auth rate limiter fails CLOSED in production
 
 **Decision:** When the auth rate limiter is unavailable (Upstash not configured) or errors at request time, `checkAuthRateLimit` now **blocks** the auth attempt in real production (`VERCEL_ENV === "production"`, else `NODE_ENV`), returning a generic "temporarily unavailable" message and logging an error. In every other environment (local dev, CI, Vercel previews) it still fails **open** so those stay usable without Redis. Previously it failed open everywhere.
@@ -2439,6 +2470,18 @@ Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject an
 
 ---
 
+## 2026-06-30 — Studio/Stripe billing security review + hardening
+
+**Review.** Focused security review of the billing money path (identification pass + three parallel adversarial verification passes), per the "anything financial must be airtight" bar. **No presently-exploitable HIGH/MEDIUM vulnerability.** Signature verification holds (`constructEvent`); checkout/portal customers are bound to `requireCurrentUser`; `metadata.profileId`/`organizationId` are server-set with no untrusted path; the two billing axes mint separate Stripe customers and designer subs are always tagged `kind="designer"`.
+
+**Fixed — Single Tool per-tool bypass (LOW, confirmed 8/10).** Tool restriction was enforced only at the Focus page route; the per-tool write server-actions checked active-seat only (`assertDesignerCanUseTool` was dead code), so a hand-crafted action call let a $5.99 Single Tool seat use the other tool inside its own workspace. Fix: `assertCanMutate(orgId, tool?)` delegates to `assertDesignerCanUseTool` for designer-only users when a `tool` is supplied. Every `features/blocking/actions.ts` write passes `"blocking"`; every `features/scripts/{actions,ocr-actions}.ts` write passes `"script"`. Shared surfaces (documents, scenes) intentionally stay on the active-seat check (both tools legitimately use them). Org users are unaffected — the `tool` arg is ignored outside the designer branch.
+
+**Hardened — webhook confused-deputy / cross-axis misroute (both verified NOT exploitable, 2/10; hardened as defense-in-depth).** `syncSubscription` and `syncDesignerSubscription` now add a customer cross-check to their `where`: the resolved row's stored Stripe customer id must be `null` or equal the event's `customer`, else 0 rows update. Any future metadata/customer mismatch (or cross-axis misroute) fails safe instead of writing the wrong org/profile. The legit flow always passes — the customer id is stamped on the org/profile at checkout, before the event fires.
+
+**Verification:** code-only; not locally typechecked (deps-less clone) — PR #66 runs CI (typecheck/lint/build/tests). Not browser-verified.
+
+---
+
 ## 2026-06-30 — QA batches 1–2 product/workflow decisions
 
 **Decisions (owner, during QA of `claude/qa-workflow-fixes`, PR #67):**
@@ -2457,6 +2500,72 @@ Both `finalizeReportAttachmentUpload` and `finalizeDocumentUpload` now reject an
 **Reason:** Owner-driven product direction gathered during hands-on QA; each polish/feature item was written up and approved before coding, per the agreed process.
 
 **Impact:** Batches 1–2 of `qa-backlog.md` are closed and merged. Batch 3+ (report inputs wired to real data — scenes/characters/people; attendance model; blocking enhancements; setup presets; union status) remains pending. The accounts/entitlements model must NOT be folded into a QA batch.
+
+---
+
+## 2026-07-02 — In-app plan changes require priced consent; `ended_at` is the effective end of a canceled subscription
+
+**Decision (1) — no one-click charges, ever.** Any in-app subscription change that bills immediately must be two-step: a server-priced preview (`previewDesignerPlanChange` → `stripe.invoices.createPreview`, returning the exact prorated amount due today plus the new recurring price on the subscriber's KEPT billing interval) followed by a separate, explicit confirm click ("Confirm upgrade — pay $X") that alone executes `changeDesignerPlan`. The preview and the execution share one resolver (`resolveDesignerPlanChange`) so the number confirmed is the number charged.
+
+**Reason:** Owner call during sandbox testing: the lock-modal tier buttons charged the card the instant they were clicked — an accidental-purchase trap that would erode exactly the "anything financial is airtight" trust the product is selling. Interval preservation came out of the same review (the upgrade previously silently moved annual subscribers to monthly pricing).
+
+**Impact:** This is the pattern for every future in-app plan-change surface (including org tier switching if it's ever brought in-app): preview → explicit consent showing real dollars → charge. The Stripe-hosted surfaces (Checkout, Customer Portal) already carry their own consent screens and are unaffected.
+
+**Decision (2) — `ended_at` wins once a subscription has ended.** Both webhook syncs (org `syncSubscription` + designer `syncDesignerSubscription`) now store `sub.ended_at` (when set) as the effective period end. An immediate cancel therefore ends access immediately — Stripe's own semantics for that path, which is typically refund-adjacent or administrative — while a normal cancel-at-period-end is unchanged (`ended_at` equals the period end there). The canceled-in-grace state remains supported: checkout accepts a `canceled` seat, and `DesignerBillingButtons` shows resubscribe cards + an "access through <date>" note instead of only the portal button (which is a dead end once no live subscription exists).
+
+**Reason:** Found live in sandbox: an immediately-canceled Studio sub kept its paid-through date, so the grace branch granted up to a month of access that Stripe considered ended — and the seat-holding UI hid every resubscribe path behind a portal with nothing left to manage.
+
+---
+
+## 2026-07-02 — Designer → full-app conversion is one click, in place, with the full 60-day trial
+
+**Decision:** A designer account converts to the full app WITHOUT cancel/re-signup: `/focus/full-app` (in-app marketing splash) + `upgradeToFullApp()` — wind the Studio seat down via `cancel_at_period_end` (never immediate; they keep what they paid for; abort the whole action if the Stripe call fails), grant the org the standard 60-day trial anchored to CONVERSION DAY, flip `accessMode` to `full`, land on the dashboard. The trial anchor is deliberately re-stamped even if a designer's earlier production create already started it (`startTrialIfFirstProduction` fires on every create path): conversion is the org's real first day as a company workspace, and the flip is one-way per account so a re-stamp can't be farmed. Org plan selection stays in Settings → Billing, where subscribing mid-trial already defers the first charge to trial end. Org tiers do NOT appear in the tool-lock modal — it stays a two-option unlock moment; the modal, Focus settings, and the seatless paywall carry a "get the full app" link instead.
+
+**Reason:** Owner rejected the concierge/deferred path ("cancel and then relog/setup... seems tedious") and set the terms: a linkable splash page with feature highlights, upgrade in place, keep the 60-day trial. The personal workspace already being an `organizations` row (with the designer as admin) makes in-place conversion the cheap, correct move — no data migration at all.
+
+**Impact:** Converts keep all Focus work (same org). The seat and org axes never overlap billing-wise beyond the already-paid seat period. Reverse conversion (full → designer-only) intentionally does not exist. The deeper free-user/paid-org entitlement model stays a separate scoping effort (`open-questions.md`).
+
+---
+
+## 2026-07-02 — Final billing security pass (manual) + two hardening fixes
+
+**Review.** Full security pass over the complete branch diff (webhook, checkout/portal, `changeDesignerPlan`/`previewDesignerPlanChange`, `upgradeToFullApp`, `requestSiteUrl`, per-tool guards, and the merged-in `attachWizardScriptByPath`), against the money + tenant-boundary threat model. **No HIGH/MEDIUM exploitable finding.** Confirmed: webhook signature-verified + customer cross-check (no confused deputy); all new actions caller-scoped via `requireCurrentUser` and operate only on the caller's own profile/org/subscription (no IDOR); prices resolved server-side from plan enums (no arbitrary/zero price); `upgradeToFullApp` is one-way (`isDesignerOnly` guard) so the trial re-stamp can't be farmed; no unsafe rendering / no raw SQL. (The automated multi-agent review harness hit a session budget limit mid-run; the pass was completed manually with all files in context — offered a re-run after budget reset for extra independence.)
+
+**Fixed — two LOW / defense-in-depth items:**
+1. `changeDesignerPlan` (`features/designer/actions.ts`) previously wrote the new tier to the DB right after `stripe.subscriptions.update`, so a declined proration charge would still grant the higher tier through the dunning window. Now `payment_behavior:"error_if_incomplete"` — Stripe fails the update (leaving the sub on its current price) if the charge can't be collected immediately, wrapped in try/catch to return a "check your card" error and skip the DB write. Fail-closed on money. Tradeoff: a card requiring 3-D Secure is refused rather than prompted (acceptable for an in-app off-session upgrade).
+2. `attachWizardScriptByPath` (`features/scripts/actions.ts`, from the PR #67 merge) filed a script with a role check but no billing gate. Added `assertCanMutate(user.organizationId, "script")` to match its sibling wizard actions (impact was already marginal — the upload that produced the file is itself gated).
+
+**Not changed (below reporting bar):** `requestSiteUrl` builds Stripe return URLs from request headers, but only affects the attacker's own post-checkout redirect (no cross-user path, no tokens in the URL).
+
+**Impact:** Branch is security-cleared for merge. Live-Stripe go-live steps (live keys/webhook, portal plan-switching, discounts) remain on the checklist.
+
+---
+
+## 2026-07-03 — Adversarial multi-agent review caught a real trial-farming bypass in upgradeToFullApp (fixed)
+
+**Finding.** A 5-dimension adversarial workflow (independent finders + 3 refute-by-default verifiers per finding + a coverage critic) found a MEDIUM/HIGH billing bypass that the earlier manual pass MISSED: `upgradeToFullApp` re-stamped `organizations.trialStartedAt/trialEndsAt` on `user.organizationId` gated ONLY by `isDesignerOnly(user)` (a per-profile flag) — with no admin check and no set-once guard. Because `accessMode` is per-profile while `organizationId` is the caller's *selected* org (steerable to any org they're a member of via `switchOrganization`, which checks membership only — `features/workspace/actions.ts`), and `inviteMembers` adds an existing designer-mode profile to an org without resetting `accessMode` (`features/members/actions.ts:903`), a disposable free designer account could be invited into a target company, switch into it, and reset its expired 60-day trial — repeatable indefinitely with fresh sock-puppets for rolling free full access. The docstring's "one-way flip can't be farmed" reasoning was wrong: one-way *per account*, but designer signups are free and unlimited.
+
+**Fix.** (1) `upgradeToFullApp` now requires `can(user.role, "settings:manage")` on the selected org — a designer is admin of their own personal workspace (legit path passes), but a designer who is merely a member of another org can no longer re-provision it. (2) The trial write is now SET-ONCE (`WHERE trial_started_at IS NULL`, matching `startTrialIfFirstProduction`), so an existing/expired trial can never be RESET — the core farming primitive is gone. (3) Designer production-creates no longer call `startTrialIfFirstProduction` (`features/productions/actions.ts`, all three paths gated on `!isDesignerOnly(user)`): designers are seat-gated, not org-trial-gated, so their personal org's clock stays `NULL` until conversion — which lets the set-once conversion still grant a genuine 60 days from conversion day (preserving the splash promise) while keeping expired orgs un-resettable.
+
+**Process note.** This is exactly the class of bug a single reviewer rationalizes away ("it's one-way, can't be farmed") and adversarial multi-agent verification catches — three independent finders converged on it, 3/3 refutation-resistant each. Worth repeating the pattern for money code.
+
+---
+
+## 2026-07-03 — OPEN: billing guards select the axis by caller accessMode, ignoring the resource org (needs a product call)
+
+**Issue (from the coverage critic, not yet fixed).** `assertCanMutate`/`assertCanOperate`/`assertCanCreateProduction` (`features/billing/guard.ts`) branch on `isDesignerOnly(caller)` and then gate on the caller's personal Studio SEAT, ignoring the `orgId` argument. Since a designer-mode account can be a member of a company org (invite keeps `accessMode="designer"`) and switch into it, this means: (a) SECURITY — a designer with an active seat could write into a *lapsed* company's productions (that org should be read-only), softening its paywall; (b) FUNCTIONALITY — a designer legitimately invited to a *paid* company would be wrongly blocked (gated on their absent/insufficient seat instead of the company's active plan). Not reachable through normal UI today (designers are routed to `/focus`), but reachable via direct server-action calls.
+
+**Why deferred to a decision, not hot-fixed:** the correct gate depends on whether "a designer-mode account working inside a separate company org" is a SUPPORTED model. There is no `is_personal_workspace` flag on `organizations` to cleanly distinguish the designer's own workspace from a company they joined. Options: (i) gate a designer caller by the RESOURCE org's billing when that org has its own footprint (grandfathered/subscription/started-trial), else by the seat — a heuristic with brand-new-company edges; (ii) add an explicit personal-workspace flag and gate by it; (iii) forbid designer-mode accounts from switching into / acting in other orgs at all (matches today's "designers are solo" model). Owner to choose direction before this is fixed. Tracked in `open-questions.md`.
+
+**RESOLVED 2026-07-03 — owner chose the Canva/Monday model + an explicit flag (option ii + a structural block).** Owner's model: a designer can be a member of a paid org and use ALL of that org's tools (gated by the ORG's billing); separately, they can pay for their own Studio seat, and that personal work lives in a SEPARATE personal workspace (gated by the SEAT); they toggle between the two. The line they drew: a designer must never use a paid org's entitlement to do their own / another non-paying company's work. Implementation:
+- New `organizations.is_personal_workspace` boolean (migration `add_is_personal_workspace_to_organizations`). True ONLY for a designer's seat-gated personal workspace (set at designer signup); false for companies and for "individual" full-access personal workspaces (which stay org-billing gated and run a normal trial). Flipped to false by `upgradeToFullApp` (personal → company on conversion).
+- `features/billing/guard.ts`: the interim footprint heuristic (`orgIsCompany`) is REPLACED by `seatGoverns(user, org) = isDesignerOnly(user) && org.isPersonalWorkspace`. A designer is gated by their seat only in their own flagged workspace; inside any company they're gated by that company's billing.
+- **Structural block (owner's "easy fix"):** `assertCanCreateProduction` now REFUSES production creation for a designer-mode caller inside a company org — they participate in the company's shows but can't spin up their own productions on the company's paid suite. Their productions go in their personal workspace, gated by their seat.
+- `startTrialIfFirstProduction` gains `AND is_personal_workspace = false`, so a personal workspace never runs the org trial clock (this replaces the earlier 3 call-site `isDesignerOnly` gates, now reverted) — which also means a company's trial correctly starts on its first production regardless of who creates it, closing the brand-new-company leak the heuristic had.
+
+**Impact:** the seat axis and the org axis are now strictly separated by an explicit flag, matching the owner's stated model exactly. Remaining follow-up is only the designer→company **toggle UI** (server-side entitlement is done); tracked in `open-questions.md`.
+
+---
 
 ## 2026-07-02 — SEO integration: /docs manual is in-repo typed content, same domain
 

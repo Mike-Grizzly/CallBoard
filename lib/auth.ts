@@ -159,14 +159,24 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     const { firstName, lastName } = deriveName(meta);
     const email = authUser.email ?? "";
     const accountType = (meta.account_type as string) || "organization";
+    // Designer-package signups become Focus-only (accessMode="designer") and,
+    // like participants, get a personal workspace named for them.
+    const isDesignerSignup = accountType === "designer";
     const requestedOrgName = ((meta.organization_name as string) || "").trim();
     const orgName =
       requestedOrgName ||
-      (accountType === "individual"
+      (accountType === "individual" || isDesignerSignup
         ? personalWorkspaceName(firstName, email)
         : fallbackOrgName(firstName, lastName, email));
 
-    const org = await createOrganization(orgName);
+    // Only a DESIGNER signup gets a seat-gated personal workspace. This flag is
+    // the axis switch in features/billing/guard.ts (seat vs org billing) AND
+    // suppresses the org trial clock — so it must NOT be set for "individual"
+    // full-access accounts, which are org-billing gated and DO run a normal
+    // 60-day org trial like any company.
+    const org = await createOrganization(orgName, undefined, {
+      isPersonalWorkspace: isDesignerSignup,
+    });
 
     await db.insert(profiles).values({
       id: authUser.id,
@@ -174,6 +184,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       firstName,
       lastName,
       selectedOrganizationId: org.id,
+      accessMode: isDesignerSignup ? "designer" : "full",
     });
 
     await db.insert(organizationMemberships).values({
@@ -191,7 +202,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       organizationId: org.id,
       organizationName: org.name,
       organizationLogoUrl: org.logoUrl ?? null,
-      accessMode: "full",
+      accessMode: isDesignerSignup ? "designer" : "full",
     };
   }
 
@@ -232,6 +243,10 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
         existing[0].lastName,
         existing[0].email,
       ),
+      undefined,
+      // A designer recovering a lost membership gets their personal workspace
+      // back (seat-gated), not a company org.
+      { isPersonalWorkspace: existing[0].accessMode === "designer" },
     );
 
     await db.insert(organizationMemberships).values({

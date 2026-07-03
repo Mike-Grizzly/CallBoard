@@ -30,12 +30,20 @@ import {
   limitCountsArchived,
   type PlanId,
 } from "./constants";
+import { getCurrentUser, isDesignerOnly, type CurrentUser } from "@/lib/auth";
+import {
+  assertDesignerCanMutate,
+  assertDesignerCanUseTool,
+  assertDesignerCanCreateProduction,
+} from "@/features/designer/entitlement";
+import type { DesignerTool } from "@/features/designer/constants";
 
 const DAY = 86_400_000;
 
 type OrgBillingRow = OrgBillingFields & {
   plan: string;
   trialStartedAt: Date | null;
+  isPersonalWorkspace: boolean;
 };
 
 async function getOrgBilling(orgId: string): Promise<OrgBillingRow | null> {
@@ -47,6 +55,7 @@ async function getOrgBilling(orgId: string): Promise<OrgBillingRow | null> {
       currentPeriodEnd: organizations.currentPeriodEnd,
       plan: organizations.plan,
       trialStartedAt: organizations.trialStartedAt,
+      isPersonalWorkspace: organizations.isPersonalWorkspace,
     })
     .from(organizations)
     .where(eq(organizations.id, orgId))
@@ -86,15 +95,42 @@ const READ_ONLY_MSG =
   "view and download everything.";
 
 /**
+ * The billing axis for a designer-only caller is chosen by WHERE they're acting:
+ * inside their OWN personal workspace (`is_personal_workspace`), their per-user
+ * Studio SEAT governs; inside a COMPANY org they belong to (designers can be
+ * invited to the companies they design for), that org's own billing governs —
+ * exactly as for any other member. This keeps the two axes strictly separate:
+ * a seat never buys writes in a lapsed company, and a seatless designer is never
+ * locked out of a paid company. `is_personal_workspace` is set at signup and
+ * flipped to false on conversion (upgradeToFullApp).
+ */
+function seatGoverns(user: CurrentUser, org: OrgBillingRow | null): boolean {
+  return isDesignerOnly(user) && (!org || org.isPersonalWorkspace);
+}
+
+/**
  * Full-access gate — for creative/config/storage writes (scripts, blocking,
  * scenes, document & report uploads, production/workspace settings, member
  * invites). Blocked the instant the trial expires (grace and locked phases).
  */
 export async function assertCanMutate(
   orgId: string,
+  tool?: DesignerTool,
 ): Promise<{ error?: string }> {
   if (!BILLING_ENABLED) return {}; // open beta: no write gating
+  // Designer-only users are governed by their personal Studio seat — but ONLY
+  // inside their own personal workspace. Acting inside a company org they belong
+  // to, that org's billing governs (see seatGoverns). When the write belongs to
+  // a specific tool, enforce that the seat includes it — the Single Tool tier
+  // buys only one of Script / Blocking. Calls without a `tool` (shared surfaces
+  // like documents/scenes) fall back to the active-seat check.
   const org = await getOrgBilling(orgId);
+  const designer = await getCurrentUser();
+  if (designer && seatGoverns(designer, org)) {
+    return tool
+      ? assertDesignerCanUseTool(designer.id, tool)
+      : assertDesignerCanMutate(designer.id);
+  }
   if (!org) return { error: "Organization not found." };
   const level = mutationLevel(org);
   if (level === "full") return {};
@@ -111,7 +147,13 @@ export async function assertCanOperate(
   orgId: string,
 ): Promise<{ error?: string }> {
   if (!BILLING_ENABLED) return {}; // open beta: no operational gating
+  // Designer seat governs only their own workspace; a company org they belong
+  // to is gated by that org (see seatGoverns / assertCanMutate).
   const org = await getOrgBilling(orgId);
+  const designer = await getCurrentUser();
+  if (designer && seatGoverns(designer, org)) {
+    return assertDesignerCanMutate(designer.id);
+  }
   if (!org) return { error: "Organization not found." };
   if (mutationLevel(org) === "locked") return { error: READ_ONLY_MSG };
   return {};
@@ -126,7 +168,24 @@ export async function assertCanCreateProduction(
   orgId: string,
 ): Promise<{ error?: string }> {
   if (!BILLING_ENABLED) return {}; // open beta: unlimited productions
+  // Designer seat's per-tier cap governs only their own workspace; inside a
+  // company org they belong to they can't start productions at all (below).
   const org = await getOrgBilling(orgId);
+  const designer = await getCurrentUser();
+  if (designer && isDesignerOnly(designer)) {
+    if (org && !org.isPersonalWorkspace) {
+      // A designer participates in a company's shows but can't START new
+      // productions inside its paid suite — that would spend the company's
+      // entitlement on the designer's own / outside work. Their own productions
+      // live in their personal workspace, gated by their Studio seat.
+      return {
+        error:
+          "Only this organization's managers can start new productions here. " +
+          "Start your own productions in your personal Studio workspace.",
+      };
+    }
+    return assertDesignerCanCreateProduction(designer.id, orgId);
+  }
   if (!org) return { error: "Organization not found." };
   if (org.grandfathered) return {}; // existing orgs: unlimited, never gated
 
@@ -226,6 +285,11 @@ export async function startTrialIfFirstProduction(
       and(
         eq(organizations.id, orgId),
         isNull(organizations.trialStartedAt),
+        // Personal workspaces are seat-gated and never run the org trial clock;
+        // only a company org's first production starts it. (A designer can't
+        // create a production in a company anyway — see assertCanCreateProduction
+        // — but this keeps the invariant true regardless of the call path.)
+        eq(organizations.isPersonalWorkspace, false),
       ),
     )
     .returning({ id: organizations.id });

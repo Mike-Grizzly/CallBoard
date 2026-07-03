@@ -16,6 +16,8 @@ import {
   stripeConfigured,
   availablePaidPlans,
   STRIPE_PRICE_IDS,
+  availableDesignerPlans,
+  STRIPE_DESIGNER_PRICE_IDS,
 } from "@/lib/stripe";
 import { AccountProfileForm } from "@/app/(app)/(default)/settings/account/account-profile-form";
 import { ChangeEmailForm } from "@/app/(app)/(default)/settings/account/change-email-form";
@@ -27,6 +29,13 @@ import {
   type PlanOption,
 } from "@/app/(app)/(default)/settings/billing/billing-buttons";
 import { FocusShell } from "../focus-shell";
+import { getDesignerSeat } from "@/features/designer/entitlement";
+import { FullAppCallout } from "@/features/designer/full-app-callout";
+import {
+  DesignerBillingButtons,
+  type DesignerPlanOption,
+} from "@/features/designer/billing-buttons";
+import type { DesignerPlanId } from "@/features/designer/constants";
 
 type CurrentUserLike = {
   firstName: string | null;
@@ -101,16 +110,19 @@ export default async function FocusSettingsPage({
     projects: visible.map((p) => ({ slug: p.slug, title: p.title })),
   };
 
-  // Billing is org-level today; only workspace admins manage it. Hidden
-  // entirely during the open beta (no payments) — see BILLING_ENABLED.
-  const canBilling = BILLING_ENABLED && can(user.role, "settings:manage");
+  const designerOnly = isDesignerOnly(user);
+  // Org billing is for full workspace admins. Designer-only users manage their
+  // personal Studio seat instead (below), never the org plan. Both are hidden
+  // during the open beta (no payments) — see BILLING_ENABLED.
+  const canOrgBilling =
+    BILLING_ENABLED && !designerOnly && can(user.role, "settings:manage");
   let billing: {
     headline: string;
     planOptions: PlanOption[];
     isSubscribed: boolean;
     available: boolean;
   } | null = null;
-  if (canBilling) {
+  if (canOrgBilling) {
     const [org] = await db
       .select({
         name: organizations.name,
@@ -143,6 +155,42 @@ export default async function FocusSettingsPage({
           stripeConfigured && (planOptions.length > 0 || isSubscribed),
       };
     }
+  }
+
+  // Designer-only users see their personal Studio-seat billing here.
+  let designerBilling: {
+    hasSeat: boolean;
+    currentPlan: DesignerPlanId | null;
+    plans: DesignerPlanOption[];
+    available: boolean;
+    canceledInGrace: boolean;
+    accessThrough: string | null;
+  } | null = null;
+  if (BILLING_ENABLED && designerOnly) {
+    const seat = await getDesignerSeat(user.id);
+    const plans: DesignerPlanOption[] = availableDesignerPlans().map((id) => ({
+      id,
+      hasMonthly: !!STRIPE_DESIGNER_PRICE_IDS[id].monthly,
+      hasAnnual: !!STRIPE_DESIGNER_PRICE_IDS[id].annual,
+    }));
+    // Canceled-but-paid-through seats can't use the portal (no live sub left),
+    // so the buttons show the plan cards with a resubscribe note instead.
+    const canceledInGrace = seat.hasSeat && seat.status === "canceled";
+    designerBilling = {
+      hasSeat: seat.hasSeat,
+      currentPlan: seat.plan,
+      plans,
+      available: stripeConfigured && (plans.length > 0 || seat.hasSeat),
+      canceledInGrace,
+      accessThrough:
+        canceledInGrace && seat.periodEnd
+          ? seat.periodEnd.toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })
+          : null,
+    };
   }
 
   return (
@@ -195,6 +243,33 @@ export default async function FocusSettingsPage({
                     Online billing isn&apos;t available yet — check back soon.
                   </p>
                 )}
+              </div>
+            </section>
+          )}
+
+          {designerBilling && (
+            <section className="fx-settings-section">
+              <h2>Plan &amp; billing</h2>
+              <div className="card card-pad">
+                <h3 style={{ fontSize: 15, margin: 0, fontWeight: 600 }}>
+                  {designerBilling.hasSeat
+                    ? "Your Studio plan"
+                    : "Choose a Studio plan"}
+                </h3>
+                {designerBilling.available ? (
+                  <DesignerBillingButtons
+                    plans={designerBilling.plans}
+                    hasSeat={designerBilling.hasSeat}
+                    currentPlan={designerBilling.currentPlan}
+                    canceledInGrace={designerBilling.canceledInGrace}
+                    accessThrough={designerBilling.accessThrough}
+                  />
+                ) : (
+                  <p className="muted" style={{ fontSize: 13, marginTop: 12 }}>
+                    Online billing isn&apos;t available yet — check back soon.
+                  </p>
+                )}
+                <FullAppCallout />
               </div>
             </section>
           )}
