@@ -1,12 +1,17 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * A "pick or type" text field with an app-styled suggestion dropdown. Suggests
  * known values (scenes, characters, people) but always accepts free-typed text
- * for guests, understudies, ensemble, or anything not in the system. Custom
- * (not a native <datalist>) so the dropdown matches the rest of the UI.
+ * for guests, understudies, ensemble, or anything not in the system.
+ *
+ * The dropdown is portaled to <body> and positioned with fixed coordinates from
+ * the input's rect, so it can never be clipped or stacked-under by an ancestor
+ * (cards, grids, overflow containers) the way a native <datalist> or an
+ * absolutely-positioned menu can.
  */
 export function ComboField({
   value,
@@ -28,7 +33,9 @@ export function ComboField({
 }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<{ left: number; top: number; width: number } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
   const listId = useId();
 
   const matches = useMemo(() => {
@@ -46,22 +53,49 @@ export function ComboField({
     return list.slice(0, 50);
   }, [value, options]);
 
+  const showPop = open && matches.length > 0 && rect !== null;
+
+  function measure() {
+    const el = inputRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setRect({ left: r.left, top: r.bottom + 4, width: r.width });
+  }
+
+  function openPop() {
+    measure();
+    setActive(0);
+    setOpen(true);
+  }
+
+  // Keep the portaled menu pinned to the input while open (scroll/resize).
   useEffect(() => {
     if (!open) return;
+    const onMove = () => measure();
+    window.addEventListener("scroll", onMove, true);
+    window.addEventListener("resize", onMove);
     const onDoc = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const t = e.target as Node;
+      if (inputRef.current?.contains(t) || popRef.current?.contains(t)) return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    return () => {
+      window.removeEventListener("scroll", onMove, true);
+      window.removeEventListener("resize", onMove);
+      document.removeEventListener("mousedown", onDoc);
+    };
   }, [open]);
 
-  const showPop = open && matches.length > 0;
+  function choose(v: string) {
+    onChange(v);
+    setOpen(false);
+  }
 
   return (
-    <div ref={wrapRef} style={{ position: "relative" }}>
+    <>
       <input
+        ref={inputRef}
         type="text"
         className={className}
         style={style}
@@ -74,13 +108,13 @@ export function ComboField({
         aria-controls={listId}
         onChange={(e) => {
           onChange(e.target.value);
-          setActive(0);
-          setOpen(true);
+          openPop();
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={openPop}
+        onClick={openPop}
         onKeyDown={(e) => {
           if (!showPop) {
-            if (e.key === "ArrowDown") setOpen(true);
+            if (e.key === "ArrowDown") openPop();
             return;
           }
           if (e.key === "ArrowDown") {
@@ -91,61 +125,62 @@ export function ComboField({
             setActive((a) => Math.max(a - 1, 0));
           } else if (e.key === "Enter") {
             e.preventDefault();
-            onChange(matches[active]);
-            setOpen(false);
+            choose(matches[active]);
           } else if (e.key === "Escape") {
             setOpen(false);
           }
         }}
       />
-      {showPop && (
-        <div
-          id={listId}
-          role="listbox"
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            right: 0,
-            minWidth: 180,
-            maxHeight: 220,
-            overflowY: "auto",
-            zIndex: 60,
-            background: "var(--bg-elev)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-s)",
-            boxShadow: "var(--shadow-2)",
-            padding: 4,
-          }}
-        >
-          {matches.map((o, i) => (
-            <div
-              key={o}
-              role="option"
-              aria-selected={i === active}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                onChange(o);
-                setOpen(false);
-              }}
-              onMouseEnter={() => setActive(i)}
-              style={{
-                padding: "6px 8px",
-                borderRadius: "var(--radius-s)",
-                fontSize: 13,
-                cursor: "pointer",
-                color: "var(--ink)",
-                background: i === active ? "var(--bg-muted)" : "transparent",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {o}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+      {showPop &&
+        createPortal(
+          <div
+            ref={popRef}
+            id={listId}
+            role="listbox"
+            style={{
+              position: "fixed",
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              minWidth: 180,
+              maxHeight: 240,
+              overflowY: "auto",
+              zIndex: 9999,
+              background: "var(--bg-elev)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-s)",
+              boxShadow: "var(--shadow-2)",
+              padding: 4,
+            }}
+          >
+            {matches.map((o, i) => (
+              <div
+                key={o}
+                role="option"
+                aria-selected={i === active}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  choose(o);
+                }}
+                onMouseEnter={() => setActive(i)}
+                style={{
+                  padding: "6px 8px",
+                  borderRadius: "var(--radius-s)",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  color: "var(--ink)",
+                  background: i === active ? "var(--bg-muted)" : "transparent",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {o}
+              </div>
+            ))}
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
