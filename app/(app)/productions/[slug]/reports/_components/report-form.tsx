@@ -230,17 +230,41 @@ export function ReportForm({
     [departments],
   );
   const [, startDeptReorder] = useTransition();
+  const [dragDeptKey, setDragDeptKey] = useState<string | null>(null);
+  // Latest order, so drop can persist the result of the drag-over reorders.
+  const deptOrderRef = useRef(deptOrder);
+  deptOrderRef.current = deptOrder;
 
-  function moveDept(key: string, dir: -1 | 1) {
-    const i = deptOrder.indexOf(key);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= deptOrder.length) return;
-    const next = [...deptOrder];
-    [next[i], next[j]] = [next[j], next[i]];
-    setDeptOrder(next);
-    startDeptReorder(() => {
-      void reorderProductionDepartments(productionId, next);
+  function onDeptDragStart(e: React.DragEvent, key: string) {
+    setDragDeptKey(key);
+    e.dataTransfer.effectAllowed = "move";
+    try {
+      e.dataTransfer.setData("text/plain", key);
+    } catch {
+      /* some browsers throw on setData during programmatic drags */
+    }
+  }
+  function onDeptDragOver(e: React.DragEvent, overKey: string) {
+    if (!dragDeptKey) return;
+    e.preventDefault();
+    if (dragDeptKey === overKey) return;
+    setDeptOrder((prev) => {
+      const from = prev.indexOf(dragDeptKey);
+      const to = prev.indexOf(overKey);
+      if (from < 0 || to < 0 || from === to) return prev;
+      const next = [...prev];
+      next.splice(from, 1);
+      next.splice(to, 0, dragDeptKey);
+      return next;
     });
+  }
+  function onDeptDragEnd() {
+    if (dragDeptKey) {
+      startDeptReorder(() => {
+        void reorderProductionDepartments(productionId, deptOrderRef.current);
+      });
+    }
+    setDragDeptKey(null);
   }
   const [breaks, setBreaks] = useState<Break[]>(initial?.breaks ?? []);
   const [scenesWorked, setScenesWorked] = useState<SceneWorked[]>(
@@ -549,7 +573,7 @@ export function ReportForm({
         <div style={{ padding: 20 }}>
           <div style={{ display: activeTab === "notes" ? "block" : "none" }}>
             <div className="grid grid-2" style={{ gap: 14 }}>
-              {deptOrder.map((deptKey, deptIdx) => {
+              {deptOrder.map((deptKey) => {
                 const d = deptByKey.get(deptKey);
                 if (!d) return null;
                 const html = deptNotes[d.key];
@@ -557,6 +581,10 @@ export function ReportForm({
                 return (
                   <div
                     key={d.key}
+                    draggable
+                    onDragStart={(e) => onDeptDragStart(e, d.key)}
+                    onDragOver={(e) => onDeptDragOver(e, d.key)}
+                    onDragEnd={onDeptDragEnd}
                     onClick={() => setEditingDept(d.key)}
                     className="dept-note-card"
                     style={{
@@ -565,8 +593,9 @@ export function ReportForm({
                       borderRadius: "var(--radius-s)",
                       cursor: "pointer",
                       minHeight: 80,
+                      opacity: dragDeptKey === d.key ? 0.5 : 1,
                       transition:
-                        "border-color .12s, background .12s, box-shadow .12s",
+                        "border-color .12s, background .12s, box-shadow .12s, opacity .12s",
                     }}
                   >
                     <div className="row" style={{ gap: 8, marginBottom: 6 }}>
@@ -583,49 +612,9 @@ export function ReportForm({
                           marginLeft: "auto",
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: 2,
+                          gap: 6,
                         }}
                       >
-                        <button
-                          type="button"
-                          className="btn ghost btn-icon"
-                          aria-label={`Move ${d.label} up`}
-                          title="Move up"
-                          disabled={deptIdx === 0}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            moveDept(d.key, -1);
-                          }}
-                          style={{
-                            width: 22,
-                            height: 22,
-                            opacity: deptIdx === 0 ? 0.3 : 1,
-                          }}
-                        >
-                          <span
-                            style={{ display: "inline-flex", transform: "rotate(180deg)" }}
-                          >
-                            <Icon name="ChevronDown" size={13} aria-hidden />
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn ghost btn-icon"
-                          aria-label={`Move ${d.label} down`}
-                          title="Move down"
-                          disabled={deptIdx === deptOrder.length - 1}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            moveDept(d.key, 1);
-                          }}
-                          style={{
-                            width: 22,
-                            height: 22,
-                            opacity: deptIdx === deptOrder.length - 1 ? 0.3 : 1,
-                          }}
-                        >
-                          <Icon name="ChevronDown" size={13} aria-hidden />
-                        </button>
                         <span
                           className="dept-note-edit-hint muted"
                           style={{
@@ -633,11 +622,21 @@ export function ReportForm({
                             display: "inline-flex",
                             alignItems: "center",
                             gap: 4,
-                            marginLeft: 4,
                           }}
                         >
                           <Icon name="PenLine" size={11} aria-hidden />
                           <span>Edit</span>
+                        </span>
+                        <span
+                          title="Drag to reorder"
+                          aria-hidden
+                          style={{
+                            display: "inline-flex",
+                            color: "var(--ink-4)",
+                            cursor: "grab",
+                          }}
+                        >
+                          <Icon name="Grip" size={13} />
                         </span>
                       </div>
                     </div>

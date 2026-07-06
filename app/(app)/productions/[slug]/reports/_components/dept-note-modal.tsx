@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { RichTextEditor } from "@/components/ui/rich-text-editor-lazy";
 import { Icon } from "@/components/ui/icon";
 import type { IconName } from "@/components/ui/icon";
@@ -45,7 +46,10 @@ export function DeptNoteModal({
 
   if (!open) return null;
 
-  return (
+  // Portal to the body so the backdrop escapes the report/nav stacking context
+  // and covers the whole viewport (the sticky production nav otherwise sat above
+  // an in-tree backdrop). High z-index matches the app's other overlays.
+  return createPortal(
     <div
       onClick={onClose}
       style={{
@@ -53,7 +57,7 @@ export function DeptNoteModal({
         inset: 0,
         background: "rgba(20, 12, 10, 0.55)",
         backdropFilter: "blur(2px)",
-        zIndex: 100,
+        zIndex: 9999,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -135,6 +139,7 @@ export function DeptNoteModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
