@@ -306,7 +306,15 @@ export function ScenesWorkedEditor({
 
   return (
     <div className="card card-pad">
-      <h3 className="h-card" style={{ marginBottom: 10 }}>Scenes worked</h3>
+      <h3 className="h-card" style={{ marginBottom: 4 }}>Scenes worked</h3>
+      <div
+        className="muted"
+        style={{ fontSize: 11.5, lineHeight: 1.5, marginBottom: 10 }}
+      >
+        {sceneOptions.length > 0
+          ? `${sceneOptions.length} scenes in this show — click a Scene field below to pick one, or type your own.`
+          : "No scenes found for this show yet — type scenes in, or add them via AI script analysis / the blocking setup."}
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {scenes.map((s, i) => (
           <div
