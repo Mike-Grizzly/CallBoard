@@ -2,6 +2,7 @@
 
 **Status:** Active working doc. Tracking convention: when a task lands, append `— ✅ DONE (branch/PR, date)` to its heading; if a task is rejected or superseded, append `— ❌ WON'T DO (reason, date)` instead of deleting it.
 **Source:** Full-surface UI/UX review (2026-07-03): four code-inspection passes (marketing site, app shell/IA, key flows, cross-surface consistency) plus live browser verification of all nine public pages at 1440px and 390px. Companion to `qa-backlog.md` (functional bugs); this doc is UX/IA/design-system work.
+**Rebased against main 2026-07-07:** billing was re-enabled after the review (PR #66, `BILLING_ENABLED=true`, Stripe still in sandbox). Tasks M3/M6/M7 were re-verified and updated to match — trust the task text below, not the 07-03 review narrative in `current-status.md`, where they differ.
 **How to use:** Tasks are grouped into phases (M/R/N/B/S) and sized XS–L. Each task has acceptance criteria and, where relevant, a security note. Suggested batching into PRs is at the bottom.
 
 ---
@@ -81,7 +82,7 @@ Verified-accurate claims to keep as-is: AI analysis + the "4 of 5 analyses" quot
 **Security note:** copy-only. Alternatively, if any of (b/f/g) get *built* instead of softened, they are separate feature specs — an .ics feed in particular is a new unauthenticated data-exposure surface (signed per-user feed URLs) and must NOT be improvised inside a copy PR.
 
 ### M3 · Pricing page: default to "For companies" — **P0 · XS**
-Initial state is `data-aud="designers"` (`pricing/page.tsx:49`), so the first thing every visitor sees is a coming-soon product (Proscene Studio) with three dead "Notify me" buttons — under a banner saying everything's free. Verified in screenshot.
+Initial state is `data-aud="designers"` (`pricing/page.tsx:49`), so the first thing every visitor sees is the individual Proscene Studio panel rather than the company plans. *(Re-verified after the 2026-07 billing launch: Studio is now purchasable with real "Get started" CTAs, so this is less broken than at review time — but companies are still the primary audience and the headline product; they should be the default panel.)*
 **Accept:** first paint shows Season/Repertory/Company; individuals still one toggle away; deep links (`?aud=`) still work.
 
 ### M4 · Restore "Sign in" for mobile marketing visitors — **P0 · XS**
@@ -92,15 +93,15 @@ Initial state is `data-aud="designers"` (`pricing/page.tsx:49`), so the first th
 `home-content.ts:247` uses `class="btn ghost lg"` — ghost = transparent bg + `--ink-2` dark-gray text (`marketing.css:170`) on the dark hero. Verified illegible in screenshot. The fix exists: change the class to `btn on-night lg` — `.btn.on-night` (`marketing.css:174`) is the dark-surface variant built for exactly this (the features-page hero at `features/content.ts:16` uses plain `btn lg` and is legible; matching that is also acceptable).
 **Accept:** secondary hero CTA meets WCAG AA contrast on the night background in a screenshot check.
 
-### M6 · One coherent beta story — **P1 · S**
-Only /pricing mentions open beta. The homepage says "Free for your first production · No card required" (`home-content.ts:273`) — a permanent-free-tier framing that contradicts "everything is free during beta." Signup repeats the 60-day-trial line. Decide the canonical message while `BILLING_ENABLED=false` and apply it to home hero note, signup footer line, and JSON-LD (`page.tsx:38` already says "Free during open beta").
-**Accept:** home, pricing, signup, FAQ trial answer, and JSON-LD tell the same story.
+### M6 · Post-billing-launch messaging audit — **P0 · S**
+*(Rewritten 2026-07-07: billing is now ON, which inverts this task.)* The open-beta banner correctly auto-hides (`pricing/page.tsx:51` gates on `!BILLING_ENABLED`), but the **JSON-LD structured data on home and pricing still tells Google "Free during open beta" with price 0** (`app/(marketing)/page.tsx:38`, `pricing/page.tsx:38`) — now-false pricing metadata on the two highest-intent pages. Fix the schema to the real offer (60-day free trial, tiers from `pricing/content.ts`). Then sweep the remaining copy against the live story ("60-day trial from first production, no card"): home hero note (`home-content.ts:273` — currently consistent), signup footer line, FAQ billing answers.
+**Accept:** JSON-LD offers match real pricing; no page or metadata claims the product is free-in-beta; home/pricing/signup/FAQ tell the same trial story.
+**Security note:** copy/metadata only; do not touch `BILLING_ENABLED`, billing gates, or Stripe config (go-live checklist in `current-status.md` is owner-only).
 
 ### M7 · Kill or wire the dead interactive elements — **P1 · S**
-All `data-noop`: three footer social icons (`_components/footer.tsx:83-94`, href="#"), pricing "How invites work" (`pricing/content.ts:61`), three Studio "Notify me" CTAs (`pricing/content.ts:200,217,233`). JSON-LD `sameAs` is empty, confirming no social presence.
-**Recommendation:** remove the social icons until real accounts exist; link "How invites work" to the existing help article on invites; make "Notify me" a real capture (reuse the contact form action with `reason=studio-waitlist`) or demote to non-interactive "Coming soon" text.
+Still `data-noop` after the billing launch: three footer social icons (`_components/footer.tsx`, href="#") and pricing "How invites work" (`pricing/content.ts:61`). JSON-LD `sameAs` is empty, confirming no social presence. *(The three Studio "Notify me" CTAs flagged at review time became real signup links in the billing launch — resolved.)*
+**Recommendation:** remove the social icons until real accounts exist; link "How invites work" to the existing help-manual article on invites (`/help/...` — find the invites page under the people or get-started section).
 **Accept:** nothing on the marketing site looks clickable but does nothing.
-**Security note:** if "Notify me" becomes a form, reuse the existing contact server action (honeypot + rate limit already built) — do not add a new unthrottled endpoint.
 
 ### M8 · Blog index honesty — **P1 · S**
 Every card links to the single real post (`blog/content.ts:3`); the featured card says 8 min read, its grid duplicate 6 min. Trim the index to real posts (the four Phase-1 SEO drafts in `docs/seo/blog-drafts/` are ready to publish via Sanity — publishing them fixes this properly). Rename footer "What's new" → "Blog" (or build a real changelog later).
@@ -285,7 +286,7 @@ Known issue (`open-questions.md` UX questions): Tailwind prose reset strips list
 - **`app/(app)/calendar` sits outside the `(default)` route group** its siblings use — harmless routing oddity; fold in whenever the file moves anyway.
 - **FAQ claims closed shows become a "read-only archive"** — archiving exists, but verify the archived state is actually enforced read-only end-to-end before the claim stays.
 - **Signup account-type choice ("I run productions" vs "I'm a participant") is good** but the participant path drops workspace naming with no preview of what a participant account can do — a one-line explainer under the radio would reduce mis-picks (participants who should be waiting for an invite instead).
-- **Trial countdown pill + trial banner + beta**: when `BILLING_ENABLED` flips back on, re-audit the messaging stack (M6's canonical story will be stale).
+- **Trial countdown pill + trial banner**: `BILLING_ENABLED` flipped back on 2026-07 — the messaging re-audit is now task M6. When Stripe moves from sandbox to live keys (owner go-live checklist in `current-status.md`), give marketing + in-app billing copy one more pass.
 - **Design tokens are healthy** — OKLCH palette, accent-strong AA handling on dark themes, flash-free theme boot (cookie + pre-paint script + `useSyncExternalStore`) are all done right; consolidation work should build on these, not replace them.
 - **Keep as-is (deliberately reviewed, no change wanted):** invited-user rescue flows (signup `account_exists` detection + login reset hint + invite footer), quick-add production, call form smart defaults, generate-form default-on "skip clashes," document upload v2 guardrails, save-draft-anywhere wizard, Focus mode as designer-seat home, per-role capability nav gating.
 
