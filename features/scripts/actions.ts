@@ -55,7 +55,7 @@ export async function setDefaultScript(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have access to that production." };
   }
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "script");
   if (lock.error) return { error: lock.error };
 
   // Verify the document belongs to this production
@@ -145,7 +145,7 @@ export async function saveAnnotations(
     return { error: "Script not found." };
   }
 
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "script");
   if (lock.error) return { error: lock.error };
 
   const annotations = JSON.parse(annotationsJson || "[]");
@@ -314,7 +314,7 @@ export async function startScriptParse(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have access to that production." };
   }
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "script");
   if (lock.error) return { error: lock.error };
 
   const [doc] = await db
@@ -429,7 +429,7 @@ export async function reparseWithNotes(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have access to that production." };
   }
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "script");
   if (lock.error) return { error: lock.error };
 
   const since = new Date(Date.now() - PARSE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
@@ -539,7 +539,7 @@ export async function applyScriptParse(
   if (!(await userCanAccessProduction(user, productionId))) {
     return { error: "You don't have access to that production." };
   }
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "script");
   if (lock.error) return { error: lock.error };
 
   // Idempotent: re-applying an already-applied parse (double-click, retry) is a
@@ -944,7 +944,7 @@ export async function requestWizardScriptUpload(
   if (!can(user.role, "productions:manage")) {
     return { error: "You don't have permission to do that." };
   }
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "script");
   if (lock.error) {
     return { error: "AI script setup is available on paid plans and during your free trial." };
   }
@@ -974,7 +974,7 @@ export async function startWizardScriptParse(
   if (!can(user.role, "productions:manage")) {
     return { error: "You don't have permission to do that." };
   }
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "script");
   if (lock.error) {
     return { error: "AI script setup is available on paid plans and during your free trial." };
   }
@@ -1142,6 +1142,10 @@ export async function attachWizardScriptByPath(input: {
   if (!can(user.role, "productions:manage")) {
     return { error: "You don't have permission to do that." };
   }
+  // Billing gate, matching the wizard upload/parse actions: don't file a script
+  // for a read-only/lapsed org or a designer seat that doesn't include Script.
+  const lock = await assertCanMutate(user.organizationId, "script");
+  if (lock.error) return { error: lock.error };
   if (!input.storagePath.startsWith(`wizard-scripts/${user.id}/`)) {
     return { error: "Upload could not be verified." };
   }

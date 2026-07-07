@@ -1,5 +1,9 @@
 import "server-only";
 import Stripe from "stripe";
+import {
+  DESIGNER_PLAN_IDS,
+  type DesignerPlanId,
+} from "@/features/designer/constants";
 
 // Server-only. Null until STRIPE_SECRET_KEY is set, so the app builds/runs
 // before Stripe is wired up. Uses the SDK's pinned API version.
@@ -66,5 +70,58 @@ export function planForPriceId(
 export function availablePaidPlans(): PaidPlanId[] {
   return PAID_PLANS.filter(
     (p) => STRIPE_PRICE_IDS[p].monthly || STRIPE_PRICE_IDS[p].annual,
+  );
+}
+
+// ─── Designer seats (Proscene Studio) — per-user subscriptions ──────────────
+// A separate set of products/prices from the org plans above. The Stripe
+// webhook routes a checkout to the per-user entitlement (profiles.designer_*)
+// rather than an org's `plan` when the subscribed price matches one of these.
+// Six prices: 3 tiers × {monthly, annual}. Like the org price ids, these are
+// env-var-driven so the money path never depends on CMS content.
+export const STRIPE_DESIGNER_PRICE_IDS: Record<
+  DesignerPlanId,
+  Record<BillingInterval, string | undefined>
+> = {
+  single_tool: {
+    monthly: process.env.STRIPE_PRICE_SINGLE_TOOL_MONTHLY,
+    annual: process.env.STRIPE_PRICE_SINGLE_TOOL_ANNUAL,
+  },
+  studio: {
+    monthly: process.env.STRIPE_PRICE_STUDIO_MONTHLY,
+    annual: process.env.STRIPE_PRICE_STUDIO_ANNUAL,
+  },
+  studio_pro: {
+    monthly: process.env.STRIPE_PRICE_STUDIO_PRO_MONTHLY,
+    annual: process.env.STRIPE_PRICE_STUDIO_PRO_ANNUAL,
+  },
+};
+
+export function designerPriceIdFor(
+  plan: DesignerPlanId,
+  interval: BillingInterval,
+): string | undefined {
+  return STRIPE_DESIGNER_PRICE_IDS[plan]?.[interval];
+}
+
+/** Reverse-map a Stripe price id to a designer plan + interval (for the webhook). */
+export function designerPlanForPriceId(
+  priceId: string,
+): { plan: DesignerPlanId; interval: BillingInterval } | null {
+  for (const plan of DESIGNER_PLAN_IDS) {
+    for (const interval of INTERVALS) {
+      if (STRIPE_DESIGNER_PRICE_IDS[plan][interval] === priceId) {
+        return { plan, interval };
+      }
+    }
+  }
+  return null;
+}
+
+/** Designer tiers with at least one configured price — purchasable right now. */
+export function availableDesignerPlans(): DesignerPlanId[] {
+  return DESIGNER_PLAN_IDS.filter(
+    (p) =>
+      STRIPE_DESIGNER_PRICE_IDS[p].monthly || STRIPE_DESIGNER_PRICE_IDS[p].annual,
   );
 }

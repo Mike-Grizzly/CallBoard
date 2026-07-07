@@ -46,6 +46,9 @@ import { FocusShell } from "./focus-shell";
 import { FocusScriptHost } from "./focus-script-host";
 import { FocusScriptUpload } from "./focus-script-upload";
 import { FocusDocUpload } from "./focus-doc-upload";
+import { getDesignerSeat } from "@/features/designer/entitlement";
+import type { DesignerTool } from "@/features/designer/constants";
+import { DesignerToolLock } from "@/features/designer/tool-lock";
 
 type CurrentUserLike = {
   firstName: string | null;
@@ -107,6 +110,34 @@ export default async function FocusPage({
     canCreateProjects: can(user.role, "productions:manage"),
     projects: visible.map((p) => ({ slug: p.slug, title: p.title })),
   };
+
+  // Studio (designer-seat) tool gate: a designer-only user can only open a tool
+  // their plan includes (Single Tool has just one). If they open the tool their
+  // seat lacks, show it LOCKED behind an upgrade modal — staying on the
+  // requested mode so the toggle reflects the switch. With no active seat at
+  // all, it's a read-only "choose a plan" prompt. Full users (who use Focus as
+  // an optional toggle) are governed by org billing and skip this.
+  if (isDesignerOnly(user)) {
+    const seat = await getDesignerSeat(user.id);
+    const wantTool: DesignerTool = mode === "blocking" ? "blocking" : "script";
+    if (!seat.tools.includes(wantTool)) {
+      if (seat.hasSeat) {
+        return (
+          <FocusShell {...shellProps} mode={wantTool}>
+            <DesignerToolLock tool={wantTool} slug={slug} />
+          </FocusShell>
+        );
+      }
+      return (
+        <FocusShell {...shellProps} mode="script">
+          <div className="fx-soon" style={{ height: "100vh" }}>
+            <p>Your Studio workspace is read-only.</p>
+            <a href={`/focus/${slug}/settings`}>Choose a plan to start editing →</a>
+          </div>
+        </FocusShell>
+      );
+    }
+  }
 
   // Blocking focus: the same Blocking tool, embedded chrome-free in the focus
   // shell. Data fetching mirrors the Blocking page so the canvas behaves

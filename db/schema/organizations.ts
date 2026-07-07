@@ -38,6 +38,14 @@ export const organizations = pgTable("organizations", {
   currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
   // Existing orgs at launch are grandfathered into full access forever.
   grandfathered: boolean("grandfathered").notNull().default(false),
+  // True ONLY for a DESIGNER's seat-gated personal workspace. Such a workspace
+  // is gated by the owner's per-user Studio seat (never org billing) and never
+  // starts the org trial clock on production-create. Company orgs — and
+  // "individual" full-access personal workspaces, which ARE org-billing gated
+  // and run a normal trial — are false. Flipped to false when a designer
+  // converts to the full app (upgradeToFullApp). Keeps the seat axis and the
+  // org billing axis strictly separate. See features/billing/guard.ts.
+  isPersonalWorkspace: boolean("is_personal_workspace").notNull().default(false),
   // How far through the post-trial email/purge lifecycle this org has been
   // taken — the daily cron uses it to send each milestone once and purge once.
   // See features/billing/lifecycle.ts.
