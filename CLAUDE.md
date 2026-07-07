@@ -23,6 +23,8 @@ For **feature work or multi-file changes**: read these docs first:
 - `/docs/dev-rules.md` — development rules and constraints
 - The relevant `/docs/feature-specs/*.md` file
 
+For **UX/polish work**: the active backlogs are `/docs/ux-backlog.md` (UX/IA/design-system tasks, phased + security-annotated — read its execution guide and security ground rules before starting any task) and `/docs/qa-backlog.md` (functional bugs + product workflow).
+
 Summarize your understanding and planned file changes before editing.
 
 ## Design handoffs — how designs enter the codebase

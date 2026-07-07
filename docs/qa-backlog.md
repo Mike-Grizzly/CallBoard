@@ -4,6 +4,10 @@ Source: Phase 2 external review — QA / product workflow notes (section 5). The
 product, workflow, and theater-domain-fit items, **not** security findings (those were
 handled separately and are not catalogued here). Safe to track in the repo.
 
+> Sibling doc: **`docs/ux-backlog.md`** — UX / IA / design-system tasks from the
+> 2026-07-03 full-surface UI/UX review. Check both before starting polish work so
+> overlapping items aren't done twice.
+
 - **Status:** ☐ todo · ◐ in progress · ☑ done
 - **Type:** 🐞 bug · ✨ polish · 🏗️ feature · 🤔 product decision
 - **Effort:** XS (<1h) · S (½ day) · M (1–2 days) · L (multi-day) — rough estimates.
