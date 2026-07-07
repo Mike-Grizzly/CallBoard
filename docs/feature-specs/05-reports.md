@@ -7,6 +7,19 @@ Rehearsal report creation, daily personal log per production, "import from log" 
 As a stage manager or director, I can keep a daily log of running notes, then create a rehearsal report (optionally importing from my log). I can attach files to reports. Team members can view reports once they are distributed; drafts stay visible only to report managers until then.
 
 ## Status: IMPLEMENTED
+- **Report inputs autofill from the show's real data (2026-07-07, Batch 3).** The
+  scenes-worked, line-note character, and incident-person fields suggest the
+  production's real scenes / cast characters / people via a shared "pick or type"
+  `ComboField` (`components/ui/combo-field.tsx`, a body-portaled dropdown), but
+  stay plain free-text under the hood — no schema change, off-roster entries
+  (guests, understudies, ensemble) always allowed. Picking a scene also
+  **auto-fills the Pages box** from that scene's script page (the AI parse's scene
+  bookmarks, matched by title; `production_scenes` has no page column, and a typed
+  value is never overwritten). Department-note sections are **drag-and-drop
+  reorderable** in the form, persisted to `production_departments.sortOrder`
+  (`reorderProductionDepartments`, report-manager-scoped). Option lists + the
+  scene→page map are built in `features/reports/input-options.ts` and loaded by the
+  new + edit report pages. See `qa-backlog.md` (Batch 3) and decision-log 2026-07-07.
 - **Draft report visibility is manager-only (2026-06-29).** Draft rehearsal
   reports are visible only to roles with `reports:create`; cast/crew see a report
   once it is distributed. Enforced server-side at every read path via

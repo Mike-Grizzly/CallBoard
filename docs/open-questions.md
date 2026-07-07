@@ -955,6 +955,21 @@ The 2026-06-19 hardening pass fixed the highest-severity confirmed issues. The f
   trial anchoring at first-production creation). Full context in `qa-backlog.md`.
   Do NOT fold into a QA batch.
 
+## Multi-character casting tracks — pursue at all? (added 2026-07-07)
+
+- Decision 1 (2026-06-29) approved letting one person be cast in multiple
+  characters (an actor covering several supporting roles). It was deliberately
+  left out of Batch 3 (report inputs) and is now **on hold**: the owner is
+  **reconsidering whether to build it at all** and wants time to think before
+  it's scoped.
+- **Open question:** is this worth the casting-model change? Today the model is
+  strictly one-person-one-role (`assignRoleToMember` swaps rather than stacks).
+  Supporting multi-character means rethinking the character-slot model, the
+  cast/crew board UI, and anything that assumes a person maps to one role.
+- **Status: do not start.** Revisit only when the owner decides. If yes, it's
+  its own schema-batch effort, not a QA item. See `decision-log.md` (2026-07-07)
+  and `qa-backlog.md` (Decision 1, marked on-hold).
+
 ## Two batch-1 bugs not reproducible on desktop Chrome (added 2026-06-30)
 
 - **PDF viewer fails on first click / recovers after a tab switch**, and **script

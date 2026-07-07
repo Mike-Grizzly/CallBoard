@@ -2509,3 +2509,38 @@ same-domain placement, which is preserved.
 calendar, blog drafts) now use `/help/...`. If the slug ever changes again,
 `app/(marketing)/help/` content files, `proxy.ts` PUBLIC_ROUTES, the sitemap,
 and the redirect map are the touchpoints.
+
+## 2026-07-07 — Report inputs wired to real data as autofill only (Batch 3)
+
+**Decision:** The rehearsal report's scene / character / person fields suggest
+the show's real data (scenes, cast characters, production people) but remain
+plain free-text under the hood — no schema change, no foreign keys. A shared
+`ComboField` (portaled dropdown) powers all three; picking a scene also
+prefills the Pages box from the AI parse's scene bookmarks.
+
+**Reason:** The report already stores strings/JSON and must keep accepting
+off-roster entries (guests, understudies, ensemble, "whole company"). Making
+the inputs relational would break that and force a migration for a
+convenience feature. Autofill gets the ergonomics without the coupling.
+
+**Impact:** `features/reports/input-options.ts` is the single place that builds
+the option lists + the scene→page map; the report form threads them to the
+editors. Free text always wins. If reports ever need structured scene/character
+references (analytics, cross-linking), that's a separate, deliberate schema
+change — not this.
+
+## 2026-07-07 — Multi-character casting tracks put on hold (owner reconsidering)
+
+**Decision:** Multi-character tracks (Decision 1, 2026-06-29 — one person cast
+in multiple characters) is **on hold**. It was deliberately excluded from
+Batch 3 (report inputs), and the owner now wants time to decide whether to
+pursue it at all before it is scoped. Do not start it.
+
+**Reason:** Owner call (2026-07-07). It's an L-effort change to the casting
+model (one-person-one-role today) with real schema/UX implications — a casting
+feature, not a report input — and the owner is no longer certain it's wanted in
+full. Better to hold than to build speculatively.
+
+**Impact:** If it proceeds, it belongs in its own schema batch (alongside
+Batch 4/5/6 work), not folded into a QA batch. Tracked in `qa-backlog.md`
+(Decision 1 marked on-hold) and `open-questions.md`.
