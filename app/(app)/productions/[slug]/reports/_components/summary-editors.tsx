@@ -329,21 +329,11 @@ export function ScenesWorkedEditor({
               value={s.label}
               onChange={(v) => update(i, { label: v })}
               options={sceneOptions}
-              placeholder="Scene (pick from the show, or type one)"
+              placeholder={
+                sceneOptions.length ? "Pick a scene, or type one" : "Scene name"
+              }
               ariaLabel="Scene"
-              className=""
-              style={{
-                width: "100%",
-                border: 0,
-                padding: 0,
-                background: "transparent",
-                fontSize: 13,
-                fontWeight: 500,
-                marginBottom: 6,
-                outline: "none",
-                color: "var(--ink)",
-                fontFamily: "inherit",
-              }}
+              style={{ fontSize: 13, marginBottom: 6 }}
             />
             <div className="row" style={{ gap: 8 }}>
               <input

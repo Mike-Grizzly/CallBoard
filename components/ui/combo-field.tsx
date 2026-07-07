@@ -2,16 +2,17 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { ChevronDown } from "lucide-react";
 
 /**
- * A "pick or type" text field with an app-styled suggestion dropdown. Suggests
- * known values (scenes, characters, people) but always accepts free-typed text
- * for guests, understudies, ensemble, or anything not in the system.
+ * A "pick or type" text field with a visible dropdown chevron and an app-styled
+ * suggestion menu. Suggests known values (scenes, characters, people) but always
+ * accepts free-typed text for guests, understudies, ensemble, or anything not in
+ * the system.
  *
- * The dropdown is portaled to <body> and positioned with fixed coordinates from
- * the input's rect, so it can never be clipped or stacked-under by an ancestor
- * (cards, grids, overflow containers) the way a native <datalist> or an
- * absolutely-positioned menu can.
+ * The menu is portaled to <body> and positioned with fixed coordinates from the
+ * input's rect, so it can never be clipped or stacked-under by an ancestor
+ * (cards, grids, overflow containers).
  */
 export function ComboField({
   value,
@@ -37,6 +38,8 @@ export function ComboField({
   const inputRef = useRef<HTMLInputElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
   const listId = useId();
+
+  const { width: styleWidth, ...restStyle } = style ?? {};
 
   const matches = useMemo(() => {
     const seen = new Set<string>();
@@ -68,7 +71,6 @@ export function ComboField({
     setOpen(true);
   }
 
-  // Keep the portaled menu pinned to the input while open (scroll/resize).
   useEffect(() => {
     if (!open) return;
     const onMove = () => measure();
@@ -94,43 +96,76 @@ export function ComboField({
 
   return (
     <>
-      <input
-        ref={inputRef}
-        type="text"
-        className={className}
-        style={style}
-        value={value}
-        placeholder={placeholder}
-        aria-label={ariaLabel}
-        autoComplete="off"
-        role="combobox"
-        aria-expanded={showPop}
-        aria-controls={listId}
-        onChange={(e) => {
-          onChange(e.target.value);
-          openPop();
+      <div
+        style={{
+          position: "relative",
+          display: "inline-block",
+          width: styleWidth ?? "100%",
+          verticalAlign: "top",
         }}
-        onFocus={openPop}
-        onClick={openPop}
-        onKeyDown={(e) => {
-          if (!showPop) {
-            if (e.key === "ArrowDown") openPop();
-            return;
-          }
-          if (e.key === "ArrowDown") {
-            e.preventDefault();
-            setActive((a) => Math.min(a + 1, matches.length - 1));
-          } else if (e.key === "ArrowUp") {
-            e.preventDefault();
-            setActive((a) => Math.max(a - 1, 0));
-          } else if (e.key === "Enter") {
-            e.preventDefault();
-            choose(matches[active]);
-          } else if (e.key === "Escape") {
-            setOpen(false);
-          }
-        }}
-      />
+      >
+        <input
+          ref={inputRef}
+          type="text"
+          className={className}
+          style={{ ...restStyle, width: "100%", paddingRight: 26 }}
+          value={value}
+          placeholder={placeholder}
+          aria-label={ariaLabel}
+          autoComplete="off"
+          role="combobox"
+          aria-expanded={showPop}
+          aria-controls={listId}
+          onChange={(e) => {
+            onChange(e.target.value);
+            openPop();
+          }}
+          onFocus={openPop}
+          onClick={openPop}
+          onKeyDown={(e) => {
+            if (!showPop) {
+              if (e.key === "ArrowDown") openPop();
+              return;
+            }
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setActive((a) => Math.min(a + 1, matches.length - 1));
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setActive((a) => Math.max(a - 1, 0));
+            } else if (e.key === "Enter") {
+              e.preventDefault();
+              choose(matches[active]);
+            } else if (e.key === "Escape") {
+              setOpen(false);
+            }
+          }}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label="Show suggestions"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            inputRef.current?.focus();
+            openPop();
+          }}
+          style={{
+            position: "absolute",
+            right: 4,
+            top: "50%",
+            transform: "translateY(-50%)",
+            display: "inline-flex",
+            padding: 2,
+            background: "none",
+            border: "none",
+            color: "var(--ink-3)",
+            cursor: "pointer",
+          }}
+        >
+          <ChevronDown size={14} aria-hidden />
+        </button>
+      </div>
       {showPop &&
         createPortal(
           <div
