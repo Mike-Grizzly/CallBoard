@@ -5,6 +5,13 @@
 
 export const THEME_COOKIE = "proscene-theme";
 
+// The client-resolved effective theme ("warm" | "dusk" | "dark"), mirrored into
+// a cookie the *server* can read. The pref cookie alone isn't enough: "system"
+// resolves against the OS, which the server can't see, so it would render light
+// and flash to dark after paint. Persisting the resolved value lets SSR paint
+// the right theme immediately on every load after the first.
+export const THEME_EFFECTIVE_COOKIE = "proscene-theme-eff";
+
 export type ThemePref = "light" | "dusk" | "dark" | "system";
 export const THEME_PREFS: ThemePref[] = ["light", "dusk", "dark", "system"];
 
@@ -50,6 +57,8 @@ export function applyThemePref(pref: ThemePref): void {
   const eff = resolveTheme(pref);
   document.body.dataset.theme = eff;
   document.cookie = `${THEME_COOKIE}=${pref}; path=/; max-age=31536000; samesite=lax`;
+  // Mirror the resolved theme so the next SSR paints it directly (no flash).
+  document.cookie = `${THEME_EFFECTIVE_COOKIE}=${eff}; path=/; max-age=31536000; samesite=lax`;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute("content", THEME_COLOR[eff]);
   window.dispatchEvent(new Event(THEME_EVENT));
