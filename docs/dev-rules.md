@@ -29,6 +29,16 @@
 - Three similar lines is better than a premature abstraction
 - No half-finished implementations
 
+## UI consistency rules (added 2026-07, from the UX review — see `docs/ux-backlog.md`)
+
+Ratchet rules: they apply to code you touch, never as standalone mass-migrations.
+
+- Never use `window.confirm` / `window.alert` — use `components/ui/confirm-dialog.tsx` for confirmations; inline errors (or the shared toast, once S2 lands) for failures
+- New or substantially-edited components use the cva `<Button>` (`components/ui/button.tsx`), not new `.btn` markup
+- When shared primitives exist (`ConfirmDialog` today; `Drawer`/`EmptyState`/toast as ux-backlog S1–S3 land), use them instead of rolling a new variant
+- New component CSS goes in a co-located file, not appended to `globals.css`; when substantially reworking a surface, consider moving its namespace block (`pp-*`, `ann-*`, `cc-*`, …) out of `globals.css` with it
+- Any new overlay (modal/drawer/popover) handles Escape, backdrop click, focus trap, and focus return
+
 ## Claude Code operating rules
 
 - Start every session by reading `CLAUDE.md` (automatic) — it will direct you to relevant docs
