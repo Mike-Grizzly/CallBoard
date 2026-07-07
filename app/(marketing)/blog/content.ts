@@ -8,12 +8,6 @@ export const BLOG_HTML = `
       <span class="eyebrow">The Proscene blog</span>
       <h1 class="display" style="margin-top:18px;font-size:clamp(34px,5vw,58px)">Notes from the <em>prompt desk.</em></h1>
       <p class="lede lede-narrow" style="margin-top:18px">Walkthroughs, stage-management craft, and the occasional opinion about call times, written by people who've held the book.</p>
-      <div class="blog-tabs">
-        <button class="blog-tab" data-on>All</button>
-        <button class="blog-tab">Walkthroughs</button>
-        <button class="blog-tab">SM craft</button>
-        <button class="blog-tab">Product</button>
-      </div>
     </div>
   </section>
 
@@ -33,63 +27,6 @@ export const BLOG_HTML = `
           <div class="by" style="margin-top:14px">The Proscene team · May 28, 2026</div>
         </div>
       </a>
-    </div>
-  </section>
-
-  <!-- GRID -->
-  <section class="section" style="padding-top:8px">
-    <div class="wrap">
-      <div class="posts reveal">
-        <a class="post" href="${POST}">
-          <div class="ph" data-label="reports-feature.jpg"></div>
-          <div class="body">
-            <div class="meta"><span class="pill" data-c="amber">Walkthrough</span><span class="read">6 min</span></div>
-            <h3>Daily reports that send themselves</h3>
-            <p>Tag notes by department as the room runs, and let Proscene format and route the report before you've packed up.</p>
-            <div class="by">The Proscene team · May 21, 2026</div>
-          </div>
-        </a>
-
-        <a class="post" href="${POST}">
-          <div class="ph" data-label="blocking-guide.jpg"></div>
-          <div class="body">
-            <div class="meta"><span class="pill" data-c="clay">SM craft</span><span class="read">9 min</span></div>
-            <h3>Blocking notation that anyone can read back</h3>
-            <p>A field guide to recording moves so your shorthand survives the night, and makes sense to the swing six weeks later.</p>
-            <div class="by">The Proscene team · May 14, 2026</div>
-          </div>
-        </a>
-
-        <a class="post" href="${POST}">
-          <div class="ph" data-label="conflict-detection.jpg"></div>
-          <div class="body">
-            <div class="meta"><span class="pill" data-c="dusk">Product</span><span class="read">4 min</span></div>
-            <h3>New: conflict detection across your whole company</h3>
-            <p>Proscene now flags double-bookings before you schedule them. Here's how it reads the cast's availability.</p>
-            <div class="by">The Proscene team · May 7, 2026</div>
-          </div>
-        </a>
-
-        <a class="post" href="${POST}">
-          <div class="ph" data-label="cast-list-import.jpg"></div>
-          <div class="body">
-            <div class="meta"><span class="pill" data-c="accent">Walkthrough</span><span class="read">5 min</span></div>
-            <h3>Import a cast list in under a minute</h3>
-            <p>Paste from a spreadsheet, map the columns, and you've got a full company with roles, contacts, and conflicts.</p>
-            <div class="by">The Proscene team · Apr 30, 2026</div>
-          </div>
-        </a>
-
-        <a class="post" href="${POST}">
-          <div class="ph" data-label="tech-week.jpg"></div>
-          <div class="body">
-            <div class="meta"><span class="pill" data-c="clay">SM craft</span><span class="read">11 min</span></div>
-            <h3>Surviving tech week: a stage manager's checklist</h3>
-            <p>The calls, the cue-to-cue, the running times, what to track, when to call breaks, and how to keep everyone fed and sane.</p>
-            <div class="by">The Proscene team · Apr 16, 2026</div>
-          </div>
-        </a>
-      </div>
     </div>
   </section>
 

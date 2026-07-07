@@ -103,7 +103,7 @@ export function PricingInteractions() {
         });
       });
 
-      let start = "designers";
+      let start = "companies";
       const hash = (location.hash || "").toLowerCase();
       if (hash === "#companies" || hash === "#company" || hash === "#teams") start = "companies";
       else if (

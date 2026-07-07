@@ -2653,3 +2653,17 @@ full. Better to hold than to build speculatively.
 **Impact:** If it proceeds, it belongs in its own schema batch (alongside
 Batch 4/5/6 work), not folded into a QA batch. Tracked in `qa-backlog.md`
 (Decision 1 marked on-hold) and `open-questions.md`.
+
+---
+
+## 2026-07-07 — UX backlog Batch 1 owner/recommendation calls
+
+**Decision:** Landed UX-backlog Batch 1 (M1, M3–M8, R7, N2) on `claude/ux-backlog-batch-1-ig6614`. Three of these carried a decision:
+
+- **M1 (school pricing):** Owner asked directly — chose **"discounted, not free."** The Contact page (title + lede) was rewritten to promise discounted, hand-verified school-year pricing, matching the Pricing page and FAQ. The word "free" no longer describes school pricing anywhere.
+- **M7 (dead affordances):** Owner unavailable → implemented the backlog's stated recommendation: **removed** the three placeholder footer social icons (no real accounts exist; `sameAs` is empty) and **wired** the pricing "How invites work" link to the existing help article `/help/get-started/invite-your-company`.
+- **R7 (wizard "opening night required"):** Implemented the recommendation to **unmark** — validation only ever required a title, so the red asterisk was removed and the banner reworded to "these dates are all optional."
+
+**Reason:** M1 is a pricing promise (owner-only); M7/R7 had explicit backlog recommendations usable when the owner is unavailable.
+
+**Impact:** Marketing copy now internally consistent on school pricing and the trial story; JSON-LD on home + pricing corrected from "Free during open beta / price 0" to a real `AggregateOffer` ($25–$79, 60-day trial). Copy-only + client-UI; no server action, permission, storage, or billing-flag changes. **Sanity note:** where these strings also live in Sanity (hero, pricing tiers, FAQ), the CMS copy needs the same edits by the owner in Studio — the static files are the always-present fallback.

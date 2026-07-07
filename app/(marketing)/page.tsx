@@ -32,10 +32,13 @@ const APP_SCHEMA = {
   description:
     "Theatre production management software: rehearsal calls, calendar, script, blocking, and rehearsal reports for cast, crew, and creative teams.",
   offers: {
-    "@type": "Offer",
-    price: "0",
+    "@type": "AggregateOffer",
     priceCurrency: "USD",
-    description: "Free during open beta",
+    lowPrice: "25",
+    highPrice: "79",
+    offerCount: 3,
+    description:
+      "Per-production plans with unlimited cast and crew. Every new organization gets a 60-day free trial, no card required.",
   },
 };
 

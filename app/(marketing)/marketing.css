@@ -280,6 +280,8 @@ h3.subtitle{
 .nav-link[aria-current="page"]{color:var(--ink)}
 .nav-cta{margin-left:auto;display:flex;align-items:center;gap:10px}
 .nav-toggle{display:none}
+/* Sign-in lives in the bar on desktop; the mobile menu gets its own copy (M4). */
+.nav-link-signin-m{display:none}
 
 /* ─── Hero ─────────────────────────────────────────────────────────────── */
 .hero{position:relative;overflow:hidden;padding-top:clamp(48px,7vw,84px);padding-bottom:clamp(40px,6vw,72px)}
@@ -351,13 +353,6 @@ h3.subtitle{
   display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
   padding-top:28px;color:var(--night-ink-3);font-size:13.5px;
 }
-.footer-social{display:flex;gap:10px}
-.footer-social a{
-  width:34px;height:34px;border-radius:9px;border:1px solid var(--night-border);
-  display:grid;place-items:center;color:var(--night-ink-2);
-}
-.footer-social a:hover{background:var(--night-elev);color:var(--night-ink)}
-.footer-social svg{width:16px;height:16px}
 
 /* ─── Night section ────────────────────────────────────────────────────── */
 .night{background:var(--night);color:var(--night-ink)}
@@ -435,6 +430,7 @@ h3.subtitle{
   }
   .nav[data-open="1"] .nav-links{display:flex}
   .nav-link{padding:11px 12px;font-size:16px}
+  .nav-link-signin-m{display:block;margin-top:6px;padding-top:15px;border-top:1px solid var(--border)}
   .nav-toggle{
     display:grid;place-items:center;margin-left:auto;
     width:42px;height:42px;border-radius:9px;border:1px solid var(--border-strong);

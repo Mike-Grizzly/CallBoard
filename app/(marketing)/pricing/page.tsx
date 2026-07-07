@@ -32,10 +32,13 @@ const PRICING_APP_SCHEMA = {
   description:
     "Stage management and theatre production software priced per show, with unlimited cast and crew on every plan.",
   offers: {
-    "@type": "Offer",
-    price: "0",
+    "@type": "AggregateOffer",
     priceCurrency: "USD",
-    description: "Free during open beta",
+    lowPrice: "25",
+    highPrice: "79",
+    offerCount: 3,
+    description:
+      "Season, Repertory, and Company plans priced per show, with unlimited cast and crew. 60-day free trial, no card required.",
   },
 };
 
@@ -46,7 +49,7 @@ export default async function PricingPage() {
 
   return (
     <>
-      <div data-page="pricing" data-aud="designers">
+      <div data-page="pricing" data-aud="companies">
         <JsonLd data={PRICING_APP_SCHEMA} />
         {!BILLING_ENABLED && (
           <div className="wrap" style={{ paddingTop: "clamp(24px,4vw,40px)" }}>

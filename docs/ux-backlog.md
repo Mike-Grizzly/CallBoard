@@ -59,7 +59,7 @@ Per-PR checklist (copy into the PR description):
 
 The site's voice and demos are strong; the problem is claims the app doesn't back, plus a few conversion-path bugs verified live in a browser.
 
-### M1 · Fix the school pricing contradiction — **P0 · XS**
+### M1 · Fix the school pricing contradiction — **P0 · XS** — ✅ DONE (claude/ux-backlog-batch-1-ig6614, 2026-07-07; owner chose "discounted, not free")
 Contact page promises the Company plan **free** for verified students/educators (`app/(marketing)/contact/page.tsx:19-22`, incl. the page title), while pricing (`pricing/content.ts:104,276`) and FAQ (`faq/content.ts:113`) say school pricing is discounted and explicitly "isn't free." Pick one policy (owner decision) and make all three pages agree.
 **Accept:** the words "free" and "discounted" cannot both be found describing school pricing; contact page title matches the chosen policy.
 
@@ -81,29 +81,29 @@ Verified-accurate claims to keep as-is: AI analysis + the "4 of 5 analyses" quot
 **Accept:** every row above is either softened or explicitly marked coming-soon; the fake "New: conflict detection" blog card is removed or rewritten about a real capability.
 **Security note:** copy-only. Alternatively, if any of (b/f/g) get *built* instead of softened, they are separate feature specs — an .ics feed in particular is a new unauthenticated data-exposure surface (signed per-user feed URLs) and must NOT be improvised inside a copy PR.
 
-### M3 · Pricing page: default to "For companies" — **P0 · XS**
+### M3 · Pricing page: default to "For companies" — **P0 · XS** — ✅ DONE (claude/ux-backlog-batch-1-ig6614, 2026-07-07)
 Initial state is `data-aud="designers"` (`pricing/page.tsx:49`), so the first thing every visitor sees is the individual Proscene Studio panel rather than the company plans. *(Re-verified after the 2026-07 billing launch: Studio is now purchasable with real "Get started" CTAs, so this is less broken than at review time — but companies are still the primary audience and the headline product; they should be the default panel.)*
 **Accept:** first paint shows Season/Repertory/Company; individuals still one toggle away; deep links (`?aud=`) still work.
 
-### M4 · Restore "Sign in" for mobile marketing visitors — **P0 · XS**
+### M4 · Restore "Sign in" for mobile marketing visitors — **P0 · XS** — ✅ DONE (claude/ux-backlog-batch-1-ig6614, 2026-07-07)
 `.nav-cta .sign-in{display:none}` at the mobile breakpoint (`marketing.css:445`) and the hamburger menu (`_components/nav.tsx:49-61`) contains only page links. Existing users on phones have no path to login. Add "Sign in" to the hamburger menu (simplest) and/or keep it visible in the bar.
 **Accept:** at 390px a visitor can reach `/login` in ≤2 taps from any marketing page.
 
-### M5 · Home hero "Book a demo" is invisible on the night hero — **P0 · XS**
+### M5 · Home hero "Book a demo" is invisible on the night hero — **P0 · XS** — ✅ DONE (claude/ux-backlog-batch-1-ig6614, 2026-07-07)
 `home-content.ts:247` uses `class="btn ghost lg"` — ghost = transparent bg + `--ink-2` dark-gray text (`marketing.css:170`) on the dark hero. Verified illegible in screenshot. The fix exists: change the class to `btn on-night lg` — `.btn.on-night` (`marketing.css:174`) is the dark-surface variant built for exactly this (the features-page hero at `features/content.ts:16` uses plain `btn lg` and is legible; matching that is also acceptable).
 **Accept:** secondary hero CTA meets WCAG AA contrast on the night background in a screenshot check.
 
-### M6 · Post-billing-launch messaging audit — **P0 · S**
+### M6 · Post-billing-launch messaging audit — **P0 · S** — ✅ DONE (claude/ux-backlog-batch-1-ig6614, 2026-07-07)
 *(Rewritten 2026-07-07: billing is now ON, which inverts this task.)* The open-beta banner correctly auto-hides (`pricing/page.tsx:51` gates on `!BILLING_ENABLED`), but the **JSON-LD structured data on home and pricing still tells Google "Free during open beta" with price 0** (`app/(marketing)/page.tsx:38`, `pricing/page.tsx:38`) — now-false pricing metadata on the two highest-intent pages. Fix the schema to the real offer (60-day free trial, tiers from `pricing/content.ts`). Then sweep the remaining copy against the live story ("60-day trial from first production, no card"): home hero note (`home-content.ts:273` — currently consistent), signup footer line, FAQ billing answers.
 **Accept:** JSON-LD offers match real pricing; no page or metadata claims the product is free-in-beta; home/pricing/signup/FAQ tell the same trial story.
 **Security note:** copy/metadata only; do not touch `BILLING_ENABLED`, billing gates, or Stripe config (go-live checklist in `current-status.md` is owner-only).
 
-### M7 · Kill or wire the dead interactive elements — **P1 · S**
+### M7 · Kill or wire the dead interactive elements — **P1 · S** — ✅ DONE (claude/ux-backlog-batch-1-ig6614, 2026-07-07; removed social icons + wired invites link, per recommendation)
 Still `data-noop` after the billing launch: three footer social icons (`_components/footer.tsx`, href="#") and pricing "How invites work" (`pricing/content.ts:61`). JSON-LD `sameAs` is empty, confirming no social presence. *(The three Studio "Notify me" CTAs flagged at review time became real signup links in the billing launch — resolved.)*
 **Recommendation:** remove the social icons until real accounts exist; link "How invites work" to the existing help-manual article on invites (`/help/...` — find the invites page under the people or get-started section).
 **Accept:** nothing on the marketing site looks clickable but does nothing.
 
-### M8 · Blog index honesty — **P1 · S**
+### M8 · Blog index honesty — **P1 · S** — ✅ DONE (claude/ux-backlog-batch-1-ig6614, 2026-07-07; trimmed to the one real post pending Sanity publish of the SEO drafts)
 Every card links to the single real post (`blog/content.ts:3`); the featured card says 8 min read, its grid duplicate 6 min. Trim the index to real posts (the four Phase-1 SEO drafts in `docs/seo/blog-drafts/` are ready to publish via Sanity — publishing them fixes this properly). Rename footer "What's new" → "Blog" (or build a real changelog later).
 **Accept:** every blog card is a distinct real post; read times consistent; no footer label promising a changelog.
 
@@ -165,7 +165,7 @@ Use `ConfirmDialog` (danger variant) naming the person/thing. Inconsistency to f
 Two parallel UIs: branded `production-card-menu.tsx:142,161` (ConfirmDialog, 30-day copy) vs `productions/archive-buttons.tsx` (native confirm + alert). Keep the branded one, refactor `archive-buttons` to use it.
 **Accept:** one shared confirm implementation for archive/delete/restore of productions.
 
-### R7 · Wizard: "opening night required" — enforce or unmark — **P1 · XS**
+### R7 · Wizard: "opening night required" — enforce or unmark — **P1 · XS** — ✅ DONE (claude/ux-backlog-batch-1-ig6614, 2026-07-07; unmarked, per recommendation)
 The new-production wizard banner says "Only opening night is required" and renders a red asterisk (`new-production-wizard.tsx:831,858`) but `canAdvance`/`submit` only validate title (`:522-525,:332-336`). Either enforce it or remove the asterisk + banner claim. (Recommend unmark: quick-add already proves title-only launches are fine.)
 **Accept:** visual requirement markers match actual validation.
 
@@ -181,7 +181,7 @@ Free-text "7:00 PM" strings (`new-production-wizard.tsx:905-918`) while the call
 **Accept:** unread notifications reachable from every app screen; mark-read works; count badge visible.
 **Security note:** bell queries are already per-user; mounting adds no new data exposure. Verify the dropdown links respect production access (they link to items the user was notified about, which are membership-gated at the target page anyway).
 
-### N2 · Remove the dead search button — **P1 · XS**
+### N2 · Remove the dead search button — **P1 · XS** — ✅ DONE (claude/ux-backlog-batch-1-ig6614, 2026-07-07)
 Production topbar renders a Search icon with no handler (`productions/[slug]/layout.tsx:245-252`). Remove it. If/when global search is wanted, spec it separately (ground rule 9 — new cross-tenant query surface needs its own authz design).
 **Accept:** no non-functional affordances in the topbar.
 

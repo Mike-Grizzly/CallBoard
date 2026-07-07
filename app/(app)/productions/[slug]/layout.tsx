@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, Search } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import type { ReactNode } from "react";
 import { requireCurrentUser } from "@/lib/auth";
@@ -242,14 +242,6 @@ export default async function ProductionLayout({
 
           <div className="topbar-actions">
             <FocusEntryButton />
-            <button
-              type="button"
-              className="btn ghost btn-icon"
-              title="Search"
-              aria-label="Search"
-            >
-              <Search className="ico" aria-hidden />
-            </button>
             <TrashDrawer productionId={production.id} initialTrashCount={initialTrashCount} />
             {canManage && (
               <Link

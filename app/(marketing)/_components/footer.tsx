@@ -7,7 +7,7 @@ const COLS = [
     links: [
       ["Features", "/features"],
       ["Pricing", "/pricing"],
-      ["What's new", "/blog"],
+      ["Blog", "/blog"],
       ["Mobile app", "/features#mobile"],
     ],
   },
@@ -28,16 +28,6 @@ const COLS = [
     ],
   },
 ] as const;
-
-function Social({ children, label }: { children: React.ReactNode; label: string }) {
-  return (
-    <a href="#" data-noop aria-label={label}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-        {children}
-      </svg>
-    </a>
-  );
-}
 
 export function Footer() {
   return (
@@ -79,20 +69,6 @@ export function Footer() {
         </div>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} Proscene. Made for the theatre.</span>
-          <div className="footer-social">
-            <Social label="Instagram">
-              <rect x="3" y="3" width="18" height="18" rx="5" />
-              <circle cx="12" cy="12" r="4" />
-              <circle cx="17.5" cy="6.5" r="1" />
-            </Social>
-            <Social label="X">
-              <path d="M4 4l16 16M20 4L4 20" />
-            </Social>
-            <Social label="YouTube">
-              <rect x="3" y="6" width="18" height="12" rx="3" />
-              <path d="M11 9l4 3-4 3z" fill="currentColor" />
-            </Social>
-          </div>
         </div>
       </div>
     </footer>

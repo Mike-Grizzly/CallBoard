@@ -17,8 +17,8 @@ const COPY: Record<string, { eyebrow: string; title: string; lede: string }> = {
   },
   school: {
     eyebrow: "Students & educators",
-    title: "Get Proscene <em>free</em> for your school.",
-    lede: "Verified students and educators get the Company plan free for school productions. Send us a note and we'll set you up.",
+    title: "School pricing, <em>hand-verified.</em>",
+    lede: "Verified students and educators get discounted school-year pricing on the Company plan. Send us a note with your department details and we'll set you up.",
   },
   general: {
     eyebrow: "Get in touch",

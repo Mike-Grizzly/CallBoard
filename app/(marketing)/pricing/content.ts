@@ -26,8 +26,8 @@ export const PRICING_HERO_HTML = `
       <p class="lede" style="margin:18px auto 0;max-width:56ch">Never for the people in them. Whether you're a company running a season or a designer touring between them, your collaborators are always free.</p>
       <div class="controls">
         <div class="aud-toggle" role="tablist" aria-label="Who's paying?">
-          <button class="aud-seg" id="tab-designers" role="tab" type="button" data-aud="designers" aria-controls="pricing-panels" aria-selected="true" tabindex="0">For individuals</button>
-          <button class="aud-seg" id="tab-companies" role="tab" type="button" data-aud="companies" aria-controls="pricing-panels" aria-selected="false" tabindex="-1">For companies</button>
+          <button class="aud-seg" id="tab-designers" role="tab" type="button" data-aud="designers" aria-controls="pricing-panels" aria-selected="false" tabindex="-1">For individuals</button>
+          <button class="aud-seg" id="tab-companies" role="tab" type="button" data-aud="companies" aria-controls="pricing-panels" aria-selected="true" tabindex="0">For companies</button>
           <span class="aud-thumb" aria-hidden="true"></span>
         </div>
         <div class="billing" role="group" aria-label="Billing period">
@@ -58,7 +58,7 @@ export const PRICING_COMPANIES_REST_HTML = `
           <b>Participants are always free.</b>
           <p>Anyone you invite to a show, actors, crew, designers, stage managers, works free, with no plan and no card. There are never per-seat fees on any tier.</p>
         </div>
-        <a class="btn-link" href="#" data-noop style="display:inline-flex">How invites work <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+        <a class="btn-link" href="/help/get-started/invite-your-company" style="display:inline-flex">How invites work <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
       </div>
 
       <div class="includes">
