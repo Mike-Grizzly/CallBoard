@@ -4,7 +4,7 @@
 //
 // Model: the ORGANIZATION subscribes; participants (cast, crew, designers) are
 // always free. Company plans differ only by how many productions you can run at
-// once. A separate "Proscene Studio" set of personal plans (coming soon) serves
+// once. A separate "Proscene Studio" set of personal plans serves
 // freelance designers and choreographers and is billed to the individual.
 //
 // Two controls live in the hero:
@@ -177,12 +177,13 @@ ${PRICING_COMPANIES_LEAD_HTML}${PRICING_COMPANIES_TIERS_HTML}${PRICING_COMPANIES
   </section>
 `;
 
-// INDIVIDUALS panel (Proscene Studio). Static only, all CTAs are data-noop.
+// INDIVIDUALS panel (Proscene Studio). Static; tier CTAs link to the designer
+// signup funnel (/signup?account=designer&plan=…).
 export const PRICING_INDIVIDUALS_HTML = `
   <section class="section aud-panel" data-aud-panel="designers" style="padding-top:clamp(20px,3vw,30px)">
     <div class="wrap">
       <div class="panel-lead">
-        <span class="badge-new"><span class="dot"></span>New &middot; coming soon</span>
+        <span class="badge-new"><span class="dot"></span>New</span>
         <span class="eyebrow no-rule">Proscene Studio</span>
         <h2>A private studio that <em>tours with you.</em></h2>
         <p>For the freelance lighting, set, sound, or projection designer or choreographer who hops between companies. Your own script, your own ground plan, your own workspace, billed to you, not a theatre. Monthly works great for gig work, switch the toggle above.</p>
@@ -197,7 +198,7 @@ export const PRICING_INDIVIDUALS_HTML = `
             <span class="per" data-per>/ month</span>
           </div>
           <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$5.99/mo, billed annually">Billed monthly</div>
-          <a class="btn" href="#" data-noop>Notify me</a>
+          <a class="btn" href="/signup?account=designer&amp;plan=single_tool">Get started</a>
           <div class="tier-cap"><b>1</b> production &middot; swap &amp; replace</div>
           <ul class="tier-list">
             <li>${TICK} Script <span class="em">or</span> Blocking</li>
@@ -214,7 +215,7 @@ export const PRICING_INDIVIDUALS_HTML = `
             <span class="per" data-per>/ month</span>
           </div>
           <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$9.99/mo, billed annually">Billed monthly</div>
-          <a class="btn primary" href="#" data-noop>Notify me</a>
+          <a class="btn primary" href="/signup?account=designer&amp;plan=studio">Get started</a>
           <div class="tier-cap"><b>1</b> production &middot; swap &amp; replace</div>
           <ul class="tier-list">
             <li>${TICK} Script <span class="em">+</span> Blocking</li>
@@ -230,7 +231,7 @@ export const PRICING_INDIVIDUALS_HTML = `
             <span class="per" data-per>/ month</span>
           </div>
           <div class="tier-sub" data-sub-monthly="Billed monthly" data-sub-annual="$14.99/mo, billed annually">Billed monthly</div>
-          <a class="btn" href="#" data-noop>Notify me</a>
+          <a class="btn" href="/signup?account=designer&amp;plan=studio_pro">Get started</a>
           <div class="tier-cap"><b>Unlimited</b> shows, all at once</div>
           <ul class="tier-list">
             <li>${TICK} Script <span class="em">+</span> Blocking</li>
@@ -272,7 +273,7 @@ export const PRICING_REST_HTML = `
         <details class="qa"><summary>Do I pay for everyone in my company?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Never. The organization subscribes; cast, crew, designers, and stage management are always free on every plan. Whether your show has a company of four or forty, the price is the same. Plans differ only by how many productions you can run at once.</p></details>
         <details class="qa"><summary>How does the free trial work?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>New organizations get a 60-day free trial, no card required. The clock doesn't start at signup, it starts when you open your first production, so you can set things up on your own schedule.</p></details>
         <details class="qa"><summary>What's the difference between monthly and annual?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Annual is roughly ten months for the price of twelve, about 20% off. Both give you the identical toolset; annual just costs less per month. You can switch between them at any time.</p></details>
-        <details class="qa"><summary>What is Proscene Studio, and is it different from a plan?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Studio is a personal subscription for freelance designers and choreographers, Script and Blocking only, billed to you instead of a theatre. It's for your own private prep between gigs. When a company invites you to their show, you already get their full suite there for free; Studio doesn't change that. It's coming soon, switch to the "For individuals" view and tap Notify me to hear when it ships.</p></details>
+        <details class="qa"><summary>What is Proscene Studio, and is it different from a plan?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Studio is a personal subscription for freelance designers and choreographers, Script and Blocking only, billed to you instead of a theatre. It's for your own private prep between gigs. When a company invites you to their show, you already get their full suite there for free; Studio doesn't change that. Switch to the "For individuals" view above to pick a plan.</p></details>
         <details class="qa"><summary>Is there a free plan for schools?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Schools get discounted school-year pricing, hand-verified by our team. Reach out and we'll get your department set up.</p></details>
       </div>
       <p class="center" style="margin-top:34px"><a class="btn-link" href="/faq" style="display:inline-flex">Read the full FAQ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a></p>

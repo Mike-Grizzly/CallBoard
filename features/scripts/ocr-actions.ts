@@ -87,7 +87,7 @@ export async function startScriptOcr(
   const gate = await gateStoragePath(input.storagePath);
   if (!gate) return { error: "You don't have access to that script." };
 
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "script");
   if (lock.error) return { error: lock.error };
 
   const [existing] = await db
@@ -152,7 +152,7 @@ export async function saveScriptOcrPages(
   if (!(await gateStoragePath(row.storagePath))) {
     return { error: "You don't have access to that script." };
   }
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "script");
   if (lock.error) return { error: lock.error };
 
   // Merge incoming pages over what's stored (idempotent per page number).
@@ -184,7 +184,7 @@ export async function failScriptOcr(ocrId: string): Promise<void> {
     .limit(1);
   if (!row) return;
   if (!(await gateStoragePath(row.storagePath))) return;
-  if ((await assertCanMutate(user.organizationId)).error) return;
+  if ((await assertCanMutate(user.organizationId, "script")).error) return;
   await db
     .update(scriptOcr)
     .set({ status: "failed", updatedAt: new Date() })
@@ -213,7 +213,7 @@ export async function createRebuiltScriptUploadUrl(input: {
   if (!(await userCanAccessProduction(user, input.productionId))) {
     return { error: "You don't have access to that production." };
   }
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "script");
   if (lock.error) return { error: lock.error };
 
   const safeName = (input.fileName || "script.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -245,7 +245,7 @@ export async function finalizeRebuiltScript(input: {
   if (!(await userCanAccessProduction(user, input.productionId))) {
     return { error: "You don't have access to that production." };
   }
-  const lock = await assertCanMutate(user.organizationId);
+  const lock = await assertCanMutate(user.organizationId, "script");
   if (lock.error) return { error: lock.error };
 
   // The path was minted server-side under this production's prefix; reject

@@ -939,6 +939,39 @@ The 2026-06-19 hardening pass fixed the highest-severity confirmed issues. The f
 
 ---
 
+## Proscene Studio (designer-seat) billing — follow-ups (added 2026-06-29)
+
+- **Per-write-action tool gating for Single Tool — RESOLVED 2026-06-30.** `assertCanMutate` gained an optional `tool` param; every write in `features/blocking/actions.ts` passes `"blocking"` and every write in `features/scripts/actions.ts` + `features/scripts/ocr-actions.ts` passes `"script"`, so for designer-only users the guard delegates to `assertDesignerCanUseTool` (tier must include that tool) instead of just the active-seat check. Shared surfaces (documents, scenes) stay on the seat check by design. Closes the hand-crafted-server-action bypass confirmed in the 2026-06-30 billing security review.
+- **Referral incentive deferred.** The designer→org referral engine (3 free months per referred org, lockstep in-arrears vesting, clawback on refund) from this spec is not built. It needs real Stripe coupon/credit infrastructure (the same infra the 15%-off org nudge wants).
+- **Designer plan upgrade — consent step added 2026-07-02 (interval issue resolved).** The locked-tool modal is now two-step: `previewDesignerPlanChange` prices the change (exact prorated amount via `stripe.invoices.createPreview`) and only an explicit confirm click charges via `changeDesignerPlan`, which now preserves the subscriber's billing interval (annual stays annual). Verified live in sandbox pre-consent-step (single_tool → studio_pro, in-place price swap on the same subscription); the confirm-step version still needs one sandbox pass.
+- **`cancel_at_period_end` isn't synced — pending cancellations are invisible in-app (added 2026-07-02).** A portal cancel-at-period-end leaves our status `active`, so settings can't show "cancels on <date>" until the deleted event fires at period end. Access behavior is correct; it's a display gap. Fix options: sync the flag to a new `designer_cancel_at_period_end` column (webhook already receives it) or read the sub live on the settings page. Same gap exists org-side.
+- **Designer → full-app ("level up") conversion — v1 BUILT 2026-07-02 (owner ask; no cancel-and-re-signup).** In-app splash page `/focus/full-app` (feature grid, company tiers, trial promise) + one-click `upgradeToFullApp()` (`features/designer/actions.ts`): winds the Studio seat down via `cancel_at_period_end` (keeps paid time; aborts if Stripe errors), grants the org the standard **60-day trial from conversion day** (re-stamps the anchor — safe, the flip is one-way per account; skipped if grandfathered/subscribed or billing paused), flips `accessMode` to `full`, hard-nav to `/dashboard`. Linked from the tool-lock modal footer, Focus settings billing, and the seatless `/focus` paywall. Org tiers deliberately NOT in the lock modal. **Still open:** plan pre-selection at conversion (today they pick a plan later in Settings → Billing, where subscribe-during-trial already defers the charge to trial end); a convert coupon; whether a converted account can go back to designer-only. Deeper entitlement questions stay with the **Accounts & entitlements model** scoping (above).
+- **Change card at the upgrade moment (added 2026-07-02, owner ask).** The in-app upgrade charges the subscription's default payment method with no way to switch cards mid-flow. Card management EXISTS today via the portal ("Manage billing" in both the lock modal and settings). Improvement: a "pay with a different card" link on the confirm panel that opens a portal `payment_method_update` flow (`billingPortal.sessions.create` with `flow_data`) returning to the locked tool. Small, contained. **Update 2026-07-02:** the dunning half of this is RESOLVED — `changeDesignerPlan` now uses `payment_behavior:"error_if_incomplete"`, so a declined upgrade charge aborts with no tier grant (no more "granted during dunning"). Remaining: the different-card affordance, and note the fail-closed tradeoff that a 3-D Secure card is refused rather than prompted (revisit if it bites real users — a Checkout-based upgrade would handle SCA).
+- **Solo designer cast for Blocking.** A single-player Studio designer has no team to draw cast from, but the Blocking canvas needs actors to place. We never built a "designer adds their own cast" path (spec 21 framed the workspace as single-player Script + Blocking but didn't resolve this). Real gap, separate from billing — revisit when building out the designer Blocking experience.
+
+---
+
+## RESOLVED 2026-07-03: billing axis by workspace (Canva/Monday model) — server side DONE; toggle UI remains
+
+- **Was:** the billing guards chose the axis from the caller's global `accessMode`, so a designer-mode member of a company org was gated on their personal seat, not that org's billing (could write into a lapsed company; locked out of a paid one).
+- **Owner's model:** a designer can be a working member of a paid org and use ALL of that org's tools (gated by the ORG's billing); separately they can pay for their own Studio seat, and that personal work lives in a SEPARATE personal workspace (gated by the SEAT); they toggle between the two. Hard line: a designer must never use a paid org's entitlement to do their own / another non-paying company's work.
+- **Resolved in PR #66 (replaces the interim footprint heuristic):**
+  - New `organizations.is_personal_workspace` flag (migration `add_is_personal_workspace_to_organizations`), true ONLY for a designer's seat-gated workspace (set at designer signup; NOT for "individual" full accounts, which stay org-billing gated + run a normal trial). Flipped to false by `upgradeToFullApp`.
+  - `seatGoverns(user, org) = isDesignerOnly(user) && org.isPersonalWorkspace` picks the axis: seat in the designer's own workspace, org billing everywhere else.
+  - `assertCanCreateProduction` **structurally blocks** a designer from creating productions inside a company org (their own productions go in their personal workspace on their seat) — the owner's "easy fix" that prevents freeloading a paid org's suite for outside shows.
+  - `startTrialIfFirstProduction` skips `is_personal_workspace` orgs (personal workspaces never run the org trial clock; companies start it on first production regardless of creator — closes the brand-new-company leak the heuristic had). The earlier 3 call-site `isDesignerOnly` gates are reverted.
+- **Remaining (UI only, not entitlement/security):** the designer-facing **workspace toggle** (personal Studio ⇄ company orgs). Server-side gating already enforces the right axis for each; `is_personal_workspace` is now a real column the toggle can surface.
+- **Related, ALREADY FIXED (PR #66):** `upgradeToFullApp` trial-farming (admin check + set-once guard).
+
+## Replace mock UI with accurate representations (added 2026-06-30)
+
+- **Owner goal:** swap stylized/mock product imagery for faithful representations of the *real* UI everywhere — the marketing site's product mockups/screenshots and in-app placeholders alike, so what people see matches the actual app.
+- **Known instance:** the Focus locked-tool teaser (`features/designer/tool-lock.tsx`) is currently a stylized approximation (a generic stage with actor tokens for Blocking, character cues + dialogue for Script). The **Blocking** teaser especially should be brought closer to the actual blocking-canvas UI (ground plan, real piece/marker styling). Cross-cutting design polish — deferred, address as a batch.
+- **No designer trial; storage cap advisory.** v1 designer seats have no free trial (charge on subscribe), and the 25 GB designer storage cap (`DESIGNER_STORAGE_GB`) is not enforced (parity with the org `STORAGE_LIMIT_GB`, also advisory). Revisit if abused.
+- **Studio billing — security-reviewed 2026-06-30; still needs a typecheck/build.** A focused billing review (identification + three adversarial verification passes) found **no presently-exploitable HIGH/MEDIUM** issue. Only confirmed finding: the Single Tool per-tool bypass (LOW, now fixed above). Two webhook trust-boundary candidates verified as **not exploitable** (event signature-verified; `profileId`/`organizationId` are server-set to the authenticated user at checkout; the two axes mint separate Stripe customers and designer subs are always tagged `kind="designer"`) but were hardened regardless: `syncSubscription`/`syncDesignerSubscription` now require the resolved row's stored Stripe customer id to be null-or-equal to the event's `customer`, so any mismatch is a 0-row no-op. Built in a deps-less clone → **still not typechecked**; run `npm run type-check && npm run build` (CI on PR #66) before going live.
+
+---
+
 ## Accounts & entitlements model — paid orgs vs free personal users (added 2026-06-30)
 
 - Owner wants the **Canva/Monday.com model**: a personal user account is **free**
@@ -954,6 +987,21 @@ The 2026-06-19 hardening pass fixed the highest-severity confirmed issues. The f
   guardrails, and reconcile with the existing trial logic (`assertCanMutate`,
   trial anchoring at first-production creation). Full context in `qa-backlog.md`.
   Do NOT fold into a QA batch.
+
+## Multi-character casting tracks — pursue at all? (added 2026-07-07)
+
+- Decision 1 (2026-06-29) approved letting one person be cast in multiple
+  characters (an actor covering several supporting roles). It was deliberately
+  left out of Batch 3 (report inputs) and is now **on hold**: the owner is
+  **reconsidering whether to build it at all** and wants time to think before
+  it's scoped.
+- **Open question:** is this worth the casting-model change? Today the model is
+  strictly one-person-one-role (`assignRoleToMember` swaps rather than stacks).
+  Supporting multi-character means rethinking the character-slot model, the
+  cast/crew board UI, and anything that assumes a person maps to one role.
+- **Status: do not start.** Revisit only when the owner decides. If yes, it's
+  its own schema-batch effort, not a QA item. See `decision-log.md` (2026-07-07)
+  and `qa-backlog.md` (Decision 1, marked on-hold).
 
 ## Two batch-1 bugs not reproducible on desktop Chrome (added 2026-06-30)
 

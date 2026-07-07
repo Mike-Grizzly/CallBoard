@@ -8,6 +8,10 @@ import {
 import { getProductionMembers } from "@/features/members/queries";
 import { getReportById } from "@/features/reports/queries";
 import { getReportAttachments } from "@/features/reports/attachments";
+import {
+  getReportAutofillOptions,
+  personOptionsFromMembers,
+} from "@/features/reports/input-options";
 import { ReportForm } from "../../_components/report-form";
 
 export default async function EditReportPage({
@@ -28,12 +32,14 @@ export default async function EditReportPage({
     notFound();
   }
 
-  const [report, members, attachmentRows, departments] = await Promise.all([
-    getReportById(reportId),
-    getProductionMembers(production.id),
-    getReportAttachments(reportId),
-    getResolvedDepartments(production.id),
-  ]);
+  const [report, members, attachmentRows, departments, autofill] =
+    await Promise.all([
+      getReportById(reportId),
+      getProductionMembers(production.id),
+      getReportAttachments(reportId),
+      getResolvedDepartments(production.id),
+      getReportAutofillOptions(production.id),
+    ]);
 
   if (!report || report.productionId !== production.id) {
     notFound();
@@ -64,6 +70,10 @@ export default async function EditReportPage({
       departments={departments}
       existingAttachments={existingAttachments}
       members={mentionMembers}
+      sceneOptions={autofill.sceneOptions}
+      characterOptions={autofill.characterOptions}
+      scenePageByLabel={autofill.scenePageByLabel}
+      personOptions={personOptionsFromMembers(members)}
     />
   );
 }

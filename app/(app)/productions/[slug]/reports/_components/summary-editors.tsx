@@ -2,6 +2,7 @@
 
 import { Icon } from "@/components/ui/icon";
 import { MentionInput } from "@/components/ui/mention-input";
+import { ComboField } from "@/components/ui/combo-field";
 import type { MentionMember } from "@/components/ui/mention-textarea";
 import type {
   Break,
@@ -291,18 +292,49 @@ function NumberStat({
 export function ScenesWorkedEditor({
   scenes,
   onChange,
+  sceneOptions = [],
+  scenePageByLabel = {},
 }: {
   scenes: SceneWorked[];
   onChange: (next: SceneWorked[]) => void;
+  /** The show's scenes, for autofill; free-typing is still allowed. */
+  sceneOptions?: readonly string[];
+  /** Scene label → script page, to prefill Pages when a scene is picked. */
+  scenePageByLabel?: Record<string, string>;
 }) {
   const update = (i: number, patch: Partial<SceneWorked>) =>
     onChange(scenes.map((s, j) => (j === i ? { ...s, ...patch } : s)));
+  // Setting the scene label also prefills Pages from the picked scene's script
+  // page — but never clobbers a value the user already typed there.
+  const setSceneLabel = (i: number, label: string) => {
+    const page = scenePageByLabel[label];
+    onChange(
+      scenes.map((s, j) => {
+        if (j !== i) return s;
+        const next: SceneWorked = { ...s, label };
+        if (page && !s.pages.trim()) next.pages = page;
+        return next;
+      }),
+    );
+  };
   const add = () => onChange([...scenes, { label: "", pages: "", time: "" }]);
   const remove = (i: number) => onChange(scenes.filter((_, j) => j !== i));
 
+  const hasPageData = Object.keys(scenePageByLabel).length > 0;
+
   return (
     <div className="card card-pad">
-      <h3 className="h-card" style={{ marginBottom: 10 }}>Scenes worked</h3>
+      <h3 className="h-card" style={{ marginBottom: 4 }}>Scenes worked</h3>
+      <div
+        className="muted"
+        style={{ fontSize: 11.5, lineHeight: 1.5, marginBottom: 10 }}
+      >
+        {sceneOptions.length > 0
+          ? hasPageData
+            ? `${sceneOptions.length} scenes in this show — pick one below and its script page fills in automatically, or type your own.`
+            : `${sceneOptions.length} scenes in this show — click a Scene field below to pick one, or type your own.`
+          : "No scenes found for this show yet — type scenes in, or add them via AI script analysis / the blocking setup."}
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {scenes.map((s, i) => (
           <div
@@ -313,22 +345,15 @@ export function ScenesWorkedEditor({
               borderRadius: 6,
             }}
           >
-            <input
-              type="text"
+            <ComboField
               value={s.label}
-              placeholder="Scene name (e.g. Act II, Sc. 1)"
-              onChange={(e) => update(i, { label: e.target.value })}
-              style={{
-                width: "100%",
-                border: 0,
-                padding: 0,
-                background: "transparent",
-                fontSize: 13,
-                fontWeight: 500,
-                marginBottom: 6,
-                outline: "none",
-                color: "var(--ink)",
-              }}
+              onChange={(v) => setSceneLabel(i, v)}
+              options={sceneOptions}
+              placeholder={
+                sceneOptions.length ? "Pick a scene, or type one" : "Scene name"
+              }
+              ariaLabel="Scene"
+              style={{ fontSize: 13, marginBottom: 6 }}
             />
             <div className="row" style={{ gap: 8 }}>
               <input
@@ -342,10 +367,10 @@ export function ScenesWorkedEditor({
               <input
                 type="text"
                 value={s.time}
-                placeholder="Duration (e.g. 55m)"
+                placeholder="Duration or time (45m or 8:15–9:00)"
                 onChange={(e) => update(i, { time: e.target.value })}
                 className="field"
-                style={{ width: 80, fontSize: 12 }}
+                style={{ flex: 1, minWidth: 150, fontSize: 12 }}
               />
               <button
                 type="button"

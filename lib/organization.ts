@@ -42,10 +42,14 @@ export type OrganizationProfile = {
  * Creates a new organization. Caller is responsible for inserting the
  * creator's `organization_memberships` row (typically with role "admin").
  * `profile` carries the optional onboarding survey answers, when present.
+ * Pass `isPersonalWorkspace: true` for a single-person personal workspace (a
+ * designer/individual signup) — it is gated by the owner's Studio seat, not org
+ * billing (see features/billing/guard.ts).
  */
 export async function createOrganization(
   name: string,
   profile?: OrganizationProfile,
+  opts?: { isPersonalWorkspace?: boolean },
 ) {
   const trimmed = name.trim() || "New organization";
   const slug = await uniqueSlugFor(trimmed);
@@ -58,6 +62,7 @@ export async function createOrganization(
     .values({
       name: trimmed,
       slug,
+      isPersonalWorkspace: opts?.isPersonalWorkspace ?? false,
       annualShows: profile?.annualShows ?? null,
       teamSize: profile?.teamSize ?? null,
       productionTypes:

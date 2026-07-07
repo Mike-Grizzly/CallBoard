@@ -1,8 +1,15 @@
 # Feature 21 — Designer Seats (à la carte sub-product)
 
-**Status:** PROPOSED / not implemented (2026-06-15). Pricing + UX direction
-agreed in discussion; no code, no schema, no Stripe products yet. Visual
-direction lives in `docs/mockups/designer-focus-view.html` (v1) and
+**Status:** IMPLEMENTED (2026-06-29) — billing built; pending the Stripe-workflow
+security audit and a typecheck/build (no deps in the build clone). The seat lives
+on `profiles.designer_*`; the tier constants (`features/designer/constants.ts`),
+checkout/portal (`features/designer/actions.ts`), the shared-webhook routing, the
+entitlement gate (`features/designer/entitlement.ts` + delegation from the org
+guards), the in-Focus subscribe/manage UI, and the `/signup?account=designer`
+funnel are all in. **Deferred:** the referral incentive (below), per-write tool
+gating for the Single Tool tier (route-gated only), storage enforcement. See
+`decision-log.md` (2026-06-29) and `open-questions.md`. Visual direction lives in
+`docs/mockups/designer-focus-view.html` (v1) and
 `docs/mockups/designer-focus-view-v2.html` (v2 — layers panel + margin view).
 
 > Public product brand is **Proscene** (see `app/(marketing)/pricing/content.ts`).
