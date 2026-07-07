@@ -54,6 +54,7 @@ export default async function NewReportPage({
       members={mentionMembers}
       sceneOptions={autofill.sceneOptions}
       characterOptions={autofill.characterOptions}
+      scenePageByLabel={autofill.scenePageByLabel}
       personOptions={personOptionsFromMembers(members)}
     />
   );

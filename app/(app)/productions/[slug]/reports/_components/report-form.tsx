@@ -76,6 +76,7 @@ export function ReportForm({
   members,
   sceneOptions = [],
   characterOptions = [],
+  scenePageByLabel = {},
   personOptions = [],
 }: {
   mode: Mode;
@@ -89,6 +90,8 @@ export function ReportForm({
   /** Real-data autofill for report inputs (scenes / characters / people). */
   sceneOptions?: readonly string[];
   characterOptions?: readonly string[];
+  /** Scene label → script page, so picking a scene prefills the Pages box. */
+  scenePageByLabel?: Record<string, string>;
   personOptions?: readonly string[];
 }) {
   const router = useRouter();
@@ -506,6 +509,7 @@ export function ReportForm({
           scenes={scenesWorked}
           onChange={setScenesWorked}
           sceneOptions={sceneOptions}
+          scenePageByLabel={scenePageByLabel}
         />
       </div>
 

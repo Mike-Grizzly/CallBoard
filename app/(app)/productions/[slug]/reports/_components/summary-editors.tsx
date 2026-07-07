@@ -293,16 +293,34 @@ export function ScenesWorkedEditor({
   scenes,
   onChange,
   sceneOptions = [],
+  scenePageByLabel = {},
 }: {
   scenes: SceneWorked[];
   onChange: (next: SceneWorked[]) => void;
   /** The show's scenes, for autofill; free-typing is still allowed. */
   sceneOptions?: readonly string[];
+  /** Scene label → script page, to prefill Pages when a scene is picked. */
+  scenePageByLabel?: Record<string, string>;
 }) {
   const update = (i: number, patch: Partial<SceneWorked>) =>
     onChange(scenes.map((s, j) => (j === i ? { ...s, ...patch } : s)));
+  // Setting the scene label also prefills Pages from the picked scene's script
+  // page — but never clobbers a value the user already typed there.
+  const setSceneLabel = (i: number, label: string) => {
+    const page = scenePageByLabel[label];
+    onChange(
+      scenes.map((s, j) => {
+        if (j !== i) return s;
+        const next: SceneWorked = { ...s, label };
+        if (page && !s.pages.trim()) next.pages = page;
+        return next;
+      }),
+    );
+  };
   const add = () => onChange([...scenes, { label: "", pages: "", time: "" }]);
   const remove = (i: number) => onChange(scenes.filter((_, j) => j !== i));
+
+  const hasPageData = Object.keys(scenePageByLabel).length > 0;
 
   return (
     <div className="card card-pad">
@@ -312,7 +330,9 @@ export function ScenesWorkedEditor({
         style={{ fontSize: 11.5, lineHeight: 1.5, marginBottom: 10 }}
       >
         {sceneOptions.length > 0
-          ? `${sceneOptions.length} scenes in this show — click a Scene field below to pick one, or type your own.`
+          ? hasPageData
+            ? `${sceneOptions.length} scenes in this show — pick one below and its script page fills in automatically, or type your own.`
+            : `${sceneOptions.length} scenes in this show — click a Scene field below to pick one, or type your own.`
           : "No scenes found for this show yet — type scenes in, or add them via AI script analysis / the blocking setup."}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -327,7 +347,7 @@ export function ScenesWorkedEditor({
           >
             <ComboField
               value={s.label}
-              onChange={(v) => update(i, { label: v })}
+              onChange={(v) => setSceneLabel(i, v)}
               options={sceneOptions}
               placeholder={
                 sceneOptions.length ? "Pick a scene, or type one" : "Scene name"

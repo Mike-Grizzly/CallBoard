@@ -72,6 +72,7 @@ export default async function EditReportPage({
       members={mentionMembers}
       sceneOptions={autofill.sceneOptions}
       characterOptions={autofill.characterOptions}
+      scenePageByLabel={autofill.scenePageByLabel}
       personOptions={personOptionsFromMembers(members)}
     />
   );
