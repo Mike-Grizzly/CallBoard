@@ -16,9 +16,12 @@ so the owner understands what is changing.
 
 ## Decisions (owner, 2026-06-29)
 
-1. **Casting model — multi-character tracks: APPROVED.** Support a single person cast in
-   two or more characters (e.g. an actor covering multiple supporting roles): one person
-   → multiple character slots / role grouping. Today the model enforces one-person-one-role.
+1. **Casting model — multi-character tracks: APPROVED, but ON HOLD (owner reconsidering,
+   2026-07-07).** Support a single person cast in two or more characters (e.g. an actor
+   covering multiple supporting roles): one person → multiple character slots / role
+   grouping. Today the model enforces one-person-one-role. **Update 2026-07-07:** the owner
+   is no longer certain this will be pursued in full and wants time to think before it is
+   scoped — do NOT start it. It was deliberately left out of Batch 3.
 2. **Blocking list membership: APPROVED, with an exception.** The blocking list shows the
    show's characters plus uncast/unassigned people in the production. EXCLUDE admin, crew,
    designers, and production-management roles. EXCEPTION: include performer-adjacent roles
@@ -34,10 +37,10 @@ so the owner understands what is changing.
 
 ## Execution order
 
-1. **Batch 1 — Real bugs** ← in progress
-2. **Batch 2 — Polish sweep**
-3. **Batch 3 — Report inputs wired to real data** (scenes, characters, people)
-4. **Batch 4 — Attendance model** (schema change)
+1. ☑ **Batch 1 — Real bugs** (done, merged PR #67)
+2. ☑ **Batch 2 — Polish sweep** (done, merged PR #67)
+3. ☑ **Batch 3 — Report inputs wired to real data** (scenes, characters, people) — branch `claude/qa-batch3-report-inputs`
+4. **Batch 4 — Attendance model** (schema change) ← next
 5. **Batch 5 — Blocking enhancements** (model now decided — see Decision 2)
 6. **Batch 6 — Setup/config & presets**
 
@@ -63,7 +66,7 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 | ☐ | More flexible rehearsal patterns | 🏗️ | M | 6 |
 | ☐ | Separate weekday/weekend rehearsal times | 🏗️ | M | 6 |
 | ☐ | Setup wizard saves progress mid-flow | 🏗️ | L | 6 |
-| ☐ | Multi-character tracks (Decision 1) | 🏗️ | L | 3/6 |
+| ☐ | Multi-character tracks (Decision 1) — **on hold, owner reconsidering (2026-07-07)** | 🏗️ | L | TBD |
 
 ## B. Script / PDF viewing
 
@@ -81,11 +84,11 @@ Polish/feature items each get a problem-and-fix write-up before they are coded.
 | ☑ | New items don't appear until manual refresh after save/send | 🐞 | M | 1 |
 | ☑ | Placeholder text should name the input type ("Scene Name") | ✨ | XS | 2 |
 | ☑ | Clearer line-note input guidance | ✨ | S | 2 |
-| ☐ | Reorderable department notes | 🏗️ | S–M | 3 |
-| ☐ | Scenes-worked autofill from the show's scenes | 🏗️ | M | 3 |
-| ☐ | Scenes-worked: duration + timestamp ranges | 🏗️ | S–M | 3 |
-| ☐ | Line-note character dropdowns | 🏗️ | M | 3 |
-| ☐ | Incident person dropdown + free-text option | 🏗️ | M | 3 |
+| ☑ | Reorderable department notes | 🏗️ | S–M | 3 |
+| ☑ | Scenes-worked autofill from the show's scenes | 🏗️ | M | 3 |
+| ☑ | Scenes-worked: duration + timestamp ranges (already free text; clarified) | 🏗️ | S–M | 3 |
+| ☑ | Line-note character dropdowns | 🏗️ | M | 3 |
+| ☑ | Incident person dropdown + free-text option | 🏗️ | M | 3 |
 | ☐ | Richer attendance states (excused/unexcused absence + late) | 🏗️ | M–L | 4 |
 | ☐ | SM toggle for excused/unexcused visibility | 🏗️ | M | 4 |
 | ☐ | Union/non-union status per person (Decision 3) | 🏗️ | M | 4 |
@@ -248,8 +251,59 @@ Resolved:
   the Choreographer spot appears when the Choreography department is enabled;
   not always-on. This is already the behavior, so no code change.
 
+## Batch 3 progress (2026-07-01) — report inputs wired to real data
+
+Branch `claude/qa-batch3-report-inputs`. No schema change — the report still
+stores plain strings/JSON; the real data is autofill only, free text always
+allowed (guests, understudies, ensemble).
+- ☑ **Reusable "pick or type" combobox** — `components/ui/combo-field.tsx`. A
+  text input with a visible dropdown chevron and an app-styled suggestion menu
+  **portaled to `<body>`** (so cards / overflow containers can't clip it);
+  suggests known values but always accepts free text. Powers the
+  scene/character/person fields. *(Started as a native `<datalist>`; reworked
+  after owner testing — see the test round below.)*
+- ☑ **Scenes-worked autofill** from the production's scenes (Act/Sc — Title).
+  Picking a scene also **auto-fills the Pages box** from that scene's script
+  page — sourced from the AI parse's scene bookmarks, matched by title (since
+  `production_scenes` has no page column), and never overwriting a typed value.
+- ☑ **Scenes-worked duration/time** — was already a free-text box; placeholder
+  widened to make clear it takes a duration *or* a time range ("45m" / "8:15–9:00").
+- ☑ **Line-note character** field suggests the show's characters.
+- ☑ **Incident person** field suggests production people.
+- ☑ **Reorderable department notes** — **drag-and-drop** (native HTML5 DnD with a
+  grip handle; the earlier up/down buttons were replaced after testing) in the
+  report form, persisted to `production_departments.sortOrder` via a
+  report-manager-scoped `reorderProductionDepartments` (reorders only; labels
+  re-derived server-side). The order sticks across reports and drives the
+  distributed report's section order.
+- Options loaded in the new + edit report pages via
+  `features/reports/input-options.ts`.
+
+Owner test round (2026-07-07) — fixed directly on the branch:
+- 🐞 **Scene picker read as static guide text** — the scene field was borderless /
+  transparent, so its "pick or type" placeholder looked like a caption, not an
+  input (the menu only appeared on hover). Reworked `ComboField` into a bordered
+  `.field` box with a visible chevron on its own full-width line; the section
+  header now states how many scenes the show has and that picking one fills its
+  page.
+- ✨ **Native datalist replaced** — the browser `<datalist>` looked foreign to the
+  app; swapped for the portaled, app-styled dropdown described above.
+- ✨ **Auto-populate page number** — picking a bookmarked scene now prefills Pages
+  (see the scenes-worked bullet).
+- 🐞 **Theme flash on refresh** — unrelated app-shell bug caught while testing:
+  "System"-theme users saw a light→dark flash on load because SSR rendered from
+  the pref cookie alone (the server can't see the OS setting). Fixed by
+  persisting the client-resolved effective theme in a cookie the server reads
+  (`THEME_EFFECTIVE_COOKIE`, written by both `applyThemePref` and the pre-paint
+  init script); SSR now paints the correct theme directly. Verified in a dark-OS
+  browser — raw SSR HTML comes back `data-theme="dark"`, no flash.
+
 Still open from this round:
-- (none blocking) — see "Carried forward" below.
+- (none blocking) — all five report-input items shipped.
+- 🤔🏗️ **Multi-character tracks (Decision 1)** — deliberately NOT in Batch 3, and
+  now **on hold**: owner is reconsidering whether to pursue it at all and wants
+  time to think (2026-07-07). It's an L-effort casting-model change, not a report
+  input, so it belongs in its own schema batch if it happens. Do NOT start it.
 - 🤔🏗️ **Accounts & entitlements model (Canva/Monday style)** — DEFERRED until
   after the QA batches; capturing full context here so it isn't lost.
 

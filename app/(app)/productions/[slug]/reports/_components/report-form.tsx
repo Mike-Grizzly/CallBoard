@@ -1,6 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,6 +15,7 @@ import {
   updateReport,
   type ReportActionResult,
 } from "@/features/reports/actions";
+import { reorderProductionDepartments } from "@/features/productions/department-actions";
 import {
   requestReportAttachmentUpload,
   finalizeReportAttachmentUpload,
@@ -66,6 +74,10 @@ export function ReportForm({
   departments,
   existingAttachments = [],
   members,
+  sceneOptions = [],
+  characterOptions = [],
+  scenePageByLabel = {},
+  personOptions = [],
 }: {
   mode: Mode;
   productionId: string;
@@ -75,6 +87,12 @@ export function ReportForm({
   departments: ResolvedDepartment[];
   existingAttachments?: ExistingAttachment[];
   members?: MentionMember[];
+  /** Real-data autofill for report inputs (scenes / characters / people). */
+  sceneOptions?: readonly string[];
+  characterOptions?: readonly string[];
+  /** Scene label → script page, so picking a scene prefills the Pages box. */
+  scenePageByLabel?: Record<string, string>;
+  personOptions?: readonly string[];
 }) {
   const router = useRouter();
   const action = mode === "edit" ? updateReport : createReport;
@@ -205,6 +223,52 @@ export function ReportForm({
   });
   const [editingDept, setEditingDept] = useState<string | null>(null);
   const editingDeptDef = departments.find((d) => d.key === editingDept) ?? null;
+  // Department note order — reorderable in-form and persisted to the production
+  // (so it sticks for future reports and drives the distributed report's order).
+  const [deptOrder, setDeptOrder] = useState<string[]>(() =>
+    departments.map((d) => d.key),
+  );
+  const deptByKey = useMemo(
+    () => new Map(departments.map((d) => [d.key, d])),
+    [departments],
+  );
+  const [, startDeptReorder] = useTransition();
+  const [dragDeptKey, setDragDeptKey] = useState<string | null>(null);
+  // Latest order, so drop can persist the result of the drag-over reorders.
+  const deptOrderRef = useRef(deptOrder);
+  deptOrderRef.current = deptOrder;
+
+  function onDeptDragStart(e: React.DragEvent, key: string) {
+    setDragDeptKey(key);
+    e.dataTransfer.effectAllowed = "move";
+    try {
+      e.dataTransfer.setData("text/plain", key);
+    } catch {
+      /* some browsers throw on setData during programmatic drags */
+    }
+  }
+  function onDeptDragOver(e: React.DragEvent, overKey: string) {
+    if (!dragDeptKey) return;
+    e.preventDefault();
+    if (dragDeptKey === overKey) return;
+    setDeptOrder((prev) => {
+      const from = prev.indexOf(dragDeptKey);
+      const to = prev.indexOf(overKey);
+      if (from < 0 || to < 0 || from === to) return prev;
+      const next = [...prev];
+      next.splice(from, 1);
+      next.splice(to, 0, dragDeptKey);
+      return next;
+    });
+  }
+  function onDeptDragEnd() {
+    if (dragDeptKey) {
+      startDeptReorder(() => {
+        void reorderProductionDepartments(productionId, deptOrderRef.current);
+      });
+    }
+    setDragDeptKey(null);
+  }
   const [breaks, setBreaks] = useState<Break[]>(initial?.breaks ?? []);
   const [scenesWorked, setScenesWorked] = useState<SceneWorked[]>(
     initial?.scenesWorked ?? [],
@@ -444,6 +508,8 @@ export function ReportForm({
         <ScenesWorkedEditor
           scenes={scenesWorked}
           onChange={setScenesWorked}
+          sceneOptions={sceneOptions}
+          scenePageByLabel={scenePageByLabel}
         />
       </div>
 
@@ -511,12 +577,18 @@ export function ReportForm({
         <div style={{ padding: 20 }}>
           <div style={{ display: activeTab === "notes" ? "block" : "none" }}>
             <div className="grid grid-2" style={{ gap: 14 }}>
-              {departments.map((d) => {
+              {deptOrder.map((deptKey) => {
+                const d = deptByKey.get(deptKey);
+                if (!d) return null;
                 const html = deptNotes[d.key];
                 const empty = !html || !html.replace(/<[^>]+>/g, "").trim();
                 return (
                   <div
                     key={d.key}
+                    draggable
+                    onDragStart={(e) => onDeptDragStart(e, d.key)}
+                    onDragOver={(e) => onDeptDragOver(e, d.key)}
+                    onDragEnd={onDeptDragEnd}
                     onClick={() => setEditingDept(d.key)}
                     className="dept-note-card"
                     style={{
@@ -525,8 +597,9 @@ export function ReportForm({
                       borderRadius: "var(--radius-s)",
                       cursor: "pointer",
                       minHeight: 80,
+                      opacity: dragDeptKey === d.key ? 0.5 : 1,
                       transition:
-                        "border-color .12s, background .12s, box-shadow .12s",
+                        "border-color .12s, background .12s, box-shadow .12s, opacity .12s",
                     }}
                   >
                     <div className="row" style={{ gap: 8, marginBottom: 6 }}>
@@ -538,19 +611,38 @@ export function ReportForm({
                         <Icon name={d.icon} size={13} aria-hidden />
                       </div>
                       <b style={{ fontSize: 13, fontWeight: 600 }}>{d.label}</b>
-                      <span
-                        className="dept-note-edit-hint muted"
+                      <div
                         style={{
                           marginLeft: "auto",
-                          fontSize: 11,
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: 4,
+                          gap: 6,
                         }}
                       >
-                        <Icon name="PenLine" size={11} aria-hidden />
-                        <span>Edit</span>
-                      </span>
+                        <span
+                          className="dept-note-edit-hint muted"
+                          style={{
+                            fontSize: 11,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <Icon name="PenLine" size={11} aria-hidden />
+                          <span>Edit</span>
+                        </span>
+                        <span
+                          title="Drag to reorder"
+                          aria-hidden
+                          style={{
+                            display: "inline-flex",
+                            color: "var(--ink-4)",
+                            cursor: "grab",
+                          }}
+                        >
+                          <Icon name="Grip" size={13} />
+                        </span>
+                      </div>
                     </div>
                     {empty ? (
                       <div
@@ -583,6 +675,7 @@ export function ReportForm({
               lines={lineNotes}
               onChange={setLineNotes}
               members={members}
+              characterOptions={characterOptions}
             />
           </div>
           <div style={{ display: activeTab === "injuries" ? "block" : "none" }}>
@@ -590,6 +683,7 @@ export function ReportForm({
               injuries={injuries}
               onChange={setInjuries}
               members={members}
+              personOptions={personOptions}
             />
           </div>
           <div style={{ display: activeTab === "general" ? "block" : "none" }}>

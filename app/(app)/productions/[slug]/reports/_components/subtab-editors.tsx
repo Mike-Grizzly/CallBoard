@@ -2,6 +2,7 @@
 
 import { Icon } from "@/components/ui/icon";
 import { MentionInput } from "@/components/ui/mention-input";
+import { ComboField } from "@/components/ui/combo-field";
 import type { MentionMember } from "@/components/ui/mention-textarea";
 import type {
   ScheduleChange,
@@ -108,10 +109,13 @@ export function LineNotesEditor({
   lines,
   onChange,
   members = [],
+  characterOptions = [],
 }: {
   lines: LineNote[];
   onChange: (next: LineNote[]) => void;
   members?: MentionMember[];
+  /** The show's characters, for autofill; free-typing is still allowed. */
+  characterOptions?: readonly string[];
 }) {
   const update = (i: number, patch: Partial<LineNote>) =>
     onChange(lines.map((l, j) => (j === i ? { ...l, ...patch } : l)));
@@ -157,12 +161,12 @@ export function LineNotesEditor({
               alignItems: "center",
             }}
           >
-            <input
-              type="text"
+            <ComboField
               value={l.who}
+              onChange={(v) => update(i, { who: v })}
+              options={characterOptions}
               placeholder="Character"
-              onChange={(e) => update(i, { who: e.target.value })}
-              className="field"
+              ariaLabel="Character"
             />
             <input
               type="text"
@@ -222,10 +226,13 @@ export function InjuriesEditor({
   injuries,
   onChange,
   members = [],
+  personOptions = [],
 }: {
   injuries: Injury[];
   onChange: (next: Injury[]) => void;
   members?: MentionMember[];
+  /** Production people, for autofill; free-typing is still allowed. */
+  personOptions?: readonly string[];
 }) {
   const update = (i: number, patch: Partial<Injury>) =>
     onChange(injuries.map((s, j) => (j === i ? { ...s, ...patch } : s)));
@@ -290,12 +297,12 @@ export function InjuriesEditor({
             }}
           >
             <div className="row" style={{ gap: 8 }}>
-              <input
-                type="text"
+              <ComboField
                 value={inj.who}
+                onChange={(v) => update(i, { who: v })}
+                options={personOptions}
                 placeholder="Person"
-                onChange={(e) => update(i, { who: e.target.value })}
-                className="field"
+                ariaLabel="Person"
                 style={{ width: 200 }}
               />
               <input
