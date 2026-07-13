@@ -1,30 +1,13 @@
 import Link from "next/link";
 import { LogOut } from "lucide-react";
-import { Icon, type IconName } from "@/components/ui/icon";
+import { Icon } from "@/components/ui/icon";
 import { requireCurrentUser } from "@/lib/auth";
-import { can, type Capability } from "@/lib/permissions";
 import { logout } from "@/app/actions/auth";
 import { ThemeControl } from "@/components/app-shell/theme-control";
 import { getThemePref } from "@/lib/theme-server";
-
-interface MoreItem {
-  label: string;
-  href: string;
-  icon: IconName;
-  capability?: Capability;
-  trail?: string;
-}
-
-// Destinations not already on the bottom tab bar (Today / Calendar /
-// Reports / Notes). Capability-gated to match the desktop rail.
-const ITEMS: MoreItem[] = [
-  { label: "Productions", href: "/productions", icon: "Theater", capability: "productions:view" },
-  { label: "Documents", href: "/documents", icon: "FolderOpen", capability: "documents:view" },
-  { label: "Announcements", href: "/announcements", icon: "Megaphone", capability: "announcements:view" },
-  { label: "Activity", href: "/activity", icon: "Activity", capability: "activity:view" },
-  { label: "People", href: "/people", icon: "Users", capability: "settings:manage" },
-  { label: "Settings", href: "/settings", icon: "Settings" },
-];
+import { navItemsFor } from "@/components/app-shell/nav-items";
+import { NotificationBell } from "@/components/app-shell/notification-bell";
+import { getUnreadNotificationCount } from "@/features/notifications/actions";
 
 function initialsFor(firstName: string, lastName: string, email: string) {
   const a = (firstName || "").trim()[0];
@@ -36,7 +19,10 @@ function initialsFor(firstName: string, lastName: string, email: string) {
 export default async function MorePage() {
   const user = await requireCurrentUser();
   const themePref = await getThemePref();
-  const items = ITEMS.filter((item) => !item.capability || can(user.role, item.capability));
+  const unreadCount = await getUnreadNotificationCount();
+  // Destinations not already on the bottom tab bar, from the shared nav source
+  // (N4) — gating stays in lockstep with the desktop rail.
+  const items = navItemsFor("more", user.role);
   const displayName =
     user.firstName || user.lastName
       ? `${user.firstName} ${user.lastName}`.trim()
@@ -44,7 +30,18 @@ export default async function MorePage() {
 
   return (
     <div className="more-page">
-      <h1 className="more-h">More</h1>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <h1 className="more-h" style={{ margin: 0 }}>
+          More
+        </h1>
+        <NotificationBell initialUnread={unreadCount} />
+      </div>
 
       <div className="more-user-card">
         <div className="avatar" aria-hidden>
@@ -64,7 +61,6 @@ export default async function MorePage() {
                 <Icon name={item.icon} aria-hidden />
               </span>
               <span className="more-item-label">{item.label}</span>
-              {item.trail && <span className="more-item-trail">{item.trail}</span>}
               <Icon name="ChevronRight" className="more-item-chev" aria-hidden />
             </Link>
           </li>

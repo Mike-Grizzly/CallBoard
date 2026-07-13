@@ -541,7 +541,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="page-narrow home">
-      {!hasNotifPrefs && <OnboardingDialog />}
+      {/* Established users (populated dashboard): a dismissible card, never a
+          blocking modal (N8). */}
+      {!hasNotifPrefs && <OnboardingDialog variant="card" />}
 
       {/* ════════════════════════════════════════════════════════════════
           DESKTOP COMMAND CENTER (hidden at phone widths)
