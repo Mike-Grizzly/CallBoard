@@ -66,12 +66,54 @@ const components: PortableTextComponents = {
       );
     },
   },
+  list: {
+    bullet: ({ children }) => <ul className="plain">{children}</ul>,
+    number: ({ children }) => <ol>{children}</ol>,
+  },
+  listItem: {
+    bullet: ({ children }) => <li>{children}</li>,
+    number: ({ children }) => <li>{children}</li>,
+  },
   types: {
     image: ({ value }) => {
       const url = urlForImage(stegaClean(value))?.width(1200).url();
       if (!url) return null;
       // eslint-disable-next-line @next/next/no-img-element
       return <img className="ph" src={url} alt={value?.alt || ""} style={{ objectFit: "cover" }} />;
+    },
+    codeBlock: ({ value }) => (
+      <pre className="art-code">
+        <code>{stegaClean(value?.code) ?? ""}</code>
+      </pre>
+    ),
+    table: ({ value }) => {
+      const rows: string[][] = (value?.rows ?? []).map(
+        (r: { cells?: string[] }) => (r?.cells ?? []).map((c) => stegaClean(c) ?? ""),
+      );
+      if (!rows.length) return null;
+      const [head, ...body] = rows;
+      return (
+        <div className="art-table">
+          <table>
+            <thead>
+              <tr>
+                {head.map((c, i) => (
+                  <th key={i}>{c}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {body.map((r, ri) => (
+                <tr key={ri}>
+                  {r.map((c, ci) => (
+                    <td key={ci}>{c}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
     },
   },
 };
