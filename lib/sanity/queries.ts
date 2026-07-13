@@ -1,15 +1,19 @@
-import { draftMode } from "next/headers";
+import { cookies, draftMode } from "next/headers";
+import { resolvePerspectiveFromCookies } from "next-sanity/live";
 import type { PortableTextBlock } from "@portabletext/react";
 import type { SanityImageSource } from "@sanity/image-url";
 import { sanityClient, getSanityPreviewClient } from "./client";
 
 // Single read path for every marketing query. Normal visitors hit the published
-// CDN with ISR (revalidate 60). When Draft Mode is on — i.e. the editor opened
-// the page from the Studio's Presentation tool — we switch to the preview
-// client so drafts + Visual Editing overlays show, and skip the cache so each
-// keystroke-saved draft is fresh. draftMode() is read inside a try/catch
-// because it throws outside a request scope (e.g. during static generation),
-// where preview is never wanted anyway.
+// content with ISR (revalidate 60). When Draft Mode is on — i.e. the editor
+// opened the page from the Studio's Presentation tool — we switch to the
+// preview client (drafts + overlays) and:
+//   - take the perspective from the Studio's Published/Drafts switcher (stored
+//     in a cookie by the enable route), defaulting to "drafts", so that switcher
+//     is the real control;
+//   - force a fresh read (no-store) so each keystroke-saved draft shows.
+// draftMode() is read inside a try/catch because it throws outside a request
+// scope (e.g. during static generation), where preview is never wanted anyway.
 async function loadQuery<T>(
   query: string,
   params: Record<string, unknown> = {},
@@ -21,7 +25,14 @@ async function loadQuery<T>(
     preview = false;
   }
   if (preview) {
-    return getSanityPreviewClient().fetch<T>(query, params);
+    const perspective =
+      (await resolvePerspectiveFromCookies({ cookies: await cookies() })) ??
+      "drafts";
+    return getSanityPreviewClient().fetch<T>(query, params, {
+      perspective,
+      stega: true,
+      cache: "no-store",
+    });
   }
   return sanityClient.fetch<T>(query, params, { next: { revalidate: 60 } });
 }
