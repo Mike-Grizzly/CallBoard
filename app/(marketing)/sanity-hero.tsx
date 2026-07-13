@@ -41,7 +41,7 @@ export function SanityHero({ home }: { home: HomePage }) {
                 </svg>
               </Link>
               {home.secondaryCtaLabel && (
-                <Link className="btn lg" href={secondaryHref}>
+                <Link className="btn on-night lg" href={secondaryHref}>
                   {home.secondaryCtaLabel}
                 </Link>
               )}

@@ -79,7 +79,7 @@ export default async function DocsSectionPage({
 
         <aside className="docs-cta-strip">
           <p>
-            New here? Proscene is free while we&apos;re in open beta.
+            New here? Your first production is free — a 60-day full-access trial, no card required.
           </p>
           <div className="docs-cta-row">
             <Link className="btn primary sm" href="/signup">

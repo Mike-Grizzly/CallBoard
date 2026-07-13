@@ -828,8 +828,8 @@ function StepCalendar({ data, set }: { data: WizardData; set: (p: Partial<Wizard
       <div className="banner">
         <Icon name="Info" size={16} />
         <div>
-          <b style={{ fontWeight: 600 }}>Only opening night is required.</b> Everything else can be set
-          later, but adding them now lets Proscene plan ahead — flag conflicts, schedule auto-reminders,
+          <b style={{ fontWeight: 600 }}>These dates are all optional.</b> You can set them any time,
+          but adding them now lets Proscene plan ahead — flag conflicts, schedule auto-reminders,
           and structure your default rehearsal calendar.
         </div>
       </div>
@@ -855,7 +855,7 @@ function StepCalendar({ data, set }: { data: WizardData; set: (p: Partial<Wizard
         </div>
         <div className="field-group">
           <label className="label">
-            Opening night<span className="req">*</span>
+            Opening night
           </label>
           <DateField
             value={data.opening}

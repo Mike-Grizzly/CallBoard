@@ -14,7 +14,7 @@ export type ContactResult = { ok?: boolean; error?: string };
 
 const REASON_LABEL: Record<string, string> = {
   demo: "Demo request",
-  school: "Student/educator verification",
+  school: "School/non-profit pricing",
   general: "Contact",
 };
 

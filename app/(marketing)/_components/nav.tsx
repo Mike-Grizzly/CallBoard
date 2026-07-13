@@ -58,6 +58,13 @@ export function Nav() {
               {l.label}
             </Link>
           ))}
+          <Link
+            className="nav-link nav-link-signin-m"
+            href="/login"
+            onClick={() => setOpen(false)}
+          >
+            Sign in
+          </Link>
         </nav>
         <div className="nav-cta">
           <Link className="nav-link sign-in" href="/login">

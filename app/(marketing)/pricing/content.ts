@@ -26,8 +26,8 @@ export const PRICING_HERO_HTML = `
       <p class="lede" style="margin:18px auto 0;max-width:56ch">Never for the people in them. Whether you're a company running a season or a designer touring between them, your collaborators are always free.</p>
       <div class="controls">
         <div class="aud-toggle" role="tablist" aria-label="Who's paying?">
-          <button class="aud-seg" id="tab-designers" role="tab" type="button" data-aud="designers" aria-controls="pricing-panels" aria-selected="true" tabindex="0">For individuals</button>
-          <button class="aud-seg" id="tab-companies" role="tab" type="button" data-aud="companies" aria-controls="pricing-panels" aria-selected="false" tabindex="-1">For companies</button>
+          <button class="aud-seg" id="tab-designers" role="tab" type="button" data-aud="designers" aria-controls="pricing-panels" aria-selected="false" tabindex="-1">For individuals</button>
+          <button class="aud-seg" id="tab-companies" role="tab" type="button" data-aud="companies" aria-controls="pricing-panels" aria-selected="true" tabindex="0">For companies</button>
           <span class="aud-thumb" aria-hidden="true"></span>
         </div>
         <div class="billing" role="group" aria-label="Billing period">
@@ -58,7 +58,7 @@ export const PRICING_COMPANIES_REST_HTML = `
           <b>Participants are always free.</b>
           <p>Anyone you invite to a show, actors, crew, designers, stage managers, works free, with no plan and no card. There are never per-seat fees on any tier.</p>
         </div>
-        <a class="btn-link" href="#" data-noop style="display:inline-flex">How invites work <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+        <a class="btn-link" href="/help/get-started/invite-your-company" style="display:inline-flex">How invites work <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
       </div>
 
       <div class="includes">
@@ -101,9 +101,15 @@ export const PRICING_COMPANIES_REST_HTML = `
         </table>
       </div>
 
-      <p class="center kicker" style="margin-top:30px">Students &amp; educators get discounted school-year pricing, hand-verified.
-        <a class="btn-link" href="/contact?reason=school" style="display:inline-flex;vertical-align:middle">Talk to us about your school <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
-      </p>
+      <div class="edu-band">
+        <div class="edu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5"/></svg></div>
+        <div class="edu-body">
+          <span class="edu-eyebrow">Schools &amp; non-profits</span>
+          <h3>A school or non-profit? <em>You pay less.</em></h3>
+          <p>Drama departments, student productions, and non-profit theatre companies get discounted, hand-verified pricing on the Company plan. Tell us about your organization and we'll get you set up.</p>
+        </div>
+        <a class="btn primary lg" href="/contact?reason=school" style="display:inline-flex;flex-shrink:0">Get special pricing <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+      </div>
 `;
 
 // Static COMPANIES tier cards (fallback when Sanity has no pricing tiers).
@@ -274,7 +280,7 @@ export const PRICING_REST_HTML = `
         <details class="qa"><summary>How does the free trial work?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>New organizations get a 60-day free trial, no card required. The clock doesn't start at signup, it starts when you open your first production, so you can set things up on your own schedule.</p></details>
         <details class="qa"><summary>What's the difference between monthly and annual?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Annual is roughly ten months for the price of twelve, about 20% off. Both give you the identical toolset; annual just costs less per month. You can switch between them at any time.</p></details>
         <details class="qa"><summary>What is Proscene Studio, and is it different from a plan?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Studio is a personal subscription for freelance designers and choreographers, Script and Blocking only, billed to you instead of a theatre. It's for your own private prep between gigs. When a company invites you to their show, you already get their full suite there for free; Studio doesn't change that. Switch to the "For individuals" view above to pick a plan.</p></details>
-        <details class="qa"><summary>Is there a free plan for schools?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Schools get discounted school-year pricing, hand-verified by our team. Reach out and we'll get your department set up.</p></details>
+        <details class="qa"><summary>Do schools or non-profits get a discount?<svg class="pl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Yes. Schools, drama departments, and non-profit theatre companies get discounted, hand-verified pricing on the Company plan. Reach out and we'll get your organization set up.</p></details>
       </div>
       <p class="center" style="margin-top:34px"><a class="btn-link" href="/faq" style="display:inline-flex">Read the full FAQ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a></p>
     </div>

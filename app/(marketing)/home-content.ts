@@ -266,7 +266,7 @@ export const HOME_HTML = `
           <p class="lede">Calls, calendar, script, blocking, and reports, connected, and shared by everyone. Proscene keeps cast, crew, and creative teams on the same page, from first read to closing night.</p>
           <div class="hero-actions">
             <a class="btn primary lg" href="/signup">Start free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
-            <a class="btn lg" href="/contact?reason=demo">Book a demo</a>
+            <a class="btn on-night lg" href="/contact?reason=demo">Book a demo</a>
           </div>
           <div class="hero-note">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>

@@ -2653,3 +2653,129 @@ full. Better to hold than to build speculatively.
 **Impact:** If it proceeds, it belongs in its own schema batch (alongside
 Batch 4/5/6 work), not folded into a QA batch. Tracked in `qa-backlog.md`
 (Decision 1 marked on-hold) and `open-questions.md`.
+
+---
+
+## 2026-07-07 — UX backlog Batch 1 owner/recommendation calls
+
+**Decision:** Landed UX-backlog Batch 1 (M1, M3–M8, R7, N2) on `claude/ux-backlog-batch-1-ig6614`. Three of these carried a decision:
+
+- **M1 (school pricing):** Owner asked directly — chose **"discounted, not free."** The Contact page (title + lede) was rewritten to promise discounted, hand-verified school-year pricing, matching the Pricing page and FAQ. The word "free" no longer describes school pricing anywhere.
+- **M7 (dead affordances):** Owner unavailable → implemented the backlog's stated recommendation: **removed** the three placeholder footer social icons (no real accounts exist; `sameAs` is empty) and **wired** the pricing "How invites work" link to the existing help article `/help/get-started/invite-your-company`.
+- **R7 (wizard "opening night required"):** Implemented the recommendation to **unmark** — validation only ever required a title, so the red asterisk was removed and the banner reworded to "these dates are all optional."
+
+**Reason:** M1 is a pricing promise (owner-only); M7/R7 had explicit backlog recommendations usable when the owner is unavailable.
+
+**Impact:** Marketing copy now internally consistent on school pricing and the trial story; JSON-LD on home + pricing corrected from "Free during open beta / price 0" to a real `AggregateOffer` ($25–$79, 60-day trial). Copy-only + client-UI; no server action, permission, storage, or billing-flag changes. **Sanity note:** where these strings also live in Sanity (hero, pricing tiers, FAQ), the CMS copy needs the same edits by the owner in Studio — the static files are the always-present fallback.
+
+---
+
+## 2026-07-07 — Blog: four SEO drafts ported live as static posts
+
+**Decision:** Following the owner's request to "add the other blogs," the four
+Phase-1 SEO drafts in `docs/seo/blog-drafts/` were ported into a small static
+multi-post system rather than waiting on Sanity publication. New module
+`app/(marketing)/blog/posts.ts` holds a typed registry (the existing setup
+walkthrough plus the four guides) and renders both the index (featured + grid)
+and each article; `blog/[slug]/page.tsx` now routes static slugs through it and
+falls back to it when Sanity has no post. `blogpost.css` gained styles for the
+elements the guides use (bulleted/numbered lists, tech-week checklists, tables,
+code blocks). The drafts' pre-billing "Free during open beta" CTAs were rewritten
+to the real trial story (consistent with M6).
+
+**Reason:** The static blog only supported one post (any slug fell back to the
+single demo article), so making the drafts live in code required a real registry.
+Static is the only path that makes them live without owner action; it remains the
+architecture's intended fallback — publishing the same slugs in Sanity Studio
+transparently supersedes each one.
+
+**Also (M1 polish):** the pricing page's small "Talk to us about your school"
+text link was upgraded to a prominent "Get school pricing" button, per owner
+feedback that the educator-discount path was hard to find.
+
+**Impact:** Five real, distinct posts on `/blog` with correct read times/dates
+and no fake "conflict detection" changelog. Content-only + CSS; no schema, auth,
+or server-action changes. **Follow-up for the owner:** if/when these are published
+in Sanity, the static copies stay as the fallback (Sanity wins per-slug) — no dedup
+needed, but keep the canonical copy in Studio going forward. All internal links in
+the ported articles were verified against real `/help/*` and `/features#*` routes.
+
+---
+
+## 2026-07-07 — School pricing extended to non-profits + dedicated section
+
+**Decision:** Per owner follow-up, the discounted-pricing offer now explicitly
+covers **schools AND non-profit theatre companies** (previously "students &
+educators" only), and it gets its own attention-grabbing section on the pricing
+page: an accent-tinted `.edu-band` callout (graduation-cap icon, "Schools &
+non-profits" eyebrow, "A school or non-profit? You pay less." headline, and a
+prominent "Get special pricing" button → `/contact?reason=school`) replacing the
+small centered kicker link. Copy broadened to include non-profits across the
+contact page (eyebrow/title/lede + metadata), the contact-form reason label, the
+email subject label (`actions.ts`), the pricing FAQ-mini, the main FAQ, and both
+pricing/contact metadata descriptions.
+
+**Reason:** Owner wants schools and non-profits called out together, with a
+section that doubles as an attention grabber, and the discount to apply to both.
+
+**Impact:** The `?reason=school` deep-link key is unchanged (still routes the
+same contact form), so nothing broke; only human-facing copy + one new styled
+section (`.edu-band` in `pricing.css`). Copy/CSS only. Screenshot-verified at
+1440 + 390.
+
+---
+
+## 2026-07-07 — Blog index merges static + Sanity (not either/or)
+
+**Decision:** The blog index (`app/(marketing)/blog/page.tsx`) now renders Sanity
+posts AND the ported static posts together, deduped by slug with **Sanity
+winning per-slug**, instead of the old "if any Sanity post exists, show only
+Sanity" gate. Static posts are mapped to the Sanity `PostCard` shape (placeholder
+cover) and appended after the Sanity posts. Removed the now-unused static index
+renderer (`renderBlogIndexHtml`/`featuredCard`/`gridCard` in `posts.ts` and
+`blog/content.ts`); the per-slug article page already preferred Sanity with a
+static fallback, so it was unchanged.
+
+**Reason:** The dataset had one published Sanity post (the setup walkthrough), so
+the old gate rendered only that and hid the four ported guides entirely. Merging
+makes all posts visible immediately and is forward-compatible: recreating any of
+the four in Sanity Studio supersedes its static copy with no duplicates, so the
+owner can migrate the blog to Sanity at their own pace.
+
+**Context:** The owner confirmed the Studio works on production (`proscene.app/
+studio` offers post creation); the earlier "blank Studio" was the preview branch
+(its URL not in the Sanity project CORS origins — expected, harmless).
+
+---
+
+## 2026-07-07 — Sanity blog seed script + code/table body types
+
+**Decision:** Added `scripts/seed-blog-posts.mjs` — a standalone Node script that
+converts the four Markdown drafts in `docs/seo/blog-drafts/` into real, published,
+editable Sanity `post` documents (Markdown → Portable Text: headings, paragraphs,
+bold/italic/links, bulleted + numbered lists, plus custom `codeBlock` and `table`
+blocks; the stale "Free during open beta" CTA is rewritten to the trial line).
+Run with `SANITY_API_WRITE_TOKEN=… node scripts/seed-blog-posts.mjs` (`--dry` to
+preview, `--replace` to overwrite; default is create-if-not-exists, so it won't
+clobber later Studio edits). It talks to sanity.io, so it runs from a networked
+machine, not the restricted build sandbox.
+
+To render the guides faithfully, the `post` schema's `body` gained two custom
+object types — `codeBlock` (a text field) and `table` (rows of string cells,
+first row = header) — and `SanityBlogPost` gained matching Portable Text
+renderers (reusing the `.art-code` / `.art-table` CSS) plus proper bulleted/
+numbered `list` components (so Sanity-authored lists get real markers, matching
+the static posts).
+
+**Reason:** The owner prefers to manage the blog in Sanity. Hand-rebuilding four
+long, table- and code-heavy articles in the Studio rich-text editor is painful;
+the seed script imports them once as native, editable documents. Standard Portable
+Text can't express tables or preformatted code, hence the two small custom types.
+
+**Impact:** Once seeded, the four posts render from the normal Sanity path (so the
+static-registry copies drop out per-slug via the merge) and are fully editable in
+Studio. The seed is idempotent (deterministic `_id`s + stable keys) and defaults
+to non-destructive. Schema/renderer additions are backward-compatible (existing
+posts without code/table blocks are unaffected). `tsc` + `eslint` (0 errors) +
+168 tests + `next build` all green; the converter was dry-run-verified on all four
+drafts (correct block/table/code counts, header rows, links, preserved code).

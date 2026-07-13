@@ -173,7 +173,7 @@ export default async function DocsArticlePage({
         )}
 
         <aside className="docs-cta-strip">
-          <p>Proscene is free while we&apos;re in open beta.</p>
+          <p>Your first production is free — a 60-day full-access trial, no card required.</p>
           <div className="docs-cta-row">
             <Link className="btn primary sm" href="/signup">
               Start free

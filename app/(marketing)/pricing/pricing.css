@@ -82,6 +82,28 @@
 [data-page="pricing"] .free-banner b{font-family:var(--font-display);font-size:16px;font-weight:600}
 [data-page="pricing"] .free-banner p{color:var(--ink-3);font-size:14px;margin-top:3px}
 
+/* Schools & non-profits special-pricing callout (attention-grabbing band) */
+[data-page="pricing"] .edu-band{
+  display:flex;align-items:center;gap:24px;flex-wrap:wrap;justify-content:space-between;
+  background:linear-gradient(120deg, var(--accent-soft), color-mix(in oklch,var(--accent-soft) 35%, var(--bg-elev)));
+  border:1px solid color-mix(in oklch,var(--accent) 32%, var(--border));
+  border-radius:var(--radius-l);
+  padding:clamp(24px,3vw,32px) clamp(24px,3vw,34px);
+  box-shadow:0 10px 30px -18px color-mix(in oklch,var(--accent) 60%, transparent);
+  margin-top:clamp(40px,5vw,56px);
+}
+[data-page="pricing"] .edu-band .edu-icon{width:54px;height:54px;border-radius:14px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;flex-shrink:0}
+[data-page="pricing"] .edu-band .edu-icon svg{width:27px;height:27px}
+[data-page="pricing"] .edu-band .edu-body{flex:1;min-width:280px}
+[data-page="pricing"] .edu-band .edu-eyebrow{display:inline-block;font-size:11.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:8px}
+[data-page="pricing"] .edu-band h3{font-family:var(--font-display);font-size:clamp(19px,2.2vw,25px);font-weight:600;letter-spacing:-.015em;line-height:1.2;color:var(--ink)}
+[data-page="pricing"] .edu-band h3 em{font-style:italic;color:var(--accent)}
+[data-page="pricing"] .edu-band p{color:var(--ink-2);font-size:15px;margin-top:9px;max-width:62ch;line-height:1.5}
+@media (max-width:640px){
+  [data-page="pricing"] .edu-band{flex-direction:column;align-items:flex-start;text-align:left}
+  [data-page="pricing"] .edu-band .btn{width:100%}
+}
+
 /* "every plan includes" strip */
 [data-page="pricing"] .includes{margin-top:54px}
 [data-page="pricing"] .includes-head{text-align:center;margin-bottom:26px}

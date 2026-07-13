@@ -62,7 +62,66 @@ export const post = defineType({
       name: "body",
       title: "Body",
       type: "array",
-      of: [{ type: "block" }, { type: "image", options: { hotspot: true } }],
+      of: [
+        { type: "block" },
+        { type: "image", options: { hotspot: true } },
+        {
+          type: "object",
+          name: "codeBlock",
+          title: "Code block",
+          fields: [
+            { name: "code", title: "Code", type: "text", rows: 10 },
+            { name: "language", title: "Language", type: "string" },
+          ],
+          preview: {
+            select: { code: "code" },
+            prepare: ({ code }: { code?: string }) => ({
+              title: "Code block",
+              subtitle: (code ?? "").split("\n")[0]?.slice(0, 60),
+            }),
+          },
+        },
+        {
+          type: "object",
+          name: "table",
+          title: "Table",
+          description: "The first row is rendered as the header row.",
+          fields: [
+            {
+              name: "rows",
+              title: "Rows",
+              type: "array",
+              of: [
+                {
+                  type: "object",
+                  name: "tableRow",
+                  fields: [
+                    {
+                      name: "cells",
+                      title: "Cells",
+                      type: "array",
+                      of: [{ type: "string" }],
+                    },
+                  ],
+                  preview: {
+                    select: { cells: "cells" },
+                    prepare: ({ cells }: { cells?: string[] }) => ({
+                      title: (cells ?? []).join(" · ").slice(0, 70) || "Row",
+                    }),
+                  },
+                },
+              ],
+            },
+          ],
+          preview: {
+            select: { rows: "rows" },
+            prepare: ({ rows }: { rows?: unknown[] }) => ({
+              title: "Table",
+              subtitle: `${rows?.length ?? 0} rows`,
+            }),
+          },
+        },
+      ],
     }),
     defineField({
       name: "seoTitle",
