@@ -2722,3 +2722,26 @@ section that doubles as an attention grabber, and the discount to apply to both.
 same contact form), so nothing broke; only human-facing copy + one new styled
 section (`.edu-band` in `pricing.css`). Copy/CSS only. Screenshot-verified at
 1440 + 390.
+
+---
+
+## 2026-07-07 — Blog index merges static + Sanity (not either/or)
+
+**Decision:** The blog index (`app/(marketing)/blog/page.tsx`) now renders Sanity
+posts AND the ported static posts together, deduped by slug with **Sanity
+winning per-slug**, instead of the old "if any Sanity post exists, show only
+Sanity" gate. Static posts are mapped to the Sanity `PostCard` shape (placeholder
+cover) and appended after the Sanity posts. Removed the now-unused static index
+renderer (`renderBlogIndexHtml`/`featuredCard`/`gridCard` in `posts.ts` and
+`blog/content.ts`); the per-slug article page already preferred Sanity with a
+static fallback, so it was unchanged.
+
+**Reason:** The dataset had one published Sanity post (the setup walkthrough), so
+the old gate rendered only that and hid the four ported guides entirely. Merging
+makes all posts visible immediately and is forward-compatible: recreating any of
+the four in Sanity Studio supersedes its static copy with no duplicates, so the
+owner can migrate the blog to Sanity at their own pace.
+
+**Context:** The owner confirmed the Studio works on production (`proscene.app/
+studio` offers post creation); the earlier "blank Studio" was the preview branch
+(its URL not in the Sanity project CORS origins — expected, harmless).

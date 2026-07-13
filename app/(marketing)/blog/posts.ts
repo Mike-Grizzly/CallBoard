@@ -686,8 +686,6 @@ export function getBlogPost(slug: string): BlogPost | undefined {
 // Rendering (static fallback markup, mirrors the Sanity-rendered layout)
 // ─────────────────────────────────────────────────────────────────────────
 
-const ARROW_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>`;
-
 function pillColor(cat: BlogCategory): string {
   return CATEGORY_COLOR[cat];
 }
@@ -758,79 +756,6 @@ ${post.body}
             <a class="btn ghost lg" href="/features">Tour the features</a>
           </div>
         </div>
-      </div>
-    </div>
-  </section>
-`;
-}
-
-function featuredCard(post: BlogPost): string {
-  return `
-      <a class="feat-post reveal" href="/blog/${post.slug}">
-        <div class="ph" data-accent data-label="${post.coverLabel}"></div>
-        <div class="body">
-          <div class="meta">
-            <span class="pill" data-c="${pillColor(post.category)}">${post.category}</span>
-            <span class="read">${post.readTime} read</span>
-          </div>
-          <h2>${post.title}</h2>
-          <p>${post.excerpt}</p>
-          <span class="btn-link" style="display:inline-flex">Read the walkthrough ${ARROW_SVG}</span>
-          <div class="by" style="margin-top:14px">The Proscene team · ${post.date}</div>
-        </div>
-      </a>`;
-}
-
-function gridCard(post: BlogPost): string {
-  return `
-        <a class="post" href="/blog/${post.slug}">
-          <div class="ph" data-label="${post.coverLabel}"></div>
-          <div class="body">
-            <div class="meta"><span class="pill" data-c="${pillColor(post.category)}">${post.category}</span><span class="read">${post.readTime}</span></div>
-            <h3>${post.title}</h3>
-            <p>${post.excerpt}</p>
-            <div class="by">The Proscene team · ${post.date}</div>
-          </div>
-        </a>`;
-}
-
-export function renderBlogIndexHtml(): string {
-  const featured = BLOG_POSTS.find((p) => p.featured) ?? BLOG_POSTS[0];
-  const rest = BLOG_POSTS.filter((p) => p !== featured);
-  return `
-  <section class="page-hero">
-    <div class="wrap">
-      <span class="eyebrow">The Proscene blog</span>
-      <h1 class="display" style="margin-top:18px;font-size:clamp(34px,5vw,58px)">Notes from the <em>prompt desk.</em></h1>
-      <p class="lede lede-narrow" style="margin-top:18px">Walkthroughs, stage-management craft, and the occasional opinion about call times, written by people who've held the book.</p>
-    </div>
-  </section>
-
-  <!-- FEATURED -->
-  <section class="section-tight">
-    <div class="wrap">${featuredCard(featured)}
-    </div>
-  </section>
-
-  <!-- GRID -->
-  <section class="section" style="padding-top:8px">
-    <div class="wrap">
-      <div class="posts reveal">${rest.map(gridCard).join("")}
-      </div>
-    </div>
-  </section>
-
-  <!-- NEWSLETTER -->
-  <section class="section" style="padding-top:0">
-    <div class="wrap-narrow">
-      <div class="card card-pad center reveal" style="padding:clamp(32px,4vw,48px)">
-        <span class="eyebrow no-rule" style="justify-content:center;margin-bottom:14px">The half-hour call</span>
-        <h3 class="subtitle">A short letter for stage managers, twice a month.</h3>
-        <p class="lede" style="margin:12px auto 24px;max-width:46ch">Craft, product updates, and the occasional war story. No spam, unsubscribe in a tap.</p>
-        <form style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;max-width:440px;margin:0 auto" data-noop-form>
-          <input type="email" placeholder="you@theatre.com" aria-label="Email" style="flex:1;min-width:220px;height:50px;border:1px solid var(--border-strong);border-radius:var(--radius);padding:0 16px;font-size:15px;font-family:inherit;background:var(--bg-elev)">
-          <button class="btn primary" style="height:50px" type="submit">Subscribe</button>
-        </form>
       </div>
     </div>
   </section>
