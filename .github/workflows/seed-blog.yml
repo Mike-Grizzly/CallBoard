@@ -1,0 +1,67 @@
+name: Seed blog posts to Sanity
+
+# Manual, browser-triggered import: converts the four Markdown drafts in
+# docs/seo/blog-drafts/ into editable Sanity `post` documents via
+# scripts/seed-blog-posts.mjs. You do NOT need this to make the posts appear on
+# the site (the /blog index already merges them) — only to make them editable
+# in Studio.
+#
+# One-time setup: add a repo secret SANITY_API_WRITE_TOKEN (an Editor token from
+# sanity.io/manage -> project -> API -> Tokens) under
+# Settings -> Secrets and variables -> Actions.
+#
+# To run: Actions tab -> "Seed blog posts to Sanity" -> Run workflow -> pick a
+# mode. Start with "dry" to preview, then "create".
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry = preview only · create = add if missing · replace = overwrite existing"
+        type: choice
+        options:
+          - dry
+          - create
+          - replace
+        default: create
+
+concurrency:
+  group: seed-blog
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: Seed blog posts
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SANITY_PROJECT_ID: dsciikio
+      NEXT_PUBLIC_SANITY_DATASET: production
+      SANITY_API_WRITE_TOKEN: ${{ secrets.SANITY_API_WRITE_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check token is set (skipped for dry runs)
+        if: ${{ inputs.mode != 'dry' }}
+        run: |
+          if [ -z "${SANITY_API_WRITE_TOKEN}" ]; then
+            echo "::error::SANITY_API_WRITE_TOKEN secret is not set. Add it under Settings -> Secrets and variables -> Actions, then re-run."
+            exit 1
+          fi
+
+      - name: Seed
+        run: |
+          case "${{ inputs.mode }}" in
+            dry)     node scripts/seed-blog-posts.mjs --dry ;;
+            replace) node scripts/seed-blog-posts.mjs --replace ;;
+            *)       node scripts/seed-blog-posts.mjs ;;
+          esac
