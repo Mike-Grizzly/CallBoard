@@ -6,7 +6,7 @@ import { submitContactForm, type ContactResult } from "./actions";
 const REASONS = [
   { value: "general", label: "General question" },
   { value: "demo", label: "Book a demo" },
-  { value: "school", label: "Student / educator verification" },
+  { value: "school", label: "School / non-profit pricing" },
 ];
 
 export function ContactForm({ reason }: { reason: string }) {

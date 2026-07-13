@@ -5,7 +5,7 @@ import { ContactForm } from "./contact-form";
 export const metadata: Metadata = {
   title: "Contact · Proscene",
   description:
-    "Questions, feedback, a demo, or student verification: get in touch. We're former stage managers and we answer fast.",
+    "Questions, feedback, a demo, or school and non-profit pricing: get in touch. We're former stage managers and we answer fast.",
   alternates: { canonical: "/contact" },
 };
 
@@ -16,9 +16,9 @@ const COPY: Record<string, { eyebrow: string; title: string; lede: string }> = {
     lede: "Tell us a bit about your production and we'll set up a walkthrough.",
   },
   school: {
-    eyebrow: "Students & educators",
-    title: "School pricing, <em>hand-verified.</em>",
-    lede: "Verified students and educators get discounted school-year pricing on the Company plan. Send us a note with your department details and we'll set you up.",
+    eyebrow: "Schools & non-profits",
+    title: "Special pricing, <em>hand-verified.</em>",
+    lede: "Schools, drama departments, and non-profit theatre companies get discounted, hand-verified pricing on the Company plan. Send us a note about your organization and we'll set you up.",
   },
   general: {
     eyebrow: "Get in touch",

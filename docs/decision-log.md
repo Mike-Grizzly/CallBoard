@@ -2699,3 +2699,26 @@ or server-action changes. **Follow-up for the owner:** if/when these are publish
 in Sanity, the static copies stay as the fallback (Sanity wins per-slug) — no dedup
 needed, but keep the canonical copy in Studio going forward. All internal links in
 the ported articles were verified against real `/help/*` and `/features#*` routes.
+
+---
+
+## 2026-07-07 — School pricing extended to non-profits + dedicated section
+
+**Decision:** Per owner follow-up, the discounted-pricing offer now explicitly
+covers **schools AND non-profit theatre companies** (previously "students &
+educators" only), and it gets its own attention-grabbing section on the pricing
+page: an accent-tinted `.edu-band` callout (graduation-cap icon, "Schools &
+non-profits" eyebrow, "A school or non-profit? You pay less." headline, and a
+prominent "Get special pricing" button → `/contact?reason=school`) replacing the
+small centered kicker link. Copy broadened to include non-profits across the
+contact page (eyebrow/title/lede + metadata), the contact-form reason label, the
+email subject label (`actions.ts`), the pricing FAQ-mini, the main FAQ, and both
+pricing/contact metadata descriptions.
+
+**Reason:** Owner wants schools and non-profits called out together, with a
+section that doubles as an attention grabber, and the discount to apply to both.
+
+**Impact:** The `?reason=school` deep-link key is unchanged (still routes the
+same contact form), so nothing broke; only human-facing copy + one new styled
+section (`.edu-band` in `pricing.css`). Copy/CSS only. Screenshot-verified at
+1440 + 390.

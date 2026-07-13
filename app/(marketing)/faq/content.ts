@@ -110,8 +110,8 @@ export const FAQ_HTML = `
               "No. Proscene Studio is a personal subscription, Script and Blocking only, billed to you instead of a theatre, for your own prep between gigs. And if a company invites you to their show, you already have their full suite there for free. It's coming soon; sign up to be notified on the <a href=\"/pricing\" style=\"color:var(--accent-ink)\">pricing page</a>."
             )}
             ${qa(
-              "Is there a discount for schools?",
-              "Yes, schools get discounted school-year pricing, hand-verified by our team. It isn't free, but it's a meaningful break for drama departments and university programs. <a href=\"/contact\" style=\"color:var(--accent-ink)\">Reach out</a> with your department details and we'll get you set up."
+              "Is there a discount for schools or non-profits?",
+              "Yes, schools, drama departments, university programs, and non-profit theatre companies get discounted, hand-verified pricing on the Company plan. It isn't free, but it's a meaningful break. <a href=\"/contact?reason=school\" style=\"color:var(--accent-ink)\">Reach out</a> with your organization's details and we'll get you set up."
             )}
           </div>
 
