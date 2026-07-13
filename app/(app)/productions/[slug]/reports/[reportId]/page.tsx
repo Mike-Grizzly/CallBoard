@@ -24,6 +24,7 @@ import { getIsPinned } from "@/features/pins/queries";
 import { PinButton } from "@/features/pins/pin-button";
 import { AttachmentUpload } from "./attachment-upload";
 import { EmailReportButton } from "./email-report-button";
+import { DeleteReportButton } from "./delete-report-button";
 import { DetailTabs } from "./detail-tabs";
 import { MobileReportDetail } from "./mobile-report-detail";
 
@@ -211,6 +212,7 @@ export default async function ReportDetailPage({
               members={productionMembers}
               autoOpen={autoOpenEmail}
             />
+            {canEdit && <DeleteReportButton reportId={reportId} slug={slug} />}
             {canEdit && (
               <Link href={`/productions/${slug}/reports/${reportId}/edit`} prefetch>
                 <button className="btn primary">

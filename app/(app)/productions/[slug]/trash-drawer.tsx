@@ -3,6 +3,7 @@
 import { useState, useTransition, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Trash2, X, RotateCcw, FileText, File, AlertTriangle } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useRouter } from "next/navigation";
 import {
   restoreDocument,
@@ -44,6 +45,10 @@ function daysUntilPurge(date: Date | null): number {
 
 export function TrashDrawer({ productionId, initialTrashCount }: Props) {
   const [open, setOpen] = useState(false);
+  const [confirmPurge, setConfirmPurge] = useState<{
+    type: "doc" | "report";
+    id: string;
+  } | null>(null);
   const [docs, setDocs] = useState<DeletedDoc[]>([]);
   const [reports, setReports] = useState<DeletedReport[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -89,7 +94,10 @@ export function TrashDrawer({ productionId, initialTrashCount }: Props) {
   }
 
   function handlePermanentDelete(type: "doc" | "report", id: string) {
-    if (!confirm("Permanently delete this item? This cannot be undone.")) return;
+    setConfirmPurge({ type, id });
+  }
+
+  function doPermanentDelete(type: "doc" | "report", id: string) {
     const formData = new FormData();
     formData.set(type === "doc" ? "document_id" : "report_id", id);
     startTransition(async () => {
@@ -265,6 +273,19 @@ export function TrashDrawer({ productionId, initialTrashCount }: Props) {
           </>,
           document.body,
         )}
+      <ConfirmDialog
+        open={confirmPurge !== null}
+        title="Permanently delete?"
+        message={`This ${confirmPurge?.type === "report" ? "report" : "document"} will be permanently deleted. This cannot be undone.`}
+        confirmLabel="Delete forever"
+        danger
+        busy={isPending}
+        onConfirm={() => {
+          if (confirmPurge) doPermanentDelete(confirmPurge.type, confirmPurge.id);
+          setConfirmPurge(null);
+        }}
+        onCancel={() => setConfirmPurge(null)}
+      />
     </>
   );
 }

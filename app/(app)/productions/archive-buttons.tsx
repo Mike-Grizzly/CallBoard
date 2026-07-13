@@ -3,12 +3,18 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 import {
   archiveProduction,
   unarchiveProduction,
   deleteProduction,
   restoreDeletedProduction,
 } from "@/features/productions/actions";
+
+// These share the ConfirmDialog copy + inline-error pattern with
+// production-card-menu.tsx (R6): one confirm implementation for
+// archive/delete/restore, no native confirm()/alert().
 
 export function ArchiveProductionButton({
   productionId,
@@ -18,43 +24,58 @@ export function ArchiveProductionButton({
   productionTitle: string;
 }) {
   const [pending, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const onClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (
-      !window.confirm(
-        `Archive "${productionTitle}"? You can restore it from the Archived section any time. Reports and history are preserved.`,
-      )
-    ) {
-      return;
-    }
+  const onConfirm = () => {
     setError(null);
     startTransition(async () => {
       const result = await archiveProduction(productionId);
       if (result.error) {
         setError(result.error);
-        window.alert(result.error);
         return;
       }
+      setConfirming(false);
       router.refresh();
     });
   };
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={pending}
-      title="Archive production"
-      aria-label={`Archive ${productionTitle}`}
-      className="prod-card-archive"
-    >
-      <Icon name="Archive" size={14} aria-hidden />
-      <span className="sr-only">{error ?? ""}</span>
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setConfirming(true);
+        }}
+        disabled={pending}
+        title="Archive production"
+        aria-label={`Archive ${productionTitle}`}
+        className="prod-card-archive"
+      >
+        <Icon name="Archive" size={14} aria-hidden />
+      </button>
+      <ConfirmDialog
+        open={confirming}
+        title={`Archive “${productionTitle}”?`}
+        confirmLabel="Archive"
+        busy={pending}
+        message={
+          <>
+            It moves to the <strong>Archived</strong> section and can be restored
+            any time. Reports and history are preserved.
+            {error && <p className="confirm-error">{error}</p>}
+          </>
+        }
+        onConfirm={onConfirm}
+        onCancel={() => {
+          setConfirming(false);
+          setError(null);
+        }}
+      />
+    </>
   );
 }
 
@@ -64,13 +85,14 @@ export function RestoreProductionButton({
   productionId: string;
 }) {
   const [pending, startTransition] = useTransition();
+  const toast = useToast();
   const router = useRouter();
 
   const onClick = () => {
     startTransition(async () => {
       const result = await unarchiveProduction(productionId);
       if (result.error) {
-        window.alert(result.error);
+        toast.error(result.error);
         return;
       }
       router.refresh();
@@ -102,39 +124,60 @@ export function DeleteProductionButton({
   productionTitle: string;
 }) {
   const [pending, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const onClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (
-      !window.confirm(
-        `Delete "${productionTitle}"?\n\nThis removes it for everyone in the workspace. You can recover it from "Recently deleted" for 30 days, after which it is permanently removed.`,
-      )
-    ) {
-      return;
-    }
+  const onConfirm = () => {
+    setError(null);
     startTransition(async () => {
       const result = await deleteProduction(productionId);
       if (result.error) {
-        window.alert(result.error);
+        setError(result.error);
         return;
       }
+      setConfirming(false);
       router.refresh();
     });
   };
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={pending}
-      title="Delete production"
-      aria-label={`Delete ${productionTitle}`}
-      className="prod-card-delete"
-    >
-      <Icon name="Trash2" size={14} aria-hidden />
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setConfirming(true);
+        }}
+        disabled={pending}
+        title="Delete production"
+        aria-label={`Delete ${productionTitle}`}
+        className="prod-card-delete"
+      >
+        <Icon name="Trash2" size={14} aria-hidden />
+      </button>
+      <ConfirmDialog
+        open={confirming}
+        danger
+        title={`Delete “${productionTitle}”?`}
+        confirmLabel="Delete"
+        busy={pending}
+        message={
+          <>
+            This removes it for everyone in the workspace. You can recover it from{" "}
+            <strong>Recently deleted</strong> for 30 days, after which it’s
+            permanently removed.
+            {error && <p className="confirm-error">{error}</p>}
+          </>
+        }
+        onConfirm={onConfirm}
+        onCancel={() => {
+          setConfirming(false);
+          setError(null);
+        }}
+      />
+    </>
   );
 }
 
@@ -145,13 +188,14 @@ export function RestoreDeletedProductionButton({
   productionId: string;
 }) {
   const [pending, startTransition] = useTransition();
+  const toast = useToast();
   const router = useRouter();
 
   const onClick = () => {
     startTransition(async () => {
       const result = await restoreDeletedProduction(productionId);
       if (result.error) {
-        window.alert(result.error);
+        toast.error(result.error);
         return;
       }
       router.refresh();

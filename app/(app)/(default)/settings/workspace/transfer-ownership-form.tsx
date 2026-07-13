@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { transferWorkspaceOwnership } from "@/features/workspace/actions";
 import { ROLES, type Role } from "@/types/roles";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const ROLE_LABELS: Record<Role, string> = {
   admin: "Admin",
@@ -32,6 +33,7 @@ export function TransferOwnershipForm({
   const [selfRole, setSelfRole] = useState<Role>("producer");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [confirmingTransfer, setConfirmingTransfer] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -60,16 +62,11 @@ export function TransferOwnershipForm({
       setError("Pick a member to transfer to.");
       return;
     }
-    const target = candidates.find((c) => c.userId === targetId);
-    if (
-      !window.confirm(
-        `Make ${
-          target?.displayName ?? "this member"
-        } the new admin and step down to ${ROLE_LABELS[selfRole]}? You can be re-promoted later.`,
-      )
-    ) {
-      return;
-    }
+    setConfirmingTransfer(true);
+  };
+
+  const doTransfer = () => {
+    setConfirmingTransfer(false);
     startTransition(async () => {
       const result = await transferWorkspaceOwnership(targetId, selfRole);
       if (result.error) {
@@ -81,6 +78,8 @@ export function TransferOwnershipForm({
       router.refresh();
     });
   };
+
+  const target = candidates.find((c) => c.userId === targetId);
 
   return (
     <form onSubmit={onSubmit} className="card card-pad">
@@ -148,6 +147,17 @@ export function TransferOwnershipForm({
       >
         {pending ? "Transferring..." : "Transfer ownership"}
       </button>
+
+      <ConfirmDialog
+        open={confirmingTransfer}
+        title="Transfer ownership?"
+        message={`${target?.displayName ?? "This member"} becomes the new admin and you step down to ${ROLE_LABELS[selfRole]}. You can be re-promoted later.`}
+        confirmLabel="Transfer ownership"
+        danger
+        busy={pending}
+        onConfirm={doTransfer}
+        onCancel={() => setConfirmingTransfer(false)}
+      />
     </form>
   );
 }
