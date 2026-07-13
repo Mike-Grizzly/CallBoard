@@ -103,7 +103,7 @@ Still `data-noop` after the billing launch: three footer social icons (`_compone
 **Recommendation:** remove the social icons until real accounts exist; link "How invites work" to the existing help-manual article on invites (`/help/...` — find the invites page under the people or get-started section).
 **Accept:** nothing on the marketing site looks clickable but does nothing.
 
-### M8 · Blog index honesty — **P1 · S** — ✅ DONE (claude/ux-backlog-batch-1-ig6614, 2026-07-07; trimmed to the one real post pending Sanity publish of the SEO drafts)
+### M8 · Blog index honesty — **P1 · S** — ✅ DONE (claude/ux-backlog-batch-1-ig6614, 2026-07-07; first trimmed to the one real post, then — per owner follow-up — the four Phase-1 SEO drafts were ported live as static posts, so the grid now shows five real, distinct posts)
 Every card links to the single real post (`blog/content.ts:3`); the featured card says 8 min read, its grid duplicate 6 min. Trim the index to real posts (the four Phase-1 SEO drafts in `docs/seo/blog-drafts/` are ready to publish via Sanity — publishing them fixes this properly). Rename footer "What's new" → "Blog" (or build a real changelog later).
 **Accept:** every blog card is a distinct real post; read times consistent; no footer label promising a changelog.
 

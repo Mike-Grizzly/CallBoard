@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { stegaClean } from "@sanity/client/stega";
 import "./blogpost.css";
-import { BLOGPOST_HTML } from "./content";
+import { getBlogPost, renderArticleHtml, BLOG_POSTS } from "../posts";
 import { getPostBySlug } from "@/lib/sanity/queries";
 import { urlForImage } from "@/lib/sanity/image";
 import { SanityBlogPost } from "./sanity-blog-post";
@@ -9,6 +9,12 @@ import { JsonLd } from "../../_components/json-ld";
 import { SITE_URL } from "@/lib/site";
 
 export const revalidate = 60;
+
+// Prerender the static fallback posts. Sanity slugs not listed here still
+// render on demand (dynamicParams defaults to true).
+export function generateStaticParams() {
+  return BLOG_POSTS.map((p) => ({ slug: p.slug }));
+}
 
 export async function generateMetadata({
   params,
@@ -39,10 +45,20 @@ export async function generateMetadata({
       },
     };
   }
+  // Static fallback posts.
+  const staticPost = getBlogPost(slug) ?? BLOG_POSTS[0];
   return {
-    title: "Set up your first production · Proscene",
-    description:
-      "A blank screen to your first call going out, step by step. We build a real show and have the whole company confirmed by the end.",
+    title: `${staticPost.title} · Proscene`,
+    description: staticPost.metaDescription,
+    alternates: { canonical: `/blog/${staticPost.slug}` },
+    keywords: staticPost.tags,
+    openGraph: {
+      type: "article",
+      title: staticPost.title,
+      description: staticPost.metaDescription,
+      url: `/blog/${staticPost.slug}`,
+      publishedTime: staticPost.dateISO,
+    },
   };
 }
 
@@ -86,8 +102,28 @@ export default async function BlogPostPage({
     );
   }
 
-  // Falls back to the static demo post until Sanity has content.
+  // Static fallback posts (used until the same slug is published in Sanity).
+  const staticPost = getBlogPost(slug) ?? BLOG_POSTS[0];
+  const staticSchema = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: staticPost.title,
+    description: staticPost.metaDescription,
+    datePublished: staticPost.dateISO,
+    keywords: staticPost.tags.join(", "),
+    author: { "@type": "Organization", name: "The Proscene team", url: SITE_URL },
+    publisher: {
+      "@type": "Organization",
+      name: "Proscene",
+      url: SITE_URL,
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/icon-512.png` },
+    },
+    mainEntityOfPage: `${SITE_URL}/blog/${staticPost.slug}`,
+  };
   return (
-    <div data-page="blogpost" dangerouslySetInnerHTML={{ __html: BLOGPOST_HTML }} />
+    <div data-page="blogpost">
+      <JsonLd data={staticSchema} />
+      <div dangerouslySetInnerHTML={{ __html: renderArticleHtml(staticPost) }} />
+    </div>
   );
 }

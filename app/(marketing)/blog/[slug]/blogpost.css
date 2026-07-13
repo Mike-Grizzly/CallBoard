@@ -49,3 +49,25 @@
 [data-page="blogpost"] .more h4{font-family:var(--font-display);font-size:18px;font-weight:600;margin-bottom:4px}
 [data-page="blogpost"] .more span{font-size:13px;color:var(--ink-4)}
 @media (max-width:600px){[data-page="blogpost"] .more{grid-template-columns:1fr}}
+
+/* Long-form article elements (bulleted/numbered lists, checklists, tables,
+   code blocks) used by the ported SM-craft guides. */
+[data-page="blogpost"] .art-body ul.plain{list-style:disc;padding-left:1.35em;gap:9px}
+[data-page="blogpost"] .art-body ul.plain li{display:list-item}
+[data-page="blogpost"] .art-body ul.plain li::marker{color:var(--accent)}
+[data-page="blogpost"] .art-body ol{margin:20px 0;padding-left:1.5em;list-style:decimal;display:block}
+[data-page="blogpost"] .art-body ol li{display:list-item;margin:10px 0;padding-left:4px}
+[data-page="blogpost"] .art-body ol li::marker{color:var(--accent);font-weight:600}
+[data-page="blogpost"] .art-body ul.task{list-style:none;padding-left:0;gap:13px}
+[data-page="blogpost"] .art-body ul.task li{display:block;position:relative;padding-left:32px}
+[data-page="blogpost"] .art-body ul.task li::before{content:"";position:absolute;left:0;top:6px;width:18px;height:18px;border:2px solid var(--accent);border-radius:5px}
+
+[data-page="blogpost"] .art-table{overflow-x:auto;margin:26px 0;border:1px solid var(--border);border-radius:var(--radius);max-width:680px}
+[data-page="blogpost"] .art-body table{width:100%;border-collapse:collapse;font-size:14.5px;line-height:1.5;min-width:460px}
+[data-page="blogpost"] .art-body thead th{background:var(--bg-muted);text-align:left;font-weight:600;color:var(--ink);white-space:nowrap}
+[data-page="blogpost"] .art-body th,[data-page="blogpost"] .art-body td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top;text-align:left}
+[data-page="blogpost"] .art-body tbody tr:last-child td{border-bottom:0}
+[data-page="blogpost"] .art-body td strong{color:var(--ink)}
+
+[data-page="blogpost"] .art-code{background:var(--night);color:var(--night-ink);border:1px solid var(--night-border);border-radius:var(--radius);padding:18px 20px;overflow-x:auto;margin:26px 0;max-width:680px}
+[data-page="blogpost"] .art-code code{font-family:var(--font-mono);font-size:12.5px;line-height:1.55;white-space:pre;color:inherit;display:block}

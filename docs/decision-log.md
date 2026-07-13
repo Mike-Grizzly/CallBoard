@@ -2667,3 +2667,35 @@ Batch 4/5/6 work), not folded into a QA batch. Tracked in `qa-backlog.md`
 **Reason:** M1 is a pricing promise (owner-only); M7/R7 had explicit backlog recommendations usable when the owner is unavailable.
 
 **Impact:** Marketing copy now internally consistent on school pricing and the trial story; JSON-LD on home + pricing corrected from "Free during open beta / price 0" to a real `AggregateOffer` ($25–$79, 60-day trial). Copy-only + client-UI; no server action, permission, storage, or billing-flag changes. **Sanity note:** where these strings also live in Sanity (hero, pricing tiers, FAQ), the CMS copy needs the same edits by the owner in Studio — the static files are the always-present fallback.
+
+---
+
+## 2026-07-07 — Blog: four SEO drafts ported live as static posts
+
+**Decision:** Following the owner's request to "add the other blogs," the four
+Phase-1 SEO drafts in `docs/seo/blog-drafts/` were ported into a small static
+multi-post system rather than waiting on Sanity publication. New module
+`app/(marketing)/blog/posts.ts` holds a typed registry (the existing setup
+walkthrough plus the four guides) and renders both the index (featured + grid)
+and each article; `blog/[slug]/page.tsx` now routes static slugs through it and
+falls back to it when Sanity has no post. `blogpost.css` gained styles for the
+elements the guides use (bulleted/numbered lists, tech-week checklists, tables,
+code blocks). The drafts' pre-billing "Free during open beta" CTAs were rewritten
+to the real trial story (consistent with M6).
+
+**Reason:** The static blog only supported one post (any slug fell back to the
+single demo article), so making the drafts live in code required a real registry.
+Static is the only path that makes them live without owner action; it remains the
+architecture's intended fallback — publishing the same slugs in Sanity Studio
+transparently supersedes each one.
+
+**Also (M1 polish):** the pricing page's small "Talk to us about your school"
+text link was upgraded to a prominent "Get school pricing" button, per owner
+feedback that the educator-discount path was hard to find.
+
+**Impact:** Five real, distinct posts on `/blog` with correct read times/dates
+and no fake "conflict detection" changelog. Content-only + CSS; no schema, auth,
+or server-action changes. **Follow-up for the owner:** if/when these are published
+in Sanity, the static copies stay as the fallback (Sanity wins per-slug) — no dedup
+needed, but keep the canonical copy in Studio going forward. All internal links in
+the ported articles were verified against real `/help/*` and `/features#*` routes.

@@ -101,9 +101,10 @@ export const PRICING_COMPANIES_REST_HTML = `
         </table>
       </div>
 
-      <p class="center kicker" style="margin-top:30px">Students &amp; educators get discounted school-year pricing, hand-verified.
-        <a class="btn-link" href="/contact?reason=school" style="display:inline-flex;vertical-align:middle">Talk to us about your school <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
-      </p>
+      <p class="center kicker" style="margin-top:30px">Students &amp; educators get discounted school-year pricing, hand-verified.</p>
+      <div class="center" style="margin-top:16px">
+        <a class="btn primary" href="/contact?reason=school" style="display:inline-flex">Get school pricing <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+      </div>
 `;
 
 // Static COMPANIES tier cards (fallback when Sanity has no pricing tiers).
