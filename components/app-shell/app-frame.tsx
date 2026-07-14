@@ -13,10 +13,13 @@ export function AppFrame({
   rail,
   banner,
   children,
+  moreBadge = 0,
 }: {
   rail: ReactNode;
   banner?: ReactNode;
   children: ReactNode;
+  /** Unread count surfaced on the "More" tab (B4). 0 hides the badge. */
+  moreBadge?: number;
 }) {
   return (
     <div className="app">
@@ -26,7 +29,7 @@ export function AppFrame({
         {banner}
         {children}
       </main>
-      <MobileTabBar />
+      <MobileTabBar moreBadge={moreBadge} />
     </div>
   );
 }

@@ -4025,6 +4025,15 @@ button.month-cell {
 .auth-field {
   margin-bottom: 14px;
 }
+/* iOS Safari/WebKit auto-zooms when an input's font-size is under 16px, and
+   that layout zoom sticks after sign-in. Floor the auth inputs at 16px so the
+   zoom never triggers in the first place (B2). Scoped to the two auth layouts
+   (login/confirm use .auth-screen, signup uses .auth-split) so the rest of the
+   app's denser forms are unaffected. */
+.auth-screen .field,
+.auth-split .field {
+  font-size: 16px;
+}
 .auth-field-row {
   display: flex;
   align-items: center;
@@ -5763,6 +5772,30 @@ select.pp-field {
   .mob-tab[data-active="1"] .ico {
     stroke-width: 2;
   }
+  /* Wrap the icon so the unread badge (B4) can anchor to its top-right. */
+  .mob-tab-ico-wrap {
+    position: relative;
+    display: inline-flex;
+  }
+  .mob-tab-badge {
+    position: absolute;
+    top: -5px;
+    left: 12px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--c-clay);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    border: 2px solid var(--bg-elev);
+    box-sizing: border-box;
+  }
   .mob-tab .lbl {
     font-size: 10px;
     font-weight: 500;
@@ -6906,10 +6939,140 @@ select.pp-field {
   height: 14px;
   color: var(--ink-4);
 }
+/* Unread-count pill in the auto (trail) column of a More row (B4). */
+.more-item-badge {
+  justify-self: end;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--c-clay);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+}
 .more-logout {
   margin-top: 20px;
   display: flex;
   justify-content: center;
+}
+
+/* ─── Rehearsal-report form: responsive sections (B1) ─────────────────────
+   Desktop keeps the horizontal tab strip with the active panel below; phones
+   get a stacked accordion so every section is reachable without a horizontal
+   scroll. Panels stay mounted in the DOM (inactive ones are display:none) — the
+   flex `order` shuffle only changes where the visible panel sits. */
+.rf-sections {
+  display: flex;
+  flex-wrap: wrap;
+}
+.rf-head {
+  order: 1; /* desktop: all heads pack into the top row … */
+  border-radius: 0;
+}
+.rf-head:first-child {
+  padding-left: 16px;
+}
+.rf-head .rf-head-chev {
+  display: none; /* chevron is an accordion (mobile) affordance */
+}
+.rf-panel {
+  order: 2; /* … and the one visible panel drops below the row */
+  flex: 0 0 100%;
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .rf-sections {
+    flex-direction: column;
+  }
+  .rf-head {
+    order: 0;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 14px 16px;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .rf-head:first-child {
+    padding-left: 16px;
+  }
+  .rf-head[data-active="1"] {
+    background: var(--bg-muted);
+    border-bottom-color: var(--border);
+  }
+  .rf-head .rf-head-label {
+    flex: 1;
+    text-align: left;
+    white-space: normal;
+  }
+  .rf-head .rf-head-chev {
+    display: inline-flex;
+    color: var(--ink-4);
+    transition: transform 0.15s ease;
+  }
+  .rf-head[data-active="1"] .rf-head-chev {
+    transform: rotate(180deg);
+    color: var(--accent);
+  }
+  .rf-panel {
+    order: 0;
+    padding: 14px;
+    border-top: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  /* No trailing divider against the card's own bottom edge. */
+  .rf-sections > .rf-head:last-child,
+  .rf-sections > .rf-panel:last-child {
+    border-bottom: 0;
+  }
+  /* Report header: stack the title above full-width action buttons. */
+  .rf-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .rf-header-actions {
+    width: 100%;
+  }
+  .rf-header-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+  /* Next-rehearsal fields stack instead of squeezing three across. */
+  .rf-next-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Inline department-note accordion header (mobile dept editing, B1). */
+.rf-dept-head {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+}
+.rf-dept-chev {
+  color: var(--ink-4);
+  transition: transform 0.15s ease;
+}
+.rf-dept-chev[data-open="1"] {
+  transform: rotate(180deg);
+  color: var(--accent);
 }
 
 /* ============================================================ *

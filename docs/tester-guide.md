@@ -106,9 +106,12 @@ don't waste time reporting them.
   they're view-only — you can navigate beats, see annotations, but
   you can't drop tokens or draw highlights. We're planning real touch
   support after beta.
-- **iOS auto-zoom after sign-in.** On iPhone, after you type your
-  password and sign in, the whole app sometimes stays zoomed in.
-  Pinch out to fix it. We have a fix lined up.
+- **iOS auto-zoom after sign-in (fix applied — please verify).** On
+  iPhone this used to leave the app zoomed in after you typed your
+  password. We floored the login/signup inputs at 16px so Safari
+  shouldn't auto-zoom at all now. **If you still get zoomed in after
+  signing in on an iPhone, tell us your exact model + iOS version** —
+  that's the last check before we retire the old zoom-reset workaround.
 - **Mobile production header / tab strip density** can feel a little
   tight when you're inside a show. Polish pass coming after beta
   surfaces the rest of the rough edges.

@@ -218,21 +218,24 @@ Switching shows requires exiting to the rail/index. Make the breadcrumb title a 
 
 ## Phase B — Mobile
 
-### B1 · Mobile rehearsal-report form — **P0 · L**
+### B1 · Mobile rehearsal-report form — **P0 · L** — ✅ DONE (claude/ux-backlog-batch-4, 2026-07-14)
 Marketing promises "file the report from the table, your laptop, or your phone in the wings." The report *detail* has `MobileReportDetail`; the *form* is the same dense desktop grid with 3-column editors and modals. This is the highest-value mobile investment in the app: a stacked single-column variant with the tabbed sections as an accordion, dept-note entry inline instead of modal, and the existing staged-attachment flow.
 **Accept:** a report can be created, dept-noted, attached, and distributed comfortably at 390px (screenshot-verified); no desktop regression.
+**Shipped:** the day's-work section card renders as the horizontal tab strip on desktop and a stacked accordion at ≤720px (flex-`order` shuffle; all panels stay mounted so the whole form still submits). Department notes are edited inline in the accordion on mobile (`RichTextEditor` per dept, one open at a time via `editingDept`) instead of the desktop modal; the modal is now desktop-only. The header title/actions stack full-width and the Next-rehearsal fields collapse to one column. The summary editors were already single-column app-wide (the `grid grid-3`/`grid-2` utilities are `.np-root`-scoped only), so no desktop layout changed. Screenshot-verified: desktop tab strip unchanged; mobile shows all six sections reachable with no horizontal scroll.
 
-### B2 · iOS auto-zoom: floor auth inputs at 16px — **P1 · XS**
+### B2 · iOS auto-zoom: floor auth inputs at 16px — **P1 · XS** — ✅ DONE (claude/ux-backlog-batch-4, 2026-07-14)
 The parked issue (`open-questions.md`, Mobile/iOS): WebKit auto-zooms on <16px inputs at login and the zoom sticks after sign-in. Two clever fixes failed; the boring one hasn't been tried — floor the login/signup `.field` font-size at 16px so the zoom never triggers. `ZoomReset` can then be removed if verified.
 **Accept:** typing into login/signup on iOS Safari causes no layout zoom (on-device verify — add to tester guide).
+**Shipped:** `.auth-screen .field` / `.auth-split .field` floored at 16px (scoped to the two auth layouts so the rest of the app's denser forms are untouched); tester guide updated to ask for on-device confirmation. `ZoomReset` kept as a safety net pending that verification.
 
 ### B3 · Mobile tab-strip scroll affordance — **P2 · S** — ✅ DONE (claude/ux-backlog-batch-3, 2026-07-13; right-edge mask fade + peek padding)
 At ≤720px all ~10 production tabs become a horizontal scroller; trailing tabs (Blocking, Script, Settings) are invisible without scrolling and nothing hints there's more. Add an edge fade + partial-tab peek (ensure the strip never ends exactly at a tab boundary at common widths).
 **Accept:** at 390px it is visually obvious the strip scrolls.
 
-### B4 · "More" page triage — **P2 · M**
+### B4 · "More" page triage — **P2 · M** — ✅ DONE (claude/ux-backlog-batch-4, 2026-07-14)
 Six top-level destinations (Productions, Documents, Announcements, Activity, People, Settings) live two taps deep under More with no badges. Minimum: unread/count badges on More items (announcements, activity) and on the More tab itself. Consider swapping Notes → Announcements in the 5-tab bar based on actual usage.
 **Accept:** a cast member with an unread announcement sees a badge without opening More.
+**Shipped:** announcements already fan out an in-app notification (`type: "announcement"`), so a new `getUnreadNotificationCountsByType()` groups the user's unread notifications by type; the More page badges the **Announcements** row with the unread-announcement count, and the bottom **More** tab carries the aggregate unread count (`getUnreadNotificationCount()` threaded through `AppLayout → AppFrame → MobileTabBar`). A cast member with an unread announcement now sees the count on the tab without opening More. Activity stays unbadged (still a placeholder surface); the Notes→Announcements tab swap is deferred until there's real usage data.
 
 ---
 

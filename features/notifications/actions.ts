@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { notifications, notificationPreferences } from "@/db/schema";
-import { eq, isNull, and, desc } from "drizzle-orm";
+import { eq, isNull, and, desc, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/auth";
 
@@ -28,6 +28,32 @@ export async function getUnreadNotificationCount(): Promise<number> {
       ),
     );
   return rows.length;
+}
+
+/**
+ * Unread notification counts for the current user, grouped by `type`
+ * ("announcement", "mention", …). Powers the per-destination badges on the
+ * mobile More page (B4) so a cast member sees an unread-announcement count
+ * without opening the notification panel. Returns only non-zero types.
+ */
+export async function getUnreadNotificationCountsByType(): Promise<
+  Record<string, number>
+> {
+  const user = await requireCurrentUser();
+  const rows = await db
+    .select({ type: notifications.type, n: count() })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.recipientId, user.id),
+        isNull(notifications.readAt),
+      ),
+    )
+    .groupBy(notifications.type);
+
+  const out: Record<string, number> = {};
+  for (const r of rows) out[r.type] = Number(r.n);
+  return out;
 }
 
 export async function markNotificationsRead(ids?: string[]): Promise<void> {
