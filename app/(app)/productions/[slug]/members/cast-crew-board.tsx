@@ -293,6 +293,7 @@ export function CastCrewBoard({
             type="button"
             className="ax-mobile-tab"
             data-on={mtab === k ? "1" : "0"}
+            aria-pressed={mtab === k}
             onClick={() => setMtab(k)}
           >
             {k === "board" ? "Casting board" : "Company"}
@@ -484,10 +485,11 @@ export function CastCrewBoard({
                               type="button"
                               className="ax-x"
                               title="Unassign"
+                              aria-label={`Unassign ${ch.name}`}
                               disabled={pending}
                               onClick={() => clearSlot(ch.id)}
                             >
-                              <Icon name="X" size={13} />
+                              <Icon name="X" size={13} aria-hidden />
                             </button>
                           </>
                         ) : (
@@ -708,13 +710,14 @@ function BucketZone({
                 type="button"
                 className="ax-pchip-x"
                 title="Remove"
+                aria-label={`Remove ${displayName(m)}`}
                 disabled={pending}
                 onClick={(e) => {
                   e.stopPropagation();
                   onRemove(m.id, displayName(m));
                 }}
               >
-                <Icon name="X" size={12} />
+                <Icon name="X" size={12} aria-hidden />
               </button>
             </span>
           ))

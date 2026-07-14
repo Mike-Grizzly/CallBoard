@@ -107,14 +107,16 @@ Still `data-noop` after the billing launch: three footer social icons (`_compone
 Every card links to the single real post (`blog/content.ts:3`); the featured card says 8 min read, its grid duplicate 6 min. Trim the index to real posts (the four Phase-1 SEO drafts in `docs/seo/blog-drafts/` are ready to publish via Sanity — publishing them fixes this properly). Rename footer "What's new" → "Blog" (or build a real changelog later).
 **Accept:** every blog card is a distinct real post; read times consistent; no footer label promising a changelog.
 
-### M9 · FAQ dual-mode fragility — **P2 · S**
+### M9 · FAQ dual-mode fragility — **P2 · S** — ✅ DONE (claude/ux-backlog-batch-5, 2026-07-14)
 Static FAQ has a hand-built sidebar with **hardcoded counts** (`faq/content.ts:24-28`); when Sanity FAQ items exist the whole body swaps to `SanityFaq` (`faq/page.tsx:36-40`) with a different layout and the custom sidebar vanishes. Either derive counts from the content array, or commit to one rendering path.
 **Accept:** category counts always match rendered items; layout identical regardless of CMS state.
+**Shipped:** the static FAQ is now generated from a single `FAQ_CATEGORIES` data array, so the sidebar counts are derived (`items.length`) and can't drift. `SanityFaq` already renders the identical `faq-*` layout with derived counts (it had been updated since the review), so both CMS states match.
 
-### M10 · Marketing pages must not block on Sanity — **P1 · M**
+### M10 · Marketing pages must not block on Sanity — **P1 · M** — ✅ DONE (claude/ux-backlog-batch-5, 2026-07-14)
 Observed while running the site: with the CMS unreachable, server rendering of Sanity-backed pages hangs for minutes (fetch has no timeout; the request blackholes). ISR masks this in production until a revalidate misses. Add a short timeout (e.g. 3s via `AbortSignal.timeout` in the `loadQuery` helper, `lib/sanity/queries.ts`) falling back to the static content that already exists for every page.
 **Accept:** with Sanity unreachable, every marketing page renders its static fallback in <5s.
 **Security note:** keep `SANITY_API_READ_TOKEN` server-only; timeout handling must not log the token or expose draft content on the public path.
+**Shipped:** `loadQuery` passes `signal: AbortSignal.timeout(3000)` to both the published and preview client fetches (`SANITY_TIMEOUT_MS`). On a healthy CDN it never fires; when Sanity is down the fetch aborts at 3s and each wrapper's existing try/catch returns its static fallback. Nothing logged; the preview/publish split is unchanged.
 
 ### M11 · Marketing home hydration warnings — **P2 · S**
 Dev overlay reports hydration issues on `/` (React diff points at `style` attributes inside the injected HTML, e.g. `section.night` with `padding-top:0px`; likely `dangerouslySetInnerHTML` markup vs the Sanity hero swap). Harmless-looking but masks real hydration regressions and shows in every dev session.
@@ -203,16 +205,18 @@ Three hand-maintained lists with independently copied capability gating: `compon
 Only one static crumb exists (`Productions › {title}`); deep pages like `calls/templates/[id]/edit` (5 levels) give no positional context. Extend the crumb to include tab + subpage, or add a consistent back link on subpages.
 **Accept:** from any depth, one visible click returns to the parent list.
 
-### N7 · Production switcher in the production topbar — **P2 · S**
+### N7 · Production switcher in the production topbar — **P2 · S** — ✅ DONE (claude/ux-backlog-batch-5, 2026-07-14)
 Switching shows requires exiting to the rail/index. Make the breadcrumb title a dropdown of the user's productions (same list the rail shows — reuse its gated query).
+**Shipped:** the current-show breadcrumb is now `<ProductionSwitcher>` — a dropdown of the user's visible productions (reuses `getVisibleProductions(user)`, the rail's gated query), each linking to that show's overview. Falls back to the plain label when the user has only one production.
 
 ### N8 · Onboarding dialog: stop interrupting existing users — **P1 · S** — ✅ DONE (claude/ux-backlog-batch-3, 2026-07-13; modal only on first-run empty workspace, dismissible card on populated dashboard)
 `OnboardingDialog` fires whenever the user lacks notification prefs (`dashboard/page.tsx:532`) — including long-time users on populated dashboards. Fold notification prefs into the `/setup` wizard as a fourth optional card for new admins, and for existing users show a dismissible banner/card instead of a modal. Related known item: setup survey data is captured but unused (`open-questions.md` 2026-06-15) — if it stays unused, trim the survey to shorten setup.
 **Accept:** modal appears at most once, only in a first-run context; a "not now" never re-prompts on next login.
 
-### N9 · Delete dead design axes — **P2 · S**
+### N9 · Delete dead design axes — **P2 · S** — ✅ DONE (claude/ux-backlog-batch-5, 2026-07-14)
 `[data-theme="cool"]` CSS is unreachable (ThemePref offers light/dusk/dark/system — `lib/theme.ts:8-9`); `data-density` compact/comfy CSS exists but body is hard-coded `"regular"` (`app/layout.tsx:85`). Delete both blocks (or ship them — owner call; recommend delete).
 **Accept:** no theme/density CSS that no UI can reach; `globals.css` shrinks accordingly.
+**Shipped:** deleted the `body[data-theme="cool"]` token block and the `[data-density="compact"]`/`[data-density="comfy"]` blocks (regular defaults live in `:root`); the mobile `--pad-x` override collapsed to `body`. Header comment updated to describe the live axes.
 
 ---
 
@@ -251,17 +255,20 @@ Five parallel implementations, each with its own Escape handler + CSS namespace:
 Only `members/cast-crew-board.tsx:106-134` has toasts (hand-rolled `.ax-toast`). Extract it into a provider + `useToast()`; adopt in the surfaces currently using `window.alert` or silent success (R4/R6 depend on this).
 **Accept:** one toast API; cast board migrated; alert()-error sites migrated.
 
-### S3 · Shared `<EmptyState>` — **P2 · S**
+### S3 · Shared `<EmptyState>` — **P2 · S** — ✅ DONE (claude/ux-backlog-batch-5, 2026-07-14)
 Three hardcoded font sizes for the same concept (`documents-client.tsx:337` 14px, `script/page.tsx:60` 15px, `notes-panel.tsx:1082` 13px) vs the designed `pp-empty` pattern in people (`people-directory.tsx:328-340` — icon + context-aware copy). Componentize the people version; adopt everywhere.
 **Accept:** all list surfaces use `<EmptyState icon title hint action?>`; people's context-aware copy pattern (different message when filters are active) preserved.
+**Shipped:** `components/ui/empty-state.tsx` (`<EmptyState icon title hint action? variant?>`), a `variant="bare"` for narrow sidebars (notes list). Adopted in documents, script, notes, member-list, and the people-directory reference (which keeps its filters-active vs empty copy by passing already-resolved title/hint). Callers resolve their own copy, so the context-aware pattern is preserved.
 
-### S4 · Focus trapping + focus return on all overlays — **P1 · M**
+### S4 · Focus trapping + focus return on all overlays — **P1 · M** — 🟡 PARTIAL (claude/ux-backlog-batch-5, 2026-07-14)
 Every drawer/modal handles Escape + backdrop click; **none** traps focus or returns it on close (ConfirmDialog has autoFocus only). This is the app's one systemic a11y hole. Implement once in the shared Drawer (S1) + ConfirmDialog + remaining modals.
 **Accept:** Tab cycles within any open overlay; closing returns focus to the trigger; verified with keyboard-only walkthrough of documents, people, announcements, calls tray.
+**Shipped (partial):** reusable `useFocusTrap(active)` hook (`components/ui/use-focus-trap.ts`) — seeds focus into the overlay if it has none, traps Tab/Shift+Tab, returns focus to the trigger on close — applied to **`ConfirmDialog`**, which backs every destructive-action confirm app-wide. **Remaining:** the five drawers (documents/people/announcements/calls tray/trash) land with **S1** (shared Drawer, one-per-PR); editor-containing modals (dept-note, distribute preview) were deferred because a Tab-trap fights TipTap's own Tab handling — they need per-modal treatment.
 
-### S5 · Route-level loading states — **P2 · M**
+### S5 · Route-level loading states — **P2 · M** — ✅ DONE (claude/ux-backlog-batch-5, 2026-07-14)
 Only `blocking/loading.tsx` and `script/loading.tsx` exist (spinners). Members, documents, videos, announcements, notes, calls have none — slow transitions show a frozen frame. Add lightweight `loading.tsx` (shared skeleton or centered spinner) per production tab.
 **Accept:** every production tab shows immediate feedback on navigation.
+**Shipped:** shared `components/ui/route-loading.tsx` (centered spinner + label); added `loading.tsx` to announcements, calls, documents, members, notes, videos, and the reports list, and refactored the existing script/blocking/report-detail loaders onto the shared component.
 
 ### S6 · Button unification (ongoing rule, not a big-bang) — **P2 · ongoing**
 Newer forms use cva `<Button>` (`components/ui/button.tsx`); main tabs use `.btn` (script 24×, blocking 21×, documents 15×…). Don't mass-migrate; adopt the rule "any touched component converts to `<Button>`" and note it in `dev-rules.md`.
@@ -272,13 +279,15 @@ Newer forms use cva `<Button>` (`components/ui/button.tsx`); main tabs use `.btn
 ### S8 · Decompose the two giant components (opportunistic) — **P3 · L**
 `script/script-viewer.tsx` (158KB, 93 hooks) and `blocking/blocking-canvas.tsx` (107KB, 51 hooks, ~40 state atoms: drag, undo, PDF paging, markers, set pieces, arrows, lasso, ghosting, comments, CRUD). Extract custom hooks/subcomponents when features next touch them — not as a standalone rewrite.
 
-### S9 · TipTap bullets don't render — **P1 · XS**
+### S9 · TipTap bullets don't render — **P1 · XS** — ✅ DONE (claude/ux-backlog-batch-5, 2026-07-14)
 Known issue (`open-questions.md` UX questions): Tailwind prose reset strips list styles in rich-text display. User-visible formatting bug in notes/reports/announcements. Scope list styles back in for `RichTextDisplay` content.
 **Accept:** bullets/numbered lists author and render correctly everywhere rich text displays (all themes).
 **Security note:** CSS-only; keep rendering through `sanitizeHtml` untouched.
+**Shipped:** the `.prose` path (RichTextDisplay, editor, announcement drawer, notes) already restored `list-style`; the gap was the **announcements center**, which renders through `.ac-item-body` without `.prose`. Added matching `list-style` restore for `.ac-item-body ul/ol/li`. CSS-only; sanitize path untouched. Verified bullets + numbered lists render.
 
-### S10 · A11y semantics on the thin surfaces — **P2 · S**
+### S10 · A11y semantics on the thin surfaces — **P2 · S** — ✅ DONE (claude/ux-backlog-batch-5, 2026-07-14)
 `components/announcements/announcements-center.tsx` has 1 aria across 257 lines; notification bell dropdown lacks menu semantics; members board is aria-thin (aria=2). Pass: labels on icon buttons, `role`/`aria-expanded` on disclosure controls, list semantics on feeds. (Script viewer is the reference — 31 aria attrs, `aria-pressed` tabs.)
+**Shipped:** announcements center — filter buttons `aria-pressed` in a labelled `role="group"`, the feed is a labelled `role="list"` of `role="listitem"` articles, count note `aria-live`. Notification bell — trigger `aria-haspopup`/`aria-expanded` + unread-count in its label; panel a labelled region; rows a `role="list"`/`listitem`. Members board — icon-only unassign/remove buttons got contextual `aria-label`s (icons `aria-hidden`), mobile tabs `aria-pressed`.
 
 ---
 

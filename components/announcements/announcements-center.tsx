@@ -124,31 +124,37 @@ export function AnnouncementsCenter({
         </div>
       )}
 
-      <div className="ac-filters">
+      <div className="ac-filters" role="group" aria-label="Filter announcements">
         <button
+          type="button"
           className="ac-filter"
           data-on={filter === "all" ? "1" : "0"}
+          aria-pressed={filter === "all"}
           onClick={() => setFilter("all")}
         >
           All <span className="n">{counts.all}</span>
         </button>
         {showOrgFilter && (
           <button
+            type="button"
             className="ac-filter"
             data-on={filter === "org" ? "1" : "0"}
+            aria-pressed={filter === "org"}
             onClick={() => setFilter("org")}
           >
             Company-wide <span className="n">{counts.org}</span>
           </button>
         )}
         <button
+          type="button"
           className="ac-filter"
           data-on={filter === "ack" ? "1" : "0"}
+          aria-pressed={filter === "ack"}
           onClick={() => setFilter("ack")}
         >
           Needs ack <span className="n">{counts.ack}</span>
         </button>
-        <span className="ac-count-note">
+        <span className="ac-count-note" aria-live="polite">
           Showing {shown.length} of {items.length}
         </span>
       </div>
@@ -164,9 +170,9 @@ export function AnnouncementsCenter({
           </p>
         </div>
       ) : (
-        <div className="ac-list">
+        <div className="ac-list" role="list" aria-label="Announcements">
           {shown.map((a) => (
-            <article key={a.id} className="ac-item" data-pri={a.priority}>
+            <article key={a.id} className="ac-item" data-pri={a.priority} role="listitem">
               <div className="ac-item-top">
                 <span className="ac-scope" data-s={a.scope}>
                   {a.scope === "org" ? (

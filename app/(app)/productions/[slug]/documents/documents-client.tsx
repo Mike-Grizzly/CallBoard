@@ -13,6 +13,7 @@ import {
   Pencil,
 } from "lucide-react";
 import { deleteDocument } from "@/features/documents/actions";
+import { EmptyState } from "@/components/ui/empty-state";
 import { DocumentUploadForm } from "./document-upload-form";
 import { DocumentRowMenu } from "./document-row-menu";
 import { DocumentDrawer } from "./document-drawer";
@@ -325,22 +326,15 @@ export function DocumentsClient({
 
           {/* Empty state */}
           {visible.length === 0 ? (
-            <div
-              className="card"
-              style={{ textAlign: "center", padding: "56px 20px" }}
-            >
-              <File
-                size={40}
-                strokeWidth={1.2}
-                style={{ margin: "0 auto 12px", color: "var(--ink-4)" }}
-              />
-              <p style={{ fontSize: 14, fontWeight: 500 }}>No documents yet</p>
-              <p style={{ fontSize: 13, color: "var(--ink-3)", marginTop: 4 }}>
-                {canUpload
+            <EmptyState
+              icon="File"
+              title="No documents yet"
+              hint={
+                canUpload
                   ? "Upload scripts, schedules, and other production files."
-                  : "No documents have been uploaded yet."}
-              </p>
-            </div>
+                  : "No documents have been uploaded yet."
+              }
+            />
           ) : view === "list" ? (
             /* ── List view ── */
             <div className="card" style={{ overflow: "hidden" }}>

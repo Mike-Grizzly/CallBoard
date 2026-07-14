@@ -2,9 +2,10 @@
 
 /*
  * Proscene design system — ported from the standalone HTML mockup.
- * See /design-reference for the original. Three themes (warm/cool/dark) and
- * three densities (compact/regular/comfy) are toggled via body[data-theme]
- * and body[data-density].
+ * See /design-reference for the original. Themes (light/dusk/dark, resolved
+ * to the warm/dusk/dark palettes) are toggled via body[data-theme]; density is
+ * fixed at "regular" (the mockup's compact/comfy axis was never wired to a
+ * control, so its CSS was removed — N9).
  *
  * Token naming follows the demo: --bg/--ink/--accent are the primaries.
  * The shadcn-style aliases (--background, --foreground, --muted, --primary,
@@ -182,34 +183,11 @@ body[data-theme="dusk"] {
   --shadow-3: 0 20px 60px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
-/* Cool theme */
-body[data-theme="cool"] {
-  --bg: oklch(0.985 0.004 250);
-  --bg-elev: oklch(1 0 0);
-  --bg-muted: oklch(0.965 0.006 250);
-  --bg-sunken: oklch(0.955 0.008 250);
-  --rail: oklch(0.96 0.006 250);
-  --border: oklch(0.92 0.008 250);
-  --border-strong: oklch(0.86 0.01 250);
-  --ink: oklch(0.22 0.012 250);
-  --ink-2: oklch(0.36 0.012 250);
-  --ink-3: oklch(0.52 0.012 250);
-  --ink-4: oklch(0.68 0.012 250);
-  --accent: oklch(0.55 0.16 250);
-  --accent-soft: oklch(0.93 0.04 250);
-  --accent-ink: oklch(0.4 0.14 250);
-  --accent-strong: var(--accent);
-}
-
-/* Density */
-body[data-density="compact"] {
-  --row-h: 30px;
-  --pad-x: 20px;
-}
-body[data-density="comfy"] {
-  --row-h: 42px;
-  --pad-x: 36px;
-}
+/* N9: the `cool` theme and the compact/comfy density variants were ported
+   from the mockup but never wired to any control — ThemePref is
+   light/dusk/dark/system (`lib/theme.ts`) and `data-density` is hard-coded
+   "regular" in the root layout. Their CSS was unreachable, so it's deleted.
+   The regular-density `--row-h`/`--pad-x` defaults live in `:root` above. */
 
 /* ─── Reset / base ───────────────────────────────────────────────────── */
 html,
@@ -647,6 +625,71 @@ body[data-theme="dusk"] .brand-badge.is-dark {
 }
 .crumbs .now {
   color: var(--ink);
+}
+
+/* N7: production switcher in the breadcrumb. The current-show crumb becomes a
+   dropdown of the user's other productions. */
+.crumb-switch {
+  position: relative;
+  display: inline-flex;
+}
+.crumb-switch-btn {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 1px 4px;
+  margin: -1px -4px;
+  border-radius: 6px;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.12s;
+}
+.crumb-switch-btn:hover {
+  background: var(--bg-muted);
+}
+.crumb-switch-chev {
+  color: var(--ink-4);
+  transition: transform 0.15s ease;
+}
+.crumb-switch-chev[data-open="1"] {
+  transform: rotate(180deg);
+}
+.crumb-switch-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 220px;
+  max-width: 320px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  z-index: 300;
+  padding: 4px;
+}
+.crumb-switch-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.crumb-switch-item:hover {
+  background: var(--bg-muted);
+}
+.crumb-switch-item[data-current="1"] {
+  color: var(--accent);
+  font-weight: 500;
 }
 
 .topbar-row {
@@ -4331,6 +4374,17 @@ button.month-cell {
   font-size: 13px;
   max-width: 320px;
 }
+/* Frameless variant for narrow sidebars (S3 EmptyState variant="bare"). */
+.pp-empty.is-bare {
+  border: 0;
+  background: transparent;
+  padding: 24px 12px;
+}
+.pp-empty.is-bare .pp-empty-ico {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
 
 /* ─── People directory ───────────────────────────────────────────────── */
 .people-page {
@@ -5648,10 +5702,8 @@ select.pp-field {
   /* Compromise side padding: more generous than the 16px overcorrection
      so cards don't run edge-to-edge, less than the 28px desktop value
      so a 393pt-wide iPhone still has reasonable content width.
-     Override every density mode so the value wins regardless. */
-  body,
-  body[data-density="compact"],
-  body[data-density="comfy"] {
+     so the value wins on phones. */
+  body {
     --pad-x: 22px;
   }
 
@@ -11974,6 +12026,24 @@ textarea.cform-field {
 }
 .ac-item-body :is(p, ul, ol) {
   margin: 0 0 6px;
+}
+/* Tailwind preflight strips list markers; restore them here the way `.prose`
+   does, so bulleted/numbered lists author in the composer and render in the
+   announcements center identically (S9). The drawer/notes/report paths already
+   render through `.prose`. */
+.ac-item-body ul {
+  list-style: disc;
+  padding-left: 1.5em;
+}
+.ac-item-body ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+}
+.ac-item-body li {
+  margin: 0.2em 0;
+}
+.ac-item-body li::marker {
+  color: var(--ink-3);
 }
 .ac-item-body :last-child {
   margin-bottom: 0;
