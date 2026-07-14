@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
+import { Drawer } from "@/components/ui/drawer/drawer";
 import { type CalEvent, fmtTime, parseYmd } from "./utils";
 
 export function EventDrawer({
@@ -14,14 +14,6 @@ export function EventDrawer({
   canEdit: boolean;
   onClose: () => void;
 }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   const whenLabel = (() => {
     if (event.allDay) return "All day";
     const [h, m] = event.time.split(":").map(Number);
@@ -36,8 +28,7 @@ export function EventDrawer({
   })();
 
   return (
-    <>
-      <div className="cal-scrim" onClick={onClose} />
+    <Drawer open onClose={onClose} width="420px" ariaLabel={`${event.title} — event detail`}>
       <aside className="cal-drawer">
         <header className="cal-drawer-h">
           <span className="cal-drawer-type">
@@ -138,6 +129,6 @@ export function EventDrawer({
           </Link>
         </div>
       </aside>
-    </>
+    </Drawer>
   );
 }

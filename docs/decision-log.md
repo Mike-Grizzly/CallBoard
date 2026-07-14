@@ -2901,3 +2901,15 @@ Per-claim owner rulings (soften/remove vs. build-later):
 - Gains: focus trap + focus return (advances S4) and a proper mobile bottom-sheet (previously a cramped right panel).
 
 **Impact:** `app/(app)/(default)/people/person-drawer.tsx`, `app/globals.css`. No server-action / permission / tenancy / storage / proxy change — pure client UI. `tsc` + `eslint` (0 errors) + 185 tests + `next build` (86 pages) green; harness-verified at 1440px (480px right panel) and ≤720px (full-width bottom sheet). Remaining S1 drawers: announcement (`ann-`), event (`cal-`), document (outlier — 1400px + fullscreen, last).
+
+---
+
+## 2026-07-14 — UX Backlog Batch 10: finish the S1 <Drawer> migration (all 5 drawers)
+
+**Decision:** Migrated the final three drawers onto the shared `<Drawer>` primitive in one PR (the owner asked to knock out the remaining drawers together), completing S1. All five drawers — trash, person, announcement, event, document — now render through `<Drawer>` and inherit its portal, backdrop, Escape, scroll-lock, focus trap + return, slide, and (where appropriate) mobile bottom-sheet.
+
+- **announcement-detail-drawer** (`ann-`) and **event-drawer** (`cal-`): straightforward migrations like person-drawer. Deleted `.ann-drawer-wrap` (+ its `@media` bottom-sheet block and the `ann-sheet-up` keyframe) and `.cal-scrim` (+ the `cal-drawer-in` keyframe and the mobile `.cal-drawer` re-positioning); `.ann-drawer`/`.cal-drawer` are now just content scroll regions (the primitive owns the sheet). Both keep their sticky headers / padding.
+- **document-drawer** (the outlier): migrated but retains its fullscreen viewer overlay, which must sit *above* the drawer. The primitive's root is z-index 240, so the fullscreen overlay was bumped 210 → 260. Escape and backdrop dismissal route through a `handleDismiss()` that exits fullscreen first, else closes — replacing the drawer's own fullscreen-aware key handler and body-scroll effect (the primitive owns both now). `mobileSheet={false}` keeps the document viewer a wide right panel (92vw) on phones rather than a cramped bottom sheet.
+- Kept the `pp-fade`/`pp-slide` keyframes — other overlays still reference them.
+
+**Impact:** `components/announcements/announcement-detail-drawer.tsx`, `app/(app)/calendar/event-drawer.tsx`, `app/(app)/productions/[slug]/documents/document-drawer.tsx`, `app/globals.css`. No server-action / permission / tenancy / storage / proxy change — pure client UI. `tsc` + `eslint` (0 errors) + 185 tests + `next build` (86 pages) green; all three harness-verified at 1440px and ≤720px. **S1 is now ✅ DONE**; every app drawer shares one implementation, and drawer motion is retunable from `drawer.constants.ts` + `drawer.css` for all of them at once. Backlog remainder: M11 (home hydration warnings) and decision-only M12/M13.
