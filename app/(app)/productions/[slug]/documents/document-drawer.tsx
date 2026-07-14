@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { getDocumentUrl, getDocumentDownloadUrl } from "@/features/documents/actions";
 import { pinItem } from "@/features/pins/actions";
+import { Drawer } from "@/components/ui/drawer/drawer";
 import { DocumentCommentsPanel } from "./document-comments-panel";
 import { FolderSelect } from "./folder-select";
 import type { FolderOption } from "./folder-select";
@@ -114,26 +115,12 @@ export function DocumentDrawer({ doc, members, folders, initialPinned, canManage
     };
   }, [doc.id]);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        if (fullscreen) {
-          setFullscreen(false);
-        } else {
-          onClose();
-        }
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [fullscreen, onClose]);
-
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, []);
+  // Escape and backdrop close route through here so fullscreen exits first
+  // (the <Drawer> primitive owns the listener + body-scroll lock).
+  function handleDismiss() {
+    if (fullscreen) setFullscreen(false);
+    else onClose();
+  }
 
   const color = doc.folderName ? folderColor(doc.folderName) : "";
   const isPdf = doc.contentType === "application/pdf";
@@ -190,25 +177,14 @@ export function DocumentDrawer({ doc, members, folders, initialPinned, canManage
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        onClick={fullscreen ? undefined : onClose}
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 200,
-          background: "rgba(0,0,0,0.4)",
-          animation: "pp-fade 0.15s ease both",
-        }}
-      />
-
-      {/* Fullscreen overlay — sits above the drawer */}
+      {/* Fullscreen overlay — sits above the drawer (the shared <Drawer> root
+          is z-index 240, so this must clear it). */}
       {fullscreen && (
         <div
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 210,
+            zIndex: 260,
             background: "#1a1a1a",
             display: "flex",
             flexDirection: "column",
@@ -265,23 +241,14 @@ export function DocumentDrawer({ doc, members, folders, initialPinned, canManage
         </div>
       )}
 
-      {/* Drawer panel */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: "min(1400px, 92vw)",
-          zIndex: 201,
-          background: "var(--bg-elev)",
-          boxShadow: "-8px 0 40px rgba(0,0,0,.18)",
-          display: "flex",
-          flexDirection: "column",
-          // Match the app's other side drawers (pp-slide): a right-to-left
-          // slide with a slight pop, instead of the generic fade-up.
-          animation: "pp-slide 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.05) both",
-        }}
+      {/* Drawer panel — the document viewer stays a wide right panel even on
+          phones (no bottom-sheet), so mobileSheet is off. */}
+      <Drawer
+        open
+        onClose={handleDismiss}
+        width="min(1400px, 92vw)"
+        mobileSheet={false}
+        ariaLabel={`${doc.title} — document preview`}
       >
         {/* Header */}
         <div
@@ -410,7 +377,7 @@ export function DocumentDrawer({ doc, members, folders, initialPinned, canManage
             </div>
           )}
         </div>
-      </div>
+      </Drawer>
     </>
   );
 }

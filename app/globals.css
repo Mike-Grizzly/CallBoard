@@ -3571,40 +3571,17 @@ div.mention:hover {
 }
 
 /* ─── Drawer ──────────────────────────────────────────────────────── */
-.cal-scrim {
-  position: fixed;
-  inset: 0;
-  background: rgba(40, 30, 15, 0.25);
-  z-index: 90;
-  animation: anim-in 0.15s ease-out both;
-}
+/* Backdrop/positioning/slide now come from the shared <Drawer> primitive (S1);
+   .cal-drawer is only the padded content scroll region. */
 .cal-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 420px;
-  max-width: 92vw;
+  flex: 1;
+  min-height: 0;
   background: var(--bg-elev);
-  border-left: 1px solid var(--border);
-  box-shadow: var(--shadow-3);
-  z-index: 100;
   padding: 22px 24px 24px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   overflow-y: auto;
-  animation: cal-drawer-in 0.2s ease-out both;
-}
-@keyframes cal-drawer-in {
-  from {
-    transform: translateX(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
 }
 @keyframes cal-sheet-in {
   from {
@@ -6793,21 +6770,10 @@ select.pp-field {
     display: none;
   }
 
-  /* Calendar event drawer slides up from the bottom as a sheet (matches
-     the demo's pattern) instead of as a side drawer. */
+  /* The event drawer becomes a bottom sheet on phones via the shared <Drawer>
+     primitive (S1); only the content padding tightens here. */
   .cal-drawer {
-    top: auto;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: auto;
-    max-width: none;
-    max-height: 82vh;
-    border-left: 0;
-    border-top: 1px solid var(--border);
-    border-radius: 22px 22px 0 0;
     padding: 14px 18px calc(20px + env(safe-area-inset-bottom, 0px));
-    animation: cal-sheet-in 0.22s ease-out both;
   }
 
   /* Toolbar compaction — smaller period label, tighter view-switcher. */
@@ -11595,24 +11561,14 @@ textarea.cform-field {
 .ann-title-btn:hover {
   text-decoration: underline;
 }
-.ann-drawer-wrap {
-  position: fixed;
-  inset: 0;
-  background: rgba(20, 10, 5, 0.32);
-  z-index: 240;
-  display: flex;
-  justify-content: flex-end;
-  animation: pp-fade 0.15s ease;
-}
+/* Backdrop/positioning/slide now come from the shared <Drawer> primitive (S1);
+   .ann-drawer is only the content scroll region. */
 .ann-drawer {
-  width: 460px;
-  max-width: 92vw;
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
   background: var(--bg);
   display: flex;
   flex-direction: column;
-  box-shadow: -16px 0 36px -10px rgba(40, 15, 5, 0.22);
-  animation: pp-slide 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.05);
   overflow-y: auto;
 }
 .ann-drawer-h {
@@ -11732,30 +11688,9 @@ textarea.cform-field {
   font-size: 13px;
   color: var(--ink-4);
 }
-@media (max-width: 720px) {
-  .ann-drawer-wrap {
-    flex-direction: column;
-    justify-content: flex-end;
-  }
-  .ann-drawer {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    max-height: 88vh;
-    border-radius: 16px 16px 0 0;
-    animation: ann-sheet-up 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.05);
-  }
-}
-@keyframes ann-sheet-up {
-  from {
-    transform: translateY(24px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
+/* The announcement drawer's mobile bottom-sheet now comes from the shared
+   <Drawer> primitive (S1); its old .ann-drawer-wrap/.ann-drawer sheet overrides
+   + ann-sheet-up keyframe were removed with the wrapper. */
 
 /* ════════════════════════════════════════════════════════════════════
    Announcements center + broadcast composer (ported from the design

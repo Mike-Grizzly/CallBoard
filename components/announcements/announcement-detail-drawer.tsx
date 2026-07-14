@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { Megaphone, Check, X } from "lucide-react";
+import { Drawer } from "@/components/ui/drawer/drawer";
 import {
   getAnnouncementDetail,
   acknowledgeAnnouncement,
@@ -92,14 +93,6 @@ function AnnouncementDrawer({
     };
   }, [announcementId]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   function toggleAck() {
     if (!data) return;
     const next = !data.mineAcked;
@@ -124,8 +117,8 @@ function AnnouncementDrawer({
   }
 
   return (
-    <div className="ann-drawer-wrap" onClick={onClose}>
-      <div className="ann-drawer" onClick={(e) => e.stopPropagation()}>
+    <Drawer open onClose={onClose} width="460px" ariaLabel="Announcement detail">
+      <div className="ann-drawer">
         <div className="ann-drawer-h">
           {data && (
             <span className="pill" data-c={data.scopeTone}>
@@ -192,7 +185,7 @@ function AnnouncementDrawer({
           </>
         ) : null}
       </div>
-    </div>
+    </Drawer>
   );
 }
 
