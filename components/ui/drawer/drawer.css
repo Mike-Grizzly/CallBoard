@@ -1,0 +1,94 @@
+/*
+ * Shared Drawer primitive (S1) — the single source of truth for drawer MOTION.
+ *
+ * Every drawer in the app renders through <Drawer>, which stamps these classes.
+ * To retune how *all* drawers open and close, edit the variables in this one
+ * block:
+ *   --drawer-dur          open/close speed (also fed from DRAWER_DURATION_MS so
+ *                         the JS unmount delay stays in sync — keep them equal)
+ *   --drawer-ease         the animation curve / "snap" (default has a slight pop)
+ *   --drawer-scrim-*      backdrop tint + fade speed
+ *   --drawer-width        desktop panel width
+ *   --drawer-sheet-max-h  bottom-sheet height cap on phones
+ *
+ * Per-drawer files should carry only their *content* styling, never motion.
+ */
+.drawer-root {
+  /* --- motion tokens: change here to retune ALL drawers --- */
+  --drawer-dur: 220ms; /* kept in sync with DRAWER_DURATION_MS (injected inline) */
+  --drawer-ease: cubic-bezier(0.2, 0.9, 0.3, 1.05); /* slight overshoot / pop */
+  --drawer-scrim-color: rgba(20, 10, 5, 0.32);
+  --drawer-scrim-dur: 150ms;
+  --drawer-width: min(480px, 92vw);
+  --drawer-sheet-max-h: 88vh;
+
+  position: fixed;
+  inset: 0;
+  z-index: 240;
+}
+
+/* Backdrop — fades with the panel. */
+.drawer-scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--drawer-scrim-color);
+  opacity: 0;
+  transition: opacity var(--drawer-scrim-dur) ease;
+}
+.drawer-root[data-state="open"] .drawer-scrim {
+  opacity: 1;
+}
+
+/* Panel — slides in from the chosen edge. Content owns its own scroll region;
+   the panel itself is a non-scrolling flex column so headers can stay put. */
+.drawer-panel {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: var(--drawer-width);
+  max-width: 92vw;
+  background: var(--bg-elev);
+  box-shadow: -16px 0 36px -10px rgba(40, 15, 5, 0.22);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateX(100%);
+  transition: transform var(--drawer-dur) var(--drawer-ease);
+  will-change: transform;
+}
+.drawer-panel[data-side="left"] {
+  right: auto;
+  left: 0;
+  box-shadow: 16px 0 36px -10px rgba(40, 15, 5, 0.22);
+  transform: translateX(-100%);
+}
+.drawer-root[data-state="open"] .drawer-panel {
+  transform: translateX(0);
+}
+
+/* Phones — collapse to a bottom sheet (matches the call tray). */
+@media (max-width: 720px) {
+  .drawer-panel[data-sheet="1"] {
+    top: auto;
+    left: 0;
+    right: 0;
+    width: auto;
+    max-width: none;
+    max-height: var(--drawer-sheet-max-h);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -16px 36px -10px rgba(40, 15, 5, 0.24);
+    transform: translateY(100%);
+  }
+  .drawer-root[data-state="open"] .drawer-panel[data-sheet="1"] {
+    transform: translateY(0);
+  }
+}
+
+/* Respect reduced-motion — snap instead of slide. */
+@media (prefers-reduced-motion: reduce) {
+  .drawer-scrim,
+  .drawer-panel {
+    transition-duration: 0.01ms;
+  }
+}
