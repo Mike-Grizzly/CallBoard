@@ -3,6 +3,14 @@ import type { PortableTextBlock } from "@portabletext/react";
 import type { SanityImageSource } from "@sanity/image-url";
 import { sanityClient, getSanityPreviewClient } from "./client";
 
+// Hard ceiling on any single Sanity fetch. Without it, an unreachable CMS makes
+// the request blackhole and server rendering of a Sanity-backed marketing page
+// hangs for minutes (M10) — ISR only masks this until a revalidate misses. On a
+// healthy CDN a query returns in well under this, so the signal never fires;
+// when Sanity is down the fetch aborts fast and each caller's try/catch falls
+// back to the static content that already exists for every page.
+const SANITY_TIMEOUT_MS = 3000;
+
 // Single read path for every marketing query. Normal visitors hit the published
 // CDN with ISR (revalidate 60). When Draft Mode is on — i.e. the editor opened
 // the page from the Studio's Presentation tool — we switch to the preview
@@ -20,10 +28,14 @@ async function loadQuery<T>(
   } catch {
     preview = false;
   }
+  const signal = AbortSignal.timeout(SANITY_TIMEOUT_MS);
   if (preview) {
-    return getSanityPreviewClient().fetch<T>(query, params);
+    return getSanityPreviewClient().fetch<T>(query, params, { signal });
   }
-  return sanityClient.fetch<T>(query, params, { next: { revalidate: 60 } });
+  return sanityClient.fetch<T>(query, params, {
+    next: { revalidate: 60 },
+    signal,
+  });
 }
 
 export type PostCard = {

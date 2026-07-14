@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useFocusTrap } from "./use-focus-trap";
 
 /**
  * On-brand confirmation modal — replaces native `window.confirm`, which looks
@@ -29,6 +30,8 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const trapRef = useFocusTrap<HTMLDivElement>(open);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -49,6 +52,7 @@ export function ConfirmDialog({
       }}
     >
       <div
+        ref={trapRef}
         className="confirm-modal"
         role="dialog"
         aria-modal="true"

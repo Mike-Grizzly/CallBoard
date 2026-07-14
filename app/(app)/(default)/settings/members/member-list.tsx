@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useActionState, useState } from "react";
-import { Icon } from "@/components/ui/icon";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ROLES } from "@/types/roles";
 import {
@@ -174,13 +174,11 @@ export function MemberList({
 }) {
   if (members.length === 0) {
     return (
-      <div className="pp-empty">
-        <div className="pp-empty-ico">
-          <Icon name="Users" size={26} />
-        </div>
-        <b>No team members yet</b>
-        <span>Team members will appear here as they sign up.</span>
-      </div>
+      <EmptyState
+        icon="Users"
+        title="No team members yet"
+        hint="Team members will appear here as they sign up."
+      />
     );
   }
 

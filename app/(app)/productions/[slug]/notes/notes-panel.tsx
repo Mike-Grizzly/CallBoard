@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useTransition, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Pin,
   Trash2,
@@ -1106,13 +1107,13 @@ export function NotesPanel({
         {/* Note list */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {notes.length === 0 && (
-            <div style={{ marginTop: 24, textAlign: "center", color: "var(--ink-4)" }}>
-              <PenLine style={{ width: 28, height: 28, margin: "0 auto 8px" }} />
-              <p style={{ fontSize: 13 }}>No notes yet.</p>
-              {canCreate && (
-                <p style={{ fontSize: 12, marginTop: 4 }}>Click + New to get started.</p>
-              )}
-            </div>
+            <EmptyState
+              variant="bare"
+              icon="PenLine"
+              iconSize={20}
+              title="No notes yet."
+              hint={canCreate ? "Click + New to get started." : undefined}
+            />
           )}
           {unpinned.map((note) => (
             <NoteRow

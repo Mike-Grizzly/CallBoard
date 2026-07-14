@@ -75,7 +75,9 @@ export function NotificationBell({ initialUnread, placement = "down" }: Props) {
         ref={btnRef}
         type="button"
         title="Notifications"
-        aria-label="Notifications"
+        aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
+        aria-haspopup="true"
+        aria-expanded={open}
         onClick={toggle}
         style={{
           position: "relative",
@@ -112,6 +114,8 @@ export function NotificationBell({ initialUnread, placement = "down" }: Props) {
         <div
           ref={panelRef}
           className="anim-in"
+          role="region"
+          aria-label="Notifications"
           style={{
             position: "absolute",
             ...(placement === "up"
@@ -139,7 +143,7 @@ export function NotificationBell({ initialUnread, placement = "down" }: Props) {
           </div>
 
           {/* Body */}
-          <div style={{ maxHeight: 400, overflowY: "auto" }}>
+          <div style={{ maxHeight: 400, overflowY: "auto" }} role="list">
             {!loaded || isPending ? (
               <div
                 style={{
@@ -243,6 +247,7 @@ function NotifRow({
       <Link
         href={n.link}
         onClick={onNavigate}
+        role="listitem"
         style={{ display: "block", textDecoration: "none", color: "inherit" }}
       >
         {inner}
@@ -250,5 +255,5 @@ function NotifRow({
     );
   }
 
-  return <div>{inner}</div>;
+  return <div role="listitem">{inner}</div>;
 }

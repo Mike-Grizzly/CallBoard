@@ -5,7 +5,8 @@ import { Icon } from "@/components/ui/icon";
 import type { ReactNode } from "react";
 import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getProductionBySlug } from "@/features/productions/queries";
+import { getProductionBySlug, getVisibleProductions } from "@/features/productions/queries";
+import { ProductionSwitcher } from "@/components/app-shell/production-switcher";
 import {
   getProductionMembers,
   getProductionMembership,
@@ -91,6 +92,7 @@ export default async function ProductionLayout({
     announcementCount,
     deletedDocCount,
     deletedReportCount,
+    switchableProductions,
   ] = await Promise.all([
     getProductionMembers(production.id),
     getReportCountByProduction(production.id),
@@ -99,6 +101,7 @@ export default async function ProductionLayout({
     getAnnouncementCountByProduction(production.id, user.organizationId),
     getDeletedDocumentCountByProduction(production.id),
     getDeletedReportCountByProduction(production.id),
+    getVisibleProductions(user),
   ]);
 
   const initialTrashCount = deletedDocCount + deletedReportCount;
@@ -197,7 +200,14 @@ export default async function ProductionLayout({
         <div className="crumbs">
           <Link href="/productions">Productions</Link>
           <ChevronRight className="sep" size={12} aria-hidden />
-          <span className="now">{production.title}</span>
+          <ProductionSwitcher
+            current={{ title: production.title, slug: production.slug }}
+            productions={switchableProductions.map((p) => ({
+              id: p.id,
+              title: p.title,
+              slug: p.slug,
+            }))}
+          />
         </div>
 
         <div className="topbar-row">

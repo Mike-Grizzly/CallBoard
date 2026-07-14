@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { DirectoryPerson } from "@/features/members/queries";
 import {
   ROLE_META,
@@ -325,29 +326,26 @@ export function PeopleDirectory({
       )}
 
       {filtered.length === 0 ? (
-        <div className="pp-empty">
-          <div className="pp-empty-ico">
-            <Icon name="Users" size={28} />
-          </div>
-          <b>
-            {people.length === 0
+        <EmptyState
+          icon="Users"
+          iconSize={28}
+          title={
+            people.length === 0
               ? "No one in your org yet."
-              : "No one matches those filters."}
-          </b>
-          <span>
-            {people.length === 0
+              : "No one matches those filters."
+          }
+          hint={
+            people.length === 0
               ? "Add your cast, crew, and creative team to get started."
-              : "Try clearing search or filters."}
-          </span>
-          <button
-            className="btn primary"
-            onClick={() => setAddOpen(true)}
-            style={{ marginTop: 14 }}
-          >
-            <Icon name="Plus" size={14} />
-            <span>Add people</span>
-          </button>
-        </div>
+              : "Try clearing search or filters."
+          }
+          action={
+            <button className="btn primary" onClick={() => setAddOpen(true)}>
+              <Icon name="Plus" size={14} />
+              <span>Add people</span>
+            </button>
+          }
+        />
       ) : view === "table" ? (
         <PeopleTable
           rows={filtered}
