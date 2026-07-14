@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Sparkles,
   Check,
@@ -511,6 +512,7 @@ function ReviewForm({
     (result?.bookmarks ?? []).map((b) => ({ ...b, key: nextKey() })),
   );
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function apply() {
@@ -541,7 +543,7 @@ function ReviewForm({
   }
 
   function discard() {
-    if (!confirm("Discard this analysis? You can run it again later.")) return;
+    setConfirmingDiscard(false);
     startTransition(async () => {
       await discardScriptParse(parseId);
       onDiscarded();
@@ -702,13 +704,28 @@ function ReviewForm({
         <button onClick={apply} disabled={isPending} style={primaryBtn}>
           <Check size={15} /> Apply to production
         </button>
-        <button onClick={discard} disabled={isPending} style={ghostBtn}>
+        <button
+          onClick={() => setConfirmingDiscard(true)}
+          disabled={isPending}
+          style={ghostBtn}
+        >
           Discard
         </button>
         <Link href={scriptHref} style={{ ...ghostBtn, textDecoration: "none" }}>
           Cancel
         </Link>
       </div>
+
+      <ConfirmDialog
+        open={confirmingDiscard}
+        title="Discard this analysis?"
+        message="The parsed roles, scenes, and bookmarks will be thrown away. You can run the analysis again later."
+        confirmLabel="Discard"
+        danger
+        busy={isPending}
+        onConfirm={discard}
+        onCancel={() => setConfirmingDiscard(false)}
+      />
     </div>
   );
 }

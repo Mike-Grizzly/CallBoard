@@ -20,6 +20,7 @@ import {
 } from "@/features/members/actions";
 import type { DirectoryPerson } from "@/features/members/queries";
 import { displayName, initials, relativeTime, memberSince } from "./helpers";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function PersonDrawer({
   person,
@@ -37,6 +38,12 @@ export function PersonDrawer({
   const [editing, setEditing] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<
+    | { kind: "assignment"; membershipId: string; title: string }
+    | { kind: "org" }
+    | { kind: "account" }
+    | null
+  >(null);
 
   const [firstName, setFirstName] = useState(person.firstName);
   const [lastName, setLastName] = useState(person.lastName);
@@ -94,35 +101,56 @@ export function PersonDrawer({
       status === "inactive" ? "Member deactivated." : "Member reactivated.",
     );
 
-  const removeAssignment = (membershipId: string, title: string) => {
-    const fd = new FormData();
-    fd.set("membership_id", membershipId);
-    run(
-      () => removeProductionMember(undefined, fd),
-      `Removed from ${title}.`,
-    );
+  // All three destructive actions route through one named ConfirmDialog (R5;
+  // account delete also drops its window.confirm per R4).
+  const removeAssignment = (membershipId: string, title: string) =>
+    setConfirming({ kind: "assignment", membershipId, title });
+  const removeFromOrg = () => setConfirming({ kind: "org" });
+  const deleteAccount = () => setConfirming({ kind: "account" });
+
+  const executeConfirmed = () => {
+    if (!confirming) return;
+    const target = confirming;
+    setConfirming(null);
+    if (target.kind === "assignment") {
+      const fd = new FormData();
+      fd.set("membership_id", target.membershipId);
+      run(
+        () => removeProductionMember(undefined, fd),
+        `Removed from ${target.title}.`,
+      );
+    } else if (target.kind === "org") {
+      const fd = new FormData();
+      fd.set("membership_id", person.membershipId);
+      run(() => removeMember(undefined, fd), "Removed from organization.").then(
+        () => onClose(),
+      );
+    } else {
+      run(() => deletePerson(person.userId), "Account deleted.").then(() =>
+        onClose(),
+      );
+    }
   };
 
-  const removeFromOrg = () => {
-    const fd = new FormData();
-    fd.set("membership_id", person.membershipId);
-    run(() => removeMember(undefined, fd), "Removed from organization.").then(
-      () => onClose(),
-    );
-  };
-
-  const deleteAccount = () => {
-    const ok = window.confirm(
-      `Permanently delete ${displayName(person)}?\n\n` +
-        "This removes their account, organization & production memberships, " +
-        "and any reports, documents, announcements, or notes they created. " +
-        "This cannot be undone.",
-    );
-    if (!ok) return;
-    run(() => deletePerson(person.userId), "Account deleted.").then(() =>
-      onClose(),
-    );
-  };
+  const confirmCopy =
+    confirming?.kind === "assignment"
+      ? {
+          title: "Remove from production?",
+          message: `${displayName(person)} will lose access to ${confirming.title}. Their account and organization membership are unaffected.`,
+          label: "Remove",
+        }
+      : confirming?.kind === "org"
+        ? {
+            title: "Remove from organization?",
+            message: `${displayName(person)} will lose access to this workspace and all of its productions. Their account is not deleted.`,
+            label: "Remove from organization",
+          }
+        : {
+            title: `Permanently delete ${displayName(person)}?`,
+            message:
+              "This removes their account, organization & production memberships, and any reports, documents, announcements, or notes they created. This cannot be undone.",
+            label: "Delete account",
+          };
 
   return (
     <div className="pp-drawer-wrap" onClick={onClose}>
@@ -386,6 +414,17 @@ export function PersonDrawer({
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirming !== null}
+        title={confirmCopy.title}
+        message={confirmCopy.message}
+        confirmLabel={confirmCopy.label}
+        danger
+        busy={pending}
+        onConfirm={executeConfirmed}
+        onCancel={() => setConfirming(null)}
+      />
     </div>
   );
 }

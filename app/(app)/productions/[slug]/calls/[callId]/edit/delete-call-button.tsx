@@ -1,7 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { deleteCall } from "@/features/calls/actions";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function DeleteCallButton({
   callId,
@@ -11,10 +12,10 @@ export function DeleteCallButton({
   productionId: string;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
 
-  function handleClick() {
-    if (!confirm("Delete this call?")) return;
-
+  function handleConfirm() {
+    setConfirming(false);
     const formData = new FormData();
     formData.set("call_id", callId);
     formData.set("production_id", productionId);
@@ -25,13 +26,25 @@ export function DeleteCallButton({
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={isPending}
-      className="text-sm text-red-600 hover:text-red-800 transition-colors disabled:opacity-50"
-    >
-      {isPending ? "Deleting..." : "Delete call"}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setConfirming(true)}
+        disabled={isPending}
+        className="text-sm text-red-600 hover:text-red-800 transition-colors disabled:opacity-50"
+      >
+        {isPending ? "Deleting..." : "Delete call"}
+      </button>
+      <ConfirmDialog
+        open={confirming}
+        title="Delete call?"
+        message="This call and its confirmations will be deleted for everyone."
+        confirmLabel="Delete call"
+        danger
+        busy={isPending}
+        onConfirm={handleConfirm}
+        onCancel={() => setConfirming(false)}
+      />
+    </>
   );
 }

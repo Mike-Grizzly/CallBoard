@@ -28,6 +28,7 @@ import {
   fetchTimestampNotes,
 } from "@/features/videos/actions";
 import { VideoPlayer, type PlayerHandle } from "./video-player";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
@@ -73,6 +74,7 @@ export function VideosClient({
   const [showAddForm, setShowAddForm] = useState(false);
   const [shareLabel, setShareLabel] = useState("Share clip");
   const [error, setError] = useState<string | null>(null);
+  const [confirmVideo, setConfirmVideo] = useState<VideoWithMeta | null>(null);
   const [pending, startTransition] = useTransition();
 
   const selected = videos.find((v) => v.id === selectedId) ?? null;
@@ -697,7 +699,7 @@ export function VideosClient({
                     aria-label="Remove video"
                     onClick={(e) => {
                       e.stopPropagation();
-                      removeVideo(video.id);
+                      setConfirmVideo(video);
                     }}
                     disabled={pending}
                     style={{
@@ -721,6 +723,26 @@ export function VideosClient({
           })}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmVideo !== null}
+        title="Delete video?"
+        message={
+          confirmVideo
+            ? `"${confirmVideo.title}" and its ${confirmVideo.noteCount ?? 0} timestamp ${
+                (confirmVideo.noteCount ?? 0) === 1 ? "note" : "notes"
+              } will be deleted. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete video"
+        danger
+        busy={pending}
+        onConfirm={() => {
+          if (confirmVideo) removeVideo(confirmVideo.id);
+          setConfirmVideo(null);
+        }}
+        onCancel={() => setConfirmVideo(null)}
+      />
     </div>
   );
 }

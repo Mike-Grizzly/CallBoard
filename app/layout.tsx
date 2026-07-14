@@ -5,6 +5,7 @@ import Script from "next/script";
 import "./globals.css";
 import { SITE_URL } from "@/lib/site";
 import { THEME_COOKIE, THEME_EFFECTIVE_COOKIE } from "@/lib/theme";
+import { ToastProvider } from "@/components/ui/toast";
 
 // Google Tag Manager. Container ID is public (visible in page source). Loads
 // site-wide; all tracking tags / ad pixels / conversions are then managed in
@@ -111,7 +112,9 @@ export default async function RootLayout({
         )}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: RAIL_INIT_SCRIPT }} />
-        {children}
+        {/* Root-level so every surface (app shell, focus view, marketing)
+            can useToast() without caring which layout it renders under. */}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

@@ -23,6 +23,8 @@ import type { DirectoryPerson, ProductionMember } from "@/features/members/queri
 import type { ProductionRoleRow } from "@/features/productions/queries";
 import type { ProductionTeamBucket } from "@/features/productions/departments";
 import { PersonDrawer } from "@/app/(app)/(default)/people/person-drawer";
+import { useToast } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // A team bucket is a (role, position) pair. `position` is an optional label
 // stored in `production_memberships.characterName`, letting the board show
@@ -103,10 +105,13 @@ export function CastCrewBoard({
   const [drawerUserId, setDrawerUserId] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [mtab, setMtab] = useState<"board" | "company">("board");
-  const [toast, setToast] = useState<{ msg: string; error: boolean } | null>(null);
   const [dropKey, setDropKey] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<{
+    membershipId: string;
+    name: string;
+  } | null>(null);
   const dragId = useRef<string | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toast = useToast();
 
   const peopleById = useMemo(() => {
     const m = new Map<string, DirectoryPerson>();
@@ -128,20 +133,14 @@ export function CastCrewBoard({
     [members],
   );
 
-  function flashToast(msg: string, error = false) {
-    setToast({ msg, error });
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), error ? 3200 : 1800);
-  }
-
   function run(fn: () => Promise<{ error?: string }>, successMsg: string) {
     startTransition(async () => {
       const res = await fn();
       if (res?.error) {
-        flashToast(res.error, true);
+        toast.error(res.error);
         return;
       }
-      flashToast(successMsg);
+      toast.show(successMsg);
       router.refresh();
     });
   }
@@ -176,7 +175,13 @@ export function CastCrewBoard({
     run(() => unassignRole(roleId), "Character uncast.");
   }
 
+  // Removing someone from the production is destructive enough to name them
+  // first (R5) — the ConfirmDialog at the bottom fires doRemoveFromBucket.
   function removeFromBucket(membershipId: string, name: string) {
+    setConfirmRemove({ membershipId, name });
+  }
+
+  function doRemoveFromBucket(membershipId: string, name: string) {
     const fd = new FormData();
     fd.set("membership_id", membershipId);
     run(() => removeProductionMember(undefined, fd), `Removed ${name}.`);
@@ -567,7 +572,7 @@ export function CastCrewBoard({
             openAssignSheet(userId);
           }}
           onChanged={(message) => {
-            flashToast(message);
+            toast.show(message);
             router.refresh();
           }}
         />
@@ -605,11 +610,24 @@ export function CastCrewBoard({
         />
       )}
 
-      {toast && (
-        <div className="ax-toast" data-error={toast.error ? "1" : "0"}>
-          {toast.msg}
-        </div>
-      )}
+      <ConfirmDialog
+        open={confirmRemove !== null}
+        title="Remove from production?"
+        message={
+          confirmRemove
+            ? `${confirmRemove.name} will lose access to this production. Their account and organization membership are unaffected.`
+            : ""
+        }
+        confirmLabel="Remove"
+        danger
+        busy={pending}
+        onConfirm={() => {
+          if (confirmRemove)
+            doRemoveFromBucket(confirmRemove.membershipId, confirmRemove.name);
+          setConfirmRemove(null);
+        }}
+        onCancel={() => setConfirmRemove(null)}
+      />
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { MoreVertical, Download, Link2, Trash2, Check, Star, Sparkles } from "lu
 import { deleteDocument, getDocumentDownloadUrl } from "@/features/documents/actions";
 import { setDefaultScript, startScriptParse } from "@/features/scripts/actions";
 import { useRouter } from "next/navigation";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 
 interface Props {
   documentId: string;
@@ -35,7 +37,9 @@ export function DocumentRowMenu({
 }: Props) {
   const [pos, setPos] = useState<MenuPos | null>(null);
   const [copied, setCopied] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const toast = useToast();
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -145,7 +149,7 @@ export function DocumentRowMenu({
     startTransition(async () => {
       const res = await startScriptParse(formData);
       if (res.error || !res.parseId) {
-        alert(res.error ?? "Could not start analysis.");
+        toast.error(res.error ?? "Could not start analysis.");
         return;
       }
       // Kick the background run; the route returns immediately and continues
@@ -158,7 +162,11 @@ export function DocumentRowMenu({
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
     setPos(null);
-    if (!confirm("Delete this document? This cannot be undone.")) return;
+    setConfirmingDelete(true);
+  }
+
+  function doDelete() {
+    setConfirmingDelete(false);
     // Hand off to the parent when it wants to animate the row out first.
     if (onRequestDelete) {
       onRequestDelete(documentId);
@@ -254,6 +262,16 @@ export function DocumentRowMenu({
           </div>,
           document.body,
         )}
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="Delete document?"
+        message="This document will be moved to the production trash."
+        confirmLabel="Delete document"
+        danger
+        busy={isPending}
+        onConfirm={doDelete}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </>
   );
 }

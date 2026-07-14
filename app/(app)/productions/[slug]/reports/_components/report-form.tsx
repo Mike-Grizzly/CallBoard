@@ -292,6 +292,36 @@ export function ReportForm({
     "notes" | "sched" | "lines" | "injuries" | "general" | "next"
   >("notes");
 
+  // R1: "Distribute" no longer fires blind — it opens a preview of the report
+  // exactly as recipients will see it (same sanitized RichTextDisplay render
+  // path as the detail page), with an explicit confirm. Save draft stays one
+  // click. The uncontrolled inputs (call times, next rehearsal) are captured
+  // from the live form when the preview opens.
+  const formRef = useRef<HTMLFormElement>(null);
+  const distributeSubmitRef = useRef<HTMLButtonElement>(null);
+  const [showDistributePreview, setShowDistributePreview] = useState(false);
+  const [previewExtras, setPreviewExtras] = useState<Record<string, string>>({});
+
+  function openDistributePreview() {
+    const fd = formRef.current ? new FormData(formRef.current) : null;
+    const grab = (k: string) => ((fd?.get(k) as string) ?? "").trim();
+    setPreviewExtras({
+      actualStart: grab("actual_start"),
+      endTime: grab("end_time"),
+      nextDate: grab("next_rehearsal_date"),
+      nextTime: grab("next_rehearsal_time"),
+      nextLocation: grab("next_rehearsal_location"),
+      nextNotes: grab("next_rehearsal_notes"),
+    });
+    setShowDistributePreview(true);
+  }
+
+  function confirmDistribute() {
+    setShowDistributePreview(false);
+    submittedStatusRef.current = "distributed";
+    distributeSubmitRef.current?.click();
+  }
+
   function handleSubmit(formData: FormData) {
     formData.set("general_notes", generalNotes);
     formAction(formData);
@@ -313,6 +343,7 @@ export function ReportForm({
 
   return (
     <form
+      ref={formRef}
       action={handleSubmit}
       className="page-narrow anim-in"
       style={{ display: "flex", flexDirection: "column", gap: 16 }}
@@ -441,14 +472,10 @@ export function ReportForm({
                   </span>
                 </button>
                 <button
-                  type="submit"
-                  name="status"
-                  value="distributed"
+                  type="button"
                   className="btn primary"
                   disabled={pending || uploading}
-                  onClick={() => {
-                    submittedStatusRef.current = "distributed";
-                  }}
+                  onClick={openDistributePreview}
                 >
                   <Icon name="Send" size={14} aria-hidden />
                   <span>
@@ -459,6 +486,16 @@ export function ReportForm({
                         : "Distribute"}
                   </span>
                 </button>
+                {/* The real submit — fired only from the preview's confirm. */}
+                <button
+                  ref={distributeSubmitRef}
+                  type="submit"
+                  name="status"
+                  value="distributed"
+                  style={{ display: "none" }}
+                  aria-hidden
+                  tabIndex={-1}
+                />
               </>
             )}
           </div>
@@ -787,6 +824,233 @@ export function ReportForm({
           }}
           onClose={() => setEditingDept(null)}
         />
+      )}
+
+      {/* R1: preview-before-distribute. Renders the report the way recipients
+          will see it — department notes and rich text go through the same
+          sanitized RichTextDisplay path as the detail page. */}
+      {showDistributePreview && (
+        <div
+          onClick={() => setShowDistributePreview(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(20, 12, 10, 0.55)",
+            backdropFilter: "blur(2px)",
+            zIndex: 100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="card anim-in"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Preview report before distributing"
+            style={{
+              width: "min(640px, 100%)",
+              maxHeight: "min(85vh, 820px)",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              className="row-between"
+              style={{ padding: "14px 18px", borderBottom: "1px solid var(--border)" }}
+            >
+              <div>
+                <div className="h-eyebrow" style={{ marginBottom: 2 }}>
+                  Preview before distributing
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>
+                  This is what recipients will see
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDistributePreview(false)}
+                className="btn ghost btn-icon"
+                aria-label="Close preview"
+              >
+                <Icon name="X" size={14} aria-hidden />
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflow: "auto", padding: "18px 22px" }}>
+              <div className="h-eyebrow" style={{ marginBottom: 4 }}>
+                Rehearsal Report{reportNumLabel ? ` · ${reportNumLabel}` : ""}
+              </div>
+              <h3 className="h-section" style={{ marginBottom: 2 }}>
+                {formatLongDate(reportDate)}
+              </h3>
+              <div className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
+                {productionTitle}
+              </div>
+
+              <div className="row" style={{ gap: 20, flexWrap: "wrap", marginBottom: 16 }}>
+                {(previewExtras.actualStart || previewExtras.endTime) && (
+                  <div>
+                    <div className="h-eyebrow" style={{ marginBottom: 2 }}>Rehearsal</div>
+                    <div className="mono" style={{ fontSize: 14 }}>
+                      {[previewExtras.actualStart, previewExtras.endTime]
+                        .filter(Boolean)
+                        .join(" – ")}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <div className="h-eyebrow" style={{ marginBottom: 2 }}>Attendance</div>
+                  <div className="mono" style={{ fontSize: 14 }}>
+                    {present} present · {absent} absent · {late} late
+                  </div>
+                </div>
+                {scenesWorked.length > 0 && (
+                  <div>
+                    <div className="h-eyebrow" style={{ marginBottom: 2 }}>Scenes worked</div>
+                    <div style={{ fontSize: 13.5 }}>
+                      {scenesWorked.map((s) => s.label).filter(Boolean).join(", ")}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="h-eyebrow" style={{ margin: "14px 0 6px" }}>
+                Department notes
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {deptOrder.map((key) => {
+                  const dept = deptByKey.get(key);
+                  if (!dept) return null;
+                  const html = (deptNotes[key] ?? "").trim();
+                  return (
+                    <div
+                      key={key}
+                      style={{
+                        border: "1px solid var(--border)",
+                        borderRadius: 8,
+                        padding: "10px 14px",
+                      }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: html ? 4 : 0 }}>
+                        {dept.label}
+                      </div>
+                      {html ? (
+                        <RichTextDisplay content={html} />
+                      ) : (
+                        <div className="muted" style={{ fontSize: 12.5 }}>
+                          No notes today.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {generalNotes.trim() && (
+                <>
+                  <div className="h-eyebrow" style={{ margin: "16px 0 6px" }}>
+                    General notes
+                  </div>
+                  <RichTextDisplay content={generalNotes} />
+                </>
+              )}
+
+              {scheduleChanges.length > 0 && (
+                <>
+                  <div className="h-eyebrow" style={{ margin: "16px 0 6px" }}>
+                    Schedule changes
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13.5 }}>
+                    {scheduleChanges.map((c, i) => (
+                      <li key={i}>{[c.who, c.what].filter(Boolean).join(" — ")}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              {injuries.length > 0 && (
+                <>
+                  <div className="h-eyebrow" style={{ margin: "16px 0 6px" }}>
+                    Injuries &amp; incidents
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13.5 }}>
+                    {injuries.map((inj, i) => (
+                      <li key={i}>{[inj.who, inj.text].filter(Boolean).join(" — ")}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              {(previewExtras.nextDate ||
+                previewExtras.nextTime ||
+                previewExtras.nextLocation ||
+                previewExtras.nextNotes) && (
+                <>
+                  <div className="h-eyebrow" style={{ margin: "16px 0 6px" }}>
+                    Next rehearsal
+                  </div>
+                  <div style={{ fontSize: 13.5 }}>
+                    {[
+                      previewExtras.nextDate,
+                      previewExtras.nextTime,
+                      previewExtras.nextLocation,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                    {previewExtras.nextNotes && (
+                      <div className="muted" style={{ marginTop: 2 }}>
+                        {previewExtras.nextNotes}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div
+              className="row"
+              style={{
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 8,
+                padding: "12px 18px",
+                borderTop: "1px solid var(--border)",
+              }}
+            >
+              <span className="muted" style={{ fontSize: 12.5 }}>
+                {members && members.length > 0
+                  ? `Becomes visible in-app to all ${members.length} production members; the email picker opens next.`
+                  : "Becomes visible in-app to the whole production; the email picker opens next."}
+              </span>
+              <div className="row" style={{ gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setShowDistributePreview(false)}
+                >
+                  <span>Keep editing</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn primary"
+                  disabled={pending || uploading}
+                  onClick={confirmDistribute}
+                >
+                  <Icon name="Send" size={14} aria-hidden />
+                  <span>
+                    {members && members.length > 0
+                      ? `Distribute to ${members.length} ${members.length === 1 ? "person" : "people"}`
+                      : "Distribute"}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </form>
   );

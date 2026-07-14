@@ -133,26 +133,26 @@ Marketing is deliberately always-light (scoped `.ps-site`); the app has three th
 
 The single most consequential action in the product (distributing a report to the whole company) has less friction than deleting a call template, while several irreversible removals have none at all. All fixes below are client-side friction wiring existing gated server actions.
 
-### R1 · Preview + confirm before "Distribute" — **P0 · M**
+### R1 · Preview + confirm before "Distribute" — **P0 · M** — ✅ DONE (claude/ux-backlog-batch-2, 2026-07-13)
 "Distribute" (`reports/_components/report-form.tsx:358-398`) flips a draft to distributed in one click; the auto-opened recipient picker previews *who*, never *what*. Add a preview step: render the report exactly as recipients will see it inside a confirm surface ("Distribute to N people"). Two existing render paths to reuse — the report detail page components under `app/(app)/productions/[slug]/reports/[reportId]/` (what in-app recipients see) and the email HTML builder in `features/reports/send-report.ts` (what inboxes get); the in-app rendering is the sensible preview. The recipient picker itself is `email-report-button.tsx` in the same `[reportId]` folder.
 **Accept:** distributing requires seeing the rendered report + an explicit confirm; "Save draft" stays one click.
 **Security note:** preview must reuse the existing sanitized render path (`sanitizeHtml` — ground rule 4) and existing queries; the author already holds `reports:create` so no visibility change. No new server action needed.
 
-### R2 · Wire up report delete/retract — **P0 · S**
+### R2 · Wire up report delete/retract — **P0 · S** — ✅ DONE (claude/ux-backlog-batch-2, 2026-07-13; detail page — list rows are bare links, row menu deferred to the IA batch)
 `deleteReport` exists (`features/reports/actions.ts:370`, billing-guarded, soft-delete) but **no UI calls it** — a wrongly distributed report can only be edited. Add a delete action (report detail overflow + list row menu) using `ConfirmDialog` with the 30-day-trash recovery copy; deleted reports already surface in the production trash drawer.
 **Accept:** a report manager can move a report to trash from the detail page; it appears in the trash drawer; restore works; cast/crew never see a delete affordance (`can()`-gated in UI as well as server).
 **Security note:** call the existing action only. Permanent purge stays behind `reports:delete` (admin/producer, per 2026-06-19 hardening) — do not surface permanent delete outside the trash drawer.
 
-### R3 · Recipient picker: make "everyone" a choice, not a default — **P0/P1 · S**
+### R3 · Recipient picker: make "everyone" a choice, not a default — **P0/P1 · S** — ✅ DONE (claude/ux-backlog-batch-2, 2026-07-13; owner chose (b) team-default + one-click everyone)
 `email-report-button.tsx:196-221` pre-selects the entire production. Over-sending is the default outcome. Options: (a) keep default-all but the send button always states the count and requires no other change — weakest; (b) default to department-relevant recipients with one-click "Entire production"; (c) default none + prominent "Select all". Recommend (b) or (c) — owner call.
 **Accept:** sending to everyone requires a deliberate selection or an explicit count-bearing confirm.
 **Security note:** server keeps filtering recipients to production members regardless (ground rule 11).
 
-### R4 · Adopt `ConfirmDialog` everywhere; retire native `confirm()`/`alert()` — **P1 · M**
+### R4 · Adopt `ConfirmDialog` everywhere; retire native `confirm()`/`alert()` — **P1 · M** — ✅ DONE (claude/ux-backlog-batch-2, 2026-07-13; grep-zero)
 The branded dialog (`components/ui/confirm-dialog.tsx`) is used in 3 places; native `confirm()` ships in: `calls/[callId]/edit/delete-call-button.tsx:16`, `documents/document-delete-button.tsx:11`, `documents/document-row-menu.tsx:161`, `announcements/announcement-delete-button.tsx:15`, `notes/notes-panel.tsx:364`, `[slug]/trash-drawer.tsx:92`, `productions/archive-buttons.tsx:28,111`, `people/person-drawer.tsx:115`, `settings/workspace/transfer-ownership-form.tsx:65`, `settings/workspace/logo-uploader.tsx:115`, `script/ai/ai-review-client.tsx:544`. Native `alert()` for errors in `archive-buttons.tsx:41,120` and `document-row-menu.tsx:148` → inline error/toast (see S3).
 **Accept:** zero `window.confirm`/`window.alert` in `app/` + `components/` (grep-verifiable).
 
-### R5 · Add confirmation to the unguarded destructive actions — **P0 · S**
+### R5 · Add confirmation to the unguarded destructive actions — **P0 · S** — ✅ DONE (claude/ux-backlog-batch-2, 2026-07-13)
 Currently single-click with no confirm at all:
 - Delete video + all its timestamp notes — `videos/videos-client.tsx:186-201,694-701`
 - Remove person from production — `members/cast-crew-board.tsx:179-183`; also `people/person-drawer.tsx:99-111`
@@ -161,7 +161,7 @@ Currently single-click with no confirm at all:
 Use `ConfirmDialog` (danger variant) naming the person/thing. Inconsistency to fix alongside: the hard account-delete right next to the unconfirmed removals *does* confirm.
 **Accept:** each of the four flows shows a named confirm before the server action fires.
 
-### R6 · One production archive/delete implementation — **P1 · S**
+### R6 · One production archive/delete implementation — **P1 · S** — ✅ DONE (claude/ux-backlog-batch-2, 2026-07-13)
 Two parallel UIs: branded `production-card-menu.tsx:142,161` (ConfirmDialog, 30-day copy) vs `productions/archive-buttons.tsx` (native confirm + alert). Keep the branded one, refactor `archive-buttons` to use it.
 **Accept:** one shared confirm implementation for archive/delete/restore of productions.
 
@@ -244,7 +244,7 @@ The systemic finding: good primitives exist but lost the adoption war — two bu
 Five parallel implementations, each with its own Escape handler + CSS namespace: `people/person-drawer.tsx` (pp-), `components/announcements/announcement-detail-drawer.tsx` (ann-), `calendar/event-drawer.tsx` (cal-), `documents/document-drawer.tsx`, `[slug]/trash-drawer.tsx` (the only portal-based one). Extract one `<Drawer>` (portal, Escape, backdrop, focus trap per S4, mobile bottom-sheet mode like the call tray) and migrate one drawer per PR.
 **Accept:** all five drawers render through the shared primitive; per-surface CSS namespaces collapse to content styles only.
 
-### S2 · Global toast provider — **P1 · M**
+### S2 · Global toast provider — **P1 · M** — ✅ DONE (claude/ux-backlog-batch-2, 2026-07-13; provider in root layout)
 Only `members/cast-crew-board.tsx:106-134` has toasts (hand-rolled `.ax-toast`). Extract it into a provider + `useToast()`; adopt in the surfaces currently using `window.alert` or silent success (R4/R6 depend on this).
 **Accept:** one toast API; cast board migrated; alert()-error sites migrated.
 

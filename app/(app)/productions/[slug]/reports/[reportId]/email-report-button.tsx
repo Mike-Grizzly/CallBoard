@@ -10,6 +10,8 @@ type Member = {
   email: string;
   firstName: string | null;
   lastName: string | null;
+  /** Production role — used to pre-select the team (everyone but cast). */
+  role?: string | null;
 };
 
 const AVATAR_PALETTE = ["clay", "sage", "dusk", "amber", "plum", "sand"] as const;
@@ -46,9 +48,15 @@ export function EmailReportButton({
   autoOpen?: boolean;
 }) {
   const [open, setOpen] = useState(autoOpen);
-  const [selected, setSelected] = useState<Set<string>>(
-    new Set(members.map((m) => m.userId)),
-  );
+  // R3 (owner call, option b): default to the department-relevant recipients —
+  // the production team (SM, directors, designers, crew) — not the entire
+  // company. Reports are working memos for departments; cast join via the
+  // checkboxes or the one-click "Entire production" toggle. The server filters
+  // recipients to actual production members regardless (ground rule 11).
+  const [selected, setSelected] = useState<Set<string>>(() => {
+    const team = members.filter((m) => m.role && m.role !== "cast");
+    return new Set(team.map((m) => m.userId));
+  });
   const [recentStatus, setRecentStatus] = useState<"idle" | "sent" | "error">(
     "idle",
   );
@@ -180,6 +188,10 @@ export function EmailReportButton({
                     Distribute report
                   </div>
                   <div style={{ fontSize: 15, fontWeight: 600 }}>Send to</div>
+                  <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                    Production team pre-selected — add cast below, or select
+                    everyone.
+                  </div>
                 </div>
               </div>
               <button
