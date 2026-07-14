@@ -63,7 +63,43 @@ function formatLongDate(iso: string): string {
   });
 }
 
+/**
+ * True at phone widths (matches the app's ≤720px mobile breakpoint). Drives the
+ * report form's mobile affordances (B1): the tabbed sections render as a stacked
+ * accordion and department notes are edited inline instead of in a modal. Starts
+ * `false` so SSR/first paint matches the desktop markup (no hydration mismatch),
+ * then corrects after mount.
+ */
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 720px)");
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return isMobile;
+}
+
 type Mode = "create" | "edit";
+
+type SectionId =
+  | "notes"
+  | "sched"
+  | "lines"
+  | "injuries"
+  | "general"
+  | "next";
+
+const SECTION_ORDER: SectionId[] = [
+  "notes",
+  "sched",
+  "lines",
+  "injuries",
+  "general",
+  "next",
+];
 
 export function ReportForm({
   mode,
@@ -95,6 +131,7 @@ export function ReportForm({
   personOptions?: readonly string[];
 }) {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const action = mode === "edit" ? updateReport : createReport;
   const [state, formAction, pending] = useActionState<
     ReportActionResult | undefined,
@@ -288,9 +325,33 @@ export function ReportForm({
     initial?.lineNotes ?? [],
   );
   const [injuries, setInjuries] = useState<Injury[]>(initial?.injuries ?? []);
-  const [activeTab, setActiveTab] = useState<
-    "notes" | "sched" | "lines" | "injuries" | "general" | "next"
-  >("notes");
+  const [activeTab, setActiveTab] = useState<SectionId>("notes");
+
+  // Section headers for the day's-work card (B1). Rendered as a desktop tab row
+  // or a mobile accordion from the same source; `count` shows a filled-item pill.
+  const deptFilledCount = Object.values(deptNotes).filter(
+    (v) => v && v.replace(/<[^>]+>/g, "").trim(),
+  ).length;
+  const sectionMeta: Record<SectionId, { label: string; count: number }> = {
+    notes: { label: "Department notes", count: deptFilledCount },
+    sched: { label: "Schedule changes", count: scheduleChanges.length },
+    lines: { label: "Line notes", count: lineNotes.length },
+    injuries: { label: "Injuries / incidents", count: injuries.length },
+    general: {
+      label: "General notes",
+      count: generalNotes.replace(/<[^>]+>/g, "").trim() ? 1 : 0,
+    },
+    next: {
+      label: "Next rehearsal",
+      count:
+        initial?.nextRehearsalDate ||
+        initial?.nextRehearsalTime ||
+        initial?.nextRehearsalLocation ||
+        initial?.nextRehearsalNotes
+          ? 1
+          : 0,
+    },
+  };
 
   // R1: "Distribute" no longer fires blind — it opens a preview of the report
   // exactly as recipients will see it (same sanitized RichTextDisplay render
@@ -374,7 +435,7 @@ export function ReportForm({
             {headerPill.label}
           </span>
         </div>
-        <div className="row-between">
+        <div className="row-between rf-header">
           <div>
             <div className="h-eyebrow" style={{ marginBottom: 4 }}>
               {isEdit
@@ -429,7 +490,7 @@ export function ReportForm({
               </div>
             )}
           </div>
-          <div className="row" style={{ gap: 8 }}>
+          <div className="row rf-header-actions" style={{ gap: 8 }}>
             {isAlreadyDistributed ? (
               <button
                 type="submit"
@@ -551,235 +612,289 @@ export function ReportForm({
       </div>
 
 
-      <div className="card">
-        <div
-          style={{
-            display: "flex",
-            borderBottom: "1px solid var(--border)",
-            padding: "0 16px",
-          }}
-        >
-          {[
-            {
-              id: "notes" as const,
-              label: "Department notes",
-              count: Object.values(deptNotes).filter(
-                (v) => v && v.replace(/<[^>]+>/g, "").trim(),
-              ).length,
-            },
-            {
-              id: "sched" as const,
-              label: "Schedule changes",
-              count: scheduleChanges.length,
-            },
-            {
-              id: "lines" as const,
-              label: "Line notes",
-              count: lineNotes.length,
-            },
-            {
-              id: "injuries" as const,
-              label: "Injuries / incidents",
-              count: injuries.length,
-            },
-            {
-              id: "general" as const,
-              label: "General notes",
-              count: generalNotes.replace(/<[^>]+>/g, "").trim() ? 1 : 0,
-            },
-            {
-              id: "next" as const,
-              label: "Next rehearsal",
-              count:
-                (initial?.nextRehearsalDate ||
-                initial?.nextRehearsalTime ||
-                initial?.nextRehearsalLocation ||
-                initial?.nextRehearsalNotes)
-                  ? 1
-                  : 0,
-            },
-          ].map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className="tab"
-              data-active={activeTab === s.id ? "1" : "0"}
-              onClick={() => setActiveTab(s.id)}
-            >
-              <span>{s.label}</span>
-              {s.count > 0 && <span className="count">{s.count}</span>}
-            </button>
-          ))}
-        </div>
-        <div style={{ padding: 20 }}>
-          <div style={{ display: activeTab === "notes" ? "block" : "none" }}>
-            <div className="grid grid-2" style={{ gap: 14 }}>
-              {deptOrder.map((deptKey) => {
-                const d = deptByKey.get(deptKey);
-                if (!d) return null;
-                const html = deptNotes[d.key];
-                const empty = !html || !html.replace(/<[^>]+>/g, "").trim();
-                return (
-                  <div
-                    key={d.key}
-                    draggable
-                    onDragStart={(e) => onDeptDragStart(e, d.key)}
-                    onDragOver={(e) => onDeptDragOver(e, d.key)}
-                    onDragEnd={onDeptDragEnd}
-                    onClick={() => setEditingDept(d.key)}
-                    className="dept-note-card"
-                    style={{
-                      padding: "10px 12px",
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-s)",
-                      cursor: "pointer",
-                      minHeight: 80,
-                      opacity: dragDeptKey === d.key ? 0.5 : 1,
-                      transition:
-                        "border-color .12s, background .12s, box-shadow .12s, opacity .12s",
-                    }}
-                  >
-                    <div className="row" style={{ gap: 8, marginBottom: 6 }}>
-                      <div
-                        className="notif-ico"
-                        data-c={d.c}
-                        style={{ width: 24, height: 24 }}
-                      >
-                        <Icon name={d.icon} size={13} aria-hidden />
-                      </div>
-                      <b style={{ fontSize: 13, fontWeight: 600 }}>{d.label}</b>
-                      <div
-                        style={{
-                          marginLeft: "auto",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <span
-                          className="dept-note-edit-hint muted"
-                          style={{
-                            fontSize: 11,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 4,
-                          }}
-                        >
-                          <Icon name="PenLine" size={11} aria-hidden />
-                          <span>Edit</span>
-                        </span>
-                        <span
-                          title="Drag to reorder"
-                          aria-hidden
-                          style={{
-                            display: "inline-flex",
-                            color: "var(--ink-4)",
-                            cursor: "grab",
-                          }}
-                        >
-                          <Icon name="Grip" size={13} />
-                        </span>
-                      </div>
+      {/* B1: the day's-work sections. On desktop this is a horizontal tab
+          strip with the active panel below; at phone widths (≤720px) it
+          becomes a stacked accordion — every section is reachable without a
+          horizontal scroll, and department notes are edited inline instead of
+          in a modal. All panels stay mounted (inactive ones are display:none)
+          so the whole form submits regardless of which section is open. */}
+      <div className="card rf-seccard">
+        <div className="rf-sections">
+          {SECTION_ORDER.flatMap((id) => {
+            const meta = sectionMeta[id];
+            const active = activeTab === id;
+            return [
+              <button
+                key={`head-${id}`}
+                type="button"
+                className="tab rf-head"
+                data-active={active ? "1" : "0"}
+                aria-expanded={active}
+                onClick={() => setActiveTab(id)}
+              >
+                <span className="rf-head-label">{meta.label}</span>
+                {meta.count > 0 && <span className="count">{meta.count}</span>}
+                <Icon name="ChevronDown" className="rf-head-chev" size={16} aria-hidden />
+              </button>,
+              <div
+                key={`panel-${id}`}
+                className="rf-panel"
+                style={{ display: active ? undefined : "none" }}
+              >
+                {id === "notes" && (
+                  isMobile ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {deptOrder.map((deptKey) => {
+                        const d = deptByKey.get(deptKey);
+                        if (!d) return null;
+                        const html = deptNotes[d.key];
+                        const empty = !html || !html.replace(/<[^>]+>/g, "").trim();
+                        const open = editingDept === d.key;
+                        return (
+                          <div
+                            key={d.key}
+                            className="dept-note-card"
+                            style={{
+                              padding: "10px 12px",
+                              border: "1px solid var(--border)",
+                              borderRadius: "var(--radius-s)",
+                            }}
+                          >
+                            <button
+                              type="button"
+                              className="rf-dept-head"
+                              aria-expanded={open}
+                              onClick={() => setEditingDept(open ? null : d.key)}
+                            >
+                              <div
+                                className="notif-ico"
+                                data-c={d.c}
+                                style={{ width: 24, height: 24 }}
+                              >
+                                <Icon name={d.icon} size={13} aria-hidden />
+                              </div>
+                              <b style={{ fontSize: 13, fontWeight: 600, flex: 1, textAlign: "left" }}>
+                                {d.label}
+                              </b>
+                              {!empty && !open && (
+                                <span
+                                  aria-hidden
+                                  style={{
+                                    width: 7,
+                                    height: 7,
+                                    borderRadius: "50%",
+                                    background: "var(--c-sage)",
+                                  }}
+                                />
+                              )}
+                              <Icon
+                                name="ChevronDown"
+                                className="rf-dept-chev"
+                                data-open={open ? "1" : "0"}
+                                size={16}
+                                aria-hidden
+                              />
+                            </button>
+                            {open ? (
+                              <div style={{ marginTop: 8 }}>
+                                <RichTextEditor
+                                  content={html}
+                                  onChange={(v) =>
+                                    setDeptNotes((prev) => ({ ...prev, [d.key]: v }))
+                                  }
+                                  members={members}
+                                  minHeight="140px"
+                                  placeholder={`Notes for ${d.label.toLowerCase()}…`}
+                                />
+                              </div>
+                            ) : empty ? (
+                              <div style={{ fontSize: 13, color: "var(--ink-4)", marginTop: 2 }}>
+                                Tap to add notes for {d.label.toLowerCase()}…
+                              </div>
+                            ) : (
+                              <div style={{ marginTop: 4 }}>
+                                <RichTextDisplay content={html} />
+                              </div>
+                            )}
+                            <input type="hidden" name={d.field} value={html} />
+                          </div>
+                        );
+                      })}
                     </div>
-                    {empty ? (
-                      <div
-                        style={{
-                          fontSize: 13,
-                          lineHeight: 1.55,
-                          color: "var(--ink-4)",
-                        }}
-                      >
-                        Click to add notes for {d.label.toLowerCase()}…
+                  ) : (
+                    <div className="grid grid-2" style={{ gap: 14 }}>
+                      {deptOrder.map((deptKey) => {
+                        const d = deptByKey.get(deptKey);
+                        if (!d) return null;
+                        const html = deptNotes[d.key];
+                        const empty = !html || !html.replace(/<[^>]+>/g, "").trim();
+                        return (
+                          <div
+                            key={d.key}
+                            draggable
+                            onDragStart={(e) => onDeptDragStart(e, d.key)}
+                            onDragOver={(e) => onDeptDragOver(e, d.key)}
+                            onDragEnd={onDeptDragEnd}
+                            onClick={() => setEditingDept(d.key)}
+                            className="dept-note-card"
+                            style={{
+                              padding: "10px 12px",
+                              border: "1px solid var(--border)",
+                              borderRadius: "var(--radius-s)",
+                              cursor: "pointer",
+                              minHeight: 80,
+                              opacity: dragDeptKey === d.key ? 0.5 : 1,
+                              transition:
+                                "border-color .12s, background .12s, box-shadow .12s, opacity .12s",
+                            }}
+                          >
+                            <div className="row" style={{ gap: 8, marginBottom: 6 }}>
+                              <div
+                                className="notif-ico"
+                                data-c={d.c}
+                                style={{ width: 24, height: 24 }}
+                              >
+                                <Icon name={d.icon} size={13} aria-hidden />
+                              </div>
+                              <b style={{ fontSize: 13, fontWeight: 600 }}>{d.label}</b>
+                              <div
+                                style={{
+                                  marginLeft: "auto",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                }}
+                              >
+                                <span
+                                  className="dept-note-edit-hint muted"
+                                  style={{
+                                    fontSize: 11,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                  }}
+                                >
+                                  <Icon name="PenLine" size={11} aria-hidden />
+                                  <span>Edit</span>
+                                </span>
+                                <span
+                                  title="Drag to reorder"
+                                  aria-hidden
+                                  style={{
+                                    display: "inline-flex",
+                                    color: "var(--ink-4)",
+                                    cursor: "grab",
+                                  }}
+                                >
+                                  <Icon name="Grip" size={13} />
+                                </span>
+                              </div>
+                            </div>
+                            {empty ? (
+                              <div
+                                style={{
+                                  fontSize: 13,
+                                  lineHeight: 1.55,
+                                  color: "var(--ink-4)",
+                                }}
+                              >
+                                Click to add notes for {d.label.toLowerCase()}…
+                              </div>
+                            ) : (
+                              <RichTextDisplay content={html} />
+                            )}
+                            <input type="hidden" name={d.field} value={html} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
+                )}
+                {id === "sched" && (
+                  <ScheduleChangesEditor
+                    changes={scheduleChanges}
+                    onChange={setScheduleChanges}
+                    members={members}
+                  />
+                )}
+                {id === "lines" && (
+                  <LineNotesEditor
+                    lines={lineNotes}
+                    onChange={setLineNotes}
+                    members={members}
+                    characterOptions={characterOptions}
+                  />
+                )}
+                {id === "injuries" && (
+                  <InjuriesEditor
+                    injuries={injuries}
+                    onChange={setInjuries}
+                    members={members}
+                    personOptions={personOptions}
+                  />
+                )}
+                {id === "general" && (
+                  <>
+                    <RichTextEditor
+                      content={generalNotes}
+                      onChange={setGeneralNotes}
+                      placeholder="Overall summary of the day's rehearsal…"
+                      minHeight="220px"
+                      members={members}
+                    />
+                    {state?.errors?.general_notes && (
+                      <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 6 }}>
+                        {state.errors.general_notes}
                       </div>
-                    ) : (
-                      <RichTextDisplay content={html} />
                     )}
-                    <input type="hidden" name={d.field} value={html} />
+                  </>
+                )}
+                {id === "next" && (
+                  <div className="grid grid-3 rf-next-grid" style={{ gap: 10 }}>
+                    <div>
+                      <div className="label">Date</div>
+                      <input
+                        type="date"
+                        name="next_rehearsal_date"
+                        defaultValue={initial?.nextRehearsalDate ?? ""}
+                        className="field"
+                      />
+                    </div>
+                    <div>
+                      <div className="label">Time</div>
+                      <input
+                        type="text"
+                        name="next_rehearsal_time"
+                        placeholder="7:00 PM"
+                        defaultValue={initial?.nextRehearsalTime ?? ""}
+                        className="field"
+                      />
+                    </div>
+                    <div>
+                      <div className="label">Location</div>
+                      <input
+                        type="text"
+                        name="next_rehearsal_location"
+                        placeholder="Studio A"
+                        defaultValue={initial?.nextRehearsalLocation ?? ""}
+                        className="field"
+                      />
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <div className="label">What will be covered</div>
+                      <textarea
+                        name="next_rehearsal_notes"
+                        rows={3}
+                        defaultValue={initial?.nextRehearsalNotes ?? ""}
+                        className="field"
+                        style={{ resize: "vertical", minHeight: 64 }}
+                      />
+                    </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-          <div style={{ display: activeTab === "sched" ? "block" : "none" }}>
-            <ScheduleChangesEditor
-              changes={scheduleChanges}
-              onChange={setScheduleChanges}
-              members={members}
-            />
-          </div>
-          <div style={{ display: activeTab === "lines" ? "block" : "none" }}>
-            <LineNotesEditor
-              lines={lineNotes}
-              onChange={setLineNotes}
-              members={members}
-              characterOptions={characterOptions}
-            />
-          </div>
-          <div style={{ display: activeTab === "injuries" ? "block" : "none" }}>
-            <InjuriesEditor
-              injuries={injuries}
-              onChange={setInjuries}
-              members={members}
-              personOptions={personOptions}
-            />
-          </div>
-          <div style={{ display: activeTab === "general" ? "block" : "none" }}>
-            <RichTextEditor
-              content={generalNotes}
-              onChange={setGeneralNotes}
-              placeholder="Overall summary of the day's rehearsal…"
-              minHeight="220px"
-              members={members}
-            />
-            {state?.errors?.general_notes && (
-              <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 6 }}>
-                {state.errors.general_notes}
-              </div>
-            )}
-          </div>
-          <div style={{ display: activeTab === "next" ? "block" : "none" }}>
-            <div className="grid grid-3" style={{ gap: 10 }}>
-              <div>
-                <div className="label">Date</div>
-                <input
-                  type="date"
-                  name="next_rehearsal_date"
-                  defaultValue={initial?.nextRehearsalDate ?? ""}
-                  className="field"
-                />
-              </div>
-              <div>
-                <div className="label">Time</div>
-                <input
-                  type="text"
-                  name="next_rehearsal_time"
-                  placeholder="7:00 PM"
-                  defaultValue={initial?.nextRehearsalTime ?? ""}
-                  className="field"
-                />
-              </div>
-              <div>
-                <div className="label">Location</div>
-                <input
-                  type="text"
-                  name="next_rehearsal_location"
-                  placeholder="Studio A"
-                  defaultValue={initial?.nextRehearsalLocation ?? ""}
-                  className="field"
-                />
-              </div>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <div className="label">What will be covered</div>
-                <textarea
-                  name="next_rehearsal_notes"
-                  rows={3}
-                  defaultValue={initial?.nextRehearsalNotes ?? ""}
-                  className="field"
-                  style={{ resize: "vertical", minHeight: 64 }}
-                />
-              </div>
-            </div>
-          </div>
+                )}
+              </div>,
+            ];
+          })}
         </div>
       </div>
 
@@ -810,7 +925,9 @@ export function ReportForm({
         )}
       </div>
 
-      {editingDeptDef && (
+      {/* Desktop edits a department note in a modal; on mobile it expands
+          inline within the accordion (B1), so the modal is desktop-only. */}
+      {!isMobile && editingDeptDef && (
         <DeptNoteModal
           open={!!editingDept}
           title={editingDeptDef.label}

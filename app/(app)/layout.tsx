@@ -7,6 +7,7 @@ import { BannerSlot } from "@/components/app-shell/banner-slot";
 import { AnnouncementBanner } from "@/components/app-shell/announcement-banner";
 import { TrialBanner } from "@/components/app-shell/trial-banner";
 import { TrialCountdown } from "@/components/app-shell/trial-countdown";
+import { getUnreadNotificationCount } from "@/features/notifications/actions";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   // Designer-package subscribers live entirely in the self-contained Focus
@@ -15,10 +16,15 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await requireCurrentUser();
   if (isDesignerOnly(user)) redirect("/focus");
 
+  // The bottom "More" tab houses the notification bell + the workspace
+  // destinations, so it carries the aggregate unread badge on mobile (B4).
+  const moreUnread = await getUnreadNotificationCount();
+
   return (
     <>
       <TrialCountdown />
       <AppFrame
+        moreBadge={moreUnread}
         rail={<Rail />}
         banner={
           <BannerSlot>

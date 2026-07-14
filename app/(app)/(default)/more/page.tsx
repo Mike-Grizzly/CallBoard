@@ -7,7 +7,17 @@ import { ThemeControl } from "@/components/app-shell/theme-control";
 import { getThemePref } from "@/lib/theme-server";
 import { navItemsFor } from "@/components/app-shell/nav-items";
 import { NotificationBell } from "@/components/app-shell/notification-bell";
-import { getUnreadNotificationCount } from "@/features/notifications/actions";
+import {
+  getUnreadNotificationCount,
+  getUnreadNotificationCountsByType,
+} from "@/features/notifications/actions";
+
+// Maps a nav destination to the notification `type` whose unread count badges
+// it (B4). Only Announcements has a first-class notification type today;
+// Activity is still a placeholder surface, so it carries no badge yet.
+const BADGE_TYPE_FOR_HREF: Record<string, string> = {
+  "/announcements": "announcement",
+};
 
 function initialsFor(firstName: string, lastName: string, email: string) {
   const a = (firstName || "").trim()[0];
@@ -19,7 +29,10 @@ function initialsFor(firstName: string, lastName: string, email: string) {
 export default async function MorePage() {
   const user = await requireCurrentUser();
   const themePref = await getThemePref();
-  const unreadCount = await getUnreadNotificationCount();
+  const [unreadCount, unreadByType] = await Promise.all([
+    getUnreadNotificationCount(),
+    getUnreadNotificationCountsByType(),
+  ]);
   // Destinations not already on the bottom tab bar, from the shared nav source
   // (N4) — gating stays in lockstep with the desktop rail.
   const items = navItemsFor("more", user.role);
@@ -54,17 +67,35 @@ export default async function MorePage() {
       </div>
 
       <ul className="more-list" role="list">
-        {items.map((item) => (
-          <li key={item.href}>
-            <Link href={item.href} className="more-item">
-              <span className="more-item-ico">
-                <Icon name={item.icon} aria-hidden />
-              </span>
-              <span className="more-item-label">{item.label}</span>
-              <Icon name="ChevronRight" className="more-item-chev" aria-hidden />
-            </Link>
-          </li>
-        ))}
+        {items.map((item) => {
+          const badgeType = BADGE_TYPE_FOR_HREF[item.href];
+          const badgeCount = badgeType ? unreadByType[badgeType] ?? 0 : 0;
+          return (
+            <li key={item.href}>
+              <Link href={item.href} className="more-item">
+                <span className="more-item-ico">
+                  <Icon name={item.icon} aria-hidden />
+                </span>
+                <span className="more-item-label">{item.label}</span>
+                {badgeCount > 0 ? (
+                  <span
+                    className="more-item-badge"
+                    aria-label={`${badgeCount} unread`}
+                  >
+                    {badgeCount > 99 ? "99+" : badgeCount}
+                  </span>
+                ) : (
+                  <span aria-hidden />
+                )}
+                <Icon
+                  name="ChevronRight"
+                  className="more-item-chev"
+                  aria-hidden
+                />
+              </Link>
+            </li>
+          );
+        })}
       </ul>
 
       <div className="more-appearance">

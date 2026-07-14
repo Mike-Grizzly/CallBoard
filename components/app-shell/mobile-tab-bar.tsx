@@ -82,7 +82,7 @@ const TABS: TabConfig[] = [
  * that production's sub-routes; outside they point at the workspace
  * equivalents.
  */
-export function MobileTabBar() {
+export function MobileTabBar({ moreBadge = 0 }: { moreBadge?: number }) {
   const pathname = usePathname();
   const slugMatch = pathname.match(PRODUCTION_PATH);
   const slug = slugMatch ? slugMatch[1] : null;
@@ -91,6 +91,7 @@ export function MobileTabBar() {
     <nav className="mob-tabbar" aria-label="Primary navigation">
       {TABS.map((tab) => {
         const active = tab.isActive(pathname, slug);
+        const badge = tab.id === "more" ? moreBadge : 0;
         return (
           <Link
             key={tab.id}
@@ -99,7 +100,14 @@ export function MobileTabBar() {
             data-active={active ? "1" : "0"}
             aria-current={active ? "page" : undefined}
           >
-            <Icon name={tab.icon} className="ico" aria-hidden />
+            <span className="mob-tab-ico-wrap">
+              <Icon name={tab.icon} className="ico" aria-hidden />
+              {badge > 0 && (
+                <span className="mob-tab-badge" aria-label={`${badge} unread`}>
+                  {badge > 99 ? "99+" : badge}
+                </span>
+              )}
+            </span>
             <span className="lbl">{tab.label}</span>
           </Link>
         );
