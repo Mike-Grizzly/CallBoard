@@ -116,13 +116,22 @@ export default async function ProductionLayout({
       href: `/productions/${slug}`,
       icon: "Layout",
     },
-    {
-      label: "Rehearsal Reports",
-      href: `/productions/${slug}/reports`,
-      icon: "FileText",
-      count: reportCount,
-    },
   ];
+  // Cast & Crew was reachable only via a topbar button (N3) — promote it to a
+  // tab, keeping its exact productions:manage gate.
+  if (canManage) {
+    tabs.push({
+      label: "Cast & Crew",
+      href: `/productions/${slug}/members`,
+      icon: "Users",
+    });
+  }
+  tabs.push({
+    label: "Rehearsal Reports",
+    href: `/productions/${slug}/reports`,
+    icon: "FileText",
+    count: reportCount,
+  });
   if (canViewNotes) {
     tabs.push({
       label: "My Notes",
@@ -161,9 +170,10 @@ export default async function ProductionLayout({
 
   if (canViewBlocking) {
     tabs.push({
+      // Distinct from Overview's "Layout" icon (N3).
       label: "Blocking",
       href: `/productions/${slug}/blocking`,
-      icon: "Layout",
+      icon: "Move",
     });
   }
 
@@ -243,15 +253,7 @@ export default async function ProductionLayout({
           <div className="topbar-actions">
             <FocusEntryButton />
             <TrashDrawer productionId={production.id} initialTrashCount={initialTrashCount} />
-            {canManage && (
-              <Link
-                href={`/productions/${slug}/members`}
-                className="btn"
-              >
-                <Icon name="Users" className="ico" aria-hidden />
-                <span>Cast &amp; Crew</span>
-              </Link>
-            )}
+            {/* Cast & Crew moved to the tab strip (N3). */}
             {canCreateReports && (
               <Link
                 href={`/productions/${slug}/reports/new`}

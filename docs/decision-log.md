@@ -2782,6 +2782,20 @@ drafts (correct block/table/code counts, header rows, links, preserved code).
 
 ---
 
+## 2026-07-13 — UX Batch 3 (IA) decisions
+
+**Decision:** Landed UX-backlog Batch 3 (N1, N3, N4, N8, B3) on `claude/ux-backlog-batch-3`. Calls made:
+
+- **N4 (nav single source) — scope call:** Consolidated the two genuinely-duplicated, capability-gated lists — the desktop rail (`nav-items.ts`) and the mobile More page (`more/page.tsx`) — into one `NAV_ITEMS` + `navItemsFor(surface, role)` helper (each item carries a `surfaces: ("rail"|"more")[]`). The dead "Productions" rail entry is gone (it's now `surfaces: ["more"]`, matching its real behavior). The **mobile bottom tab bar was deliberately left separate**: it's a curated 5-item, context-aware set (labels/icons differ on purpose — "Today"/Sun not "Dashboard"; routes rewrite inside a production) with no capability gating, so folding it in would be a worse abstraction with no gating-drift benefit. A per-role test (`nav-items.test.ts`) asserts `navItemsFor` reproduces the exact pre-refactor rail/more output for all 8 roles — the guard the backlog's security note asks for.
+- **N8 (onboarding) — approach:** Used the existing `myProductions.length === 0` branch as the first-run signal instead of adding account-age/setup-wizard detection. The notification prompt is now a **modal only on the brand-new empty-workspace dashboard** (nothing to interrupt there) and a **dismissible inline card on the populated dashboard** (established users). Both persist the prefs row, so "Not now" never re-prompts. Did **not** fold prefs into the `/setup` wizard (the backlog's suggested impl) — the card approach fully satisfies the acceptance with less surface area and no fragile new-vs-existing detection.
+- **N1 (bell):** Mounted the orphaned `NotificationBell` in the rail foot (`placement="up"`) and the mobile More header; unread count fetched server-side (`getUnreadNotificationCount`) in both. Component was already complete and unchanged.
+- **N3 (Cast & Crew tab):** Promoted to a tab right after Overview, keeping the exact `productions:manage` gate; Blocking's icon changed Layout → Move (Overview keeps Layout); the now-duplicate topbar "Cast & Crew" button was dropped.
+- **B3:** Right-edge `mask-image` fade + extra right padding on the mobile `.tabs` scroller — CSS-only, no DOM change.
+
+**Impact:** IA/nav only. No server action, permission, storage, or proxy changes; the one place gating could silently loosen (N4) is covered by the per-role test. `tsc` + `eslint` (0 errors) + 185 tests + `next build` green. **Verification note:** these are auth-gated `(app)` surfaces that don't render in the DATABASE_URL-less sandbox, so verification is code/type/build/test level per the backlog gotcha — owner should click through a preview deploy (bell in rail + More, Cast & Crew tab, dashboard onboarding card, mobile tab-strip fade at 390px).
+
+---
+
 ## 2026-07-13 — UX Batch 2 (action safety) decisions
 
 **Decision:** Landed UX-backlog Batch 2 (S2, R1–R6) on `claude/ux-backlog-batch-2`. Calls made:

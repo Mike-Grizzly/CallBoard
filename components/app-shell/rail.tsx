@@ -9,13 +9,15 @@ import {
 import { getSignedLogoUrl } from "@/lib/workspace-logo";
 import { can } from "@/lib/permissions";
 import { Icon } from "@/components/ui/icon";
-import { NAV_ITEMS } from "./nav-items";
+import { navItemsFor } from "./nav-items";
 import { RailLink } from "./rail-link";
 import { LogoutButton } from "./logout-button";
 import { WorkspaceRailBadge } from "./workspace-rail-badge";
 import { ThemeControl } from "./theme-control";
 import { RailCollapseToggle } from "./rail-collapse-toggle";
+import { NotificationBell } from "./notification-bell";
 import { getThemePref } from "@/lib/theme-server";
+import { getUnreadNotificationCount } from "@/features/notifications/actions";
 
 function initialsFor(firstName: string, lastName: string, email: string) {
   const a = (firstName || "").trim()[0];
@@ -29,22 +31,19 @@ export async function Rail() {
   const role = user?.role ?? "cast";
   const themePref = await getThemePref();
 
-  const [productions, memberships, logoUrl, alertCounts] = user
+  const [productions, memberships, logoUrl, alertCounts, unreadCount] = user
     ? await Promise.all([
         getVisibleProductions(user),
         getUserMemberships(user.id),
         getSignedLogoUrl(user.organizationLogoUrl),
         getWorkspaceAlertCounts(user.id),
+        getUnreadNotificationCount(),
       ])
-    : [[], [], null, {}];
+    : [[], [], null, {}, 0];
 
-  // Workspace items follow NAV_ITEMS order, gated by capability.
-  // We exclude "Productions" since the productions section below covers it.
-  const workspaceItems = NAV_ITEMS.filter(
-    (item) =>
-      item.href !== "/productions" &&
-      (!item.capability || can(role, item.capability)),
-  );
+  // Workspace items in NAV_ITEMS order, gated by capability. Productions has
+  // its own section below, so it isn't in the "rail" surface (N4).
+  const workspaceItems = navItemsFor("rail", role);
 
   return (
     <aside className="rail" id="app-rail">
@@ -169,6 +168,7 @@ export async function Rail() {
                 {user.role}
               </span>
             </div>
+            <NotificationBell initialUnread={unreadCount} placement="up" />
             <ThemeControl variant="icon" initialPref={themePref} />
             <Link href="/settings" title="Settings" aria-label="Settings">
               <Icon name="Settings" className="ico" aria-hidden />

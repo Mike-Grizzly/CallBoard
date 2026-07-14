@@ -176,7 +176,7 @@ Free-text "7:00 PM" strings (`new-production-wizard.tsx:905-918`) while the call
 
 ## Phase N — Navigation & IA
 
-### N1 · Mount the notification bell — **P1 · S**
+### N1 · Mount the notification bell — **P1 · S** — ✅ DONE (claude/ux-backlog-batch-3, 2026-07-13; rail foot + mobile More header)
 `components/app-shell/notification-bell.tsx` is complete (loading/empty/populated, mark-read, per-row links) and referenced nowhere — confirm with grep before assuming it still works; it may have drifted since it was built. There is no persistent notification inbox in the shell. Mount it in the rail (`components/app-shell/rail.tsx` — the footer row next to `ThemeControl` is the natural spot) and surface an equivalent entry on mobile (e.g. dashboard header or the More page, `app/(app)/(default)/more/page.tsx`).
 **Accept:** unread notifications reachable from every app screen; mark-read works; count badge visible.
 **Security note:** bell queries are already per-user; mounting adds no new data exposure. Verify the dropdown links respect production access (they link to items the user was notified about, which are membership-gated at the target page anyway).
@@ -185,12 +185,12 @@ Free-text "7:00 PM" strings (`new-production-wizard.tsx:905-918`) while the call
 Production topbar renders a Search icon with no handler (`productions/[slug]/layout.tsx:245-252`). Remove it. If/when global search is wanted, spec it separately (ground rule 9 — new cross-tenant query surface needs its own authz design).
 **Accept:** no non-functional affordances in the topbar.
 
-### N3 · Promote Cast & Crew to a tab; give Blocking its own icon — **P1 · S**
+### N3 · Promote Cast & Crew to a tab; give Blocking its own icon — **P1 · S** — ✅ DONE (claude/ux-backlog-batch-3, 2026-07-13; Cast & Crew tab (canManage) after Overview, Blocking → Move icon, topbar button dropped)
 The drag-to-assign casting board (`/members`) is reachable only via a topbar button while ten lesser surfaces get tabs; Overview and Blocking share the same `Layout` icon (`layout.tsx:126-176`). Add Cast & Crew to the tab strip (keep the exact `canManage` gate it has today) and pick a distinct Blocking icon (e.g. Move/Map).
 **Accept:** Cast & Crew appears in the strip for managers only; no duplicate icons; tab count pressure acknowledged — consider dropping the separate topbar button.
 **Security note:** gating must remain `productions:manage` — promotion to a tab must not widen visibility.
 
-### N4 · Single source of truth for nav items — **P1 · M**
+### N4 · Single source of truth for nav items — **P1 · M** — ✅ DONE (claude/ux-backlog-batch-3, 2026-07-13; rail+more via navItemsFor(), dead Productions entry gone, per-role test; mobile tab bar left separate — see decision-log)
 Three hand-maintained lists with independently copied capability gating: `components/app-shell/nav-items.ts` (rail), `app/(app)/(default)/more/page.tsx` ITEMS, `components/app-shell/mobile-tab-bar.tsx` TABS. Also `NAV_ITEMS` carries a dead "Productions/Theater" entry that the rail filters out. Consolidate into one definition (label, href, icon, capability, surfaces) consumed by all three.
 **Accept:** adding/gating a nav item is a one-file change; dead entry removed; existing gating byte-identical (write a small test asserting each surface's rendered items per role).
 **Security note:** this is where gating could silently loosen — the per-role test is the guard.
@@ -206,7 +206,7 @@ Only one static crumb exists (`Productions › {title}`); deep pages like `calls
 ### N7 · Production switcher in the production topbar — **P2 · S**
 Switching shows requires exiting to the rail/index. Make the breadcrumb title a dropdown of the user's productions (same list the rail shows — reuse its gated query).
 
-### N8 · Onboarding dialog: stop interrupting existing users — **P1 · S**
+### N8 · Onboarding dialog: stop interrupting existing users — **P1 · S** — ✅ DONE (claude/ux-backlog-batch-3, 2026-07-13; modal only on first-run empty workspace, dismissible card on populated dashboard)
 `OnboardingDialog` fires whenever the user lacks notification prefs (`dashboard/page.tsx:532`) — including long-time users on populated dashboards. Fold notification prefs into the `/setup` wizard as a fourth optional card for new admins, and for existing users show a dismissible banner/card instead of a modal. Related known item: setup survey data is captured but unused (`open-questions.md` 2026-06-15) — if it stays unused, trim the survey to shorten setup.
 **Accept:** modal appears at most once, only in a first-run context; a "not now" never re-prompts on next login.
 
@@ -226,7 +226,7 @@ Marketing promises "file the report from the table, your laptop, or your phone i
 The parked issue (`open-questions.md`, Mobile/iOS): WebKit auto-zooms on <16px inputs at login and the zoom sticks after sign-in. Two clever fixes failed; the boring one hasn't been tried — floor the login/signup `.field` font-size at 16px so the zoom never triggers. `ZoomReset` can then be removed if verified.
 **Accept:** typing into login/signup on iOS Safari causes no layout zoom (on-device verify — add to tester guide).
 
-### B3 · Mobile tab-strip scroll affordance — **P2 · S**
+### B3 · Mobile tab-strip scroll affordance — **P2 · S** — ✅ DONE (claude/ux-backlog-batch-3, 2026-07-13; right-edge mask fade + peek padding)
 At ≤720px all ~10 production tabs become a horizontal scroller; trailing tabs (Blocking, Script, Settings) are invisible without scrolling and nothing hints there's more. Add an edge fade + partial-tab peek (ensure the strip never ends exactly at a tab boundary at common widths).
 **Accept:** at 390px it is visually obvious the strip scrolls.
 

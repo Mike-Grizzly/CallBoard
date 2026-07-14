@@ -6764,8 +6764,14 @@ select.pp-field {
     margin-left: calc(-1 * var(--pad-x));
     margin-right: calc(-1 * var(--pad-x));
     padding-left: var(--pad-x);
-    padding-right: var(--pad-x);
+    /* Extra right padding leaves a sliver of the next tab peeking past the
+       fade instead of the strip ending flush on a tab boundary (B3). */
+    padding-right: calc(var(--pad-x) + 24px);
     padding-bottom: 1px;
+    /* Fade the trailing edge so it's visually obvious the strip scrolls to
+       more tabs. Mask alpha only, so it works in every theme (B3). */
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent 100%);
   }
   .tabs::-webkit-scrollbar {
     display: none;
