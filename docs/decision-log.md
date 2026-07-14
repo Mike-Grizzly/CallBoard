@@ -2871,3 +2871,20 @@ Per-claim owner rulings (soften/remove vs. build-later):
 - **N6 (deep-route breadcrumbs):** chose the "extend the crumb" option over per-page back links. A single client component `<ProductionCrumbTail>` derives tab + sub-segment crumbs from the pathname, so every deep production route (down to `calls/templates/[id]/edit`) gains positional context and a one-click path back to the parent list, without touching each deep page. Dynamic id segments (report/call/template ids) are intentionally skipped as crumbs — they have no human-readable label — while still threading the cumulative href so the next crumb links correctly.
 
 **Impact:** `app/(app)/(default)/settings/page.tsx`, `app/(app)/productions/[slug]/layout.tsx`, new `components/app-shell/production-crumb-tail.tsx`, `app/globals.css` (new `.more-item-main`/`.more-item-sub`/`.settings-*` classes, `.crumbs { flex-wrap: wrap }`). No server-action / permission / tenancy / storage / proxy change — the Workspace section keeps its `settings:manage` gate and the switcher still calls the already-gated `switchOrganization`. `tsc` + `eslint` (0 errors) + 185 tests + `next build` (86 pages) green. Both surfaces are `(app)`-only (no DB render in the sandbox), so verified via the compiled-CSS static harness: switcher hidden at 1440px, visible + crumb wrapping at ≤720px.
+
+---
+
+## 2026-07-14 — UX Backlog Batch 8: shared Drawer primitive with single-source motion (S1, start)
+
+**Decision:** Began the S1 shared-`<Drawer>` series on `claude/ux-backlog-batch-8`. Built the primitive and migrated one drawer (trash-drawer); the remaining four migrate one-per-PR per the backlog.
+
+**Why the motion is centralised (owner's explicit requirement):** the owner asked that changing drawer behaviour — open/close speed, animation snap, etc. — propagate to *all* drawers from one place. The design guarantees that:
+- **Duration** is defined once in `components/ui/drawer/drawer.constants.ts` (`DRAWER_DURATION_MS`). `<Drawer>` injects it as the `--drawer-dur` CSS custom property, so the CSS transition and the JS unmount delay (how long the panel stays mounted to play its exit) are driven by the same number and cannot drift.
+- **Everything else** — easing/snap curve (`--drawer-ease`), backdrop tint + fade (`--drawer-scrim-*`), desktop width (`--drawer-width`), bottom-sheet height (`--drawer-sheet-max-h`) — are CSS variables in one labelled block in `components/ui/drawer/drawer.css`.
+- Per-drawer files carry only *content* styling, never motion. So "make all drawers close 40ms faster with a softer ease" is a one/two-line edit in these two files.
+
+**Primitive scope:** `<Drawer>` owns portal, backdrop, Escape, body-scroll lock, focus trap + focus return (reuses S4's `useFocusTrap`), the enter/exit slide, and a ≤720px bottom-sheet mode (matching the call tray). Props: `open`, `onClose`, `side`, `width`, `mobileSheet`, `ariaLabel`/`ariaLabelledby`, `dismissible`. Keep `<Drawer>` mounted (don't wrap in `{open && …}`) so the exit animation can play.
+
+**First migration:** `trash-drawer.tsx` — dropped its hand-rolled portal/backdrop/Escape/`anim-in` shell for `<Drawer>`, and in doing so gained the focus trap it lacked (advances S4) and a mobile bottom-sheet. The `ConfirmDialog` purge flow and the reload/restore logic are unchanged.
+
+**Impact:** new `components/ui/drawer/{drawer.tsx,drawer.css,drawer.constants.ts}`, edited `app/(app)/productions/[slug]/trash-drawer.tsx`. No server-action / permission / tenancy / storage / proxy change — pure client UI. `tsc` + `eslint` (0 errors) + 185 tests + `next build` (86 pages) green; verified via the compiled-CSS harness (480px right panel at 1440px; full-width bottom sheet at ≤720px). Remaining drawers (person/announcement/event/document) tracked in the S1 row of `ux-backlog.md`.

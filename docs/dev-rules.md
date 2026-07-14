@@ -38,6 +38,7 @@ Ratchet rules: they apply to code you touch, never as standalone mass-migrations
 - When shared primitives exist (`ConfirmDialog` today; `Drawer`/`EmptyState`/toast as ux-backlog S1–S3 land), use them instead of rolling a new variant
 - New component CSS goes in a co-located file, not appended to `globals.css`; when substantially reworking a surface, consider moving its namespace block (`pp-*`, `ann-*`, `cc-*`, …) out of `globals.css` with it
 - Any new overlay (modal/drawer/popover) handles Escape, backdrop click, focus trap, and focus return
+- Drawers render through the shared `<Drawer>` primitive (`components/ui/drawer/`) — it already provides all of the above plus the mobile bottom-sheet. Never hand-roll a portal/backdrop/slide; do not add per-drawer animation timing. All drawer motion is centralised (`DRAWER_DURATION_MS` + `drawer.css` vars) so it can be retuned for every drawer at once — keep it that way
 
 ## Claude Code operating rules
 

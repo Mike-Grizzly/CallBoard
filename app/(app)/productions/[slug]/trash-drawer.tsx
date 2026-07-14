@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition, useCallback, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState, useTransition, useCallback } from "react";
 import { Trash2, X, RotateCcw, FileText, File, AlertTriangle } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Drawer } from "@/components/ui/drawer/drawer";
 import { useRouter } from "next/navigation";
 import {
   restoreDocument,
@@ -73,15 +73,6 @@ export function TrashDrawer({ productionId, initialTrashCount }: Props) {
     if (!loaded) reload();
   }
 
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
-
   function handleRestore(type: "doc" | "report", id: string) {
     const formData = new FormData();
     formData.set(type === "doc" ? "document_id" : "report_id", id);
@@ -136,143 +127,115 @@ export function TrashDrawer({ productionId, initialTrashCount }: Props) {
         )}
       </button>
 
-      {open &&
-        createPortal(
-          <>
-            {/* Backdrop */}
-            <div
-              onClick={() => setOpen(false)}
-              style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 200,
-                background: "rgba(0,0,0,0.35)",
-              }}
-            />
+      <Drawer
+        open={open}
+        onClose={() => setOpen(false)}
+        ariaLabelledby="trash-drawer-title"
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border)",
+            flexShrink: 0,
+          }}
+        >
+          <Trash2 size={16} style={{ color: "var(--ink-3)" }} />
+          <div style={{ flex: 1 }}>
+            <div id="trash-drawer-title" style={{ fontSize: 14, fontWeight: 600 }}>
+              Recently Deleted
+            </div>
+            <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 2 }}>
+              Items are permanently removed after 30 days
+            </div>
+          </div>
+          <button
+            className="btn ghost btn-icon"
+            onClick={() => setOpen(false)}
+            title="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
 
-            {/* Drawer */}
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {!loaded ? (
             <div
-              className="anim-in"
               style={{
-                position: "fixed",
-                top: 0,
-                right: 0,
-                bottom: 0,
-                width: "min(480px, 92vw)",
-                zIndex: 201,
-                background: "var(--bg-elev)",
-                boxShadow: "-8px 0 40px rgba(0,0,0,.18)",
-                display: "flex",
-                flexDirection: "column",
+                padding: 40,
+                textAlign: "center",
+                color: "var(--ink-4)",
+                fontSize: 13,
               }}
             >
-              {/* Header */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "16px 20px",
-                  borderBottom: "1px solid var(--border)",
-                  flexShrink: 0,
-                }}
-              >
-                <Trash2 size={16} style={{ color: "var(--ink-3)" }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>
-                    Recently Deleted
-                  </div>
-                  <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 2 }}>
-                    Items are permanently removed after 30 days
-                  </div>
-                </div>
-                <button
-                  className="btn ghost btn-icon"
-                  onClick={() => setOpen(false)}
-                  title="Close"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              {/* Body */}
-              <div style={{ flex: 1, overflowY: "auto" }}>
-                {!loaded ? (
-                  <div
-                    style={{
-                      padding: 40,
-                      textAlign: "center",
-                      color: "var(--ink-4)",
-                      fontSize: 13,
-                    }}
-                  >
-                    Loading…
-                  </div>
-                ) : trashCount === 0 ? (
-                  <div
-                    style={{
-                      padding: "56px 32px",
-                      textAlign: "center",
-                      color: "var(--ink-4)",
-                      fontSize: 13,
-                    }}
-                  >
-                    <Trash2
-                      size={40}
-                      strokeWidth={1.2}
-                      style={{ margin: "0 auto 12px", display: "block" }}
-                    />
-                    Trash is empty
-                  </div>
-                ) : (
-                  <>
-                    {docs.length > 0 && (
-                      <Section title="Documents">
-                        {docs.map((d) => (
-                          <TrashItem
-                            key={d.id}
-                            icon={<File size={15} strokeWidth={1.5} />}
-                            name={d.title}
-                            meta={d.folderName ?? "No folder"}
-                            deletedAt={d.deletedAt}
-                            isPending={isPending}
-                            onRestore={() => handleRestore("doc", d.id)}
-                            onPermanentDelete={() =>
-                              handlePermanentDelete("doc", d.id)
-                            }
-                          />
-                        ))}
-                      </Section>
-                    )}
-                    {reports.length > 0 && (
-                      <Section title="Rehearsal Reports">
-                        {reports.map((r) => (
-                          <TrashItem
-                            key={r.id}
-                            icon={<FileText size={15} strokeWidth={1.5} />}
-                            name={
-                              r.reportNumber
-                                ? `Report #${r.reportNumber}`
-                                : `Report — ${r.reportDate}`
-                            }
-                            meta={r.reportDate}
-                            deletedAt={r.deletedAt}
-                            isPending={isPending}
-                            onRestore={() => handleRestore("report", r.id)}
-                            onPermanentDelete={() =>
-                              handlePermanentDelete("report", r.id)
-                            }
-                          />
-                        ))}
-                      </Section>
-                    )}
-                  </>
-                )}
-              </div>
+              Loading…
             </div>
-          </>,
-          document.body,
-        )}
+          ) : trashCount === 0 ? (
+            <div
+              style={{
+                padding: "56px 32px",
+                textAlign: "center",
+                color: "var(--ink-4)",
+                fontSize: 13,
+              }}
+            >
+              <Trash2
+                size={40}
+                strokeWidth={1.2}
+                style={{ margin: "0 auto 12px", display: "block" }}
+              />
+              Trash is empty
+            </div>
+          ) : (
+            <>
+              {docs.length > 0 && (
+                <Section title="Documents">
+                  {docs.map((d) => (
+                    <TrashItem
+                      key={d.id}
+                      icon={<File size={15} strokeWidth={1.5} />}
+                      name={d.title}
+                      meta={d.folderName ?? "No folder"}
+                      deletedAt={d.deletedAt}
+                      isPending={isPending}
+                      onRestore={() => handleRestore("doc", d.id)}
+                      onPermanentDelete={() =>
+                        handlePermanentDelete("doc", d.id)
+                      }
+                    />
+                  ))}
+                </Section>
+              )}
+              {reports.length > 0 && (
+                <Section title="Rehearsal Reports">
+                  {reports.map((r) => (
+                    <TrashItem
+                      key={r.id}
+                      icon={<FileText size={15} strokeWidth={1.5} />}
+                      name={
+                        r.reportNumber
+                          ? `Report #${r.reportNumber}`
+                          : `Report — ${r.reportDate}`
+                      }
+                      meta={r.reportDate}
+                      deletedAt={r.deletedAt}
+                      isPending={isPending}
+                      onRestore={() => handleRestore("report", r.id)}
+                      onPermanentDelete={() =>
+                        handlePermanentDelete("report", r.id)
+                      }
+                    />
+                  ))}
+                </Section>
+              )}
+            </>
+          )}
+        </div>
+      </Drawer>
       <ConfirmDialog
         open={confirmPurge !== null}
         title="Permanently delete?"
