@@ -7,6 +7,7 @@ import { requireCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { getProductionBySlug, getVisibleProductions } from "@/features/productions/queries";
 import { ProductionSwitcher } from "@/components/app-shell/production-switcher";
+import { ProductionCrumbTail } from "@/components/app-shell/production-crumb-tail";
 import {
   getProductionMembers,
   getProductionMembership,
@@ -208,6 +209,7 @@ export default async function ProductionLayout({
               slug: p.slug,
             }))}
           />
+          <ProductionCrumbTail slug={slug} />
         </div>
 
         <div className="topbar-row">
