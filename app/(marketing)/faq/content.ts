@@ -31,7 +31,7 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
       },
       {
         q: "Do I need to install anything?",
-        a: "No. Proscene runs in any browser, and the company installs the mobile app from the App Store or Google Play. Nothing to maintain, nothing to update.",
+        a: "No. Proscene runs in any browser. On a phone, add it to your home screen (Share → Add to Home Screen) and it launches full-screen like an app — no App Store download, nothing to maintain or update. Dedicated iOS and Android apps are on the roadmap.",
       },
       {
         q: "Can I import a cast list from a spreadsheet?",
@@ -39,7 +39,7 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
       },
       {
         q: "What if my actors aren't tech people?",
-        a: "They tap one link to join and see exactly one thing: tonight's call and this week's schedule. There's nothing to learn. Confirming a call is a single button, and reminders arrive by text and push.",
+        a: "They tap one link to join and see exactly one thing: tonight's call and this week's schedule. There's nothing to learn. Confirming a call is a single button, and push notifications reach them the moment an announcement or an @mention is meant for them.",
       },
     ],
   },
@@ -84,8 +84,8 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
         a: "It supports the shorthand you already use, and expands it into plain language for anyone reading the book later. Moves pin to the exact line, so a cross is never floating in the margin.",
       },
       {
-        q: "Can I export reports as PDF?",
-        a: "Every report exports to a clean, printable PDF, and can be emailed straight from Proscene to the right departments. Running times and breaks are tracked automatically.",
+        q: "How do rehearsal reports get out?",
+        a: "Proscene formats the report and distributes it by email straight to the right departments — pick the recipients and send. Running times and breaks are tracked automatically. (A dedicated PDF export for reports is on the roadmap; the script and blocking tools already export to PDF today.)",
       },
     ],
   },
@@ -119,7 +119,7 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
     items: [
       {
         q: "Who owns the data in my productions?",
-        a: "You do. We never sell data or use it to train anything. Export your full production: schedule, reports, contacts, to PDF and CSV whenever you like.",
+        a: "You do. We never sell your data or use it to train anything, and a closed show stays yours to revisit, export, or reopen for a remount.",
       },
       {
         q: "Is the company's contact info kept private?",

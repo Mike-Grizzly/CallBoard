@@ -69,10 +69,10 @@ export const PRICING_COMPANIES_REST_HTML = `
         <div class="inc-grid">
           <div>${TICK} Script &amp; scene breakdown</div>
           <div>${TICK} Blocking &amp; ground plans</div>
-          <div>${TICK} Auto reports &amp; PDF export</div>
+          <div>${TICK} Auto reports &amp; email distribution</div>
           <div>${TICK} Calls, calendar &amp; confirmations</div>
           <div>${TICK} Document &amp; media library</div>
-          <div>${TICK} AI script setup &amp; mobile app</div>
+          <div>${TICK} AI script setup &amp; installable web app</div>
         </div>
       </div>
 
@@ -91,9 +91,9 @@ export const PRICING_COMPANIES_REST_HTML = `
             <tr><td>Calls, calendar &amp; confirmations</td>${YES}${YES}${YES}${YES}</tr>
             <tr><td>Script &amp; AI script setup</td>${NO}${YES}${YES}${YES}</tr>
             <tr><td>Blocking &amp; ground plans</td>${NO}${YES}${YES}${YES}</tr>
-            <tr><td>Auto reports &amp; PDF export</td>${NO}${YES}${YES}${YES}</tr>
+            <tr><td>Auto reports &amp; email distribution</td>${NO}${YES}${YES}${YES}</tr>
             <tr><td>Document &amp; media library</td>${NO}${YES}${YES}${YES}</tr>
-            <tr><td>Mobile app</td>${YES}${YES}${YES}${YES}</tr>
+            <tr><td>Installable web app</td>${YES}${YES}${YES}${YES}</tr>
             <tr class="grouphd"><td colspan="5">Company &amp; support</td></tr>
             <tr><td>Custom branding</td>${NO}${NO}${NO}${YES}</tr>
             <tr><td>Support</td>${NO}<td>Standard</td><td>Email</td><td>Priority</td></tr>
@@ -128,7 +128,7 @@ const PRICING_COMPANIES_TIERS_HTML = `
           <ul class="tier-list">
             <li>${TICK} The complete toolset</li>
             <li>${TICK} Unlimited cast &amp; crew</li>
-            <li>${TICK} Mobile app for the company</li>
+            <li>${TICK} Installable web app for the company</li>
           </ul>
         </div>
         <div class="tier" data-feat>

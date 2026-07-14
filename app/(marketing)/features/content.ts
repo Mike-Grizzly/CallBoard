@@ -117,7 +117,7 @@ export const FEATURES_HTML = `
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Cast, scenes, and bookmarks proposed from the real script</li>
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Scanned or photographed scripts read too, page by page</li>
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Refine in plain English: "songs are misnumbered after p.30"</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> A licensed show parsed once is instant, and free, for the next company</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Parse once, then everyone in the company opens the same script — each with their own private markup</li>
           </ul>
           <div class="ai-note">
             <span class="pill" data-c="plum"><span class="dot"></span>Beta soon</span>
@@ -228,10 +228,10 @@ export const FEATURES_HTML = `
           <div class="aud-copy" data-seg="cast">
             <span class="pill" data-c="accent"><span class="dot"></span>Stage Management</span>
             <h2 class="title" style="margin:16px 0 16px">Run the whole room from <em>one</em> command center.</h2>
-            <p class="lede" style="margin-bottom:22px">Proscene was born at the SM's table. Send calls, take blocking, log notes, and file the report from a single home screen, with the conflict flags and live confirmations that keep a show on its feet.</p>
+            <p class="lede" style="margin-bottom:22px">Proscene was born at the SM's table. Send calls, take blocking, log notes, and file the report from a single home screen, with the live call confirmations that keep a show on its feet.</p>
             <ul class="checklist">
               <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> One command center: calls, calendar, script, blocking, reports</li>
-              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Live confirmations and conflict flags as the room runs</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Live call confirmations and read receipts as the room runs</li>
               <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> File the daily report before the company's left the lobby</li>
             </ul>
           </div>
@@ -240,7 +240,7 @@ export const FEATURES_HTML = `
           <div class="panel">
             <div class="panel-row panel-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 11h6M9 15h4"/></svg> Command center · Pirates · Wk 4</div>
             <div class="panel-row"><span class="pill" data-c="accent"><span class="dot"></span>Calls</span><span class="lead"><b>Tonight's call sent</b><span>Act II Stumble · 22 called</span></span><span class="pill" data-c="sage"><span class="dot"></span>18/22 in</span></div>
-            <div class="panel-row"><span class="pill" data-c="dusk"><span class="dot"></span>Cal</span><span class="lead"><b>3 conflicts flagged</b><span>Thu 19:00 to 18:00 resolved</span></span><span class="pill" data-c="sage"><span class="dot"></span>Clear</span></div>
+            <div class="panel-row"><span class="pill" data-c="dusk"><span class="dot"></span>Cal</span><span class="lead"><b>Thu music call · 18:00</b><span>Principals called · confirmations in</span></span><span class="pill" data-c="sage"><span class="dot"></span>20/22</span></div>
             <div class="panel-row"><span class="pill" data-c="amber"><span class="dot"></span>Rpt</span><span class="lead"><b>Rehearsal Report #24</b><span>Routed to 5 departments</span></span><span class="pill" data-c="sage"><span class="dot"></span>Sent</span></div>
             <div class="panel-row"><span class="pill" data-c="clay"><span class="dot"></span>Blk</span><span class="lead"><b>Blocking saved</b><span>Act II Sc. 1 · pinned to p.42</span></span><span class="panel-time">9:48</span></div>
           </div>
@@ -302,21 +302,21 @@ export const FEATURES_HTML = `
           <div class="aud-copy" data-seg="cast">
             <span class="pill" data-c="dusk"><span class="dot"></span>Calendar</span>
             <h2 class="title" style="margin:16px 0 16px">Know exactly when you're <em>called.</em></h2>
-            <p class="lede" style="margin-bottom:22px">Your personal calendar shows only your calls, rehearsals, fittings, and performances, synced to the phone you already use. Something moves, you'll know before you leave the house.</p>
+            <p class="lede" style="margin-bottom:22px">Your personal calendar shows only your calls, rehearsals, fittings, and performances, on the phone you already use. Something moves, and it's the current time you see — never last week's.</p>
             <ul class="checklist">
               <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> A personal calendar of just your calls</li>
-              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Subscribe from Google, Apple, or Outlook</li>
-              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Instant notice the moment a time moves</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Month, week, day, and agenda views</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> One-tap confirm so your SM knows you've seen it</li>
             </ul>
           </div>
           <div class="aud-copy" data-seg="creative">
             <span class="pill" data-c="dusk"><span class="dot"></span>Calendar</span>
             <h2 class="title" style="margin:16px 0 16px">Plan around the <em>whole company.</em></h2>
-            <p class="lede" style="margin-bottom:22px">Lay out rehearsals, music calls, fittings, and performances in one timeline, with conflict detection across the entire cast before you commit a room or a date.</p>
+            <p class="lede" style="margin-bottom:22px">Lay out rehearsals, music calls, fittings, and performances for the whole company in one timeline, colour-coded by show so overlapping productions stay legible.</p>
             <ul class="checklist">
-              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> The full company's availability in one view</li>
-              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Conflict detection across the cast</li>
-              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Drag-to-reschedule with instant notify</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Every production's calls in a single timeline</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Call by scene, role, or department — Proscene works out who's needed</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Generate a recurring schedule, skipping known clashes</li>
             </ul>
           </div>
         </div>
@@ -326,7 +326,7 @@ export const FEATURES_HTML = `
             <div class="panel-row"><span class="pill" data-c="accent"><span class="dot"></span>Mon</span><span class="lead"><b>Act I, Run</b><span>Full company</span></span><span class="panel-time">18:30</span></div>
             <div class="panel-row"><span class="pill" data-c="dusk"><span class="dot"></span>Tue</span><span class="lead"><b>Patter songs</b><span>Principals</span></span><span class="panel-time">19:00</span></div>
             <div class="panel-row"><span class="pill" data-c="amber"><span class="dot"></span>Wed</span><span class="lead"><b>Fittings</b><span>Ensemble A</span></span><span class="panel-time">17:00</span></div>
-            <div class="panel-row cal-target"><span class="pill" data-c="sage"><span class="dot"></span>Thu</span><span class="lead"><b>Act II, Stumble</b><span>Full company</span></span><span class="cal-meta"><span class="cal-flag"><span class="cal-flag-bad">3 conflicts</span><span class="cal-flag-ok"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> clear</span></span><span class="panel-time cal-time"><span class="ct-old">19:00</span><span class="ct-new">18:00</span></span></span></div>
+            <div class="panel-row cal-target"><span class="pill" data-c="sage"><span class="dot"></span>Thu</span><span class="lead"><b>Act II, Stumble</b><span>Full company</span></span><span class="cal-meta"><span class="cal-flag"><span class="cal-flag-bad">clash check</span><span class="cal-flag-ok"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> clear</span></span><span class="panel-time cal-time"><span class="ct-old">19:00</span><span class="ct-new">18:00</span></span></span></div>
             <div class="cal-toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg> <span><b>22 company calendars</b> updated · just now</span></div>
             <span class="demo-cursor"></span>
           </div>
@@ -455,7 +455,7 @@ export const FEATURES_HTML = `
             <ul class="checklist">
               <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Rehearsal, performance &amp; production templates</li>
               <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Running time and break tracking</li>
-              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Export to PDF or send straight to inboxes</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Distributed straight to the right departments' inboxes</li>
             </ul>
           </div>
         </div>
@@ -493,7 +493,7 @@ export const FEATURES_HTML = `
             <p class="lede" style="margin-bottom:22px">One contact sheet with permissions that fit each role, principals see calls, designers see notes, and no one sees more than they should.</p>
             <ul class="checklist">
               <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Role-based access for every department</li>
-              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Emergency contacts &amp; conflict calendars</li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Emergency contacts, visible only to stage management</li>
               <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Reuse your company across every show</li>
             </ul>
           </div>
@@ -531,8 +531,8 @@ export const FEATURES_HTML = `
         </div>
         <div class="night-card card-pad">
           <div class="feature-ico" style="background:color-mix(in oklch,var(--accent) 26%,var(--night));color:color-mix(in oklch,var(--accent) 70%,white)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 9 16l10-9"/><circle cx="12" cy="12" r="10"/></svg></div>
-          <h3 style="font-family:var(--font-display);font-size:20px;font-weight:600;margin-bottom:8px;color:var(--night-ink)">Works offline</h3>
-          <p style="color:var(--night-ink-2);font-size:15px">Dressing-room dead-zone? The call's already on the device.</p>
+          <h3 style="font-family:var(--font-display);font-size:20px;font-weight:600;margin-bottom:8px;color:var(--night-ink)">Installs like an app</h3>
+          <p style="color:var(--night-ink-2);font-size:15px">Add Proscene to your home screen and it opens full-screen, no App Store trip required.</p>
         </div>
       </div>
     </div>
