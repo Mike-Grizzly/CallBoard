@@ -608,6 +608,7 @@ body[data-theme="dusk"] .brand-badge.is-dark {
 .crumbs {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   font-size: 12.5px;
   color: var(--ink-3);
@@ -6982,6 +6983,18 @@ select.pp-field {
 .more-item-label {
   font-size: 14px;
 }
+/* Stacked label + hint variant used by the settings hub (N5). */
+.more-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.more-item-sub {
+  font-size: 12px;
+  color: var(--ink-4);
+  line-height: 1.35;
+}
 .more-item-trail {
   font-size: 11.5px;
   color: var(--ink-4);
@@ -7007,6 +7020,43 @@ select.pp-field {
   font-weight: 600;
   line-height: 1;
 }
+/* N5 — settings hub sections. Each group gets a short description; the
+   workspace switcher is duplicated by the rail badge on desktop, so it only
+   shows at phone widths where the rail is hidden. */
+.settings-sec-desc {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin: 3px 0 12px;
+  line-height: 1.4;
+}
+.settings-appearance {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.settings-crosslink {
+  margin: 12px 2px 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+.settings-crosslink a {
+  color: var(--accent-strong);
+  font-weight: 500;
+  text-decoration: none;
+}
+.settings-crosslink a:hover {
+  text-decoration: underline;
+}
+.settings-ws-switch {
+  display: none;
+}
+@media (max-width: 720px) {
+  .settings-ws-switch {
+    display: block;
+  }
+}
+
 .more-logout {
   margin-top: 20px;
   display: flex;

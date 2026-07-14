@@ -198,13 +198,15 @@ Three hand-maintained lists with independently copied capability gating: `compon
 **Accept:** adding/gating a nav item is a one-file change; dead entry removed; existing gating byte-identical (write a small test asserting each surface's rendered items per role).
 **Security note:** this is where gating could silently loosen — the per-role test is the guard.
 
-### N5 · Settings hub cleanup — **P2 · M**
+### N5 · Settings hub cleanup — **P2 · M** — ✅ DONE (claude/ux-backlog-batch-1-ig6614, 2026-07-14)
 `/settings` mixes org identity, a duplicate org switcher (the rail badge already switches orgs), theme, and links to account/workspace/notifications/billing/members; production settings live in a separate tree. Minimum: remove the duplicate switcher, group the hub into Account / Workspace / Notifications sections with descriptions, and cross-link production settings.
 **Accept:** one org-switcher surface on desktop (rail); hub reads as a directory, not a junk drawer.
+**Shipped:** the flat card + junk-drawer link list is now grouped into labelled sections — **Account** (profile & password + the theme control), **Notifications** (preferences), **Workspace** (settings / members / billing, managers only), and **Help** (feedback) — each with a one-line description and stacked label+hint rows (`.more-item-main`/`.more-item-sub`). The Workspace section cross-links per-show settings ("Departments, roles, and scenes live on each production's Settings tab"). The duplicate org switcher is now **mobile-only** (`.settings-ws-switch`, `display:none` above 720px): the desktop rail badge is the single switcher, but the rail is hidden on phones, so keeping the settings switcher there is the only mobile switch path — verified hidden at 1440px, visible at ≤720px.
 
-### N6 · Breadcrumbs / back affordance for deep routes — **P2 · M**
+### N6 · Breadcrumbs / back affordance for deep routes — **P2 · M** — ✅ DONE (claude/ux-backlog-batch-1-ig6614, 2026-07-14)
 Only one static crumb exists (`Productions › {title}`); deep pages like `calls/templates/[id]/edit` (5 levels) give no positional context. Extend the crumb to include tab + subpage, or add a consistent back link on subpages.
 **Accept:** from any depth, one visible click returns to the parent list.
+**Shipped:** `<ProductionCrumbTail>` (`components/app-shell/production-crumb-tail.tsx`), a client component mounted in the production layout crumb bar, reads the pathname and appends the tab and any recognised sub-segments as links, with the leaf as plain `aria-current` text — e.g. from a template edit the crumb now reads `Productions › {show} › Rehearsal Schedule › Templates › Edit`, so one click on any earlier crumb returns to that list. Tab labels mirror the tab strip; dynamic id segments (report/call/template ids) carry no human label and are skipped as crumbs while still threading the cumulative href. `.crumbs` gained `flex-wrap: wrap` so deep trails wrap cleanly on phones (screenshot-verified at 1440px and ≤720px).
 
 ### N7 · Production switcher in the production topbar — **P2 · S** — ✅ DONE (claude/ux-backlog-batch-5, 2026-07-14)
 Switching shows requires exiting to the rail/index. Make the breadcrumb title a dropdown of the user's productions (same list the rail shows — reuse its gated query).

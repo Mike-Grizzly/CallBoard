@@ -2860,3 +2860,14 @@ Per-claim owner rulings (soften/remove vs. build-later):
 **Future features to spec later (owner-desired, logged in `open-questions.md`):** per-show conflict/clash detection when casting; automated **email reminders before events/rehearsals** (owner: "would be nice"); drag-to-reschedule; iCal subscribe; a report PDF export; native iOS/Android apps.
 
 **Impact:** Marketing copy only (`home-content.ts`, `features/content.ts`, `faq/content.ts`, `pricing/content.ts`, `_components/footer.tsx`). No app/server/permission/schema change. `tsc` + `eslint` + 185 tests + `next build` green; home/features/pricing/FAQ screenshot-verified.
+
+---
+
+## 2026-07-14 — UX Backlog Batch 7: settings hub + deep-route breadcrumbs (N5, N6)
+
+**Decision:** Shipped the two IA tasks (N5, N6) held back from Batches 5/6 as their own PR on `claude/ux-backlog-batch-1-ig6614`.
+
+- **N5 (settings hub):** the flat identity-card + junk-drawer link list became labelled sections (Account / Notifications / Workspace / Help), each with a description and stacked label+hint rows, plus a cross-link to per-show settings. The org switcher that duplicated the desktop rail badge is now **mobile-only** — `.settings-ws-switch` is `display:none` above 720px. Rationale: the desktop rail badge is the single switcher, but the rail is hidden at ≤720px (bottom tab bar takes over), so the settings-page switcher is the **only** workspace-switch path on phones — deleting it outright would strand multi-workspace mobile users. Hiding it on desktop satisfies the N5 acceptance ("one org-switcher surface on desktop") without that regression.
+- **N6 (deep-route breadcrumbs):** chose the "extend the crumb" option over per-page back links. A single client component `<ProductionCrumbTail>` derives tab + sub-segment crumbs from the pathname, so every deep production route (down to `calls/templates/[id]/edit`) gains positional context and a one-click path back to the parent list, without touching each deep page. Dynamic id segments (report/call/template ids) are intentionally skipped as crumbs — they have no human-readable label — while still threading the cumulative href so the next crumb links correctly.
+
+**Impact:** `app/(app)/(default)/settings/page.tsx`, `app/(app)/productions/[slug]/layout.tsx`, new `components/app-shell/production-crumb-tail.tsx`, `app/globals.css` (new `.more-item-main`/`.more-item-sub`/`.settings-*` classes, `.crumbs { flex-wrap: wrap }`). No server-action / permission / tenancy / storage / proxy change — the Workspace section keeps its `settings:manage` gate and the switcher still calls the already-gated `switchOrganization`. `tsc` + `eslint` (0 errors) + 185 tests + `next build` (86 pages) green. Both surfaces are `(app)`-only (no DB render in the sandbox), so verified via the compiled-CSS static harness: switcher hidden at 1440px, visible + crumb wrapping at ≤720px.
