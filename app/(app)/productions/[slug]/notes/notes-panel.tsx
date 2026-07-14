@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useTransition, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Pin,
   Trash2,
@@ -360,8 +361,10 @@ function NoteEditor({
     scheduleSave({ dueDate: val || null });
   }
 
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
   async function handleDelete() {
-    if (!confirm("Delete this note?")) return;
+    setConfirmingDelete(false);
     await deleteNote(note.id, productionSlug);
     onNoteUpdated({ id: note.id, _deleted: true } as never);
     onClose();
@@ -535,7 +538,7 @@ function NoteEditor({
               <button
                 type="button"
                 className="note-prop-ico"
-                onClick={handleDelete}
+                onClick={() => setConfirmingDelete(true)}
                 title="Delete note"
               >
                 <Trash2 style={{ width: 15, height: 15 }} />
@@ -595,6 +598,16 @@ function NoteEditor({
           })}
         </span>
       </div>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="Delete note?"
+        message="This note will be deleted for everyone on the production."
+        confirmLabel="Delete note"
+        danger
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </div>
   );
 }
@@ -690,6 +703,7 @@ function TagManager({
   const [color, setColor] = useState<string>(TAG_COLOR_OPTIONS[0]);
   const [error, setError] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [confirmTag, setConfirmTag] = useState<{ id: string; name: string } | null>(null);
   const [, startTransition] = useTransition();
 
   // Standard mount flag so the portal only renders client-side (avoids an
@@ -715,6 +729,7 @@ function TagManager({
   }
 
   function handleRemove(tagId: string) {
+    setConfirmTag(null);
     startTransition(async () => {
       await deleteNoteTag(tagId, organizationId);
       onTagRemoved(tagId);
@@ -780,7 +795,7 @@ function TagManager({
               </div>
               <button
                 type="button"
-                onClick={() => handleRemove(tag.id)}
+                onClick={() => setConfirmTag({ id: tag.id, name: tag.name })}
                 className="btn ghost btn-icon"
                 style={{ width: 24, height: 24, color: "var(--ink-4)" }}
               >
@@ -835,6 +850,20 @@ function TagManager({
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmTag !== null}
+        title="Delete tag?"
+        message={
+          confirmTag
+            ? `"${confirmTag.name}" will be removed from every note that uses it, across all productions in this workspace.`
+            : ""
+        }
+        confirmLabel="Delete tag"
+        danger
+        onConfirm={() => confirmTag && handleRemove(confirmTag.id)}
+        onCancel={() => setConfirmTag(null)}
+      />
     </div>,
     document.body,
   );

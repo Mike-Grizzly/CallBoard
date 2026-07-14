@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { uploadFileToSignedUrl } from "@/lib/storage-upload";
 import {
   finalizeWorkspaceLogoUpload,
@@ -51,6 +52,7 @@ export function WorkspaceLogoUploader({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -111,8 +113,10 @@ export function WorkspaceLogoUploader({
     e.target.value = "";
   };
 
-  const onRemove = () => {
-    if (!window.confirm("Remove the workspace logo?")) return;
+  const onRemove = () => setConfirmingRemove(true);
+
+  const doRemove = () => {
+    setConfirmingRemove(false);
     setError(null);
     setSuccess(false);
     startTransition(async () => {
@@ -210,6 +214,17 @@ export function WorkspaceLogoUploader({
         accept={ACCEPT}
         onChange={onChange}
         style={{ display: "none" }}
+      />
+
+      <ConfirmDialog
+        open={confirmingRemove}
+        title="Remove workspace logo?"
+        message="The workspace will go back to showing its initial in the rail and on reports."
+        confirmLabel="Remove logo"
+        danger
+        busy={pending}
+        onConfirm={doRemove}
+        onCancel={() => setConfirmingRemove(false)}
       />
     </div>
   );

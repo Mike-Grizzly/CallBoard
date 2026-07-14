@@ -2793,3 +2793,16 @@ drafts (correct block/table/code counts, header rows, links, preserved code).
 - **B3:** Right-edge `mask-image` fade + extra right padding on the mobile `.tabs` scroller — CSS-only, no DOM change.
 
 **Impact:** IA/nav only. No server action, permission, storage, or proxy changes; the one place gating could silently loosen (N4) is covered by the per-role test. `tsc` + `eslint` (0 errors) + 185 tests + `next build` green. **Verification note:** these are auth-gated `(app)` surfaces that don't render in the DATABASE_URL-less sandbox, so verification is code/type/build/test level per the backlog gotcha — owner should click through a preview deploy (bell in rail + More, Cast & Crew tab, dashboard onboarding card, mobile tab-strip fade at 390px).
+
+---
+
+## 2026-07-13 — UX Batch 2 (action safety) decisions
+
+**Decision:** Landed UX-backlog Batch 2 (S2, R1–R6) on `claude/ux-backlog-batch-2`. Calls made:
+
+- **R3 (recipient default):** Owner chose **option (b)** — the report email picker now pre-selects the production team (every member whose production role isn't `cast`) instead of the entire company, with the existing "Entire production" checkbox as the one-click select-all. Server-side recipient filtering (ground rule 11) unchanged.
+- **S2 (toast placement):** `ToastProvider` is mounted in the **root layout**, not the (app) shell — the focus view renders `ai-review-client` outside the (app) group, and a root mount removes the whole "component used outside provider" failure class.
+- **R2 (report delete scope):** Wired on the report **detail page** (per acceptance). The list rows are whole-row links with no menu; adding a row overflow there is IA restructuring, deferred to the IA batch (noted in the backlog row).
+- **R1 (preview source):** The distribute preview renders from the form's client state + live FormData snapshot, with all rich text through the existing sanitized `RichTextDisplay` path (ground rule 4); the real submit fires only from the preview's confirm. Save-draft stays one click.
+
+**Impact:** Zero native `window.confirm`/`window.alert` calls remain in `app/` + `components/` (R4 acceptance, grep-verified). All confirmations use the branded `ConfirmDialog`; alert-style errors use the new `useToast()`. Client-side UX only — every server action's permission/tenancy checks are untouched.

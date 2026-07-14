@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ROLES } from "@/types/roles";
 import {
   updateMemberRole,
@@ -56,8 +57,18 @@ function MemberRow({
     MemberActionResult | undefined,
     FormData
   >(removeMember, undefined);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
 
   const error = roleState?.error ?? removeState?.error;
+
+  // Org removal is destructive enough to name the person first (R5); the
+  // confirmed dispatch runs the same gated server action the form used.
+  const confirmedRemove = () => {
+    setConfirmingRemove(false);
+    const fd = new FormData();
+    fd.set("membership_id", member.id);
+    startTransition(() => removeAction(fd));
+  };
 
   return (
     <tr>
@@ -128,16 +139,26 @@ function MemberRow({
       </td>
       <td style={{ textAlign: "right" }}>
         {!isCurrentUser && (
-          <form action={removeAction}>
-            <input type="hidden" name="membership_id" value={member.id} />
+          <>
             <button
-              type="submit"
+              type="button"
               className="btn ghost sm danger"
               disabled={removePending}
+              onClick={() => setConfirmingRemove(true)}
             >
               {removePending ? "Removing..." : "Remove"}
             </button>
-          </form>
+            <ConfirmDialog
+              open={confirmingRemove}
+              title="Remove from organization?"
+              message={`${displayName(member)} will lose access to this workspace and all of its productions. Their account is not deleted.`}
+              confirmLabel="Remove"
+              danger
+              busy={removePending}
+              onConfirm={confirmedRemove}
+              onCancel={() => setConfirmingRemove(false)}
+            />
+          </>
         )}
       </td>
     </tr>
