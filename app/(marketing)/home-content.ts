@@ -104,23 +104,23 @@ export const HOME_REST_HTML = `
         <div>
           <span class="eyebrow">Production calendar</span>
           <h2 class="title" style="margin:16px 0 18px">From first read to <em>closing night.</em></h2>
-          <p class="lede" style="margin-bottom:24px">Lay out the whole rehearsal period at a glance. Drag to reschedule, flag tech week, and let Proscene surface conflicts before they cost you a room.</p>
+          <p class="lede" style="margin-bottom:24px">Lay out the whole rehearsal period at a glance — rehearsals, music calls, fittings, and performances on one colour-coded timeline, so tech week never sneaks up on you.</p>
           <ul class="checklist">
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Block, scene, and character coverage in one view</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Conflict detection across the full company</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Export a clean rehearsal schedule in a click</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Month, week, day, and agenda views in one place</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Call the people a scene needs, then watch confirmations roll in</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Every production colour-coded so the calendar stays scannable</li>
           </ul>
           <a class="btn-link" href="/features" style="margin-top:26px;display:inline-flex">See how scheduling works <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
         </div>
         <div class="split-media stage tilt" style="--glow:var(--accent-soft)">
-          <div class="float-chip" data-c="accent" style="top:-16px;right:-8px"><span class="fdot"></span> Conflict caught early</div>
+          <div class="float-chip" data-c="accent" style="top:-16px;right:-8px"><span class="fdot"></span> Colour-coded by show</div>
           <div class="panel">
             <div class="panel-row" style="background:var(--bg-muted);font-weight:600;color:var(--ink)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg> Week 4 · Apr 28 – May 4</div>
             <div class="panel-row"><span class="pill" data-c="accent"><span class="dot"></span>Mon</span><span class="lead"><b>Act I, Run</b><span>Studio A · Full company</span></span><span class="panel-time">18:30</span></div>
             <div class="panel-row"><span class="pill" data-c="dusk"><span class="dot"></span>Tue</span><span class="lead"><b>Music, Patter songs</b><span>Rehearsal Room 2 · Principals</span></span><span class="panel-time">19:00</span></div>
             <div class="panel-row"><span class="pill" data-c="amber"><span class="dot"></span>Wed</span><span class="lead"><b>Costume fittings</b><span>Wardrobe · Ensemble A</span></span><span class="panel-time">17:00</span></div>
             <div class="panel-row"><span class="pill" data-c="sage"><span class="dot"></span>Thu</span><span class="lead"><b>Act II, Stumble run</b><span>Studio A · Full company</span></span><span class="panel-time">19:00</span></div>
-            <div class="panel-row" style="background:var(--accent-soft)"><span class="pill" data-c="clay"><span class="dot"></span>Fri</span><span class="lead"><b style="color:var(--accent-ink)">Conflict flagged</b><span>2 actors double-booked at 19:00</span></span><span class="panel-time">!</span></div>
+            <div class="panel-row" style="background:var(--accent-soft)"><span class="pill" data-c="clay"><span class="dot"></span>Fri</span><span class="lead"><b style="color:var(--accent-ink)">Sitzprobe</b><span>Orchestra + principals · 18/22 confirmed</span></span><span class="panel-time">19:00</span></div>
           </div>
         </div>
       </div>
@@ -195,7 +195,7 @@ export const HOME_REST_HTML = `
           <ul class="checklist">
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Push notifications for new calls and changes</li>
             <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Today screen built for a glance backstage</li>
-            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Works offline in the dressing room dead-zone</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> Installs to your home screen and runs full-screen like an app</li>
           </ul>
         </div>
         <div class="split-media center">

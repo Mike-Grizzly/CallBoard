@@ -8,7 +8,7 @@ const COLS = [
       ["Features", "/features"],
       ["Pricing", "/pricing"],
       ["Blog", "/blog"],
-      ["Mobile app", "/features#mobile"],
+      ["FAQ", "/faq"],
     ],
   },
   {

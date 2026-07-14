@@ -2836,3 +2836,27 @@ drafts (correct block/table/code counts, header rows, links, preserved code).
 - **N7 — reuse the gated query.** `<ProductionSwitcher>` derives its list from `getVisibleProductions(user)` (the rail's query, already capability-gated), so it can't surface a production the user shouldn't see; it links to each show's overview and degrades to a plain label with one production.
 
 **Impact:** Client-side UX + one new gated read query. No server-action mutation, permission, tenancy, storage, RLS, proxy, or rate-limit change; no new `dangerouslySetInnerHTML` outside the sanitized paths. `tsc` + `eslint` (0 errors) + 185 tests + `next build` green.
+
+---
+
+## 2026-07-14 — UX Batch 6 (M2 marketing truth pass) decisions
+
+**Decision:** Shipped M2 (the P0 marketing-truth pass) as its own PR on `claude/ux-backlog-batch-6`. The owner gave a per-claim ruling on the eight flagged claims; N5/N6 were held back for a later batch so this copy-only diff reviews cleanly.
+
+Per-claim owner rulings (soften/remove vs. build-later):
+- **Conflict detection (a):** does not exist — removed from all marketing (home hero demo + calendar, features SM & calendar sections, people list). Owner **wants a real per-show conflict system eventually** (flag clashes when people are cast) — captured in `open-questions.md` as a future feature, not claimed now.
+- **Drag-to-reschedule (b):** not built; "might be a cool UX thing later." Removed now.
+- **Works offline (c):** no service worker/offline caching. Removed; reframed as the PWA install story.
+- **Native app (d):** there is **no App Store / Play app** — Proscene is a **PWA** ("Add to Home Screen," full-screen). All "mobile app" / store copy reworded to "installable web app," with an explicit "dedicated iOS/Android apps on the roadmap" note. Owner confirmed native apps come later.
+- **SMS reminders (e):** no SMS and **not planned**. Removed. (Push exists for announcements/@mentions only — calls do not push; see below.)
+- **iCal subscribe (f):** no .ics feed. Removed. (If ever built, it's a new unauthenticated data-exposure surface — signed per-user feed URLs — and gets its own spec, per the backlog security note.)
+- **Report PDF export (g):** reports are **email-distribution only**; report-PDF copy fixed. **Script and blocking PDF export are real and were left intact** — the original flag was specifically the *report* claim.
+- **Cross-company script cache (h):** the "parsed once, free for the next *company*" claim is false (cache is per-org). Removed. The **real** capability — one parse, then everyone in the *same* company opens it with their own private markup — is now described accurately.
+
+**Two truth issues discovered while editing (softened, owner should confirm):**
+- **Calls do not send notifications.** `features/calls/` has no push/notification path (only call *confirmations* exist). Marketing copy implying "everyone notified / instant notice when a time moves" was softened to the real story (confirmations, current-time-always-shown). Push is scoped to announcements + @mentions.
+- **No schedule/calendar export.** "Export a clean rehearsal schedule in a click" had no backing feature; softened to real calendar capabilities (month/week/day/agenda views, per-production colour-coding).
+
+**Future features to spec later (owner-desired, logged in `open-questions.md`):** per-show conflict/clash detection when casting; automated **email reminders before events/rehearsals** (owner: "would be nice"); drag-to-reschedule; iCal subscribe; a report PDF export; native iOS/Android apps.
+
+**Impact:** Marketing copy only (`home-content.ts`, `features/content.ts`, `faq/content.ts`, `pricing/content.ts`, `_components/footer.tsx`). No app/server/permission/schema change. `tsc` + `eslint` + 185 tests + `next build` green; home/features/pricing/FAQ screenshot-verified.

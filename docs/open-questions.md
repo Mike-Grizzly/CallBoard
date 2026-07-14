@@ -1019,3 +1019,18 @@ The 2026-06-19 hardening pass fixed the highest-severity confirmed issues. The f
   and the built-in generic shapes stay one click away rather than being deleted.
   If the reviewer meant removing the built-ins entirely, that's a small
   follow-up.
+
+## Marketing-truth pass (M2) — features desired but not yet built (added 2026-07-14)
+
+The M2 copy pass (Batch 6) removed claims the app doesn't back. The owner confirmed several of these are **wanted later** — they are future features/specs, not shipped, and marketing must not re-assert them until built:
+
+- **Per-show conflict / clash detection.** Flag people double-booked or unavailable when casting / generating calls, company-wide. (Today only the *generate calls* form has a "skip clashes" toggle — the closest existing thing.) Owner: "want to eventually add a conflict system for each show when people are cast."
+- **Automated email reminders before events/rehearsals.** Owner: email reminders "would be nice as an automated reminder before events/rehearsals." Note the current reality: **calls send no notifications at all** (`features/calls/` has no push/email path); push exists only for announcements + @mentions. An email-reminder feature would be the first proactive call alert — needs a scheduler + opt-out.
+- **Drag-to-reschedule calendar.** A possible future UX affordance; today calls are edited via the form.
+- **iCal / .ics subscribe** from Google/Apple/Outlook. Security-sensitive: signed per-user feed URLs, an unauthenticated data-exposure surface — needs its own spec (flagged in `ux-backlog.md` M2 security note).
+- **Report PDF export.** Reports distribute by email only today; script & blocking already export to PDF.
+- **Native iOS/Android apps.** Proscene is a PWA (installable to home screen) today; native apps are roadmap.
+
+## Discovered during M2: calls send no notifications (added 2026-07-14)
+
+`features/calls/` has no notification/push code — creating or moving a call does **not** alert anyone; cast see the change only when they next open the app (call *confirmations* do exist). This may be intended, but it undercuts the "instant notice when a time moves" story and is the natural home for the email-reminder feature above. Worth confirming whether call-change push is desired.
