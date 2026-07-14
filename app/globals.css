@@ -4791,15 +4791,9 @@ button.month-cell {
 }
 
 /* Drawer */
-.pp-drawer-wrap {
-  position: fixed;
-  inset: 0;
-  background: rgba(20, 10, 5, 0.32);
-  z-index: 240;
-  display: flex;
-  justify-content: flex-end;
-  animation: pp-fade 0.15s ease;
-}
+/* pp-fade keyframe is shared (document-drawer + other overlays still use it);
+   the person-drawer's own backdrop/positioning/slide now come from the shared
+   <Drawer> primitive (S1), so .pp-drawer is only the content scroll region. */
 @keyframes pp-fade {
   from {
     opacity: 0;
@@ -4809,14 +4803,11 @@ button.month-cell {
   }
 }
 .pp-drawer {
-  width: 480px;
-  max-width: 92vw;
+  flex: 1;
+  min-height: 0;
   background: var(--bg);
-  height: 100vh;
   display: flex;
   flex-direction: column;
-  box-shadow: -16px 0 36px -10px rgba(40, 15, 5, 0.22);
-  animation: pp-slide 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.05);
   overflow-y: auto;
 }
 @keyframes pp-slide {

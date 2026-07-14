@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { Drawer } from "@/components/ui/drawer/drawer";
 import { ROLES, type Role } from "@/types/roles";
 import {
   ROLE_META,
@@ -49,14 +50,6 @@ export function PersonDrawer({
   const [lastName, setLastName] = useState(person.lastName);
   const [phone, setPhone] = useState(person.phone ?? "");
   const [pronouns, setPronouns] = useState(person.pronouns ?? "");
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const meta = ROLE_META[person.role];
 
@@ -153,9 +146,15 @@ export function PersonDrawer({
           };
 
   return (
-    <div className="pp-drawer-wrap" onClick={onClose}>
-      <div className="pp-drawer" onClick={(e) => e.stopPropagation()}>
-        <div className="pp-drawer-h">
+    <>
+      <Drawer
+        open
+        onClose={onClose}
+        width="480px"
+        ariaLabel={`${displayName(person)} — person details`}
+      >
+        <div className="pp-drawer">
+          <div className="pp-drawer-h">
           <button className="pp-icon-btn" onClick={onClose} aria-label="Close">
             <Icon name="X" size={14} />
           </button>
@@ -412,8 +411,9 @@ export function PersonDrawer({
               ))}
             </div>
           )}
+          </div>
         </div>
-      </div>
+      </Drawer>
 
       <ConfirmDialog
         open={confirming !== null}
@@ -425,6 +425,6 @@ export function PersonDrawer({
         onConfirm={executeConfirmed}
         onCancel={() => setConfirming(null)}
       />
-    </div>
+    </>
   );
 }

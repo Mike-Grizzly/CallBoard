@@ -2888,3 +2888,16 @@ Per-claim owner rulings (soften/remove vs. build-later):
 **First migration:** `trash-drawer.tsx` — dropped its hand-rolled portal/backdrop/Escape/`anim-in` shell for `<Drawer>`, and in doing so gained the focus trap it lacked (advances S4) and a mobile bottom-sheet. The `ConfirmDialog` purge flow and the reload/restore logic are unchanged.
 
 **Impact:** new `components/ui/drawer/{drawer.tsx,drawer.css,drawer.constants.ts}`, edited `app/(app)/productions/[slug]/trash-drawer.tsx`. No server-action / permission / tenancy / storage / proxy change — pure client UI. `tsc` + `eslint` (0 errors) + 185 tests + `next build` (86 pages) green; verified via the compiled-CSS harness (480px right panel at 1440px; full-width bottom sheet at ≤720px). Remaining drawers (person/announcement/event/document) tracked in the S1 row of `ux-backlog.md`.
+
+---
+
+## 2026-07-14 — UX Backlog Batch 9: migrate person-drawer onto shared <Drawer> (S1, 2/5)
+
+**Decision:** Second drawer in the S1 one-per-PR series. `people/person-drawer.tsx` now renders through the shared `<Drawer>` primitive (built in batch 8) instead of its bespoke `.pp-drawer-wrap` backdrop + `.pp-drawer` panel.
+
+- Removed the drawer's own Escape handler and the `.pp-drawer-wrap` CSS (backdrop/positioning) — the primitive owns portal, backdrop, Escape, scroll-lock, focus trap + return, slide, and the ≤720px bottom-sheet. `.pp-drawer` collapsed to a content scroll region (`flex:1; overflow-y:auto`).
+- Kept the `pp-fade`/`pp-slide` keyframes: document-drawer (inline) and other overlays still reference them until those surfaces migrate.
+- Both callers (people-directory, cast-crew-board) conditionally mount the drawer, so `<Drawer open>` mounts already-open — the enter animation plays; exit is instant, matching the pre-migration behaviour (a full exit animation needs the callers to keep `<Drawer>` mounted and pass `open`, deferred to avoid touching two call sites in this PR). The three destructive actions' `ConfirmDialog` is unchanged, now a sibling of `<Drawer>`.
+- Gains: focus trap + focus return (advances S4) and a proper mobile bottom-sheet (previously a cramped right panel).
+
+**Impact:** `app/(app)/(default)/people/person-drawer.tsx`, `app/globals.css`. No server-action / permission / tenancy / storage / proxy change — pure client UI. `tsc` + `eslint` (0 errors) + 185 tests + `next build` (86 pages) green; harness-verified at 1440px (480px right panel) and ≤720px (full-width bottom sheet). Remaining S1 drawers: announcement (`ann-`), event (`cal-`), document (outlier — 1400px + fullscreen, last).
