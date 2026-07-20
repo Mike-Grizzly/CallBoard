@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* Brand seeds — the single place to edit product colour. Must load before
+   the semantic tokens below, which reference its --brand-* variables. */
+@import "./brand-tokens.css";
 
 /*
  * Proscene design system — ported from the standalone HTML mockup.
@@ -15,30 +18,31 @@
 
 :root {
   color-scheme: light;
-  /* Warm theatre palette — paper, ink, curtain */
-  --bg: oklch(0.985 0.005 75);
-  --bg-elev: oklch(1 0 0);
-  --bg-muted: oklch(0.965 0.008 75);
-  --bg-sunken: oklch(0.955 0.01 75);
-  --rail: oklch(0.96 0.008 75);
-  --border: oklch(0.92 0.01 75);
-  --border-strong: oklch(0.86 0.012 75);
-  --ink: oklch(0.22 0.012 60);
-  --ink-2: oklch(0.36 0.012 60);
-  --ink-3: oklch(0.52 0.012 60);
-  --ink-4: oklch(0.68 0.012 60);
+  /* Semantic surface/ink tokens. Values come from the brand seeds in
+     brand-tokens.css — edit colour THERE, not here. "paper & spotlight". */
+  --bg: var(--brand-paper);
+  --bg-elev: var(--brand-elev);
+  --bg-muted: var(--brand-muted);
+  --bg-sunken: var(--brand-sunken);
+  --rail: var(--brand-muted);
+  --border: var(--brand-border);
+  --border-strong: var(--brand-border-strong);
+  --ink: var(--brand-ink);
+  --ink-2: var(--brand-ink-2);
+  --ink-3: var(--brand-ink-3);
+  --ink-4: var(--brand-ink-4);
 
-  /* Accent — single curtain crimson */
-  --accent: oklch(0.55 0.16 25);
-  --accent-soft: oklch(0.93 0.04 25);
-  --accent-ink: oklch(0.4 0.14 25);
-  /* Accent for filled BUTTON surfaces that carry white label text. In light
-     themes this is the accent itself (already ~5:1 on white). In dark/dusk the
-     plain --accent is lightened (for use as text/icon colour on dark surfaces),
-     which drops white-on-accent button contrast below AA — so those themes
-     override this with a deeper red. Light/cool keep it identical to --accent,
-     so light mode is visually unchanged. */
-  --accent-strong: var(--accent);
+  /* Accent — spotlight amber (from brand seeds) */
+  --accent: var(--brand-accent);
+  --accent-soft: var(--brand-accent-soft);
+  --accent-ink: var(--brand-accent-ink);
+  /* Background for filled accent buttons. */
+  --accent-strong: var(--brand-accent-strong);
+  /* Text/icon colour ON a filled accent button. Amber is a light colour, so
+     in light mode this is the dark ink (white-on-amber fails AA); dusk/dark
+     keep white while their accent is still the deep crimson. Themed in
+     brand-tokens.css via --brand-on-accent. */
+  --on-accent: var(--brand-on-accent);
 
   /* Status / categorical pills */
   --c-sage: oklch(0.7 0.07 145);
@@ -133,11 +137,13 @@ body[data-theme="dark"] {
   --ink-2: oklch(0.82 0.008 75);
   --ink-3: oklch(0.65 0.01 75);
   --ink-4: oklch(0.5 0.01 75);
-  --accent: oklch(0.7 0.16 25);
-  --accent-soft: oklch(0.32 0.08 25);
-  --accent-ink: oklch(0.85 0.14 25);
-  /* Deeper than --accent so white button labels clear AA in dark mode. */
-  --accent-strong: oklch(0.585 0.17 25);
+  /* Accent from the DARK brand seeds (placeholder in brand-tokens.css —
+     still the old crimson until the dark palette is reshared). */
+  --accent: var(--brand-accent-dark);
+  --accent-soft: var(--brand-accent-dark-soft);
+  --accent-ink: var(--brand-accent-dark-ink);
+  --accent-strong: var(--brand-accent-dark-strong);
+  --on-accent: var(--brand-on-accent-dark);
   /* Department/category soft tints — bumped lightness + chroma so department
      thumbnails, pills, and report note cards stay vibrant and legible on dark
      surfaces (was too dim/desaturated). */
@@ -167,11 +173,12 @@ body[data-theme="dusk"] {
   --ink-2: oklch(0.8 0.01 75);
   --ink-3: oklch(0.66 0.012 75);
   --ink-4: oklch(0.55 0.012 75);
-  --accent: oklch(0.68 0.16 28);
-  --accent-soft: oklch(0.4 0.09 28);
-  --accent-ink: oklch(0.86 0.13 28);
-  /* Deeper than --accent so white button labels clear AA in dusk. */
-  --accent-strong: oklch(0.575 0.17 28);
+  /* Accent from the DUSK brand seeds (placeholder in brand-tokens.css). */
+  --accent: var(--brand-accent-dusk);
+  --accent-soft: var(--brand-accent-dusk-soft);
+  --accent-ink: var(--brand-accent-dusk-ink);
+  --accent-strong: var(--brand-accent-dusk-strong);
+  --on-accent: var(--brand-on-accent-dusk);
   --c-sage-soft: oklch(0.4 0.05 145);
   --c-amber-soft: oklch(0.42 0.07 80);
   --c-dusk-soft: oklch(0.4 0.05 260);
@@ -497,7 +504,7 @@ body[data-theme="dusk"] .brand-badge.is-dark {
   font-size: 10.5px;
   font-weight: 500;
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   border-radius: 999px;
   min-width: 16px;
   height: 16px;
@@ -553,7 +560,7 @@ body[data-theme="dusk"] .brand-badge.is-dark {
   height: 28px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--c-clay), var(--accent));
-  color: white;
+  color: var(--on-accent);
   display: grid;
   place-items: center;
   font-weight: 500;
@@ -786,7 +793,7 @@ body[data-theme="dusk"] .brand-badge.is-dark {
 }
 .btn.primary {
   background: var(--accent-strong);
-  color: white;
+  color: var(--on-accent);
   border-color: var(--accent-strong);
 }
 .btn.primary:hover {
@@ -1635,7 +1642,7 @@ textarea.field {
 .btn-hero:active { transform: translateY(.5px); }
 .btn-hero.primary {
   background: var(--accent-strong);
-  color: white;
+  color: var(--on-accent);
   border-color: var(--accent-strong);
   padding-right: 10px;
   box-shadow:
@@ -2077,7 +2084,7 @@ textarea.field {
   font-size: 10.5px;
   font-variant-numeric: tabular-nums;
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   border-radius: 999px;
   padding: 0 5px;
   min-width: 16px;
@@ -2926,7 +2933,7 @@ div.mention:hover {
 }
 .mini-day[data-today="1"] {
   background: var(--accent);
-  color: white !important;
+  color: var(--on-accent) !important;
   font-weight: 600;
 }
 .mini-day[data-active="1"]:not([data-today="1"]) {
@@ -3116,7 +3123,7 @@ div.mention:hover {
   font-size: 9.5px;
   font-weight: 600;
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   padding: 1px 5px;
   border-radius: 3px;
   letter-spacing: 0.02em;
@@ -3282,7 +3289,7 @@ div.mention:hover {
 }
 .month-cell[data-today="1"] .month-cell-num {
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
 }
 .month-cell-h {
   display: flex;
@@ -3522,7 +3529,7 @@ div.mention:hover {
   font-size: 10.5px;
   font-weight: 500;
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   padding: 2px 10px;
   border-radius: 999px;
 }
@@ -3718,7 +3725,7 @@ button.month-cell {
 }
 .month-cell-phone[data-today="1"] .month-cell-num-m {
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
 }
 .month-cell-phone[data-mute="1"] .month-cell-num-m {
   color: var(--ink-4);
@@ -4231,7 +4238,7 @@ button.month-cell {
   letter-spacing: 0.02em;
   flex-shrink: 0;
 }
-.pp-av[data-c="accent"] { background: var(--accent); color: #fff; }
+.pp-av[data-c="accent"] { background: var(--accent); color: var(--on-accent); }
 .pp-av[data-c="clay"]   { background: var(--c-clay); color: #fff; }
 .pp-av[data-c="plum"]   { background: var(--c-plum); color: #fff; }
 .pp-av[data-c="dusk"]   { background: var(--c-dusk); color: #fff; }
@@ -5371,7 +5378,7 @@ select.pp-field {
 }
 .pp-stepper-i[data-state="active"] .n {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border-color: var(--accent);
 }
 .pp-stepper-i[data-state="done"] .n {
@@ -6261,7 +6268,7 @@ select.pp-field {
     height: 42px;
     border-radius: 10px;
     background: var(--accent-strong);
-    color: white;
+    color: var(--on-accent);
     text-decoration: none;
     font-size: 13.5px;
     font-weight: 500;
@@ -7301,7 +7308,7 @@ select.pp-field {
 .np-root .step.active .step-no {
   background: var(--accent);
   border-color: var(--accent);
-  color: white;
+  color: var(--on-accent);
 }
 .np-root .step-label {
   font-size: 13.5px;
@@ -7471,7 +7478,7 @@ select.pp-field {
 }
 .np-root .btn.primary {
   background: var(--accent-strong);
-  color: white;
+  color: var(--on-accent);
   border-color: var(--accent-strong);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset,
     0 1px 2px rgba(120, 30, 15, 0.25);
@@ -7482,7 +7489,7 @@ select.pp-field {
 }
 .np-root .btn.accent {
   background: var(--accent-strong);
-  color: white;
+  color: var(--on-accent);
   border-color: var(--accent-strong);
 }
 .np-root .btn.accent:hover {
@@ -8066,7 +8073,7 @@ select.pp-field {
 }
 .np-root .day-chip[data-on="1"] {
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   border-color: var(--accent);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset,
     0 1px 2px rgba(120, 30, 15, 0.2);
@@ -8575,7 +8582,7 @@ textarea.cform-field {
     border-radius: 999px;
     border: none;
     background: var(--accent-strong);
-    color: #fff;
+    color: var(--on-accent);
     cursor: pointer;
     box-shadow:
       0 10px 24px -6px color-mix(in oklch, var(--accent) 55%, transparent),
@@ -9668,7 +9675,7 @@ textarea.cform-field {
 }
 .dd-btn-primary {
   background: var(--accent-strong);
-  color: #fff;
+  color: var(--on-accent);
   box-shadow: var(--shadow-1);
 }
 .dd-btn-primary:hover {
@@ -9871,7 +9878,7 @@ textarea.cform-field {
   font-size: 10px;
   font-weight: 700;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   padding: 2px 7px;
   border-radius: 999px;
 }
@@ -10040,7 +10047,7 @@ textarea.cform-field {
   font-size: 10.5px;
   font-weight: 700;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border-radius: 999px;
   min-width: 18px;
   height: 18px;
@@ -10379,7 +10386,7 @@ textarea.cform-field {
 }
 .md-root .mbtn.primary {
   background: var(--accent-strong);
-  color: #fff;
+  color: var(--on-accent);
   border-color: var(--accent-strong);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset,
     0 1px 2px rgba(120, 30, 15, 0.18);
@@ -10779,7 +10786,7 @@ textarea.cform-field {
   font-size: 10px;
   font-weight: 700;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
@@ -10930,7 +10937,7 @@ textarea.cform-field {
   font-size: 11px;
   font-weight: 700;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border-radius: 999px;
   min-width: 18px;
   height: 18px;
@@ -11748,7 +11755,7 @@ textarea.cform-field {
   padding: 0 18px;
   border-radius: 11px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border: 1px solid var(--accent);
   font: 600 14px var(--font-ui);
   box-shadow:
@@ -11952,7 +11959,7 @@ textarea.cform-field {
 }
 .ac-pri-tag[data-pri="urgent"] {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .ac-pri-tag[data-pri="important"] {
   background: var(--c-amber-soft);
@@ -12602,7 +12609,7 @@ textarea.cform-field {
 }
 .ac-btn.primary {
   background: var(--accent-strong);
-  color: #fff;
+  color: var(--on-accent);
   border-color: var(--accent-strong);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset;
 }
@@ -12712,7 +12719,7 @@ textarea.cform-field {
   height: 32px;
   border-radius: 8px;
   background: var(--accent-strong);
-  color: #fff;
+  color: var(--on-accent);
   font: 600 12px var(--font-ui);
   display: flex;
   align-items: center;
@@ -12940,7 +12947,7 @@ textarea.cform-field {
   .ax-wrap { grid-template-columns: 1fr; }
   .ax-mobile-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
   .ax-mobile-tab { flex: 1; height: 36px; border: 1px solid var(--border); background: var(--bg-elev); border-radius: 8px; font: inherit; font-size: 13px; font-weight: 500; color: var(--ink-3); cursor: pointer; }
-  .ax-mobile-tab[data-on="1"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .ax-mobile-tab[data-on="1"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
   .ax-pool, .ax-board { display: none; }
   .ax-wrap[data-mtab="company"] .ax-pool { display: flex; }
   .ax-wrap[data-mtab="board"] .ax-board { display: flex; }

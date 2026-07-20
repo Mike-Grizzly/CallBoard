@@ -123,12 +123,14 @@ Observed while running the site: with the CMS unreachable, server rendering of S
 Dev overlay reports hydration issues on `/` (React diff points at `style` attributes inside the injected HTML, e.g. `section.night` with `padding-top:0px`; likely `dangerouslySetInnerHTML` markup vs the Sanity hero swap). Harmless-looking but masks real hydration regressions and shows in every dev session.
 **Accept:** `/` renders in dev with zero hydration warnings.
 
-### M12 · Brand seam: amber marketing → crimson app — **P2 · decision + S**
+### M12 · Brand seam: amber marketing → crimson app — **P2 · decision + S** — ✅ DONE (claude/ux-backlog-batch-11, 2026-07-20; owner: amber IS the brand, spread app-wide + single-sourced)
 The site is spotlight-amber "paper & spotlight"; clicking "Start free" lands on a crimson split-screen (`app/signup/`) with a red submit button — verified jarring in screenshots. Also two logo asset systems (inline `BrandMark` SVG on marketing vs `brand-paper.svg`/`brand-ink.svg` image files on signup). Owner decision: is amber the brand or the marketing costume? Then make auth screens bridge the two (shared accent on the CTA, one logo component).
 **Accept:** decision in `decision-log.md`; auth screens use the shared `BrandMark`; palettes deliberate rather than accidental.
+**Shipped:** Owner confirmed **amber is the brand** (off-white paper + dark-blue ink + spotlight amber). The whole app's **light** mode now wears it, sourced from a single `app/brand-tokens.css` that both `globals.css` (app, all themes) and `marketing.css` read — so app + marketing can't drift and a future rebrand is a one-file edit. The signup "crimson split" healed automatically: it already used `var(--accent)` + the amber `brand-*.svg` logos, so flipping the token turned it amber. Filled accent buttons switched from `color:white` to `var(--on-accent)` (dark ink on amber, WCAG AA). Dusk/dark left as-is (old crimson) per owner, pending a reshared dark palette; they read placeholder `*-dusk`/`*-dark` seeds so inserting the real values later is one edit. See decision-log 2026-07-20.
 
-### M13 · Marketing dark mode — **P3 · decision**
+### M13 · Marketing dark mode — **P3 · decision** — 🕗 DEFERRED (owner tracking for later, 2026-07-20)
 Marketing is deliberately always-light (scoped `.ps-site`); the app has three themes. A dark-theme app user who hits a marketing link gets flashbanged. Fine to keep as a brand choice — but log it as a decision rather than an accident. No code required if the answer is "keep light."
+**Status:** Owner wants to revisit later — tracked, not yet decided. (Note: the batch-11 brand work made the marketing site provably stay always-light even after the token unification, so there is no regression here; this remains a pure keep-light-or-not call.)
 
 ---
 

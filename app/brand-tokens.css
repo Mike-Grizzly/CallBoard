@@ -1,0 +1,75 @@
+/* =====================================================================
+   PROSCENE BRAND TOKENS — the single source of truth for brand colour.
+
+   ►► TO REBRAND THE ENTIRE PRODUCT, EDIT THE VALUES IN THIS FILE. ◄◄
+
+   Every surface — the app (all themes) AND the marketing site — reads its
+   colour from these `--brand-*` seeds via the semantic tokens in
+   `globals.css` (`--bg`, `--ink`, `--accent`, …) and `marketing.css`
+   (`.ps-site`). Change a seed here and it cascades everywhere at once;
+   you never have to hunt through component CSS.
+
+   Everything lives in one flat :root block — no theme selectors — so the
+   marketing site (which is always light, even for dark-theme app users)
+   can safely read the canonical `--brand-accent` without a dark theme
+   ever recolouring it. The app's dark/dusk themes read the separate
+   `*-dark` / `*-dusk` seeds below.
+
+   Current palette: "paper & spotlight" — warm off-white paper, dark-blue
+   ink, spotlight-amber accent. Branding is still being finalised, so this
+   file is deliberately the only knob you need to turn.
+   ===================================================================== */
+
+:root {
+  /* ---- Surfaces (light) ------------------------------------------- */
+  --brand-paper:         #F8F5EF; /* page background (warm off-white)   */
+  --brand-elev:          #FFFFFF; /* cards / elevated surfaces          */
+  --brand-muted:         #EFEAE0; /* muted section bands / rail         */
+  --brand-sunken:        #E6DECF; /* sunken fills, tracks               */
+  --brand-border:        #E5DCCC; /* hairline borders                   */
+  --brand-border-strong: #D3C7B1; /* stronger borders                   */
+
+  /* ---- Ink / text (dark blue) ------------------------------------- */
+  --brand-ink:           #15181F; /* primary text (reads as dark blue)  */
+  --brand-ink-2:         #3A3F48; /* secondary text                     */
+  --brand-ink-3:         #5F636C; /* tertiary text                      */
+  --brand-ink-4:         #94908A; /* muted / labels                     */
+
+  /* ---- Night (dark "island" sections + footer on the light site) -- */
+  --brand-night:         #14171E;
+  --brand-night-elev:    #20252F;
+  --brand-night-border:  #2D3340;
+  --brand-night-ink:     #F5F2EA;
+  --brand-night-ink-2:   #C5C8CF;
+  --brand-night-ink-3:   #9398A4;
+
+  /* ---- Accent — spotlight amber (canonical / light) --------------- */
+  --brand-accent:        #E0A23A; /* buttons, links, active states      */
+  --brand-accent-soft:   #F8E9CB; /* soft tint (pills, icon chips)      */
+  --brand-accent-ink:    #9C6B14; /* amber text on light surfaces       */
+  --brand-accent-bright: #ECB04E; /* brighter amber (hover/emphasis)    */
+  --brand-accent-strong: #E0A23A; /* filled-button background           */
+  --brand-on-accent:     #15181F; /* text/icon ON a filled accent button
+                                     — amber is light, so this is the
+                                     dark ink, NOT white (WCAG AA).      */
+
+  /* ---- Accent — DUSK theme (placeholder) -------------------------- *
+   * The dusk/dark brand is still being finalised and will be reshared,
+   * so these hold the app's CURRENT (old crimson) accent — dusk looks
+   * unchanged for now. When the real dusk palette lands, replace these
+   * five values (amber-family) and set --brand-on-accent-dusk back to
+   * the dark ink like light mode above. Only the app's dusk theme reads
+   * these; the marketing site never does.                              */
+  --brand-accent-dusk:        oklch(0.68 0.16 28);
+  --brand-accent-dusk-soft:   oklch(0.4 0.09 28);
+  --brand-accent-dusk-ink:    oklch(0.86 0.13 28);
+  --brand-accent-dusk-strong: oklch(0.575 0.17 28);
+  --brand-on-accent-dusk:     #FFFFFF; /* white clears AA on the crimson */
+
+  /* ---- Accent — DARK theme (placeholder, same story as dusk) ------ */
+  --brand-accent-dark:        oklch(0.7 0.16 25);
+  --brand-accent-dark-soft:   oklch(0.32 0.08 25);
+  --brand-accent-dark-ink:    oklch(0.85 0.14 25);
+  --brand-accent-dark-strong: oklch(0.585 0.17 25);
+  --brand-on-accent-dark:     #FFFFFF;
+}
