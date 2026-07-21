@@ -1,3 +1,9 @@
+**Status:** Implemented — 2026-07-21 (branch `claude/brand-color-update`). All
+three themes mapped onto the app's `light` (Proscene) / `dusk` (Proscene Medium,
+split) / `dark` (Proscene Dark) slots; accent single-sourced in
+`app/brand-tokens.css`, per-theme surfaces/ink/rail in `app/globals.css`. See
+`docs/branding.md` + `docs/decision-log.md` (2026-07-21).
+
 # Proscene brand color handoff
 
 Three color themes for the CallBoard / Proscene UI rebrand, extracted verbatim
