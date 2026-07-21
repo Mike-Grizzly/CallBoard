@@ -42,7 +42,8 @@ Ratchet rules: they apply to code you touch, never as standalone mass-migrations
 
 ## Brand colour — single source of truth
 
-**All brand colour lives in `app/brand-tokens.css`.** It defines the `--brand-*`
+**All brand colour lives in `app/brand-tokens.css`.** (Owner-facing how-to:
+`docs/branding.md`.) It defines the `--brand-*`
 seeds (paper / ink / night / spotlight-amber accent), and *everything* — the
 app's semantic tokens in `globals.css` (`--bg`, `--ink`, `--accent`, …) and the
 marketing site in `marketing.css` (`.ps-site`) — reads colour from those seeds.
