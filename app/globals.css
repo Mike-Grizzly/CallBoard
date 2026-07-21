@@ -18,31 +18,38 @@
 
 :root {
   color-scheme: light;
-  /* Semantic surface/ink tokens. Values come from the brand seeds in
-     brand-tokens.css — edit colour THERE, not here. "paper & spotlight". */
-  --bg: var(--brand-paper);
-  --bg-elev: var(--brand-elev);
-  --bg-muted: var(--brand-muted);
-  --bg-sunken: var(--brand-sunken);
-  --rail: var(--brand-muted);
-  --border: var(--brand-border);
-  --border-strong: var(--brand-border-strong);
-  --ink: var(--brand-ink);
-  --ink-2: var(--brand-ink-2);
-  --ink-3: var(--brand-ink-3);
-  --ink-4: var(--brand-ink-4);
+  /* Theme "light" = Proscene (warm paper + dark ink rail). Surface/ink
+     values are the handoff's; the accent comes from brand-tokens.css. */
+  --bg: #ECE6DA;
+  --bg-elev: #F7F4ED;
+  --bg-muted: #E6DFD0;
+  --bg-sunken: #DFD6C4;
+  --border: #DBD1BE;
+  --border-strong: #C8BBA2;
+  --ink: #15181F;
+  --ink-2: #3B3F47;
+  --ink-3: #6A6A63;
+  --ink-4: #9C988C;
 
-  /* Accent — spotlight amber (from brand seeds) */
+  /* Accent — spotlight amber (shared seed); light-surface tints. */
   --accent: var(--brand-accent);
-  --accent-soft: var(--brand-accent-soft);
-  --accent-ink: var(--brand-accent-ink);
-  /* Background for filled accent buttons. */
-  --accent-strong: var(--brand-accent-strong);
-  /* Text/icon colour ON a filled accent button. Amber is a light colour, so
-     in light mode this is the dark ink (white-on-amber fails AA); dusk/dark
-     keep white while their accent is still the deep crimson. Themed in
-     brand-tokens.css via --brand-on-accent. */
-  --on-accent: var(--brand-on-accent);
+  --accent-soft: var(--brand-accent-soft-light);
+  --accent-ink: var(--brand-accent-ink-light);
+  /* Filled accent buttons: amber bg, dark-ink label (WCAG AA). --on-accent
+     is dark ink in every theme now (amber is light). */
+  --accent-strong: var(--brand-accent);
+  --on-accent: var(--brand-accent-on);
+
+  /* Dark "ink" side rail — even in light mode. The rail remaps the general
+     tokens to these inside its own scope (see `.rail`). */
+  --rail: #15181F;
+  --rail-bg: #15181F;
+  --rail-border: #272C36;
+  --rail-ink: #B7BAC2;
+  --rail-ink-dim: #787E8A;
+  --rail-active-bg: #20252F;
+  --rail-active-ink: #F5F2EA;
+  --rail-hover-bg: #1B202A;
 
   /* Status / categorical pills */
   --c-sage: oklch(0.7 0.07 145);
@@ -123,34 +130,39 @@
   --font-display: var(--font-display);
 }
 
-/* Dark mode */
+/* Dark mode — Proscene Dark (full ink surfaces + spotlight). */
 body[data-theme="dark"] {
   color-scheme: dark;
-  --bg: oklch(0.18 0.008 60);
-  --bg-elev: oklch(0.22 0.008 60);
-  --bg-muted: oklch(0.21 0.008 60);
-  --bg-sunken: oklch(0.16 0.008 60);
-  --rail: oklch(0.2 0.008 60);
-  --border: oklch(0.28 0.01 60);
-  --border-strong: oklch(0.34 0.012 60);
-  --ink: oklch(0.96 0.005 75);
-  --ink-2: oklch(0.82 0.008 75);
-  --ink-3: oklch(0.65 0.01 75);
-  --ink-4: oklch(0.5 0.01 75);
-  /* Accent from the DARK brand seeds (placeholder in brand-tokens.css —
-     still the old crimson until the dark palette is reshared). */
-  --accent: var(--brand-accent-dark);
-  --accent-soft: var(--brand-accent-dark-soft);
-  --accent-ink: var(--brand-accent-dark-ink);
-  --accent-strong: var(--brand-accent-dark-strong);
-  --on-accent: var(--brand-on-accent-dark);
-  /* Department/category soft tints — bumped lightness + chroma so department
-     thumbnails, pills, and report note cards stay vibrant and legible on dark
-     surfaces (was too dim/desaturated). */
-  --c-sage-soft: oklch(0.33 0.08 145);
-  --c-amber-soft: oklch(0.35 0.1 80);
-  --c-dusk-soft: oklch(0.33 0.08 260);
-  --c-clay-soft: oklch(0.35 0.1 35);
+  --bg: #16191F;
+  --bg-elev: #20252F;
+  --bg-muted: #1B1F27;
+  --bg-sunken: #11141A;
+  --border: #2B313C;
+  --border-strong: #3A414E;
+  --ink: #F5F2EA;
+  --ink-2: #C5C8CF;
+  --ink-3: #9398A4;
+  --ink-4: #6B7180;
+  /* Amber accent (shared seed); dark-surface tints; dark-ink label on amber. */
+  --accent: var(--brand-accent);
+  --accent-soft: var(--brand-accent-soft-dark);
+  --accent-ink: var(--brand-accent-ink-dark);
+  --accent-strong: var(--brand-accent);
+  --on-accent: var(--brand-accent-on);
+  /* Darkest rail. */
+  --rail: #101318;
+  --rail-bg: #101318;
+  --rail-border: #262C36;
+  --rail-ink: #B5B9C2;
+  --rail-ink-dim: #717784;
+  --rail-active-bg: #20252F;
+  --rail-active-ink: #F5F2EA;
+  --rail-hover-bg: #181C24;
+  /* Category soft tints on ink (handoff values; sand/plum kept from before). */
+  --c-sage-soft: #22302A;
+  --c-amber-soft: #3A2E14;
+  --c-dusk-soft: #23293A;
+  --c-clay-soft: #33271E;
   --c-sand-soft: oklch(0.33 0.07 90);
   --c-plum-soft: oklch(0.33 0.08 320);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -158,36 +170,65 @@ body[data-theme="dark"] {
   --shadow-3: 0 20px 60px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
-/* Dusk — a soft "dim" theme between light and dark: warm charcoal, lower
-   contrast than dark, gentle for evening use. */
+/* Dusk — Proscene Medium: a SPLIT theme. The page canvas is ink, but
+   content tiles (`.card`) re-map their surface/ink tokens back to paper so
+   tile interiors read light (see the `.card` override below the rail). */
 body[data-theme="dusk"] {
   color-scheme: dark;
-  --bg: oklch(0.305 0.012 55);
-  --bg-elev: oklch(0.35 0.013 55);
-  --bg-muted: oklch(0.335 0.012 55);
-  --bg-sunken: oklch(0.275 0.012 55);
-  --rail: oklch(0.32 0.013 55);
-  --border: oklch(0.41 0.014 55);
-  --border-strong: oklch(0.47 0.016 55);
-  --ink: oklch(0.93 0.008 75);
-  --ink-2: oklch(0.8 0.01 75);
-  --ink-3: oklch(0.66 0.012 75);
-  --ink-4: oklch(0.55 0.012 75);
-  /* Accent from the DUSK brand seeds (placeholder in brand-tokens.css). */
-  --accent: var(--brand-accent-dusk);
-  --accent-soft: var(--brand-accent-dusk-soft);
-  --accent-ink: var(--brand-accent-dusk-ink);
-  --accent-strong: var(--brand-accent-dusk-strong);
-  --on-accent: var(--brand-on-accent-dusk);
-  --c-sage-soft: oklch(0.4 0.05 145);
-  --c-amber-soft: oklch(0.42 0.07 80);
-  --c-dusk-soft: oklch(0.4 0.05 260);
-  --c-clay-soft: oklch(0.42 0.07 35);
+  --bg: #20252F;
+  --bg-elev: #2A303B;
+  --bg-muted: #252B35;
+  --bg-sunken: #1A1F27;
+  --border: #333A45;
+  --border-strong: #424A57;
+  --ink: #F5F2EA;
+  --ink-2: #C7CAD1;
+  --ink-3: #969BA7;
+  --ink-4: #6E7480;
+  /* Amber accent (shared seed); dark-surface tints; dark-ink label on amber. */
+  --accent: var(--brand-accent);
+  --accent-soft: var(--brand-accent-soft-dark);
+  --accent-ink: var(--brand-accent-ink-dark);
+  --accent-strong: var(--brand-accent);
+  --on-accent: var(--brand-accent-on);
+  /* Ink rail. */
+  --rail: #15181F;
+  --rail-bg: #15181F;
+  --rail-border: #262C36;
+  --rail-ink: #B5B9C2;
+  --rail-ink-dim: #717784;
+  --rail-active-bg: #20252F;
+  --rail-active-ink: #F5F2EA;
+  --rail-hover-bg: #191D25;
+  --c-sage-soft: #22302A;
+  --c-amber-soft: #3A2E14;
+  --c-dusk-soft: #23293A;
+  --c-clay-soft: #33271E;
   --c-sand-soft: oklch(0.4 0.04 90);
   --c-plum-soft: oklch(0.4 0.05 320);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.22);
   --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.26), 0 2px 6px rgba(0, 0, 0, 0.2);
   --shadow-3: 0 20px 60px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+/* Dusk (Proscene Medium) split mode: the page canvas is ink, but content
+   tiles must read as paper. Re-map surface + ink tokens INSIDE .card so a
+   tile's interior (and everything that reads --bg-elev/--ink within it)
+   flips back to the light paper palette. Note: elevated surfaces that are
+   NOT .card (some drawers/menus/inputs) stay on the ink canvas by design. */
+body[data-theme="dusk"] .card {
+  --bg: #ECE6DA;
+  --bg-elev: #F7F4ED;
+  --bg-muted: #E6DFD0;
+  --bg-sunken: #DFD6C4;
+  --border: #DBD1BE;
+  --border-strong: #C8BBA2;
+  --ink: #15181F;
+  --ink-2: #3B3F47;
+  --ink-3: #6A6A63;
+  --ink-4: #9C988C;
+  --accent-soft: var(--brand-accent-soft-light);
+  --accent-ink: var(--brand-accent-ink-light);
 }
 
 /* N9: the `cool` theme and the compact/comfy density variants were ported
@@ -266,8 +307,22 @@ body {
 
 /* ─── Left rail ──────────────────────────────────────────────────────── */
 .rail {
-  background: var(--rail);
-  border-right: 1px solid var(--border);
+  /* The rail is a dark "ink" surface in EVERY theme. Rather than rewire
+     each .rail-* rule, remap the general tokens to the --rail-* set inside
+     the rail's own scope, so existing rules (which reference --ink,
+     --bg-muted, --border, …) automatically render dark-rail. The accent
+     (amber) is intentionally left alone. */
+  --bg-elev: var(--rail-active-bg);
+  --bg-muted: var(--rail-hover-bg);
+  --ink: var(--rail-active-ink);
+  --ink-2: var(--rail-ink);
+  --ink-3: var(--rail-ink);
+  --ink-4: var(--rail-ink-dim);
+  --border: var(--rail-border);
+  --border-strong: var(--rail-border);
+  background: var(--rail-bg);
+  color: var(--rail-ink);
+  border-right: 1px solid var(--rail-border);
   display: flex;
   flex-direction: column;
   min-height: 0;

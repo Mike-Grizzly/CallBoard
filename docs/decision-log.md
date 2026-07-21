@@ -2950,3 +2950,45 @@ trivial and global.
 **Follow-ups:** (1) owner to reshare dusk/dark amber values; (2) one decorative
 logo badge (`linear-gradient(amber, dark-red)`) keeps white text — ambiguous either
 way, left as-is; (3) M13 (marketing always-light) still open as a separate decision.
+
+---
+
+## 2026-07-21 — Brand: three-theme "Brand Color Explorer" palette adopted app-wide
+
+**Decision:** The owner's three-theme brand handoff (`handoff/handoff 2/proscene-brand-tokens/`)
+is the app's colour system. The three themes map onto the app's existing theme
+slots (so saved prefs + the switcher keep working):
+
+- **light** = *Proscene* — warm paper canvas (`#ECE6DA`) + a **dark ink side rail**.
+- **dusk** = *Proscene Medium* — a **split** theme: ink canvas (`#20252F`) with paper `.card` tiles.
+- **dark** = *Proscene Dark* — full ink surfaces (`#16191F`).
+
+All three share **one accent, spotlight amber `#E0A23A`**, and text on filled
+accent buttons is the **dark ink `#15181F` in every theme** (amber is light, so
+dark-on-amber clears WCAG AA even on dark UI — no more white button labels).
+This supersedes the 2026-07-20 interim state (light amber / dusk+dark crimson):
+**dusk and dark are now amber too** — this was the "reshared dark palette."
+
+**Architecture:** the accent stays single-sourced in `app/brand-tokens.css`
+(`--brand-accent` + light/dark soft/ink tint pairs + `--brand-accent-on`). Each
+theme's surfaces/ink/borders/rail live in its `app/globals.css` block (values
+verbatim from the handoff). The dark ink rail is done with a scoped token remap
+on `.rail` (general tokens → `--rail-*`), so no per-rule rail rewrite was needed.
+The split Medium theme uses `body[data-theme="dusk"] .card { … }` to flip tiles
+to paper.
+
+**Marketing:** kept on its own always-light neutrals (`#F8F5EF` paper — a touch
+lighter than the app's Proscene light), but reads the **shared amber accent**, so
+the brand colour can't drift. (Unifying the two paper whites is a possible future
+tidy-up, not done here.)
+
+**Known/expected:** in Medium (dusk), only `.card` surfaces flip to paper —
+non-`.card` elevated surfaces (some drawers, menus, inputs) stay on the ink
+canvas by design (inherent to a split theme); categorical pill tints (`--c-*-soft`)
+also aren't remapped inside cards, so a status pill on a paper card reads dark
+(matches the handoff's card override, which only remaps the accent tints).
+
+**Verify:** tsc + eslint (0 errors) + 185 tests + build green; all three themes
+harness-rendered (ink rail, paper/ink split, amber dark-ink buttons legible in
+every theme). Owner-facing guide rewritten in `docs/branding.md`; handoff README
+marked Implemented.

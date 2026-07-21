@@ -54,15 +54,16 @@ To rebrand the product, edit that one file; the change cascades everywhere.
   (`var(--accent)`, `var(--ink)`, `var(--on-accent)`, …). There are currently
   zero hardcoded brand hexes in `app/` — keep it that way.
 - **Text on a filled accent button is `var(--on-accent)`, not `white`.** Amber is
-  a light accent, so `--on-accent` is the dark ink in light mode (white-on-amber
-  fails AA); dusk/dark keep white while their accent is still the old crimson.
-- **Marketing must stay always-light.** It reads the canonical (never-themed)
-  `--brand-accent`; do not point it at the `*-dark` / `*-dusk` seeds or it will
-  recolour for dark-theme app users.
-- **Dusk/dark are placeholders** (still the old crimson) pending a reshared dark
-  palette. When it arrives, replace the `--brand-accent-dusk*` / `--brand-accent-dark*`
-  values (and flip `--brand-on-accent-dusk/-dark` to the dark ink) in
-  `brand-tokens.css` — nothing else.
+  a light accent, so `--on-accent` is the dark ink in **every** theme (including
+  dark — dark-on-amber clears AA, white-on-amber doesn't).
+- **Three themes, one accent.** light = Proscene, dusk = Proscene Medium (split:
+  ink canvas + paper `.card` tiles), dark = Proscene Dark. Per-theme
+  surfaces/ink/rail live in the `globals.css` theme blocks; the accent is the
+  shared seed. The dark ink rail is a scoped token remap on `.rail` — don't
+  hardcode rail colours.
+- **Marketing keeps its own always-light neutrals** but reads the shared
+  `--brand-accent`, so the accent can't drift. Don't make marketing depend on a
+  theme-specific token.
 
 ## Claude Code operating rules
 

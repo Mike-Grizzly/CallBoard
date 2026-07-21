@@ -15,36 +15,35 @@
   /* Proscene brand — "paper & spotlight": warm, light, airy. Pure-white
      elevated surfaces, warm-paper page, spotlight-amber accent, and a few
      dark "night" islands reserved for dramatic moments. */
-  /* All colour comes from the shared brand seeds in app/brand-tokens.css —
-     edit colour THERE, not here, so the app and this site never drift.
-     These reference the canonical (light) seeds, which are never themed,
-     so the marketing site stays always-light even for dark-theme app
-     users. */
-  --bg: var(--brand-paper);
-  --bg-elev: var(--brand-elev);
-  --bg-muted: var(--brand-muted);
-  --bg-sunken: var(--brand-sunken);
-  --border: var(--brand-border);
-  --border-strong: var(--brand-border-strong);
-  --ink: var(--brand-ink);
-  --ink-2: var(--brand-ink-2);
-  --ink-3: var(--brand-ink-3);
-  --ink-4: var(--brand-ink-4);
+  /* The marketing site keeps its own always-light neutrals (this "paper &
+     spotlight" surface set is a touch lighter than the app's Proscene light
+     theme). The ACCENT is the shared brand seed (app/brand-tokens.css), so
+     the amber can never drift between app and site. */
+  --bg: #F8F5EF;
+  --bg-elev: #FFFFFF;
+  --bg-muted: #EFEAE0;
+  --bg-sunken: #E6DECF;
+  --border: #E5DCCC;
+  --border-strong: #D3C7B1;
+  --ink: #15181F;
+  --ink-2: #3A3F48;
+  --ink-3: #5F636C;
+  --ink-4: #94908A;
 
   /* Deep "house lights down" surface — brand ink (dark islands + footer) */
-  --night: var(--brand-night);
-  --night-elev: var(--brand-night-elev);
-  --night-border: var(--brand-night-border);
-  --night-ink: var(--brand-night-ink);
-  --night-ink-2: var(--brand-night-ink-2);
-  --night-ink-3: var(--brand-night-ink-3);
+  --night: #14171E;
+  --night-elev: #20252F;
+  --night-border: #2D3340;
+  --night-ink: #F5F2EA;
+  --night-ink-2: #C5C8CF;
+  --night-ink-3: #9398A4;
 
-  /* Accent — spotlight amber */
+  /* Accent — spotlight amber (shared seed) */
   --accent: var(--brand-accent);
-  --accent-soft: var(--brand-accent-soft);
-  --accent-ink: var(--brand-accent-ink);
-  --accent-bright: var(--brand-accent-bright);
-  --on-accent: var(--brand-on-accent);
+  --accent-soft: var(--brand-accent-soft-light);
+  --accent-ink: var(--brand-accent-ink-light);
+  --accent-bright: #ECB04E;
+  --on-accent: var(--brand-accent-on);
 
   /* Categorical (curated, light tints used sparingly for feature tags) */
   --c-sage: oklch(0.7 0.07 145);     --c-sage-soft: oklch(0.94 0.03 145);
