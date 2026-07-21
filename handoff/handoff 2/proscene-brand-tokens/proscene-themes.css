@@ -1,0 +1,131 @@
+/* ════════════════════════════════════════════════════════════════
+   Proscene brand color themes — extracted from Brand Color Explorer.
+   Three variants of one brand system. All share:
+     • Accent (spotlight amber): #E0A23A
+     • Display font: Geist
+   They differ only in surface + ink direction (light paper → full ink).
+
+   Apply a theme by setting the attribute on <body> (or :root):
+     <body data-theme="proscene">          → light paper
+     <body data-theme="proscene-mid">      → ink canvas, paper tiles (split)
+     <body data-theme="proscene-dark">     → full ink surfaces
+
+   "proscene-mid" is a SPLIT mode: the page canvas is ink, but content
+   cards re-map surface/ink tokens back to paper inside .card. See the
+   note at the bottom for that override.
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Proscene · warm paper + ink rail + spotlight ── */
+[data-theme="proscene"] {
+  --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --bg: #ECE6DA;
+  --bg-elev: #F7F4ED;
+  --bg-muted: #E6DFD0;
+  --bg-sunken: #DFD6C4;
+  --border: #DBD1BE;
+  --border-strong: #C8BBA2;
+  --ink: #15181F;
+  --ink-2: #3B3F47;
+  --ink-3: #6A6A63;
+  --ink-4: #9C988C;
+  --accent: #E0A23A;
+  --accent-soft: #F6E7C7;
+  --accent-ink: #9A6716;
+  --accent-on: #15181F;
+  --c-amber-soft: #F3E6C8;
+  --c-clay-soft: #EFDFCB;
+  --rail-bg: #15181F;
+  --rail-border: #272C36;
+  --rail-ink: #B7BAC2;
+  --rail-ink-dim: #787E8A;
+  --rail-active-bg: #20252F;
+  --rail-active-ink: #F5F2EA;
+  --rail-hover-bg: #1B202A;
+  --rail-mark-bg: #E0A23A;
+  --rail-mark-ink: #15181F;
+  --rail-accent: #E0A23A;
+}
+
+/* ── Proscene Medium · ink canvas + paper tiles (split) ── */
+[data-theme="proscene-mid"] {
+  --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --bg: #20252F;
+  --bg-elev: #2A303B;
+  --bg-muted: #252B35;
+  --bg-sunken: #1A1F27;
+  --border: #333A45;
+  --border-strong: #424A57;
+  --ink: #F5F2EA;
+  --ink-2: #C7CAD1;
+  --ink-3: #969BA7;
+  --ink-4: #6E7480;
+  --accent: #E0A23A;
+  --accent-soft: #3A2E16;
+  --accent-ink: #E9BC6C;
+  --accent-on: #15181F;
+  --c-sage-soft: #22302A;
+  --c-amber-soft: #3A2E14;
+  --c-dusk-soft: #23293A;
+  --c-clay-soft: #33271E;
+  --rail-bg: #15181F;
+  --rail-border: #262C36;
+  --rail-ink: #B5B9C2;
+  --rail-ink-dim: #717784;
+  --rail-active-bg: #20252F;
+  --rail-active-ink: #F5F2EA;
+  --rail-hover-bg: #191D25;
+  --rail-mark-bg: #E0A23A;
+  --rail-mark-ink: #15181F;
+  --rail-accent: #E0A23A;
+}
+
+/* ── Proscene Dark · full ink surfaces + spotlight ── */
+[data-theme="proscene-dark"] {
+  --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --bg: #16191F;
+  --bg-elev: #20252F;
+  --bg-muted: #1B1F27;
+  --bg-sunken: #11141A;
+  --border: #2B313C;
+  --border-strong: #3A414E;
+  --ink: #F5F2EA;
+  --ink-2: #C5C8CF;
+  --ink-3: #9398A4;
+  --ink-4: #6B7180;
+  --accent: #E0A23A;
+  --accent-soft: #3A2E16;
+  --accent-ink: #E9BC6C;
+  --accent-on: #15181F;
+  --c-sage-soft: #22302A;
+  --c-amber-soft: #3A2E14;
+  --c-dusk-soft: #23293A;
+  --c-clay-soft: #33271E;
+  --rail-bg: #101318;
+  --rail-border: #262C36;
+  --rail-ink: #B5B9C2;
+  --rail-ink-dim: #717784;
+  --rail-active-bg: #20252F;
+  --rail-active-ink: #F5F2EA;
+  --rail-hover-bg: #181C24;
+  --rail-mark-bg: #E0A23A;
+  --rail-mark-ink: #15181F;
+  --rail-accent: #E0A23A;
+}
+
+/* ── Proscene Medium split-mode override ──
+   The page canvas is ink, but content tiles must read as paper.
+   Re-map surface + ink tokens INSIDE cards so their interiors stay light. */
+[data-theme="proscene-mid"] .card {
+  --bg: #ECE6DA;
+  --bg-elev: #F7F4ED;
+  --bg-muted: #E6DFD0;
+  --bg-sunken: #DFD6C4;
+  --border: #DBD1BE;
+  --border-strong: #C8BBA2;
+  --ink: #15181F;
+  --ink-2: #3B3F47;
+  --ink-3: #6A6A63;
+  --ink-4: #9C988C;
+  --accent-soft: #F6E7C7;
+  --accent-ink: #9A6716;
+}
