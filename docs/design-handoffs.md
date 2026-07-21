@@ -51,8 +51,12 @@ being re-told.
 
 - **Never edit the design files** in `handoff/` or `design-reference/` to match
   the code. They are read-only reference — recreate the design in real code.
-- `--accent` is **curtain crimson** in this codebase (per the design-reference
-  README) — honor it in any `.drop`/active-state highlights.
+- `--accent` is **spotlight amber** (`#E0A23A`) across all three themes — honor
+  it in any `.drop`/active-state highlights. (It was curtain crimson in the
+  original design-reference port; the brand moved to amber — see
+  `docs/branding.md` + decision-log 2026-07-21.) Note: amber is a light colour,
+  so text on a filled accent surface is the dark ink (`var(--on-accent)`), never
+  white.
 - Respect `prefers-reduced-motion`; keep motion to what the prototype shows.
 - If a handoff is ambiguous or conflicts with documented architecture, flag it
   to the owner before building (per `session-start.md`).

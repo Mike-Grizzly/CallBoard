@@ -19,7 +19,8 @@ match the demo, tab by tab.
 ### Phase 1 — design system & shell — DONE
 
 - [x] Warm oklch token set ported into `app/globals.css` (`--bg`, `--ink-*`,
-      `--accent` curtain crimson, status pills, shadows, radii)
+      `--accent` (originally curtain crimson; now spotlight amber — see
+      `docs/branding.md`), status pills, shadows, radii)
 - [x] `body[data-theme]` and `body[data-density]` hooks wired in
       `app/layout.tsx`
 - [x] Geist + Geist Mono + Newsreader loaded via `next/font/google`
