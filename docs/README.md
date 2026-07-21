@@ -48,4 +48,5 @@ These docs **must** be updated whenever:
 | `open-questions.md` | Unresolved questions, risks, and concerns |
 | `ux-backlog.md` | Actionable UX/IA/design-system tasks from the 2026-07-03 full-surface UI/UX review (companion to `qa-backlog.md`) |
 | `design-handoffs.md` | Standard for design drop-offs: `handoff/<feature>/` folders, status markers, how sessions process them |
+| `branding.md` | Owner guide: how to rebrand the whole product by editing one file (`app/brand-tokens.css`) |
 | `feature-specs/` | Per-feature specifications (one file per vertical slice) |

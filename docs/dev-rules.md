@@ -40,6 +40,30 @@ Ratchet rules: they apply to code you touch, never as standalone mass-migrations
 - Any new overlay (modal/drawer/popover) handles Escape, backdrop click, focus trap, and focus return
 - Drawers render through the shared `<Drawer>` primitive (`components/ui/drawer/`) — it already provides all of the above plus the mobile bottom-sheet. Never hand-roll a portal/backdrop/slide; do not add per-drawer animation timing. All drawer motion is centralised (`DRAWER_DURATION_MS` + `drawer.css` vars) so it can be retuned for every drawer at once — keep it that way
 
+## Brand colour — single source of truth
+
+**All brand colour lives in `app/brand-tokens.css`.** (Owner-facing how-to:
+`docs/branding.md`.) It defines the `--brand-*`
+seeds (paper / ink / night / spotlight-amber accent), and *everything* — the
+app's semantic tokens in `globals.css` (`--bg`, `--ink`, `--accent`, …) and the
+marketing site in `marketing.css` (`.ps-site`) — reads colour from those seeds.
+To rebrand the product, edit that one file; the change cascades everywhere.
+
+- **Never hardcode a brand colour** in component CSS (`color: white` on an accent
+  button, a literal `#…` accent, an inline crimson). Use the semantic tokens
+  (`var(--accent)`, `var(--ink)`, `var(--on-accent)`, …). There are currently
+  zero hardcoded brand hexes in `app/` — keep it that way.
+- **Text on a filled accent button is `var(--on-accent)`, not `white`.** Amber is
+  a light accent, so `--on-accent` is the dark ink in light mode (white-on-amber
+  fails AA); dusk/dark keep white while their accent is still the old crimson.
+- **Marketing must stay always-light.** It reads the canonical (never-themed)
+  `--brand-accent`; do not point it at the `*-dark` / `*-dusk` seeds or it will
+  recolour for dark-theme app users.
+- **Dusk/dark are placeholders** (still the old crimson) pending a reshared dark
+  palette. When it arrives, replace the `--brand-accent-dusk*` / `--brand-accent-dark*`
+  values (and flip `--brand-on-accent-dusk/-dark` to the dark ink) in
+  `brand-tokens.css` — nothing else.
+
 ## Claude Code operating rules
 
 - Start every session by reading `CLAUDE.md` (automatic) — it will direct you to relevant docs

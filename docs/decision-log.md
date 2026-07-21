@@ -2913,3 +2913,40 @@ Per-claim owner rulings (soften/remove vs. build-later):
 - Kept the `pp-fade`/`pp-slide` keyframes — other overlays still reference them.
 
 **Impact:** `components/announcements/announcement-detail-drawer.tsx`, `app/(app)/calendar/event-drawer.tsx`, `app/(app)/productions/[slug]/documents/document-drawer.tsx`, `app/globals.css`. No server-action / permission / tenancy / storage / proxy change — pure client UI. `tsc` + `eslint` (0 errors) + 185 tests + `next build` (86 pages) green; all three harness-verified at 1440px and ≤720px. **S1 is now ✅ DONE**; every app drawer shares one implementation, and drawer motion is retunable from `drawer.constants.ts` + `drawer.css` for all of them at once. Backlog remainder: M11 (home hydration warnings) and decision-only M12/M13.
+
+---
+
+## 2026-07-20 — Amber "paper & spotlight" is the product brand; colour is single-sourced
+
+**Decision:** The marketing site's **"paper & spotlight"** palette — warm off-white
+paper (`#F8F5EF`), dark-blue ink (`#15181F`), spotlight-amber accent (`#E0A23A`) —
+is the official product brand, and it now applies to the **app** too, not just the
+marketing site. This resolves the old M12 "brand seam" question (amber is the brand,
+not a marketing costume). The app's previous **curtain crimson** accent is retired in
+**light mode**.
+
+All brand colour now lives in a single source of truth, `app/brand-tokens.css`
+(`--brand-*` seeds). Both the app (`globals.css` semantic tokens, all themes) and the
+marketing site (`marketing.css` `.ps-site`) read colour from those seeds, so the two
+can never drift again and a future rebrand is a one-file edit.
+
+**Reason:** A prior rebrand "didn't spread" because the app and marketing defined
+colour independently (crimson in `globals.css`, amber in `marketing.css`). Branding is
+still being finalised, so the priority was an architecture where colour changes are
+trivial and global.
+
+**Impact / interim state:**
+- App **light** mode is now amber; filled accent buttons use `var(--on-accent)` (dark
+  ink on amber — white-on-amber fails WCAG AA). The app had **zero** hardcoded brand
+  hexes, so this was a clean token cascade (~28 `color:white`→`var(--on-accent)` fixes
+  on accent-filled surfaces).
+- App **dusk/dark** are left **unchanged (old crimson)** for now, per owner: the
+  dusk/dark brand is being reshared. They read `--brand-accent-dusk*` / `--brand-accent-dark*`
+  placeholder seeds, so dropping in the real dark palette later is a one-file edit.
+- The marketing site is **byte-identical** (its resolved values are unchanged) and
+  stays always-light — it reads the canonical, never-themed `--brand-accent`.
+- Rule recorded in `dev-rules.md` (Brand colour — single source of truth).
+
+**Follow-ups:** (1) owner to reshare dusk/dark amber values; (2) one decorative
+logo badge (`linear-gradient(amber, dark-red)`) keeps white text — ambiguous either
+way, left as-is; (3) M13 (marketing always-light) still open as a separate decision.

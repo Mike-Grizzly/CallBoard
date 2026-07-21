@@ -43,6 +43,17 @@ import {
 const DATE_MIN = `${new Date().getFullYear() - 5}-01-01`;
 const DATE_MAX = `${new Date().getFullYear() + 10}-12-31`;
 
+// Render a stored 24-hour "HH:MM" rehearsal time as a friendly 12-hour label
+// for the review step (the inputs store 24-hour, matching the call form).
+function fmt12h(hhmm: string): string {
+  const m = hhmm.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return hhmm;
+  const h = Number(m[1]);
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = ((h + 11) % 12) + 1;
+  return `${h12}:${m[2]} ${period}`;
+}
+
 type AiParseState = {
   // "uploaded" = file is in storage but no parse ran (auto-fill toggled off);
   // it still gets attached as the default script at launch.
@@ -153,8 +164,8 @@ export default function NewProductionWizard({
     opening: "",
     closing: "",
     rehearsalDays: { Mon: true, Tue: true, Wed: true, Thu: true, Fri: true, Sat: true, Sun: false },
-    rehearsalStart: "7:00 PM",
-    rehearsalEnd: "10:30 PM",
+    rehearsalStart: "19:00",
+    rehearsalEnd: "22:30",
     depts: {
       director: true, stage: true, music: true, costumes: true, props: true,
       set: true, lighting: true, sound: true, choreo: false, intimacy: false,
@@ -904,6 +915,8 @@ function StepCalendar({ data, set }: { data: WizardData; set: (p: Partial<Wizard
           <label className="label">Typical start</label>
           <input
             className="field"
+            type="time"
+            aria-label="Typical rehearsal start time"
             value={data.rehearsalStart}
             onChange={(e) => set({ rehearsalStart: e.target.value })}
           />
@@ -912,6 +925,8 @@ function StepCalendar({ data, set }: { data: WizardData; set: (p: Partial<Wizard
           <label className="label">Typical end</label>
           <input
             className="field"
+            type="time"
+            aria-label="Typical rehearsal end time"
             value={data.rehearsalEnd}
             onChange={(e) => set({ rehearsalEnd: e.target.value })}
           />
@@ -1525,7 +1540,9 @@ function StepReview({ data, jumpTo }: { data: WizardData; jumpTo: (i: number) =>
           <div className="kv">
             <span className="k">Typical call</span>
             <span className="v" style={{ fontFamily: "var(--font-mono)" }}>
-              {data.rehearsalStart} – {data.rehearsalEnd}
+              {data.rehearsalStart && data.rehearsalEnd
+                ? `${fmt12h(data.rehearsalStart)} – ${fmt12h(data.rehearsalEnd)}`
+                : "—"}
             </span>
           </div>
         </div>
