@@ -2992,3 +2992,20 @@ also aren't remapped inside cards, so a status pill on a paper card reads dark
 harness-rendered (ink rail, paper/ink split, amber dark-ink buttons legible in
 every theme). Owner-facing guide rewritten in `docs/branding.md`; handoff README
 marked Implemented.
+
+---
+
+## 2026-07-21 — Marketing site stays always-light (M13)
+
+**Decision:** The marketing site (`.ps-site`) remains **always-light** — a
+deliberate brand choice, not an oversight. It will not follow the app's
+light/dusk/dark themes.
+
+**Reason:** Owner's call. The "paper & spotlight" marketing look is intentional;
+a dark-theme app user briefly seeing the light marketing site on an outbound link
+is an acceptable, minor seam. The brand-token work already guarantees the site
+stays light regardless of the visitor's app theme (it reads the canonical,
+never-themed `--brand-accent`), so there's no accidental recolouring to guard
+against.
+
+**Impact:** None — no code change. Closes M13 in `ux-backlog.md`.

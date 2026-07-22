@@ -279,6 +279,5 @@ export const HOME_HTML = `
 ${HOME_HERO_MOCK_HTML}          </div>
         </div>
       </div>
-    </div>
   </section>
 ${HOME_REST_HTML}`;
